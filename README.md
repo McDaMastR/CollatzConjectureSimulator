@@ -12,13 +12,13 @@ positive integer input $n$ and gives a positive integer output $f(n)$. If the in
 function returns half the input. If the input is odd, the function returns triple the input, plus
 one.
 
-$
+$$
 f(n) =
  \begin{cases}
   n/2  & \text{if } n \equiv 0 \pmod 2\\
   3n+1 & \text{if } n \equiv 1 \pmod 2
  \end{cases}
-$
+$$
 
 The Collatz function can be applied recursively, meaning given an initial input $n$ and resultant
 output $f(n)$, this first output can be used as an input, resulting in a second output $f(f(n))$.
@@ -34,7 +34,7 @@ The Collatz Conjecture states that for all positive integer starting values $n$,
 application of the Collatz function will eventually result in the value $1$. Using mathematical
 logic:
 
-$\forall n \in \mathbb{Z}_{> 0}, \exists k \in \mathbb{Z}_{\geq 0} : f^k(n)=1$
+$ \forall n \in \mathbb{Z}_{> 0}, \exists k \in \mathbb{Z}_{\geq 0} : f^k(n) = 1 $
 
 ## The Simulation
 
