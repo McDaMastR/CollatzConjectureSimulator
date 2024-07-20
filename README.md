@@ -34,7 +34,7 @@ The Collatz Conjecture states that for all positive integer starting values $n$,
 application of the Collatz function will eventually result in the value $1$. Using mathematical
 logic:
 
-$ \forall n \in \mathbb{Z}_{> 0}, \exists k \in \mathbb{Z}_{\geq 0} : f^k(n) = 1 $
+$` \forall n \in \mathbb{Z}_{> 0}, \exists k \in \mathbb{Z}_{\geq 0} : f^k(n) = 1 `$
 
 ## The Simulation
 
