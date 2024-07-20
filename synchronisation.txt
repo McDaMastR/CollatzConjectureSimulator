@@ -1,0 +1,45 @@
+Description of Vulkan synchronisation within the program
+
+[R] = Read operation
+[W] = Write operation
+[A] = Availability operation
+[M] = Memory domain operation
+[V] = Visibility operation
+[L] = Release operation
+[Q] = Aquire operation
+
+Host Thread: [W] HV-in                                         {writeInBuffer}
+Host Thread: [A] (host threads; HV-in) -> host domain          {vkFlushMappedMemoryRanges}
+Host Thread: [M] host domain -> device domain                  {vkQueueSubmit2KHR}
+Host Thread: [V] device domain -> (device agents; device refs) {vkQueueSubmit2KHR}
+Onetime CmdBuf: [R] HV-in                                      {vkCmdCopyBuffer}
+Onetime CmdBuf: [W] DL-in                                      {vkCmdCopyBuffer}
+Onetime CmdBuf: [A] (copy op; DL-in) -> device domain          {vkCmdPipelineBarrier2KHR}
+Onetime CmdBuf: [L] DL-in                                      {vkCmdPipelineBarrier2KHR}
+Host Thread: [W] HV-in                                         {writeInBuffer}
+Host Thread: [A] (host threads; HV-in) -> host domain          {vkFlushMappedMemoryRanges}
+Host Thread: [M] host domain -> device domain                  {vkQueueSubmit2KHR}
+Host Thread: [V] device domain -> (device agents; device refs) {vkQueueSubmit2KHR}
+Compute CmdBuf: [Q] DL-in                                      {vkCmdPipelineBarrier2KHR}
+Compute CmdBuf: [V] device domain -> (dispatch op; DL-in)      {vkCmdPipelineBarrier2KHR}
+Compute CmdBuf: [R] DL-in                                      {vkCmdDispatch}
+Compute CmdBuf: [W] DL-out                                     {vkCmdDispatch}
+Compute CmdBuf: [A] (dispatch op; DL-out) -> device domain     {vkCmdPipelineBarrier2KHR}
+Compute CmdBuf: [L] DL-out                                     {vkCmdPipelineBarrier2KHR}
+Transfer CmdBuf: [R] HV-in                                     {vkCmdCopyBuffer}
+Transfer CmdBuf: [W] DL-in                                     {vkCmdCopyBuffer}
+Transfer CmdBuf: [A] (copy op; DL-in) -> device domain         {vkCmdPipelineBarrier2KHR}
+Transfer CmdBuf: [L] DL-in                                     {vkCmdPipelineBarrier2KHR}
+Transfer CmdBuf: [Q] DL-out                                    {vkCmdPipelineBarrier2KHR}
+Transfer CmdBuf: [V] device domain -> (copy op; DL-out)        {vkCmdPipelineBarrier2KHR}
+Transfer CmdBuf: [R] DL-out                                    {vkCmdCopyBuffer}
+Transfer CmdBuf: [W] HV-out                                    {vkCmdCopyBuffer}
+Transfer CmdBuf: [A] (copy op; HV-out) -> device domain        {vkCmdPipelineBarrier2KHR}
+Transfer CmdBuf: [M] device domain -> host domain              {vkCmdPipelineBarrier2KHR}
+Host Thread: [W] HV-in                                         {writeInBuffer}
+Host Thread: [A] (host threads; HV-in) -> host domain          {vkFlushMappedMemoryRanges}
+Host Thread: [V] host domain -> (host threads; HV-out)         {vkInvalidateMappedMemoryRanges}
+Host Thread: [R] HV-out                                        {readOutBuffer}
+Host Thread: [M] host domain -> device domain                  {vkQueueSubmit2KHR}
+Host Thread: [V] device domain -> (device agents; device refs) {vkQueueSubmit2KHR}
+...
