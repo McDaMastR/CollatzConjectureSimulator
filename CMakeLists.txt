@@ -1,17 +1,13 @@
 cmake_minimum_required(VERSION 3.21)
-project(CollatzConjectureSimulator VERSION 1.0.0 LANGUAGES C)
-
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
-find_package(Vulkan 1.2 REQUIRED)
+project(CollatzConjectureSimulator VERSION 1.1 LANGUAGES C)
 
 add_subdirectory(src)
 
-find_program(glslc_exe NAMES glslc HINTS Vulkan::glslc REQUIRED)
+find_program(glslc_exe NAMES glslc REQUIRED)
 add_custom_target(
 	Shaders
 	ALL
-	DEPENDS 
+	DEPENDS
 		${CMAKE_SOURCE_DIR}/bin/shader.spv
 		${CMAKE_SOURCE_DIR}/bin/shader64.spv
 )

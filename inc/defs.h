@@ -19,10 +19,11 @@
 #pragma once
 
 #define VK_ENABLE_BETA_EXTENSIONS
-#include <vulkan/vulkan.h>
-#include <pthread.h>
+#include <volk.h> // vulkan.h, stddef.h, stdint.h
+
+#include <pthread.h> // stddef.h, limits.h, time.h
 #include <stdbool.h>
-#include <stdlib.h>
+#include <stdlib.h> // limits.h
 #include <stdio.h>
 
 
@@ -31,13 +32,17 @@
 #define PROGRAM_NAME "Collatz Conjecture Simulator"
 #define VK_LAYER_KHRONOS_VALIDATION_LAYER_NAME "VK_LAYER_KHRONOS_validation"
 
-#define LOG_NAME "log.txt"
+#define DEBUG_LOG_NAME "debug_log.txt"
+#define ALLOC_LOG_NAME "alloc_log.txt"
 #define SHADER32_NAME "shader.spv"
 #define SHADER64_NAME "shader64.spv"
 #define PIPELINE_CACHE_NAME "pipeline_cache.bin"
 
 // Milliseconds per clock
 #define MS_PER_CLOCK (1000.0F / CLOCKS_PER_SEC)
+
+// Milliseconds since start
+#define PROGRAM_TIME (clock() * MS_PER_CLOCK)
 
 // Set a 128-bit integer to a given value
 #define SET_128BIT_INT(val, top, bottom) (val) = (top); (val) <<= 64; (val) |= (bottom);
@@ -64,16 +69,10 @@
 // Maximum proportion of available GPU heap memory to use
 #define MAX_HEAP_MEMORY 0.8F
 
-// When to end program
-// 1 -> On user input
-// 2 -> On # loops completed
-// 3 -> On new highest step count
-#define END_ON 1
-
 // Whether to benchmark Vulkan commands via queries
 #define QUERY_BENCHMARKING 1
 
-// Whether to log all memory allocations from Vulkan (must be in debug build to enable)
+// Whether to log all memory allocations from Vulkan
 #define LOG_VULKAN_ALLOCATIONS 0
 
 // If 1, use Shader Storage Buffer Object (SSBO)
@@ -81,11 +80,16 @@
 // If changing, must change in shaders as well
 #define IN_BUFFER_TYPE 1
 
+// When to end program
+// 1 -> On user input
+// 2 -> On # loops completed
+// 3 -> On new highest step count
+#define END_ON 1
+
 // Just a newline
 #define NEWLINE putchar('\n');
 
-// Failure macros
-#define MALLOC_FAILURE(ptr, size) print_malloc_failure(__LINE__, (const void*) (ptr), (size_t) (size));
+#define MALLOC_FAILURE(ptr) print_malloc_failure(__LINE__, (const void*) (ptr), size);
 #define CALLOC_FAILURE(ptr, num, size) print_calloc_failure(__LINE__, (const void*) (ptr), (size_t) (num), (size_t) (size));
 #define REALLOC_FAILURE(ptr, mem, size) print_realloc_failure(__LINE__, (const void*) (ptr), (const void*) (mem), (size_t) (size));
 #define FOPEN_FAILURE(name, mode) print_fopen_failure(__LINE__, file, (const char*) (name), (const char*) (mode));
@@ -101,48 +105,36 @@
 #define PLOCK_FAILURE(mtx) print_plock_failure(__LINE__, threadResult, (const pthread_mutex_t*) (mtx));
 #define PUNLOCK_FAILURE(mtx) print_punlock_failure(__LINE__, threadResult, (const pthread_mutex_t*) (mtx));
 #define PDESTROY_FAILURE(mtx) print_pdestroy_failure(__LINE__, threadResult, (const pthread_mutex_t*) (mtx));
+#define VINIT_FAILURE() print_vinit_failure(__LINE__, result);
+#define VINSTVERS_FAILURE(vers) print_vinstvers_failure(__LINE__, vers);
 #define VULKAN_FAILURE(func, count, ...) print_vulkan_failure(__LINE__, #func, result, (unsigned int) (count), __VA_ARGS__);
-#define INSTPROCADDR_FAILURE(inst, func) print_instprocaddr_failure(__LINE__, (VkInstance) (inst), #func);
-#define DEVPROCADDR_FAILURE(dev, func) print_devprocaddr_failure(__LINE__, (VkDevice) (dev), #func);
+
+#define CHECK_RESULT(func) if (!func(&gpu)) {destroy_gpu(&gpu); puts("EXIT FAILURE"); return EXIT_FAILURE;}
 
 #ifdef NDEBUG
-	#define CHECK_RESULT(func) func(&gpu);
-	#define CHECK_HANDLE(handle)
 	#define GET_RESULT(func) func;
+	#define GET_INIT_RESULT(func) func;
 	#define GET_FILE_RESULT(func) func;
 	#define GET_READ_RESULT(func) func;
 	#define GET_WRITE_RESULT(func) func;
 	#define GET_THRD_RESULT(func) func;
 	#define BEGIN_FUNC
 	#define END_FUNC
-	#define GLOBAL_PROC_ADDR(func) const PFN_##func func = (PFN_##func) vkGetInstanceProcAddr(NULL, #func);
-	#define INSTANCE_PROC_ADDR(func) const PFN_##func func = (PFN_##func) vkGetInstanceProcAddr(instance, #func);
-	#define DEVICE_PROC_ADDR(func) const PFN_##func func = (PFN_##func) vkGetDeviceProcAddr(device, #func);
 #else
-	#define CHECK_RESULT(func) if (!func(&gpu)) {destroy_gpu(&gpu); puts("EXIT FAILURE"); return EXIT_FAILURE;}
-	#define CHECK_HANDLE(handle) if ((handle) != VK_NULL_HANDLE)
 	#define GET_RESULT(func) result = func;
+	#define GET_INIT_RESULT(func) initResult = func;
 	#define GET_FILE_RESULT(func) fileResult = func;
 	#define GET_READ_RESULT(func) readResult = func;
 	#define GET_WRITE_RESULT(func) writeResult = func;
 	#define GET_THRD_RESULT(func) threadResult = func;
 	#define BEGIN_FUNC printf("BEGIN %s\n", __func__);
 	#define END_FUNC printf("END %s\n\n", __func__);
-	#define GLOBAL_PROC_ADDR(func)                                               \
-		const PFN_##func func = (PFN_##func) vkGetInstanceProcAddr(NULL, #func); \
-		if (!func) {INSTPROCADDR_FAILURE(NULL, func) return false;}
-	#define INSTANCE_PROC_ADDR(func)                                                 \
-		const PFN_##func func = (PFN_##func) vkGetInstanceProcAddr(instance, #func); \
-		if (!func) {INSTPROCADDR_FAILURE(instance, func) return false;}
-	#define DEVICE_PROC_ADDR(func)                                               \
-		const PFN_##func func = (PFN_##func) vkGetDeviceProcAddr(device, #func); \
-		if (!func) {DEVPROCADDR_FAILURE(device, func) return false;}
-#endif // NDEBUG
 
-#define SET_DEBUG_NAME                                                          \
-	GET_RESULT(vkSetDebugUtilsObjectNameEXT(device, &debugUtilsObjectNameInfo)) \
-	if (result != VK_SUCCESS)                                                   \
-		VULKAN_FAILURE(vkSetDebugUtilsObjectNameEXT, 2, 'p', device, 'p', &debugUtilsObjectNameInfo)
+	#define SET_DEBUG_NAME()                                                        \
+		GET_RESULT(vkSetDebugUtilsObjectNameEXT(device, &debugUtilsObjectNameInfo)) \
+		if (result != VK_SUCCESS)                                                   \
+			VULKAN_FAILURE(vkSetDebugUtilsObjectNameEXT, 2, 'p', device, 'p', &debugUtilsObjectNameInfo)
+#endif // NDEBUG
 
 #define HOST_VISIBLE_BUFFER_USAGE VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
 #define OUT_BUFFER_DESCRIPTOR_TYPE VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
@@ -159,7 +151,11 @@
 // * ===== Typedefs =====
 
 // Data type of values to test
-__extension__ typedef unsigned __int128 value_t;
+#if defined(__SIZEOF_INT128__) && __SIZEOF_INT128__ == 16
+	__extension__ typedef unsigned __int128 value_t;
+#else
+	#error "Compiler must support 128-bit unsigned integers via the '__int128' type"
+#endif // __SIZEOF_INT128__
 
 // Data type of step count
 typedef uint16_t step_t;
@@ -177,9 +173,7 @@ typedef struct AllocationCallbackCounts
 // Structure containing all relevant Vulkan info
 typedef struct Gpu
 {
-	VkInstance instance;
 	VkPhysicalDevice physicalDevice;
-	VkDevice device;
 
 	uint32_t transferQueueFamilyIndex;
 	uint32_t computeQueueFamilyIndex;
@@ -343,6 +337,10 @@ bool destroy_gpu(Gpu_t* gpu);
 // Returns true if successful, false otherwise
 bool init_debug_logfile(void);
 
+// Initialise the allocation logfile
+// Returns true if successful, false otherwise
+bool init_alloc_logfile(void);
+
 // Failure functions
 void print_malloc_failure(int line, const void* ptr, size_t _Size);
 void print_calloc_failure(int line, const void* ptr, size_t _NumOfElements, size_t _SizeOfElements);
@@ -360,9 +358,9 @@ void print_pinit_failure(int line, int result, const pthread_mutex_t* m, const p
 void print_plock_failure(int line, int result, const pthread_mutex_t* m);
 void print_punlock_failure(int line, int result, const pthread_mutex_t* m);
 void print_pdestroy_failure(int line, int result, const pthread_mutex_t* m);
+void print_vinit_failure(int line, VkResult result);
+void print_vinstvers_failure(int line, uint32_t apiVersion);
 void print_vulkan_failure(int line, const char* func, VkResult result, unsigned int count, ...);
-void print_instprocaddr_failure(int line, VkInstance instance, const char* pName);
-void print_devprocaddr_failure(int line, VkDevice device, const char* pName);
 
 // Callback functions
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback              (VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);

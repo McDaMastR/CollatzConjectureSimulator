@@ -28,7 +28,7 @@ By applying the Collatz function recursively, the sequence of successive inputs 
 form a _Collatz sequence_. If a Collatz sequence includes the value $1$, then the number of
 elements in the sequence from the starting value to the first instance of the value $1$ is the
 _total stopping time_ of that Collatz sequence. That is, given a starting value $n$ and total
-stopping time $k$, $f^k(n)=1$.
+stopping time $k$, $f^k(n) = 1$.
 
 The Collatz Conjecture states that for all positive integer starting values $n$, finite recursive
 application of the Collatz function will eventually result in the value $1$. Using mathematical
@@ -57,6 +57,8 @@ primarily written in C, and the shaders are written in GLSL.
   - Little endian
 - CMake 3.21
 - pthreads
+- glslc
+- volk
 - Vulkan 1.2
   - `VK_EXT_debug_utils` (recommended for debug)
   - `VK_LAYER_KHRONOS_validation` (recommended for debug)
@@ -67,22 +69,22 @@ primarily written in C, and the shaders are written in GLSL.
   - `VkPhysicalDeviceFeatures::shaderInt16`
   - `VkPhysicalDeviceFeatures::shaderInt64` (recommended)
   - `VkPhysicalDevice16BitStorageFeatures::storageBuffer16BitAccess`
-- shaderc
-  - glslc
 
 ## Building and Running
 
-The program is built via CMake. It uses `find_package` to locate the Vulkan and pthreads libraries,
+The program is built via CMake. It uses `find_package` to locate the pthreads and volk libraries,
 and `find_program` to locate the glslc executable. The compute shaders are added as a custom
 target and are compiled into SPIR-V when building.
 
 To generate the build system for the program, navigate the terminal to the project directory and
-execute the following command.
+execute the following command. To specify a debug or release build system, add
+`-DCMAKE_BUILD_TYPE=Debug` or `-DCMAKE_BUILD_TYPE=Release`, respectively.
 
     cmake -S . -B build
 
 A `build` directory will be created containing the build system. To build the program, execute the
-following command.
+following command. To specify a debug or release build, add `--config Debug` or `--config Release`,
+respectively.
 
     cmake --build build
 
@@ -90,8 +92,10 @@ A `bin` directory will be created containing the compiled compute shaders and pr
 To run the program, execute `CollatzConjectureSimulator.exe` from within the `bin` directory. If
 not executed inside the `bin` directory, the program will be unable to locate the compiled shaders.
 
-If in debug, a `log.txt` file will be created during execution containing any potentially notable
-callbacks from the Vulkan API via the `VK_EXT_debug_utils` extension. After execution, a
+If in debug, a `debug_log.txt` file will be created during execution containing all debug callbacks
+from the Vulkan API via the `VK_EXT_debug_utils` extension, if present. If logging Vulkan
+allocations, an `alloc_log.txt` file will be created during execution containing all allocation
+callbacks from the Vulkan API via a `VkAllocationCallbacks` object. After execution, a
 `pipeline_cache.bin` file will be created containing the data from a `VkPipelineCache` object. This
 file will be read by the program if run again.
 
@@ -125,3 +129,44 @@ and read from DL-in. Step counts are written to DL-out, copied from DL-out to HV
 HV-out.
 
 CPU -> HV-in -> DL-in -> GPU -> DL-out -> HV-out -> CPU
+
+## Preprocessor configurations
+
+The program defines various preprocessor macros in `defs.h` whose definitions can be changed to
+configure the behaviour of the program.
+
+`MIN_TEST_VALUE_TOP` and `MIN_TEST_VALUE_BOTTOM` are the upper and lower 64 bits, respectively, of
+the 128-bit starting value the program will test first. Subsequent tested starting values will
+linearly increase from there onwards.
+
+`MAX_STEP_VALUE_TOP` and `MAX_STEP_VALUE_BOTTOM` are the upper and lower 64 bits, respectively, of
+the 128-bit starting value with the current highest step count. That is, in the set of integers
+from 1 to `MIN_TEST_VALUE`, the starting value with the highest step count is `MAX_STEP_VALUE`.
+
+`MAX_STEP_COUNT` is the step count of the starting value `MAX_STEP_VALUE`. By configuring
+`MIN_TEST_VALUE`, `MAX_STEP_VALUE`, and `MAX_STEP_COUNT`, the program can resume testing starting
+values from exactly where it last ended.
+
+`MAX_HEAP_MEMORY` is a floating-point value within the interval $(0, 1)$, describing the maximum
+proportion of available memory in a `VkMemoryHeap` the program can allocate via `vkAllocateMemory`.
+For example, a value of 0.8F means at most 80% of available memory in any GPU memory heap will be
+allocated for inout-buffers. If the `VK_EXT_memory_budget` extension is present, _available memory_
+refers to the `VkPhysicalDeviceMemoryBudgetPropertiesEXT::heapBudget` of a memory heap. Elsewise,
+it refers to the corresponding `VkMemoryHeap::size`.
+
+`QUERY_BENCHMARKING` is a boolean value describing whether or not the program will benchmark Vulkan
+commands via queries. If 1, the `vkCmdCopyBuffer` and `vkCmdDispatch` commands will be benchmarked.
+
+`LOG_VULKAN_ALLOCATIONS` is a boolean value describing whether or not the program will log memory
+allocations performed by the Vulkan API via a `VkAllocationCallbacks` object.
+
+`IN_BUFFER_TYPE` is an integer value describing the type of buffer object in-buffers will be
+treated as. If 1, in-buffers will be shader storage buffer objects (SSBOs). If 2, in-buffers will
+be uniform buffer objects (UBOs). If this value is changed, the corresponding macro in the compute
+shaders must be changed accordingly.
+
+`END_ON` is an integer value describing when the program will terminate. If 1, the program will end
+on user input, namely when either of the __enter__ or __return__ keys are pressed. If 2, the
+program will end when the main loop has performed a particular number of loops, such as 20 or
+10,000. If 3, the program will end when a new starting value is found to have the highest step
+count so far.

@@ -59,36 +59,51 @@ bool create_instance(Gpu_t* const gpu)
 
 	CreateInstanceData_t data = {0};
 	VkResult result;
+	bool initResult;
 
-	GLOBAL_PROC_ADDR(vkEnumerateInstanceVersion)
-	GLOBAL_PROC_ADDR(vkEnumerateInstanceExtensionProperties)
-	GLOBAL_PROC_ADDR(vkEnumerateInstanceLayerProperties)
-	GLOBAL_PROC_ADDR(vkCreateInstance)
+	result = volkInitialize();
+	if (result != VK_SUCCESS) {
+		VINIT_FAILURE()
+		free_CreateInstanceData(data);
+		return false;
+	}
+
+	const uint32_t appApiVersion = VK_API_VERSION_1_2;
+	const uint32_t instApiVersion = volkGetInstanceVersion();
+
+	if (VK_API_VERSION_VARIANT(instApiVersion) != VK_API_VERSION_VARIANT(appApiVersion) ||
+		VK_API_VERSION_MAJOR(instApiVersion)    < VK_API_VERSION_MAJOR(appApiVersion)   ||
+		VK_API_VERSION_MINOR(instApiVersion)    < VK_API_VERSION_MINOR(appApiVersion)) {
+		VINSTVERS_FAILURE(instApiVersion)
+		free_CreateInstanceData(data);
+		return false;
+	}
 
 #if LOG_VULKAN_ALLOCATIONS
-	gpu->allocationCallbacks.pUserData = &gpu->allocationCallbackCounts;
-	gpu->allocationCallbacks.pfnAllocation = allocation_callback;
-	gpu->allocationCallbacks.pfnReallocation = reallocation_callback;
-	gpu->allocationCallbacks.pfnFree = free_callback;
-	gpu->allocationCallbacks.pfnInternalAllocation = internal_allocation_callback;
-	gpu->allocationCallbacks.pfnInternalFree = internal_free_callback;
+	GET_INIT_RESULT(init_alloc_logfile())
+#ifndef NDEBUG
+	if (!initResult) {
+		free_CreateInstanceData(data);
+		return false;
+	}
+#endif // NDEBUG
+
+	VkAllocationCallbacks allocationCallbacks;
+	allocationCallbacks.pUserData             = &gpu->allocationCallbackCounts;
+	allocationCallbacks.pfnAllocation         = allocation_callback;
+	allocationCallbacks.pfnReallocation       = reallocation_callback;
+	allocationCallbacks.pfnFree               = free_callback;
+	allocationCallbacks.pfnInternalAllocation = internal_allocation_callback;
+	allocationCallbacks.pfnInternalFree       = internal_free_callback;
+
+	gpu->allocationCallbacks = allocationCallbacks;
 	gpu->allocator = &gpu->allocationCallbacks;
 #endif // LOG_VULKAN_ALLOCATIONS
 	const VkAllocationCallbacks* const allocator = gpu->allocator;
 
-	const uint32_t applicationApiVersion = VK_API_VERSION_1_2;
-
-	VkApplicationInfo applicationInfo;
-	applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	applicationInfo.pNext = NULL;
-	applicationInfo.pApplicationName = PROGRAM_NAME;
-	applicationInfo.applicationVersion = 0;
-	applicationInfo.pEngineName = NULL;
-	applicationInfo.engineVersion = 0;
-	applicationInfo.apiVersion = applicationApiVersion;
-
 #ifndef NDEBUG
-	if (!init_debug_logfile()) {
+	GET_INIT_RESULT(init_debug_logfile())
+	if (!initResult) {
 		free_CreateInstanceData(data);
 		return false;
 	}
@@ -101,30 +116,6 @@ bool create_instance(Gpu_t* const gpu)
 	debugUtilsMessengerCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	debugUtilsMessengerCreateInfo.pfnUserCallback = debug_callback;
 	debugUtilsMessengerCreateInfo.pUserData = &gpu->debugCallbackCount;
-
-	uint32_t apiVersion;
-	GET_RESULT(vkEnumerateInstanceVersion(&apiVersion))
-	if (result != VK_SUCCESS) {
-		VULKAN_FAILURE(vkEnumerateInstanceVersion, 1, 'p', &apiVersion)
-		free_CreateInstanceData(data);
-		return false;
-	}
-
-	if (VK_API_VERSION_VARIANT(apiVersion) != VK_API_VERSION_VARIANT(applicationApiVersion) ||
-		VK_API_VERSION_MAJOR(apiVersion)    < VK_API_VERSION_MAJOR(applicationApiVersion)   ||
-		VK_API_VERSION_MINOR(apiVersion)    < VK_API_VERSION_MINOR(applicationApiVersion)) {
-		fprintf(stderr,
-			"Instance failure at line %d\n"
-			"Function call 'vkEnumerateInstanceVersion' returned *pApiVersion = %u.%u.%u.%u\n\n",
-			__LINE__,
-			VK_API_VERSION_VARIANT(apiVersion), VK_API_VERSION_MAJOR(apiVersion),
-			VK_API_VERSION_MINOR(apiVersion), VK_API_VERSION_PATCH(apiVersion)
-		);
-
-		free_CreateInstanceData(data);
-		return false;
-	}
-
 #endif // NDEBUG
 
 	uint32_t layerPropertyCount;
@@ -154,7 +145,7 @@ bool create_instance(Gpu_t* const gpu)
 	data.properties = malloc(size);
 #ifndef NDEBUG
 	if (!data.properties && size) {
-		MALLOC_FAILURE(data.properties, size)
+		MALLOC_FAILURE(data.properties)
 		free_CreateInstanceData(data);
 		return false;
 	}
@@ -181,7 +172,6 @@ bool create_instance(Gpu_t* const gpu)
 	}
 #endif // NDEBUG
 
-	// Find wanted layers
 	uint32_t enabledLayerCount = 0;
 	const char* enabledLayers[1];
 	for (uint32_t i = 0; i < layerPropertyCount; i++) {
@@ -194,7 +184,6 @@ bool create_instance(Gpu_t* const gpu)
 #endif // NDEBUG
 	}
 
-	// Find wanted extensions
 	const void* pNextChain = NULL;
 	const void** next = &pNextChain;
 
@@ -224,6 +213,15 @@ bool create_instance(Gpu_t* const gpu)
 #endif // NDEBUG
 	}
 
+	VkApplicationInfo applicationInfo;
+	applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+	applicationInfo.pNext = NULL;
+	applicationInfo.pApplicationName = PROGRAM_NAME;
+	applicationInfo.applicationVersion = 0;
+	applicationInfo.pEngineName = NULL;
+	applicationInfo.engineVersion = 0;
+	applicationInfo.apiVersion = appApiVersion;
+
 	VkInstanceCreateInfo instanceCreateInfo;
 	instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	instanceCreateInfo.pNext = pNextChain;
@@ -233,15 +231,6 @@ bool create_instance(Gpu_t* const gpu)
 	instanceCreateInfo.ppEnabledLayerNames = enabledLayers;
 	instanceCreateInfo.enabledExtensionCount = enabledExtensionCount;
 	instanceCreateInfo.ppEnabledExtensionNames = enabledExtensions;
-
-	GET_RESULT(vkCreateInstance(&instanceCreateInfo, allocator, &gpu->instance))
-#ifndef NDEBUG
-	if (result != VK_SUCCESS) {
-		VULKAN_FAILURE(vkCreateInstance, 3, 'p', &instanceCreateInfo, 'p', allocator, 'p', &gpu->instance)
-		free_CreateInstanceData(data);
-		return false;
-	}
-#endif // NDEBUG
 
 	printf("Enabled instance layers (%u):\n", enabledLayerCount);
 	for (uint32_t i = 0; i < enabledLayerCount; i++)
@@ -253,13 +242,21 @@ bool create_instance(Gpu_t* const gpu)
 		printf("\tExtension %u: %s\n", i + 1, enabledExtensions[i]);
 	NEWLINE
 
+	VkInstance instance;
+	GET_RESULT(vkCreateInstance(&instanceCreateInfo, allocator, &instance))
+#ifndef NDEBUG
+	if (result != VK_SUCCESS) {
+		VULKAN_FAILURE(vkCreateInstance, 3, 'p', &instanceCreateInfo, 'p', allocator, 'p', &instance)
+		free_CreateInstanceData(data);
+		return false;
+	}
+#endif // NDEBUG
+
+	volkLoadInstanceOnly(instance);
 	free_CreateInstanceData(data);
 
 #ifndef NDEBUG
 	if (extDebugUtils) {
-		const VkInstance instance = gpu->instance;
-		INSTANCE_PROC_ADDR(vkCreateDebugUtilsMessengerEXT)
-
 		debugUtilsMessengerCreateInfo.pNext = NULL;
 		GET_RESULT(vkCreateDebugUtilsMessengerEXT(instance, &debugUtilsMessengerCreateInfo, allocator, &gpu->debugMessenger))
 		if (result != VK_SUCCESS) {
@@ -289,19 +286,11 @@ bool create_device(Gpu_t* const gpu)
 {
 	BEGIN_FUNC
 
-	const VkInstance instance = gpu->instance;
+	const VkInstance instance = volkGetLoadedInstance();
 	const VkAllocationCallbacks* const allocator = gpu->allocator;
 
 	CreateDeviceData_t data = {0};
 	VkResult result;
-
-	INSTANCE_PROC_ADDR(vkEnumeratePhysicalDevices)
-	INSTANCE_PROC_ADDR(vkEnumerateDeviceExtensionProperties)
-	INSTANCE_PROC_ADDR(vkGetPhysicalDeviceProperties2)
-	INSTANCE_PROC_ADDR(vkGetPhysicalDeviceMemoryProperties2)
-	INSTANCE_PROC_ADDR(vkGetPhysicalDeviceQueueFamilyProperties2)
-	INSTANCE_PROC_ADDR(vkGetPhysicalDeviceFeatures2)
-	INSTANCE_PROC_ADDR(vkCreateDevice)
 
 	uint32_t physicalDeviceCount;
 	GET_RESULT(vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, NULL))
@@ -325,11 +314,7 @@ bool create_device(Gpu_t* const gpu)
 #endif // NDEBUG
 
 	size_t size =
-		physicalDeviceCount * 5 * sizeof(bool) +
-		physicalDeviceCount * 2 * sizeof(uint32_t) +
 		physicalDeviceCount *     sizeof(VkPhysicalDevice) +
-		physicalDeviceCount *     sizeof(VkExtensionProperties*) +
-		physicalDeviceCount *     sizeof(VkQueueFamilyProperties2*) +
 		physicalDeviceCount *     sizeof(VkPhysicalDeviceProperties2) +
 		physicalDeviceCount *     sizeof(VkPhysicalDeviceFeatures2) +
 		physicalDeviceCount *     sizeof(VkPhysicalDevice16BitStorageFeatures) +
@@ -337,70 +322,46 @@ bool create_device(Gpu_t* const gpu)
 		physicalDeviceCount *     sizeof(VkPhysicalDeviceMemoryProperties2) +
 		physicalDeviceCount *     sizeof(VkPhysicalDeviceMemoryPriorityFeaturesEXT) +
 		physicalDeviceCount *     sizeof(VkPhysicalDeviceSynchronization2FeaturesKHR) +
-		physicalDeviceCount *     sizeof(VkPhysicalDeviceTimelineSemaphoreFeatures);
+		physicalDeviceCount *     sizeof(VkPhysicalDeviceTimelineSemaphoreFeatures) +
+		physicalDeviceCount *     sizeof(VkExtensionProperties*) +
+		physicalDeviceCount *     sizeof(VkQueueFamilyProperties2*) +
+		physicalDeviceCount * 2 * sizeof(uint32_t) +
+		physicalDeviceCount * 5 * sizeof(bool);
 
 	data.devices = malloc(size);
 #ifndef NDEBUG
 	if (!data.devices) {
-		MALLOC_FAILURE(data.devices, size)
+		MALLOC_FAILURE(data.devices)
 		free_CreateDeviceData(data);
 		return false;
 	}
 #endif // NDEBUG
 
 	VkPhysicalDevice* const physicalDevices = (VkPhysicalDevice*) data.devices;
-	size_t offset = physicalDeviceCount * sizeof(VkPhysicalDevice);
 
-	uint32_t* const extensionPropertyCounts = (uint32_t*) ((char*) physicalDevices + offset);
-	offset += physicalDeviceCount * sizeof(uint32_t);
+	VkExtensionProperties**    const extensionsProperties    = (VkExtensionProperties**)    (physicalDevices      + physicalDeviceCount);
+	VkQueueFamilyProperties2** const queueFamiliesProperties = (VkQueueFamilyProperties2**) (extensionsProperties + physicalDeviceCount);
 
-	uint32_t* const queueFamilyPropertyCounts = (uint32_t*) ((char*) physicalDevices + offset);
-	offset += physicalDeviceCount * sizeof(uint32_t);
+	VkPhysicalDeviceProperties2* const physicalDevicesProperties = (VkPhysicalDeviceProperties2*) (queueFamiliesProperties   + physicalDeviceCount);
+	VkPhysicalDeviceFeatures2*   const physicalDevicesFeatures   = (VkPhysicalDeviceFeatures2*)   (physicalDevicesProperties + physicalDeviceCount);
 
-	VkExtensionProperties** const extensionsProperties = (VkExtensionProperties**) ((char*) physicalDevices + offset);
-	offset += physicalDeviceCount * sizeof(VkExtensionProperties*);
+	VkPhysicalDevice16BitStorageFeatures*    const physicalDevices16BitStorageFeatures = (VkPhysicalDevice16BitStorageFeatures*)    (physicalDevicesFeatures             + physicalDeviceCount);
+	VkPhysicalDeviceMaintenance4FeaturesKHR* const physicalDevicesMaintenance4Features = (VkPhysicalDeviceMaintenance4FeaturesKHR*) (physicalDevices16BitStorageFeatures + physicalDeviceCount);
 
-	VkQueueFamilyProperties2** const queueFamiliesProperties = (VkQueueFamilyProperties2**) ((char*) physicalDevices + offset);
-	offset += physicalDeviceCount * sizeof(VkQueueFamilyProperties2*);
+	VkPhysicalDeviceMemoryProperties2*         const physicalDevicesMemoryProperties       = (VkPhysicalDeviceMemoryProperties2*)         (physicalDevicesMaintenance4Features + physicalDeviceCount);
+	VkPhysicalDeviceMemoryPriorityFeaturesEXT* const physicalDevicesMemoryPriorityFeatures = (VkPhysicalDeviceMemoryPriorityFeaturesEXT*) (physicalDevicesMemoryProperties     + physicalDeviceCount);
 
-	VkPhysicalDeviceProperties2* const physicalDevicesProperties = (VkPhysicalDeviceProperties2*) ((char*) physicalDevices + offset);
-	offset += physicalDeviceCount * sizeof(VkPhysicalDeviceProperties2);
+	VkPhysicalDeviceSynchronization2FeaturesKHR* const physicalDevicesSynchronization2Features  = (VkPhysicalDeviceSynchronization2FeaturesKHR*) (physicalDevicesMemoryPriorityFeatures   + physicalDeviceCount);
+	VkPhysicalDeviceTimelineSemaphoreFeatures*   const physicalDevicesTimelineSemaphoreFeatures = (VkPhysicalDeviceTimelineSemaphoreFeatures*)   (physicalDevicesSynchronization2Features + physicalDeviceCount);
 
-	VkPhysicalDeviceFeatures2* const physicalDevicesFeatures = (VkPhysicalDeviceFeatures2*) ((char*) physicalDevices + offset);
-	offset += physicalDeviceCount * sizeof(VkPhysicalDeviceFeatures2);
+	uint32_t* const extensionPropertyCounts   = (uint32_t*) (physicalDevicesTimelineSemaphoreFeatures + physicalDeviceCount);
+	uint32_t* const queueFamilyPropertyCounts = (uint32_t*) (extensionPropertyCounts                  + physicalDeviceCount);
 
-	VkPhysicalDevice16BitStorageFeatures* const physicalDevices16BitStorageFeatures = (VkPhysicalDevice16BitStorageFeatures*) ((char*) physicalDevices + offset);
-	offset += physicalDeviceCount * sizeof(VkPhysicalDevice16BitStorageFeatures);
-
-	VkPhysicalDeviceMaintenance4FeaturesKHR* const physicalDevicesMaintenance4Features = (VkPhysicalDeviceMaintenance4FeaturesKHR*) ((char*) physicalDevices + offset);
-	offset += physicalDeviceCount * sizeof(VkPhysicalDeviceMaintenance4FeaturesKHR);
-
-	VkPhysicalDeviceMemoryProperties2* const physicalDevicesMemoryProperties = (VkPhysicalDeviceMemoryProperties2*) ((char*) physicalDevices + offset);
-	offset += physicalDeviceCount * sizeof(VkPhysicalDeviceMemoryProperties2);
-
-	VkPhysicalDeviceMemoryPriorityFeaturesEXT* const physicalDevicesMemoryPriorityFeatures = (VkPhysicalDeviceMemoryPriorityFeaturesEXT*) ((char*) physicalDevices + offset);
-	offset += physicalDeviceCount * sizeof(VkPhysicalDeviceMemoryPriorityFeaturesEXT);
-
-	VkPhysicalDeviceSynchronization2FeaturesKHR* const physicalDevicesSynchronization2Features = (VkPhysicalDeviceSynchronization2FeaturesKHR*) ((char*) physicalDevices + offset);
-	offset += physicalDeviceCount * sizeof(VkPhysicalDeviceSynchronization2FeaturesKHR);
-
-	VkPhysicalDeviceTimelineSemaphoreFeatures* const physicalDevicesTimelineSemaphoreFeatures = (VkPhysicalDeviceTimelineSemaphoreFeatures*) ((char*) physicalDevices + offset);
-	offset += physicalDeviceCount * sizeof(VkPhysicalDeviceTimelineSemaphoreFeatures);
-
-	bool* const haveMaintenance4 = (bool*) ((char*) physicalDevices + offset);
-	offset += physicalDeviceCount * sizeof(bool);
-
-	bool* const haveSynchronization2 = (bool*) ((char*) physicalDevices + offset);
-	offset += physicalDeviceCount * sizeof(bool);
-
-	bool* const havePortabilitySubset = (bool*) ((char*) physicalDevices + offset);
-	offset += physicalDeviceCount * sizeof(bool);
-
-	bool* const haveMemoryBudget = (bool*) ((char*) physicalDevices + offset);
-	offset += physicalDeviceCount * sizeof(bool);
-
-	bool* const haveMemoryPriority = (bool*) ((char*) physicalDevices + offset);
-	offset += physicalDeviceCount * sizeof(bool);
+	bool* const haveMaintenance4      = (bool*) (queueFamilyPropertyCounts + physicalDeviceCount);
+	bool* const haveSynchronization2  = (bool*) (haveMaintenance4          + physicalDeviceCount);
+	bool* const havePortabilitySubset = (bool*) (haveSynchronization2      + physicalDeviceCount);
+	bool* const haveMemoryBudget      = (bool*) (havePortabilitySubset     + physicalDeviceCount);
+	bool* const haveMemoryPriority    = (bool*) (haveMemoryBudget          + physicalDeviceCount);
 
 	GET_RESULT(vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, physicalDevices))
 #ifndef NDEBUG
@@ -435,20 +396,20 @@ bool create_device(Gpu_t* const gpu)
 	}
 
 	size =
-		extensionTotal   * sizeof(VkExtensionProperties) +
-		queueFamilyTotal * sizeof(VkQueueFamilyProperties2);
+		queueFamilyTotal * sizeof(VkQueueFamilyProperties2) +
+		extensionTotal   * sizeof(VkExtensionProperties);
 
 	data.properties = malloc(size);
 #ifndef NDEBUG
 	if (!data.properties) {
-		MALLOC_FAILURE(data.properties, size)
+		MALLOC_FAILURE(data.properties)
 		free_CreateDeviceData(data);
 		return false;
 	}
 #endif // NDEBUG
 
-	extensionsProperties[0]    = (VkExtensionProperties*) data.properties;
-	queueFamiliesProperties[0] = (VkQueueFamilyProperties2*) (extensionsProperties[0] + extensionTotal);
+	queueFamiliesProperties[0] = (VkQueueFamilyProperties2*) data.properties;
+	extensionsProperties[0]    = (VkExtensionProperties*) (queueFamiliesProperties[0] + queueFamilyTotal);
 
 	for (uint32_t i = 1; i < physicalDeviceCount; i++) {
 		extensionsProperties[i] = extensionsProperties[i - 1] + extensionPropertyCounts[i - 1];
@@ -617,13 +578,11 @@ bool create_device(Gpu_t* const gpu)
 			physicalDeviceIndex = i;
 	}
 
-#ifndef NDEBUG
 	if (physicalDeviceIndex == UINT32_MAX) {
-		fprintf(stderr, "Device failure at line %d\nNo physical device meets requirements of program\n\n", __LINE__);
+		fprintf(stderr, "Vulkan failure\nNo physical device meets requirements of program\n\n");
 		free_CreateDeviceData(data);
 		return false;
 	}
-#endif // NDEBUG
 
 	const VkPhysicalDevice physicalDevice = physicalDevices[physicalDeviceIndex];
 	gpu->physicalDevice = physicalDevice;
@@ -829,7 +788,7 @@ bool create_device(Gpu_t* const gpu)
 	gpu->timestampPeriod = physicalDevicesProperties[physicalDeviceIndex].properties.limits.timestampPeriod;
 #endif // QUERY_BENCHMARKING
 
-	// CPU spends more time waiting for compute operations than transfer operations
+	// CPU spends much more time waiting for compute operations than transfer operations
 	// So compute queue has higher priority to potentially reduce this wait time
 	const float computeQueuePriority = 1.0f;
 	const float transferQueuePriority = 0.0f;
@@ -861,15 +820,6 @@ bool create_device(Gpu_t* const gpu)
 	deviceCreateInfo.ppEnabledExtensionNames = enabledExtensions;
 	deviceCreateInfo.pEnabledFeatures = NULL;
 
-	GET_RESULT(vkCreateDevice(physicalDevice, &deviceCreateInfo, allocator, &gpu->device))
-#ifndef NDEBUG
-	if (result != VK_SUCCESS) {
-		VULKAN_FAILURE(vkCreateDevice, 4, 'p', physicalDevice, 'p', &deviceCreateInfo, 'p', allocator, 'p', &gpu->device)
-		free_CreateDeviceData(data);
-		return false;
-	}
-#endif // NDEBUG
-
 	printf(
 		"Device: %s\n"
 		"\tTransfer QF index: %u\n"
@@ -896,11 +846,18 @@ bool create_device(Gpu_t* const gpu)
 		printf("\tExtension %u: %s\n", i + 1, enabledExtensions[i]);
 	NEWLINE
 
-	free_CreateDeviceData(data);
+	VkDevice device;
+	GET_RESULT(vkCreateDevice(physicalDevice, &deviceCreateInfo, allocator, &device))
+#ifndef NDEBUG
+	if (result != VK_SUCCESS) {
+		VULKAN_FAILURE(vkCreateDevice, 4, 'p', physicalDevice, 'p', &deviceCreateInfo, 'p', allocator, 'p', &device)
+		free_CreateDeviceData(data);
+		return false;
+	}
+#endif // NDEBUG
 
-	const VkDevice device = gpu->device;
-	INSTANCE_PROC_ADDR(vkGetDeviceProcAddr)
-	DEVICE_PROC_ADDR(vkGetDeviceQueue2)
+	volkLoadDevice(device);
+	free_CreateDeviceData(data);
 
 	VkDeviceQueueInfo2 transferQueueInfo;
 	transferQueueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2;
@@ -920,9 +877,7 @@ bool create_device(Gpu_t* const gpu)
 	vkGetDeviceQueue2(device, &computeQueueInfo, &gpu->computeQueue);
 
 #ifndef NDEBUG
-	CHECK_HANDLE(gpu->debugMessenger) {
-		DEVICE_PROC_ADDR(vkSetDebugUtilsObjectNameEXT)
-
+	if(gpu->debugMessenger) {
 		VkDebugUtilsObjectNameInfoEXT debugUtilsObjectNameInfo;
 		debugUtilsObjectNameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
 		debugUtilsObjectNameInfo.pNext = NULL;
@@ -931,16 +886,16 @@ bool create_device(Gpu_t* const gpu)
 		if (gpu->transferQueue == gpu->computeQueue) {
 			debugUtilsObjectNameInfo.objectHandle = (uint64_t) gpu->transferQueue;
 			debugUtilsObjectNameInfo.pObjectName = "Transfer & compute queue";
-			SET_DEBUG_NAME
+			SET_DEBUG_NAME()
 		}
 		else {
 			debugUtilsObjectNameInfo.objectHandle = (uint64_t) gpu->transferQueue;
 			debugUtilsObjectNameInfo.pObjectName = "Transfer queue";
-			SET_DEBUG_NAME
+			SET_DEBUG_NAME()
 
 			debugUtilsObjectNameInfo.objectHandle = (uint64_t) gpu->computeQueue;
 			debugUtilsObjectNameInfo.pObjectName = "Compute queue";
-			SET_DEBUG_NAME
+			SET_DEBUG_NAME()
 		}
 	}
 #endif // NDEBUG
@@ -953,17 +908,11 @@ bool manage_memory(Gpu_t* const gpu)
 {
 	BEGIN_FUNC
 
-	const VkInstance instance = gpu->instance;
+	const VkDevice device = volkGetLoadedDevice();
 	const VkPhysicalDevice physicalDevice = gpu->physicalDevice;
-	const VkDevice device = gpu->device;
 	const uint32_t hostVisibleMemoryHeapIndex = gpu->hostVisibleMemoryHeapIndex;
 	const uint32_t deviceLocalMemoryHeapIndex = gpu->deviceLocalMemoryHeapIndex;
 	const bool usingMemoryBudget = gpu->usingMemoryBudget;
-
-	INSTANCE_PROC_ADDR(vkGetPhysicalDeviceProperties2)
-	INSTANCE_PROC_ADDR(vkGetPhysicalDeviceMemoryProperties2)
-	INSTANCE_PROC_ADDR(vkGetDeviceProcAddr)
-	DEVICE_PROC_ADDR(vkGetDeviceBufferMemoryRequirementsKHR)
 
 	VkPhysicalDeviceMaintenance3Properties physicalDeviceMaintenance3Properties;
 	physicalDeviceMaintenance3Properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES;
@@ -1042,7 +991,9 @@ bool manage_memory(Gpu_t* const gpu)
 		bytesPerBuffer -= excessBytes % buffersPerDeviceMemory ? 1 : 0;
 	}
 
-	uint32_t valuesPerInoutBuffer = min_uint32(maxInBufferRange / sizeof(value_t), maxOutBufferRange / sizeof(step_t));
+	const uint32_t valuesPerInBuffer = maxInBufferRange / sizeof(value_t);
+	const uint32_t valuesPerOutBuffer = maxOutBufferRange / sizeof(step_t);
+	uint32_t valuesPerInoutBuffer = min_uint32(valuesPerInBuffer, valuesPerOutBuffer);
 	uint32_t computeWorkGroupSize = maxComputeWorkGroupSize;
 	uint32_t computeWorkGroupCount = min_uint32(maxComputeWorkGroupCount, valuesPerInoutBuffer / maxComputeWorkGroupSize);
 
@@ -1196,7 +1147,7 @@ bool manage_memory(Gpu_t* const gpu)
 		inoutBuffersPerHeap   * sizeof(VkCommandBuffer) + // Compute command buffers
 		inoutBuffersPerHeap   * sizeof(VkSemaphore);      // Semaphores
 
-	gpu->dynamicMemory = calloc(1, size);
+	gpu->dynamicMemory = calloc((size_t) 1, size);
 #ifndef NDEBUG
 	if (!gpu->dynamicMemory) {
 		CALLOC_FAILURE(gpu->dynamicMemory, 1, size)
@@ -1204,7 +1155,7 @@ bool manage_memory(Gpu_t* const gpu)
 	}
 #endif // NDEBUG
 
-	gpu->mappedHostVisibleInBuffers = (value_t**) gpu->dynamicMemory;
+	gpu->mappedHostVisibleInBuffers  = (value_t**) gpu->dynamicMemory;
 	gpu->mappedHostVisibleOutBuffers = (step_t**) (gpu->mappedHostVisibleInBuffers + inoutBuffersPerHeap);
 
 	gpu->hostVisibleBuffers = (VkBuffer*) (gpu->mappedHostVisibleOutBuffers + inoutBuffersPerHeap);
@@ -1238,8 +1189,7 @@ bool create_buffers(Gpu_t* const gpu)
 {
 	BEGIN_FUNC
 
-	const VkInstance instance = gpu->instance;
-	const VkDevice device = gpu->device;
+	const VkDevice device = volkGetLoadedDevice();
 	const uint32_t hostVisibleMemoryTypeIndex = gpu->hostVisibleMemoryTypeIndex;
 	const uint32_t deviceLocalMemoryTypeIndex = gpu->deviceLocalMemoryTypeIndex;
 	VkDeviceMemory* const hostVisibleDeviceMemories = gpu->hostVisibleDeviceMemories;
@@ -1265,17 +1215,11 @@ bool create_buffers(Gpu_t* const gpu)
 	CreateBuffersData_t data = {0};
 	VkResult result;
 
-	INSTANCE_PROC_ADDR(vkGetDeviceProcAddr)
-	DEVICE_PROC_ADDR(vkCreateBuffer)
-	DEVICE_PROC_ADDR(vkAllocateMemory)
-	DEVICE_PROC_ADDR(vkBindBufferMemory2)
-	DEVICE_PROC_ADDR(vkMapMemory)
-
 	size_t size = buffersPerHeap * 2 * sizeof(VkBindBufferMemoryInfo);
 	data.memory = malloc(size);
 #ifndef NDEBUG
 	if (!data.memory) {
-		MALLOC_FAILURE(data.memory, size)
+		MALLOC_FAILURE(data.memory)
 		free_CreateBuffersData(data);
 		return false;
 	}
@@ -1393,7 +1337,7 @@ bool create_buffers(Gpu_t* const gpu)
 
 	uint32_t inoIndex = 0; // Inout-buffer index
 	for (uint32_t i = 0; i < deviceMemoriesPerHeap; i++) {
-		GET_RESULT(vkMapMemory(device, hostVisibleDeviceMemories[i], 0, bytesPerHostVisibleDeviceMemory, 0, (void**) &mappedHostVisibleInBuffers[inoIndex]))
+		GET_RESULT(vkMapMemory(device, hostVisibleDeviceMemories[i], (VkDeviceSize) 0, bytesPerHostVisibleDeviceMemory, 0, (void**) &mappedHostVisibleInBuffers[inoIndex]))
 #ifndef NDEBUG
 		if (result != VK_SUCCESS) {
 			VULKAN_FAILURE(vkMapMemory, 6, 'p', device, 'p', hostVisibleDeviceMemories[i], 'u', 0, 'u', bytesPerHostVisibleDeviceMemory, 'u', 0, 'p', (void**) &mappedHostVisibleInBuffers[inoIndex])
@@ -1401,31 +1345,30 @@ bool create_buffers(Gpu_t* const gpu)
 			return false;
 		}
 #endif // NDEBUG
+		mappedHostVisibleOutBuffers[inoIndex] = (step_t*) (mappedHostVisibleInBuffers[inoIndex] + valuesPerInoutBuffer);
+		inoIndex++;
 
-		for (uint32_t j = 0; /* j < buffersPerDeviceMemory */; /* j++ */) {
-			for (uint32_t k = 0; /* k < inoutBuffersPerBuffer */; /* k++ */) {
-				mappedHostVisibleOutBuffers[inoIndex] = (step_t*) (mappedHostVisibleInBuffers[inoIndex] + valuesPerInoutBuffer);
+		for (uint32_t j = 1; j < inoutBuffersPerBuffer; j++, inoIndex++) {
+			mappedHostVisibleInBuffers [inoIndex] = (value_t*) (mappedHostVisibleOutBuffers[inoIndex - 1] + valuesPerInoutBuffer);
+			mappedHostVisibleOutBuffers[inoIndex] = (step_t*)  (mappedHostVisibleInBuffers [inoIndex]     + valuesPerInoutBuffer);
+		}
 
-				k++;
-				inoIndex++;
-				if (k == inoutBuffersPerBuffer) break;
+		for (uint32_t j = 1; j < buffersPerDeviceMemory; j++) {
+			mappedHostVisibleInBuffers [inoIndex] = (value_t*) ((char*) (mappedHostVisibleOutBuffers[inoIndex - 1] + valuesPerInoutBuffer) + hostVisibleBufferAlignment);
+			mappedHostVisibleOutBuffers[inoIndex] = (step_t*)  (mappedHostVisibleInBuffers[inoIndex] + valuesPerInoutBuffer);
+			inoIndex++;
 
-				mappedHostVisibleInBuffers[inoIndex] = (value_t*) (mappedHostVisibleOutBuffers[inoIndex - 1] + valuesPerInoutBuffer);
+			for (uint32_t k = 1; k < inoutBuffersPerBuffer; k++, inoIndex++) {
+				mappedHostVisibleInBuffers [inoIndex] = (value_t*) (mappedHostVisibleOutBuffers[inoIndex - 1] + valuesPerInoutBuffer);
+				mappedHostVisibleOutBuffers[inoIndex] = (step_t*)  (mappedHostVisibleInBuffers [inoIndex]     + valuesPerInoutBuffer);
 			}
-
-			j++;
-			if (j == buffersPerDeviceMemory) break;
-
-			mappedHostVisibleInBuffers[inoIndex] = (value_t*) ((char*) (mappedHostVisibleOutBuffers[inoIndex - 1] + valuesPerInoutBuffer) + hostVisibleBufferAlignment);
 		}
 	}
 
 	free_CreateBuffersData(data);
 
 #ifndef NDEBUG
-	CHECK_HANDLE(gpu->debugMessenger) {
-		DEVICE_PROC_ADDR(vkSetDebugUtilsObjectNameEXT)
-
+	if(gpu->debugMessenger) {
 		char objectName[80];
 		VkDebugUtilsObjectNameInfoEXT debugUtilsObjectNameInfo;
 		debugUtilsObjectNameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
@@ -1443,13 +1386,13 @@ bool create_buffers(Gpu_t* const gpu)
 				);
 
 				debugUtilsObjectNameInfo.objectHandle = (uint64_t) hostVisibleBuffers[bufIndex];
-				SET_DEBUG_NAME
+				SET_DEBUG_NAME()
 
 				strcpy(objectName, "Device local"); // strlen("Host visible") == strlen("Device local")
 				objectName[12] = ' '; // Remove '\0' from strcpy
 
 				debugUtilsObjectNameInfo.objectHandle = (uint64_t) deviceLocalBuffers[bufIndex];
-				SET_DEBUG_NAME
+				SET_DEBUG_NAME()
 			}
 		}
 
@@ -1463,13 +1406,13 @@ bool create_buffers(Gpu_t* const gpu)
 			);
 
 			debugUtilsObjectNameInfo.objectHandle = (uint64_t) hostVisibleDeviceMemories[i];
-			SET_DEBUG_NAME
+			SET_DEBUG_NAME()
 
 			strcpy(objectName, "Device local"); // strlen("Host visible") == strlen("Device local")
 			objectName[12] = ' '; // Remove '\0' from strcpy
 
 			debugUtilsObjectNameInfo.objectHandle = (uint64_t) deviceLocalDeviceMemories[i];
-			SET_DEBUG_NAME
+			SET_DEBUG_NAME()
 		}
 	}
 #endif // NDEBUG
@@ -1492,8 +1435,7 @@ bool create_descriptors(Gpu_t* const gpu)
 {
 	BEGIN_FUNC
 
-	const VkInstance instance = gpu->instance;
-	const VkDevice device = gpu->device;
+	const VkDevice device = volkGetLoadedDevice();
 	const VkBuffer* const deviceLocalBuffers = gpu->deviceLocalBuffers;
 	const VkDeviceSize inBufferAlignment = gpu->inBufferAlignment;
 	VkDescriptorSet* const descriptorSets = gpu->descriptorSets;
@@ -1512,13 +1454,6 @@ bool create_descriptors(Gpu_t* const gpu)
 	CreateDescriptorsData_t data = {0};
 	VkResult result;
 
-	INSTANCE_PROC_ADDR(vkGetDeviceProcAddr)
-	DEVICE_PROC_ADDR(vkCreateDescriptorSetLayout)
-	DEVICE_PROC_ADDR(vkCreateDescriptorPool)
-	DEVICE_PROC_ADDR(vkAllocateDescriptorSets)
-	DEVICE_PROC_ADDR(vkUpdateDescriptorSets)
-	DEVICE_PROC_ADDR(vkCreateQueryPool)
-
 	size_t size =
 		inoutBuffersPerHeap     * sizeof(VkDescriptorSetLayout) +  // Descriptor set layouts
 		inoutBuffersPerHeap * 2 * sizeof(VkDescriptorBufferInfo) + // In-buffer & out-buffer descriptor buffer information
@@ -1527,7 +1462,7 @@ bool create_descriptors(Gpu_t* const gpu)
 	data.memory = malloc(size);
 #ifndef NDEBUG
 	if (!data.memory) {
-		MALLOC_FAILURE(data.memory, size)
+		MALLOC_FAILURE(data.memory)
 		free_CreateDescriptorsData(data);
 		return false;
 	}
@@ -1670,10 +1605,9 @@ bool create_descriptors(Gpu_t* const gpu)
 	free_CreateDescriptorsData(data);
 
 #ifndef NDEBUG
-	CHECK_HANDLE(gpu->debugMessenger) {
+	if(gpu->debugMessenger) {
 		const uint32_t buffersPerDeviceMemory = gpu->buffersPerDeviceMemory;
 		const uint32_t deviceMemoriesPerHeap = gpu->deviceMemoriesPerHeap;
-		DEVICE_PROC_ADDR(vkSetDebugUtilsObjectNameEXT)
 
 		char objectName[122];
 		VkDebugUtilsObjectNameInfoEXT debugUtilsObjectNameInfo;
@@ -1692,7 +1626,7 @@ bool create_descriptors(Gpu_t* const gpu)
 					);
 
 					debugUtilsObjectNameInfo.objectHandle = (uint64_t) descriptorSets[inoIndex];
-					SET_DEBUG_NAME
+					SET_DEBUG_NAME()
 				}
 			}
 		}
@@ -1719,8 +1653,7 @@ bool create_pipeline(Gpu_t* const gpu)
 {
 	BEGIN_FUNC
 
-	const VkInstance instance = gpu->instance;
-	const VkDevice device = gpu->device;
+	const VkDevice device = volkGetLoadedDevice();
 	const VkDescriptorSetLayout descriptorSetLayout = gpu->descriptorSetLayout;
 
 	const uint32_t valuesPerInoutBuffer = gpu->valuesPerInoutBuffer;
@@ -1732,14 +1665,6 @@ bool create_pipeline(Gpu_t* const gpu)
 	VkResult result;
 	int fileResult;
 	size_t readResult;
-
-	INSTANCE_PROC_ADDR(vkGetDeviceProcAddr)
-	DEVICE_PROC_ADDR(vkCreateShaderModule)
-	DEVICE_PROC_ADDR(vkCreatePipelineCache)
-	DEVICE_PROC_ADDR(vkCreatePipelineLayout)
-	DEVICE_PROC_ADDR(vkCreateComputePipelines)
-	DEVICE_PROC_ADDR(vkDestroyDescriptorSetLayout)
-	DEVICE_PROC_ADDR(vkDestroyShaderModule)
 
 	// Get shader code from file, pre-compiled into SPIR-V
 	const char* const shaderName = usingShaderInt64 ? SHADER64_NAME : SHADER32_NAME;
@@ -1781,21 +1706,21 @@ bool create_pipeline(Gpu_t* const gpu)
 
 	rewind(file);
 
-	size_t size = fileSize;
+	size_t size = (size_t) fileSize;
 	data.shaderCode = malloc(size);
 #ifndef NDEBUG
 	if (!data.shaderCode) {
-		MALLOC_FAILURE(data.shaderCode, size)
+		MALLOC_FAILURE(data.shaderCode)
 		fclose(file);
 		free_CreatePipelineData(data);
 		return false;
 	}
 #endif // NDEBUG
 
-	const size_t shaderSize = fileSize;
+	const size_t shaderSize = (size_t) fileSize;
 	uint32_t* const shaderCode = (uint32_t*) data.shaderCode;
 
-	GET_READ_RESULT(fread(shaderCode, 1, shaderSize, file))
+	GET_READ_RESULT(fread(shaderCode, (size_t) 1, shaderSize, file))
 #ifndef NDEBUG
 	if (readResult != shaderSize) {
 		FREAD_FAILURE(shaderCode, 1, shaderSize)
@@ -1842,21 +1767,21 @@ bool create_pipeline(Gpu_t* const gpu)
 
 		rewind(file);
 
-		size = fileSize;
+		size = (size_t) fileSize;
 		data.pipelineCache = malloc(size);
 #ifndef NDEBUG
 		if (!data.pipelineCache) {
-			MALLOC_FAILURE(data.pipelineCache, size)
+			MALLOC_FAILURE(data.pipelineCache)
 			fclose(file);
 			free_CreatePipelineData(data);
 			return false;
 		}
 #endif // NDEBUG
 
-		cacheSize = fileSize;
+		cacheSize = (size_t) fileSize;
 		cacheData = data.pipelineCache;
 
-		GET_READ_RESULT(fread(cacheData, 1, cacheSize, file))
+		GET_READ_RESULT(fread(cacheData, (size_t) 1, cacheSize, file))
 #ifndef NDEBUG
 		if (readResult != cacheSize) {
 			FREAD_FAILURE(cacheData, 1, cacheSize)
@@ -2001,8 +1926,7 @@ bool create_commands(Gpu_t* const gpu)
 {
 	BEGIN_FUNC
 
-	const VkInstance instance = gpu->instance;
-	const VkDevice device = gpu->device;
+	const VkDevice device = volkGetLoadedDevice();
 	const uint32_t transferQueueFamilyIndex = gpu->transferQueueFamilyIndex;
 	const uint32_t computeQueueFamilyIndex = gpu->computeQueueFamilyIndex;
 	const VkDeviceSize inBufferAlignment = gpu->inBufferAlignment;
@@ -2032,21 +1956,6 @@ bool create_commands(Gpu_t* const gpu)
 	CreateCommandsData_t data = {0};
 	VkResult result;
 
-	INSTANCE_PROC_ADDR(vkGetDeviceProcAddr)
-	DEVICE_PROC_ADDR(vkCreateCommandPool)
-	DEVICE_PROC_ADDR(vkAllocateCommandBuffers)
-	DEVICE_PROC_ADDR(vkBeginCommandBuffer)
-	DEVICE_PROC_ADDR(vkEndCommandBuffer)
-	DEVICE_PROC_ADDR(vkCmdCopyBuffer)
-	DEVICE_PROC_ADDR(vkCmdBindPipeline)
-	DEVICE_PROC_ADDR(vkCmdBindDescriptorSets)
-	DEVICE_PROC_ADDR(vkCmdDispatch)
-	DEVICE_PROC_ADDR(vkCmdResetQueryPool)
-	DEVICE_PROC_ADDR(vkCmdWriteTimestamp2KHR)
-	DEVICE_PROC_ADDR(vkCmdPipelineBarrier2KHR)
-	DEVICE_PROC_ADDR(vkDestroyPipelineLayout)
-	DEVICE_PROC_ADDR(vkCreateSemaphore)
-
 	size_t size =
 		inoutBuffersPerBuffer   * sizeof(VkBufferCopy) +              // In-buffer copy information
 		inoutBuffersPerBuffer   * sizeof(VkBufferCopy) +              // Out-buffer copy information
@@ -2059,7 +1968,7 @@ bool create_commands(Gpu_t* const gpu)
 	data.memory = malloc(size);
 #ifndef NDEBUG
 	if (!data.memory) {
-		MALLOC_FAILURE(data.memory, size)
+		MALLOC_FAILURE(data.memory)
 		free_CreateCommandsData(data);
 		return false;
 	}
@@ -2567,10 +2476,9 @@ bool create_commands(Gpu_t* const gpu)
 	free_CreateCommandsData(data);
 
 #ifndef NDEBUG
-	CHECK_HANDLE(gpu->debugMessenger) {
+	if(gpu->debugMessenger) {
 		const uint32_t buffersPerDeviceMemory = gpu->buffersPerDeviceMemory;
 		const uint32_t deviceMemoriesPerHeap = gpu->deviceMemoriesPerHeap;
-		DEVICE_PROC_ADDR(vkSetDebugUtilsObjectNameEXT)
 
 		char objectName[134];
 		VkDebugUtilsObjectNameInfoEXT debugUtilsObjectNameInfo;
@@ -2580,25 +2488,25 @@ bool create_commands(Gpu_t* const gpu)
 		debugUtilsObjectNameInfo.objectType = VK_OBJECT_TYPE_COMMAND_POOL;
 		debugUtilsObjectNameInfo.objectHandle = (uint64_t) onetimeCommandPool;
 		debugUtilsObjectNameInfo.pObjectName = "Onetime command pool";
-		SET_DEBUG_NAME
+		SET_DEBUG_NAME()
 
 		debugUtilsObjectNameInfo.objectHandle = (uint64_t) transferCommandPool;
 		debugUtilsObjectNameInfo.pObjectName = "Transfer command pool";
-		SET_DEBUG_NAME
+		SET_DEBUG_NAME()
 
 		debugUtilsObjectNameInfo.objectHandle = (uint64_t) computeCommandPool;
 		debugUtilsObjectNameInfo.pObjectName = "Compute command pool";
-		SET_DEBUG_NAME
+		SET_DEBUG_NAME()
 
 		debugUtilsObjectNameInfo.objectType = VK_OBJECT_TYPE_COMMAND_BUFFER;
 		debugUtilsObjectNameInfo.objectHandle = (uint64_t) onetimeCommandBuffer;
 		debugUtilsObjectNameInfo.pObjectName = "Onetime command buffer";
-		SET_DEBUG_NAME
+		SET_DEBUG_NAME()
 
 		debugUtilsObjectNameInfo.objectType = VK_OBJECT_TYPE_SEMAPHORE;
 		debugUtilsObjectNameInfo.objectHandle = (uint64_t) gpu->onetimeSemaphore;
 		debugUtilsObjectNameInfo.pObjectName = "Onetime semaphore";
-		SET_DEBUG_NAME
+		SET_DEBUG_NAME()
 
 		debugUtilsObjectNameInfo.pObjectName = objectName;
 
@@ -2617,20 +2525,20 @@ bool create_commands(Gpu_t* const gpu)
 
 					debugUtilsObjectNameInfo.objectType = VK_OBJECT_TYPE_COMMAND_BUFFER;
 					debugUtilsObjectNameInfo.objectHandle = (uint64_t) transferCommandBuffers[inoIndex];
-					SET_DEBUG_NAME
+					SET_DEBUG_NAME()
 
 					strcpy(objectName, "Compute command buffer ");
 					strcat(objectName, specs);
 
 					debugUtilsObjectNameInfo.objectHandle = (uint64_t) computeCommandBuffers[inoIndex];
-					SET_DEBUG_NAME
+					SET_DEBUG_NAME()
 
 					strcpy(objectName, "Transfer-compute semaphore ");
 					strcat(objectName, specs);
 
 					debugUtilsObjectNameInfo.objectType = VK_OBJECT_TYPE_SEMAPHORE;
 					debugUtilsObjectNameInfo.objectHandle = (uint64_t) semaphores[inoIndex];
-					SET_DEBUG_NAME
+					SET_DEBUG_NAME()
 				}
 			}
 		}
@@ -2775,8 +2683,7 @@ bool submit_commands(Gpu_t* const gpu)
 {
 	BEGIN_FUNC
 
-	const VkInstance instance = gpu->instance;
-	const VkDevice device = gpu->device;
+	const VkDevice device = volkGetLoadedDevice();
 	const VkQueue transferQueue = gpu->transferQueue;
 	const VkQueue computeQueue = gpu->computeQueue;
 	const VkDeviceMemory* const hostVisibleDeviceMemories = gpu->hostVisibleDeviceMemories;
@@ -2808,15 +2715,8 @@ bool submit_commands(Gpu_t* const gpu)
 	SubmitCommandsData_t data = {0};
 	VkResult result;
 
-	INSTANCE_PROC_ADDR(vkGetDeviceProcAddr)
-	DEVICE_PROC_ADDR(vkFlushMappedMemoryRanges)
-	DEVICE_PROC_ADDR(vkInvalidateMappedMemoryRanges)
-	DEVICE_PROC_ADDR(vkWaitSemaphores)
-	DEVICE_PROC_ADDR(vkQueueSubmit2KHR)
-	DEVICE_PROC_ADDR(vkGetQueryPoolResults)
-	DEVICE_PROC_ADDR(vkDestroyCommandPool)
-
 	size_t size =
+		inoutBuffersPerHeap * sizeof(value_t) +                      // Tested values
 		inoutBuffersPerHeap * sizeof(VkMappedMemoryRange) +          // In-buffer mapped memory ranges
 		inoutBuffersPerHeap * sizeof(VkMappedMemoryRange) +          // Out-buffer mapped memory ranges
 		inoutBuffersPerHeap * sizeof(VkSubmitInfo2KHR) +             // Transfer submission information
@@ -2828,19 +2728,20 @@ bool submit_commands(Gpu_t* const gpu)
 		inoutBuffersPerHeap * sizeof(VkSemaphoreSubmitInfoKHR) +     // Compute-to-transfer signal semaphore submission information
 		inoutBuffersPerHeap * sizeof(VkSemaphoreSubmitInfoKHR) +     // Compute-to-transfer wait semaphore submission information
 		inoutBuffersPerHeap * sizeof(VkSemaphoreWaitInfo) +          // Transfer semaphore wait information
-		inoutBuffersPerHeap * sizeof(VkSemaphoreWaitInfo) +          // Compute semaphore wait information
-		inoutBuffersPerHeap * sizeof(value_t);                       // Tested values
+		inoutBuffersPerHeap * sizeof(VkSemaphoreWaitInfo);           // Compute semaphore wait information
 
 	data.memory = malloc(size);
 #ifndef NDEBUG
 	if (!data.memory) {
-		MALLOC_FAILURE(data.memory, size)
+		MALLOC_FAILURE(data.memory)
 		free_SubmitCommandsData(data);
 		return false;
 	}
 #endif // NDEBUG
 
-	VkMappedMemoryRange* const hostVisibleInBuffersMappedMemoryRanges  = (VkMappedMemoryRange*) data.memory;
+	value_t* const testedValues = (value_t*) data.memory;
+
+	VkMappedMemoryRange* const hostVisibleInBuffersMappedMemoryRanges  = (VkMappedMemoryRange*) (testedValues                           + inoutBuffersPerHeap);
 	VkMappedMemoryRange* const hostVisibleOutBuffersMappedMemoryRanges = (VkMappedMemoryRange*) (hostVisibleInBuffersMappedMemoryRanges + inoutBuffersPerHeap);
 
 	VkSubmitInfo2KHR* const transferSubmitInfos = (VkSubmitInfo2KHR*) (hostVisibleOutBuffersMappedMemoryRanges + inoutBuffersPerHeap);
@@ -2856,8 +2757,6 @@ bool submit_commands(Gpu_t* const gpu)
 
 	VkSemaphoreWaitInfo* const transferSemaphoreWaitInfos = (VkSemaphoreWaitInfo*) (computeToTransferWaitSemaphoreSubmitInfos + inoutBuffersPerHeap);
 	VkSemaphoreWaitInfo* const computeSemaphoreWaitInfos  = (VkSemaphoreWaitInfo*) (transferSemaphoreWaitInfos                + inoutBuffersPerHeap);
-
-	value_t* const testedValues = (value_t*) (computeSemaphoreWaitInfos + inoutBuffersPerHeap);
 
 	const clock_t bmarkStart = clock();
 
@@ -3305,7 +3204,7 @@ bool submit_commands(Gpu_t* const gpu)
 	printf(
 		"Time: %.0fms\n"
 		"Speed: %.0f/s\n",
-		(double) bmark, 1000.0 * num / (double) bmark
+		(double) bmark, 1000 * num / (double) bmark
 	);
 
 #if END_ON == 1
@@ -3351,8 +3250,8 @@ bool destroy_gpu(Gpu_t* const gpu)
 {
 	BEGIN_FUNC
 
-	const VkInstance instance = gpu->instance;
-	const VkDevice device = gpu->device;
+	const VkInstance instance = volkGetLoadedInstance();
+	const VkDevice device = volkGetLoadedDevice();
 	const VkDeviceMemory* const hostVisibleDeviceMemories = gpu->hostVisibleDeviceMemories;
 	const VkDeviceMemory* const deviceLocalDeviceMemories = gpu->deviceLocalDeviceMemories;
 	const VkBuffer* const hostVisibleBuffers = gpu->hostVisibleBuffers;
@@ -3380,32 +3279,28 @@ bool destroy_gpu(Gpu_t* const gpu)
 	size_t writeResult;
 	int fileResult;
 
-	CHECK_HANDLE(pipelineCache) {
-		INSTANCE_PROC_ADDR(vkGetDeviceProcAddr)
-		DEVICE_PROC_ADDR(vkGetPipelineCacheData)
-		DEVICE_PROC_ADDR(vkDestroyPipelineCache)
-
-		size_t cacheSize;
-		GET_RESULT(vkGetPipelineCacheData(device, pipelineCache, &cacheSize, NULL))
+	if(pipelineCache) {
+		size_t size;
+		GET_RESULT(vkGetPipelineCacheData(device, pipelineCache, &size, NULL))
 #ifndef NDEBUG
 		if (result != VK_SUCCESS) {
-			VULKAN_FAILURE(vkGetPipelineCacheData, 4, 'p', device, 'p', pipelineCache, 'p', &cacheSize, 'p', NULL)
+			VULKAN_FAILURE(vkGetPipelineCacheData, 4, 'p', device, 'p', pipelineCache, 'p', &size, 'p', NULL)
 			return false;
 		}
 #endif // NDEBUG
 
-		void* const cache = malloc(cacheSize);
+		void* const cache = malloc(size);
 #ifndef NDEBUG
 		if (!cache) {
-			MALLOC_FAILURE(cache, cacheSize)
+			MALLOC_FAILURE(cache)
 			return false;
 		}
 #endif // NDEBUG
 
-		GET_RESULT(vkGetPipelineCacheData(device, pipelineCache, &cacheSize, cache))
+		GET_RESULT(vkGetPipelineCacheData(device, pipelineCache, &size, cache))
 #ifndef NDEBUG
 		if (result != VK_SUCCESS) {
-			VULKAN_FAILURE(vkGetPipelineCacheData, 4, 'p', device, 'p', pipelineCache, 'p', &cacheSize, 'p', cache)
+			VULKAN_FAILURE(vkGetPipelineCacheData, 4, 'p', device, 'p', pipelineCache, 'p', &size, 'p', cache)
 			free(cache);
 			return false;
 		}
@@ -3420,10 +3315,10 @@ bool destroy_gpu(Gpu_t* const gpu)
 		}
 #endif // NDEBUG
 
-		GET_WRITE_RESULT(fwrite(cache, 1, cacheSize, file))
+		GET_WRITE_RESULT(fwrite(cache, (size_t) 1, size, file))
 #ifndef NDEBUG
-		if (writeResult != cacheSize) {
-			FWRITE_FAILURE(cache, 1, cacheSize)
+		if (writeResult != size) {
+			FWRITE_FAILURE(cache, 1, size)
 			fclose(file);
 			free(cache);
 			return false;
@@ -3443,21 +3338,7 @@ bool destroy_gpu(Gpu_t* const gpu)
 		free(cache);
 	}
 
-	CHECK_HANDLE(device) {
-		INSTANCE_PROC_ADDR(vkGetDeviceProcAddr)
-		DEVICE_PROC_ADDR(vkDeviceWaitIdle)
-		DEVICE_PROC_ADDR(vkDestroyDescriptorSetLayout)
-		DEVICE_PROC_ADDR(vkDestroyShaderModule)
-		DEVICE_PROC_ADDR(vkDestroyPipelineLayout)
-		DEVICE_PROC_ADDR(vkDestroySemaphore)
-		DEVICE_PROC_ADDR(vkDestroyCommandPool)
-		DEVICE_PROC_ADDR(vkDestroyPipeline)
-		DEVICE_PROC_ADDR(vkDestroyQueryPool)
-		DEVICE_PROC_ADDR(vkDestroyDescriptorPool)
-		DEVICE_PROC_ADDR(vkDestroyBuffer)
-		DEVICE_PROC_ADDR(vkFreeMemory)
-		DEVICE_PROC_ADDR(vkDestroyDevice)
-
+	if(device) {
 		vkDestroyDescriptorSetLayout(device, descriptorSetLayout, allocator);
 		vkDestroyShaderModule(device, shaderModule, allocator);
 		vkDestroyPipelineLayout(device, pipelineLayout, allocator);
@@ -3497,17 +3378,16 @@ bool destroy_gpu(Gpu_t* const gpu)
 	}
 
 #ifndef NDEBUG
-	CHECK_HANDLE(gpu->debugMessenger) {
-		INSTANCE_PROC_ADDR(vkDestroyDebugUtilsMessengerEXT)
+	if(gpu->debugMessenger) {
 		vkDestroyDebugUtilsMessengerEXT(instance, gpu->debugMessenger, allocator);
 	}
 #endif // NDEBUG
 
-	CHECK_HANDLE(instance) {
-		INSTANCE_PROC_ADDR(vkDestroyInstance)
+	if(instance) {
 		vkDestroyInstance(instance, allocator);
 	}
 
+	volkFinalize();
 	free(dynamicMemory);
 
 	END_FUNC

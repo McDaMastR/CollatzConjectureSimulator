@@ -22,7 +22,7 @@ int main(void)
 {
 	BEGIN_FUNC
 
-	Gpu_t gpu = {0};
+	Gpu_t gpu = {0}; // Stack-allocate majority of variables
 
 	CHECK_RESULT(create_instance)
 	CHECK_RESULT(create_device)
