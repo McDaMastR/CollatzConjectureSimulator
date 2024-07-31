@@ -12,13 +12,13 @@ positive integer input $n$ and gives a positive integer output $f(n)$. If the in
 function returns half the input. If the input is odd, the function returns triple the input, plus
 one.
 
-$$
+```math
 f(n) =
  \begin{cases}
   n/2  & \text{if } n \equiv 0 \pmod 2\\
   3n+1 & \text{if } n \equiv 1 \pmod 2
  \end{cases}
-$$
+```
 
 The Collatz function can be applied recursively, meaning given an initial input $n$ and resultant
 output $f(n)$, this first output can be used as an input, resulting in a second output $f(f(n))$.
@@ -34,7 +34,9 @@ The Collatz Conjecture states that for all positive integer starting values $n$,
 application of the Collatz function will eventually result in the value $1$. Using mathematical
 logic:
 
-$` \forall n \in \mathbb{Z}_{> 0}, \exists k \in \mathbb{Z}_{\geq 0} : f^k(n) = 1 `$
+```math
+\forall n \in \mathbb{Z}_{> 0}, \exists k \in \mathbb{Z}_{\geq 0} : f^k(n) = 1
+```
 
 ## The Simulation
 
@@ -52,7 +54,8 @@ primarily written in C, and the shaders are written in GLSL.
 
 ## Program Requirements
 
-- C99
+- C11
+  - `_Atomic`
   - `__int128`
   - Little endian
 - CMake 3.21
@@ -93,9 +96,9 @@ To run the program, execute `CollatzConjectureSimulator.exe` from within the `bi
 not executed inside the `bin` directory, the program will be unable to locate the compiled shaders.
 
 If in debug, a `debug_log.txt` file will be created during execution containing all debug callbacks
-from the Vulkan API via the `VK_EXT_debug_utils` extension, if present. If logging Vulkan
-allocations, an `alloc_log.txt` file will be created during execution containing all allocation
-callbacks from the Vulkan API via a `VkAllocationCallbacks` object. After execution, a
+from the Vulkan API via a `VkDebugUtilsMessengerEXT` object, if `VK_EXT_debug_utils` is present. If
+logging Vulkan allocations, an `alloc_log.txt` file will be created during execution containing all
+allocation callbacks from the Vulkan API via a `VkAllocationCallbacks` object. After execution, a
 `pipeline_cache.bin` file will be created containing the data from a `VkPipelineCache` object. This
 file will be read by the program if run again.
 
@@ -150,15 +153,20 @@ values from exactly where it last ended.
 `MAX_HEAP_MEMORY` is a floating-point value within the interval $(0, 1)$, describing the maximum
 proportion of available memory in a `VkMemoryHeap` the program can allocate via `vkAllocateMemory`.
 For example, a value of 0.8F means at most 80% of available memory in any GPU memory heap will be
-allocated for inout-buffers. If the `VK_EXT_memory_budget` extension is present, _available memory_
-refers to the `VkPhysicalDeviceMemoryBudgetPropertiesEXT::heapBudget` of a memory heap. Elsewise,
-it refers to the corresponding `VkMemoryHeap::size`.
+allocated for inout-buffers. If `VK_EXT_memory_budget` is present, _available memory_ refers to the
+`VkPhysicalDeviceMemoryBudgetPropertiesEXT::heapBudget` of a memory heap. Elsewise, it refers to
+the corresponding `VkMemoryHeap::size`.
 
 `QUERY_BENCHMARKING` is a boolean value describing whether or not the program will benchmark Vulkan
 commands via queries. If 1, the `vkCmdCopyBuffer` and `vkCmdDispatch` commands will be benchmarked.
 
 `LOG_VULKAN_ALLOCATIONS` is a boolean value describing whether or not the program will log memory
 allocations performed by the Vulkan API via a `VkAllocationCallbacks` object.
+
+`EXT_LAYERS` is a boolean value describing whether or not the Khronos
+[extension layers](https://github.com/KhronosGroup/Vulkan-ExtensionLayer) will be enabled, if
+present. This includes `VK_LAYER_KHRONOS_synchronization2`. This value should be 1 if
+`VK_KHR_synchronization2` is not present.
 
 `IN_BUFFER_TYPE` is an integer value describing the type of buffer object in-buffers will be
 treated as. If 1, in-buffers will be shader storage buffer objects (SSBOs). If 2, in-buffers will
@@ -168,5 +176,5 @@ shaders must be changed accordingly.
 `END_ON` is an integer value describing when the program will terminate. If 1, the program will end
 on user input, namely when either of the __enter__ or __return__ keys are pressed. If 2, the
 program will end when the main loop has performed a particular number of loops, such as 20 or
-10,000. If 3, the program will end when a new starting value is found to have the highest step
+10 000. If 3, the program will end when a new starting value is found to have the highest step
 count so far.

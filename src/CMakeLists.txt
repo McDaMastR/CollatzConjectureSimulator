@@ -33,7 +33,6 @@ if(${CMAKE_BUILD_TYPE} MATCHES Debug)
 			-Wbad-function-cast
 			-Wbidi-chars=any,ucn
 			-Wc++-compat
-			-Wc99-c11-compat
 			-Wc11-c23-compat
 			-Wcast-align=strict
 			-Wcast-qual
@@ -77,7 +76,6 @@ if(${CMAKE_BUILD_TYPE} MATCHES Debug)
 			-Wswitch-default
 			-Wswitch-enum
 			-Wsync-nand
-			-Wtraditional-conversion
 			-Wtrampolines
 			-Wtrivial-auto-var-init
 			-Wundef

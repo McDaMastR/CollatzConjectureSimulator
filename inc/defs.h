@@ -31,6 +31,7 @@
 
 #define PROGRAM_NAME "Collatz Conjecture Simulator"
 #define VK_LAYER_KHRONOS_VALIDATION_LAYER_NAME "VK_LAYER_KHRONOS_validation"
+#define VK_LAYER_KHRONOS_SYNCHRONIZATION_2_LAYER_NAME "VK_LAYER_KHRONOS_synchronization2"
 
 #define DEBUG_LOG_NAME "debug_log.txt"
 #define ALLOC_LOG_NAME "alloc_log.txt"
@@ -75,6 +76,9 @@
 // Whether to log all memory allocations from Vulkan
 #define LOG_VULKAN_ALLOCATIONS 0
 
+// Whether to use Khronos extension layers
+#define EXT_LAYERS 0
+
 // If 1, use Shader Storage Buffer Object (SSBO)
 // If 2, use Uniform Buffer Object (UBO)
 // If changing, must change in shaders as well
@@ -92,12 +96,13 @@
 #define MALLOC_FAILURE(ptr) print_malloc_failure(__LINE__, (const void*) (ptr), size);
 #define CALLOC_FAILURE(ptr, num, size) print_calloc_failure(__LINE__, (const void*) (ptr), (size_t) (num), (size_t) (size));
 #define REALLOC_FAILURE(ptr, mem, size) print_realloc_failure(__LINE__, (const void*) (ptr), (const void*) (mem), (size_t) (size));
+
 #define FOPEN_FAILURE(name, mode) print_fopen_failure(__LINE__, file, (const char*) (name), (const char*) (mode));
-#define FCLOSE_FAILURE() print_fclose_failure(__LINE__, fileResult, file);
 #define FSEEK_FAILURE(off, ori) print_fseek_failure(__LINE__, fileResult, file, (long) (off), (int) (ori));
 #define FTELL_FAILURE() print_ftell_failure(__LINE__, fileSize, file);
 #define FREAD_FAILURE(buf, size, count) print_fread_failure(__LINE__, readResult, (const void*) (buf), (size_t) (size), (size_t) (count), file);
 #define FWRITE_FAILURE(str, size, count) print_fwrite_failure(__LINE__, writeResult, (const void*) (str), (size_t) (size), (size_t) (count), file);
+
 #define PCREATE_FAILURE(thrd, atr, func, arg) print_pcreate_failure(__LINE__, threadResult, (const pthread_t*) (thrd), (const pthread_attr_t*) (atr), #func, (const void*) (arg));
 #define PJOIN_FAILURE(thrd, res) print_pjoin_failure(__LINE__, threadResult, (pthread_t) (thrd), (const void* const*) (res));
 #define PCANCEL_FAILURE(thrd) print_pcancel_failure(__LINE__, threadResult, (pthread_t) (thrd));
@@ -105,11 +110,12 @@
 #define PLOCK_FAILURE(mtx) print_plock_failure(__LINE__, threadResult, (const pthread_mutex_t*) (mtx));
 #define PUNLOCK_FAILURE(mtx) print_punlock_failure(__LINE__, threadResult, (const pthread_mutex_t*) (mtx));
 #define PDESTROY_FAILURE(mtx) print_pdestroy_failure(__LINE__, threadResult, (const pthread_mutex_t*) (mtx));
+
 #define VINIT_FAILURE() print_vinit_failure(__LINE__, result);
 #define VINSTVERS_FAILURE(vers) print_vinstvers_failure(__LINE__, vers);
 #define VULKAN_FAILURE(func, count, ...) print_vulkan_failure(__LINE__, #func, result, (unsigned int) (count), __VA_ARGS__);
 
-#define CHECK_RESULT(func) if (!func(&gpu)) {destroy_gpu(&gpu); puts("EXIT FAILURE"); return EXIT_FAILURE;}
+#define CHECK_RESULT(func) if (!func) {destroy_gpu(&gpu); puts("EXIT FAILURE"); return EXIT_FAILURE;}
 
 #ifdef NDEBUG
 	#define GET_RESULT(func) func;
@@ -173,32 +179,11 @@ typedef struct AllocationCallbackCounts
 // Structure containing all relevant Vulkan info
 typedef struct Gpu
 {
-	VkPhysicalDevice physicalDevice;
-
-	uint32_t transferQueueFamilyIndex;
-	uint32_t computeQueueFamilyIndex;
-
-	uint32_t hostVisibleMemoryHeapIndex;
-	uint32_t deviceLocalMemoryHeapIndex;
-	uint32_t hostVisibleMemoryTypeIndex;
-	uint32_t deviceLocalMemoryTypeIndex;
-
-	VkQueue transferQueue;
-	VkQueue computeQueue;
-
 	VkDeviceMemory* hostVisibleDeviceMemories; // Count = deviceMemoriesPerHeap
 	VkDeviceMemory* deviceLocalDeviceMemories; // Count = deviceMemoriesPerHeap
 
-	VkDeviceSize inBufferAlignment;
-	VkDeviceSize outBufferAlignment;
-	VkDeviceSize hostVisibleBufferAlignment;
-	VkDeviceSize deviceLocalBufferAlignment;
-
 	VkBuffer* hostVisibleBuffers; // Count = buffersPerHeap
 	VkBuffer* deviceLocalBuffers; // Count = buffersPerHeap
-
-	value_t** mappedHostVisibleInBuffers; // Count = inoutBuffersPerHeap, valuesPerInoutBuffer
-	step_t** mappedHostVisibleOutBuffers; // Count = inoutBuffersPerHeap, valuesPerInoutBuffer
 
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkDescriptorPool descriptorPool;
@@ -213,40 +198,22 @@ typedef struct Gpu
 	VkCommandPool transferCommandPool;
 	VkCommandPool computeCommandPool;
 
-	/*
-		Copy operation: HV-in -> DL-in
-		Availability operation: (copy operation, DL-in) -> device domain
-		Release operation: DL-in -> compute QF
-	*/
 	VkCommandBuffer onetimeCommandBuffer;
-
-	/*
-		Copy operation: HV-in -> DL-in
-		Availability operation: (copy operation, DL-in) -> device domain
-		Release operation: DL-in -> compute QF
-
-		Aquire operation: compute QF -> DL-out
-		Visibility operation: device domain -> (copy operation; DL-out)
-		Copy operation: DL-out -> HV-out
-		Availability operation: (copy operation; HV-out) -> device domain
-		Memory domain operation: device domain -> host domain
-	*/
 	VkCommandBuffer* transferCommandBuffers; // Count = inoutBuffersPerHeap
-
-	/*
-		Bind pipeline
-		Bind descriptor set
-
-		Aquire operation: transfer QF -> DL-in
-		Visibility operation: device domain -> (dispatch operation; DL-in)
-		Dispatch operation: DL-in -> DL-out
-		Availability operation: (dispatch operation; DL-out) -> device domain
-		Release operation: DL-out -> transfer QF
-	*/
 	VkCommandBuffer* computeCommandBuffers; // Count = inoutBuffersPerHeap
 
 	VkSemaphore onetimeSemaphore;
 	VkSemaphore* semaphores; // Count = inoutBuffersPerHeap
+
+	VkQueryPool queryPool;
+
+	value_t** mappedHostVisibleInBuffers; // Count = inoutBuffersPerHeap, valuesPerInoutBuffer
+	step_t** mappedHostVisibleOutBuffers; // Count = inoutBuffersPerHeap, valuesPerInoutBuffer
+
+	VkDeviceSize inBufferAlignment;
+	VkDeviceSize outBufferAlignment;
+	VkDeviceSize hostVisibleBufferAlignment;
+	VkDeviceSize deviceLocalBufferAlignment;
 
 	VkDeviceSize bytesPerInBuffer;
 	VkDeviceSize bytesPerOutBuffer;
@@ -272,26 +239,24 @@ typedef struct Gpu
 	uint32_t computeWorkGroupCount;
 	uint32_t computeWorkGroupSize;
 
-	bool usingShaderInt64;
-	bool usingMemoryBudget;
-	bool usingMemoryPriority;
-	void* dynamicMemory;
+	uint32_t hostVisibleMemoryHeapIndex;
+	uint32_t deviceLocalMemoryHeapIndex;
+	uint32_t hostVisibleMemoryTypeIndex;
+	uint32_t deviceLocalMemoryTypeIndex;
+
+	uint32_t transferQueueFamilyIndex;
+	uint32_t computeQueueFamilyIndex;
 
 	uint32_t transferQueueTimestampValidBits;
 	uint32_t computeQueueTimestampValidBits;
+
 	float timestampPeriod;
-	VkQueryPool queryPool;
 
-#ifndef NDEBUG
-	uint64_t debugCallbackCount;
-	VkDebugUtilsMessengerEXT debugMessenger;
-#endif // NDEBUG
+	bool usingShaderInt64;
+	bool usingMemoryBudget;
+	bool usingMemoryPriority;
 
-	const VkAllocationCallbacks* allocator;
-#if LOG_VULKAN_ALLOCATIONS
-	AllocationCallbackCounts_t allocationCallbackCounts;
-	VkAllocationCallbacks allocationCallbacks;
-#endif // LOG_VULKAN_ALLOCATIONS
+	void* dynamicMemory;
 } Gpu_t;
 
 
@@ -299,7 +264,7 @@ typedef struct Gpu
 
 // Creates Vulkan instance
 // Returns true if successful, false otherwise
-bool create_instance(Gpu_t* gpu);
+bool create_instance(void);
 
 // Creates logical device
 // Returns true if successful, false otherwise
@@ -342,25 +307,27 @@ bool init_debug_logfile(void);
 bool init_alloc_logfile(void);
 
 // Failure functions
-void print_malloc_failure(int line, const void* ptr, size_t _Size);
-void print_calloc_failure(int line, const void* ptr, size_t _NumOfElements, size_t _SizeOfElements);
+void print_malloc_failure (int line, const void* ptr, size_t _Size);
+void print_calloc_failure (int line, const void* ptr, size_t _NumOfElements, size_t _SizeOfElements);
 void print_realloc_failure(int line, const void* ptr, const void* _Memory, size_t _NewSize);
-void print_fopen_failure(int line, const FILE* file, const char* _Filename, const char* _Mode);
-void print_fclose_failure(int line, int result, const FILE* _File);
-void print_fseek_failure(int line, int result, const FILE* _File, long _Offset, int _Origin);
-void print_ftell_failure(int line, long result, const FILE* _File);
-void print_fread_failure(int line, size_t result, const void* _DstBuf, size_t _ElementSize, size_t _Count, const FILE* _File);
+
+void print_fopen_failure (int line, const FILE* file, const char* _Filename, const char* _Mode);
+void print_fseek_failure (int line, int result, const FILE* _File, long _Offset, int _Origin);
+void print_ftell_failure (int line, long result, const FILE* _File);
+void print_fread_failure (int line, size_t result, const void* _DstBuf, size_t _ElementSize, size_t _Count, const FILE* _File);
 void print_fwrite_failure(int line, size_t result, const void* _Str, size_t _Size, size_t _Count, const FILE* _File);
-void print_pcreate_failure(int line, int result, const pthread_t* th, const pthread_attr_t* attr, const char* func, const void* arg);
-void print_pjoin_failure(int line, int result, pthread_t t, const void* const* res);
-void print_pcancel_failure(int line, int result, pthread_t t);
-void print_pinit_failure(int line, int result, const pthread_mutex_t* m, const pthread_mutexattr_t* a);
-void print_plock_failure(int line, int result, const pthread_mutex_t* m);
-void print_punlock_failure(int line, int result, const pthread_mutex_t* m);
+
+void print_pcreate_failure (int line, int result, const pthread_t* th, const pthread_attr_t* attr, const char* func, const void* arg);
+void print_pjoin_failure   (int line, int result, pthread_t t, const void* const* res);
+void print_pcancel_failure (int line, int result, pthread_t t);
+void print_pinit_failure   (int line, int result, const pthread_mutex_t* m, const pthread_mutexattr_t* a);
+void print_plock_failure   (int line, int result, const pthread_mutex_t* m);
+void print_punlock_failure (int line, int result, const pthread_mutex_t* m);
 void print_pdestroy_failure(int line, int result, const pthread_mutex_t* m);
-void print_vinit_failure(int line, VkResult result);
+
+void print_vinit_failure    (int line, VkResult result);
 void print_vinstvers_failure(int line, uint32_t apiVersion);
-void print_vulkan_failure(int line, const char* func, VkResult result, unsigned int count, ...);
+void print_vulkan_failure   (int line, const char* func, VkResult result, unsigned int count, ...);
 
 // Callback functions
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback              (VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
