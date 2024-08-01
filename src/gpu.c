@@ -87,7 +87,7 @@ bool create_instance(void)
 		return false;
 	}
 
-	uint32_t appApiVersion = VK_API_VERSION_1_2;
+	uint32_t appApiVersion = VK_API_VERSION_1_1;
 	uint32_t instApiVersion = volkGetInstanceVersion();
 
 	if (VK_API_VERSION_VARIANT(instApiVersion) != VK_API_VERSION_VARIANT(appApiVersion) ||
@@ -191,21 +191,21 @@ bool create_instance(void)
 	uint32_t enabledLayerCount = 0;
 	const char* enabledLayers[2];
 	for (uint32_t i = 0; i < layerPropertyCount; i++) {
-#if EXT_LAYERS
-		if (strcmp(layersProperties[i].layerName, VK_LAYER_KHRONOS_SYNCHRONIZATION_2_LAYER_NAME) == 0) {
+#if EXTENSION_LAYERS
+		if (strcmp(layersProperties[i].layerName, VK_KHR_SYNCHRONIZATION_2_LAYER_NAME) == 0) {
 			enabledLayers[enabledLayerCount] = layersProperties[i].layerName;
 			enabledLayerCount++;
 			continue;
 		}
-#endif // EXT_LAYERS
+#endif // EXTENSION_LAYERS
 
-#ifndef NDEBUG
-		if (strcmp(layersProperties[i].layerName, VK_LAYER_KHRONOS_VALIDATION_LAYER_NAME) == 0) {
+#if VALIDATION_LAYERS
+		if (strcmp(layersProperties[i].layerName, VK_KHR_VALIDATION_LAYER_NAME) == 0) {
 			enabledLayers[enabledLayerCount] = layersProperties[i].layerName;
 			enabledLayerCount++;
 			continue;
 		}
-#endif // NDEBUG
+#endif // VALIDATION_LAYERS
 	}
 
 	const void* pNextChain = NULL;
@@ -343,16 +343,16 @@ bool create_device(Gpu_t* gpu)
 		physicalDeviceCount *     sizeof(VkPhysicalDeviceMemoryProperties2) +
 		physicalDeviceCount *     sizeof(VkPhysicalDeviceMemoryPriorityFeaturesEXT) +
 		physicalDeviceCount *     sizeof(VkPhysicalDeviceSynchronization2FeaturesKHR) +
-		physicalDeviceCount *     sizeof(VkPhysicalDeviceTimelineSemaphoreFeatures) +
+		physicalDeviceCount *     sizeof(VkPhysicalDeviceTimelineSemaphoreFeaturesKHR) +
 		physicalDeviceCount *     sizeof(VkExtensionProperties*) +
 		physicalDeviceCount *     sizeof(VkQueueFamilyProperties2*) +
 		physicalDeviceCount * 2 * sizeof(uint32_t) +
-		physicalDeviceCount * 5 * sizeof(bool);
+		physicalDeviceCount * 6 * sizeof(bool);
 
-	data.devices = malloc(size);
+	data.devices = calloc(1, size);
 #ifndef NDEBUG
 	if (!data.devices) {
-		MALLOC_FAILURE(data.devices)
+		CALLOC_FAILURE(data.devices, 1, size)
 		free_CreateDeviceData(data);
 		return false;
 	}
@@ -372,15 +372,16 @@ bool create_device(Gpu_t* gpu)
 	VkPhysicalDeviceMemoryProperties2*         physicalDevicesMemoryProperties       = (VkPhysicalDeviceMemoryProperties2*)         (physicalDevicesMaintenance4Features + physicalDeviceCount);
 	VkPhysicalDeviceMemoryPriorityFeaturesEXT* physicalDevicesMemoryPriorityFeatures = (VkPhysicalDeviceMemoryPriorityFeaturesEXT*) (physicalDevicesMemoryProperties     + physicalDeviceCount);
 
-	VkPhysicalDeviceSynchronization2FeaturesKHR* physicalDevicesSynchronization2Features  = (VkPhysicalDeviceSynchronization2FeaturesKHR*) (physicalDevicesMemoryPriorityFeatures   + physicalDeviceCount);
-	VkPhysicalDeviceTimelineSemaphoreFeatures*   physicalDevicesTimelineSemaphoreFeatures = (VkPhysicalDeviceTimelineSemaphoreFeatures*)   (physicalDevicesSynchronization2Features + physicalDeviceCount);
+	VkPhysicalDeviceSynchronization2FeaturesKHR*  physicalDevicesSynchronization2Features  = (VkPhysicalDeviceSynchronization2FeaturesKHR*)  (physicalDevicesMemoryPriorityFeatures   + physicalDeviceCount);
+	VkPhysicalDeviceTimelineSemaphoreFeaturesKHR* physicalDevicesTimelineSemaphoreFeatures = (VkPhysicalDeviceTimelineSemaphoreFeaturesKHR*) (physicalDevicesSynchronization2Features + physicalDeviceCount);
 
 	uint32_t* extensionPropertyCounts   = (uint32_t*) (physicalDevicesTimelineSemaphoreFeatures + physicalDeviceCount);
 	uint32_t* queueFamilyPropertyCounts = (uint32_t*) (extensionPropertyCounts                  + physicalDeviceCount);
 
 	bool* haveMaintenance4      = (bool*) (queueFamilyPropertyCounts + physicalDeviceCount);
 	bool* haveSynchronization2  = (bool*) (haveMaintenance4          + physicalDeviceCount);
-	bool* havePortabilitySubset = (bool*) (haveSynchronization2      + physicalDeviceCount);
+	bool* haveTimelineSemaphore = (bool*) (haveSynchronization2      + physicalDeviceCount);
+	bool* havePortabilitySubset = (bool*) (haveTimelineSemaphore     + physicalDeviceCount);
 	bool* haveMemoryBudget      = (bool*) (havePortabilitySubset     + physicalDeviceCount);
 	bool* haveMemoryPriority    = (bool*) (haveMemoryBudget          + physicalDeviceCount);
 
@@ -392,12 +393,6 @@ bool create_device(Gpu_t* gpu)
 		return false;
 	}
 #endif // NDEBUG
-
-	memset(haveMaintenance4,      0, physicalDeviceCount * sizeof(bool));
-	memset(haveSynchronization2,  0, physicalDeviceCount * sizeof(bool));
-	memset(havePortabilitySubset, 0, physicalDeviceCount * sizeof(bool));
-	memset(haveMemoryBudget,      0, physicalDeviceCount * sizeof(bool));
-	memset(haveMemoryPriority,    0, physicalDeviceCount * sizeof(bool));
 
 	size_t extensionTotal = 0;
 	size_t queueFamilyTotal = 0;
@@ -460,6 +455,11 @@ bool create_device(Gpu_t* gpu)
 				continue;
 			}
 
+			if (strcmp(extensionName, VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME) == 0) {
+				haveTimelineSemaphore[i] = true;
+				continue;
+			}
+
 			if (strcmp(extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) == 0) {
 				havePortabilitySubset[i] = true;
 				continue;
@@ -500,10 +500,6 @@ bool create_device(Gpu_t* gpu)
 		*next = &physicalDevices16BitStorageFeatures[i];
 		next = &physicalDevices16BitStorageFeatures[i].pNext;
 
-		physicalDevicesTimelineSemaphoreFeatures[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
-		*next = &physicalDevicesTimelineSemaphoreFeatures[i];
-		next = &physicalDevicesTimelineSemaphoreFeatures[i].pNext;
-
 		if (haveMaintenance4[i]) {
 			physicalDevicesMaintenance4Features[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_FEATURES_KHR;
 			*next = &physicalDevicesMaintenance4Features[i];
@@ -514,6 +510,12 @@ bool create_device(Gpu_t* gpu)
 			physicalDevicesSynchronization2Features[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
 			*next = &physicalDevicesSynchronization2Features[i];
 			next = &physicalDevicesSynchronization2Features[i].pNext;
+		}
+
+		if (haveTimelineSemaphore[i]) {
+			physicalDevicesTimelineSemaphoreFeatures[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES_KHR;
+			*next = &physicalDevicesTimelineSemaphoreFeatures[i];
+			next = &physicalDevicesTimelineSemaphoreFeatures[i].pNext;
 		}
 
 		if (haveMemoryPriority[i]) {
@@ -531,11 +533,11 @@ bool create_device(Gpu_t* gpu)
 	uint32_t highestScore = 0;
 
 	for (uint32_t i = 0; i < physicalDeviceCount; i++) {
-		if (VK_API_VERSION_MINOR(physicalDevicesProperties[i].properties.apiVersion) < 2) continue;
-		if (physicalDevicesFeatures[i].features.shaderInt16                 == VK_FALSE) continue;
+		if (VK_API_VERSION_MINOR(physicalDevicesProperties[i].properties.apiVersion) < 1) continue;
 		if (physicalDevices16BitStorageFeatures[i].storageBuffer16BitAccess == VK_FALSE) continue;
-		if (!haveMaintenance4[i]    ) continue;
-		if (!haveSynchronization2[i]) continue;
+		if (!haveMaintenance4[i])      continue;
+		if (!haveSynchronization2[i])  continue;
+		if (!haveTimelineSemaphore[i]) continue;
 
 		bool hasDedicatedDeviceLocal = false;
 		bool hasHostCachedNonCoherent = false;
@@ -609,12 +611,15 @@ bool create_device(Gpu_t* gpu)
 
 	// Enable available extensions
 	uint32_t enabledExtensionCount = 0;
-	const char* enabledExtensions[5];
+	const char* enabledExtensions[6];
 
 	enabledExtensions[enabledExtensionCount] = VK_KHR_MAINTENANCE_4_EXTENSION_NAME;
 	enabledExtensionCount++;
 
 	enabledExtensions[enabledExtensionCount] = VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME;
+	enabledExtensionCount++;
+
+	enabledExtensions[enabledExtensionCount] = VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME;
 	enabledExtensionCount++;
 
 	if (havePortabilitySubset[physicalDeviceIndex]) {
@@ -674,7 +679,7 @@ bool create_device(Gpu_t* gpu)
 	physicalDevicesFeatures[physicalDeviceIndex].features.shaderCullDistance = VK_FALSE;
 	physicalDevicesFeatures[physicalDeviceIndex].features.shaderFloat64 = VK_FALSE;
 	// physicalDevicesFeatures[physicalDeviceIndex].features.shaderInt64; // Enable if available
-	physicalDevicesFeatures[physicalDeviceIndex].features.shaderInt16 = VK_TRUE;
+	// physicalDevicesFeatures[physicalDeviceIndex].features.shaderInt16; // Enable if available
 	physicalDevicesFeatures[physicalDeviceIndex].features.shaderResourceResidency = VK_FALSE;
 	physicalDevicesFeatures[physicalDeviceIndex].features.shaderResourceMinLod = VK_FALSE;
 	physicalDevicesFeatures[physicalDeviceIndex].features.sparseBinding = VK_FALSE;
@@ -798,6 +803,7 @@ bool create_device(Gpu_t* gpu)
 	uint32_t computeQueueFamilyIndex = gpu->computeQueueFamilyIndex;
 	uint32_t transferQueueFamilyIndex = gpu->transferQueueFamilyIndex;
 
+	gpu->usingShaderInt16 = physicalDevicesFeatures[physicalDeviceIndex].features.shaderInt16;
 	gpu->usingShaderInt64 = physicalDevicesFeatures[physicalDeviceIndex].features.shaderInt64;
 	gpu->usingMemoryBudget = haveMemoryBudget[physicalDeviceIndex];
 	gpu->usingMemoryPriority = haveMemoryPriority[physicalDeviceIndex];
@@ -848,6 +854,7 @@ bool create_device(Gpu_t* gpu)
 		"\tHV type index:     %u\n"
 		"\tDL heap index:     %u\n"
 		"\tHV heap index:     %u\n"
+		"\tshaderInt16:       %d\n"
 		"\tshaderInt64:       %d\n"
 		"\tmemoryPriority:    %d\n\n",
 		physicalDevicesProperties[physicalDeviceIndex].properties.deviceName,
@@ -857,6 +864,7 @@ bool create_device(Gpu_t* gpu)
 		gpu->hostVisibleMemoryTypeIndex,
 		gpu->deviceLocalMemoryHeapIndex,
 		gpu->hostVisibleMemoryHeapIndex,
+		gpu->usingShaderInt16,
 		gpu->usingShaderInt64,
 		gpu->usingMemoryPriority
 	);
@@ -981,21 +989,14 @@ bool manage_memory(Gpu_t* gpu)
 
 	vkGetPhysicalDeviceMemoryProperties2(physicalDevice, &physicalDeviceMemoryProperties);
 
-	VkDeviceSize inBufferOffsetAlignment = physicalDeviceProperties.properties.limits.minStorageBufferOffsetAlignment;
+	VkDeviceSize minStorageBufferOffsetAlignment = physicalDeviceProperties.properties.limits.minStorageBufferOffsetAlignment;
 	VkDeviceSize maxMemoryAllocationSize = physicalDeviceMaintenance3Properties.maxMemoryAllocationSize;
 	VkDeviceSize maxBufferSize = physicalDeviceMaintenance4Properties.maxBufferSize;
-	uint32_t maxOutBufferRange = physicalDeviceProperties.properties.limits.maxStorageBufferRange;
+
+	uint32_t maxStorageBufferRange = physicalDeviceProperties.properties.limits.maxStorageBufferRange;
 	uint32_t maxMemoryAllocationCount = physicalDeviceProperties.properties.limits.maxMemoryAllocationCount;
 	uint32_t maxComputeWorkGroupCount = physicalDeviceProperties.properties.limits.maxComputeWorkGroupCount[0];
 	uint32_t maxComputeWorkGroupSize = physicalDeviceProperties.properties.limits.maxComputeWorkGroupSize[0];
-
-#if IN_BUFFER_TYPE == 1
-	VkDeviceSize outBufferOffsetAlignment = physicalDeviceProperties.properties.limits.minStorageBufferOffsetAlignment;
-	uint32_t maxInBufferRange = physicalDeviceProperties.properties.limits.maxStorageBufferRange;
-#elif IN_BUFFER_TYPE == 2
-	VkDeviceSize outBufferOffsetAlignment = physicalDeviceProperties.properties.limits.minUniformBufferOffsetAlignment;
-	uint32_t maxInBufferRange = physicalDeviceProperties.properties.limits.maxUniformBufferRange;
-#endif // IN_BUFFER_TYPE
 
 	VkDeviceSize bytesPerHostVisibleHeap;
 	VkDeviceSize bytesPerDeviceLocalHeap;
@@ -1034,9 +1035,7 @@ bool manage_memory(Gpu_t* gpu)
 		bytesPerBuffer -= excessBytes % buffersPerDeviceMemory ? 1 : 0;
 	}
 
-	uint32_t valuesPerInBuffer = maxInBufferRange / sizeof(value_t);
-	uint32_t valuesPerOutBuffer = maxOutBufferRange / sizeof(step_t);
-	uint32_t valuesPerInoutBuffer = min_uint32(valuesPerInBuffer, valuesPerOutBuffer);
+	uint32_t valuesPerInoutBuffer = maxStorageBufferRange / sizeof(value_t);
 	uint32_t computeWorkGroupSize = maxComputeWorkGroupSize;
 	uint32_t computeWorkGroupCount = min_uint32(maxComputeWorkGroupCount, valuesPerInoutBuffer / computeWorkGroupSize);
 
@@ -1055,8 +1054,8 @@ bool manage_memory(Gpu_t* gpu)
 
 	VkDeviceSize bytesPerInBuffer  = valuesPerInoutBuffer * sizeof(value_t);
 	VkDeviceSize bytesPerOutBuffer = valuesPerInoutBuffer * sizeof(step_t);
-	VkDeviceSize inBufferAlignment  = (inBufferOffsetAlignment  - bytesPerInBuffer  % inBufferOffsetAlignment ) % inBufferOffsetAlignment;
-	VkDeviceSize outBufferAlignment = (outBufferOffsetAlignment - bytesPerOutBuffer % outBufferOffsetAlignment) % outBufferOffsetAlignment;
+	VkDeviceSize inBufferAlignment  = (minStorageBufferOffsetAlignment - bytesPerInBuffer  % minStorageBufferOffsetAlignment) % minStorageBufferOffsetAlignment;
+	VkDeviceSize outBufferAlignment = (minStorageBufferOffsetAlignment - bytesPerOutBuffer % minStorageBufferOffsetAlignment) % minStorageBufferOffsetAlignment;
 
 	VkDeviceSize bytesPerHostVisibleInoutBuffer = bytesPerInBuffer + bytesPerOutBuffer;
 	VkDeviceSize bytesPerDeviceLocalInoutBuffer = bytesPerInBuffer + bytesPerOutBuffer + inBufferAlignment + outBufferAlignment;
@@ -1656,9 +1655,9 @@ bool create_pipeline(Gpu_t* gpu)
 
 	VkDescriptorSetLayout descriptorSetLayout = gpu->descriptorSetLayout;
 
-	uint32_t valuesPerInoutBuffer = gpu->valuesPerInoutBuffer;
 	uint32_t computeWorkGroupSize = gpu->computeWorkGroupSize;
 
+	bool usingShaderInt16 = gpu->usingShaderInt16;
 	bool usingShaderInt64 = gpu->usingShaderInt64;
 
 	CreatePipelineData_t data = {0};
@@ -1666,8 +1665,13 @@ bool create_pipeline(Gpu_t* gpu)
 	size_t readResult;
 	int fileResult;
 
+	const char* shaderName;
+	if (usingShaderInt16 && usingShaderInt64) shaderName = SHADER_16_64_NAME;
+	else if (usingShaderInt16)                shaderName = SHADER_16_NAME;
+	else if (usingShaderInt64)                shaderName = SHADER_64_NAME;
+	else                                      shaderName = SHADER_NOEXT_NAME;
+
 	// Get shader code from file, pre-compiled into SPIR-V
-	const char* shaderName = usingShaderInt64 ? SHADER64_NAME : SHADER32_NAME;
 	FILE* file = fopen(shaderName, "rb");
 #ifndef NDEBUG
 	if (!file) {
@@ -1844,17 +1848,13 @@ bool create_pipeline(Gpu_t* gpu)
 	vkDestroyDescriptorSetLayout(device, descriptorSetLayout, allocator);
 	gpu->descriptorSetLayout = VK_NULL_HANDLE;
 
-	uint32_t specialisationData[2];
+	uint32_t specialisationData[1];
 	specialisationData[0] = computeWorkGroupSize;
-	specialisationData[1] = valuesPerInoutBuffer;
 
-	VkSpecializationMapEntry specialisationMapEntries[2];
+	VkSpecializationMapEntry specialisationMapEntries[1];
 	specialisationMapEntries[0].constantID = 0;
 	specialisationMapEntries[0].offset = 0;
 	specialisationMapEntries[0].size = sizeof(specialisationData[0]);
-	specialisationMapEntries[1].constantID = 1;
-	specialisationMapEntries[1].offset = sizeof(specialisationData[0]);
-	specialisationMapEntries[1].size = sizeof(specialisationData[1]);
 
 	VkSpecializationInfo specialisationInfo;
 	specialisationInfo.mapEntryCount = sizeof(specialisationMapEntries) / sizeof(specialisationMapEntries[0]);
@@ -2080,6 +2080,17 @@ bool create_commands(Gpu_t* gpu)
 	uint32_t inoIndex = 0; // Inout-buffer index
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
 		for (uint32_t j = 0; j < inoutBuffersPerBuffer; j++, inoIndex++) {
+			/*
+				* My understanding of queue family ownership transfer operations *
+				In a buffer memory barrier, availability operations occur first, then release/acquire operations, then visibility
+				operations. This suggests that if a release operation occurs on a buffer range, then that buffer range must be made
+				available prior. Similarly, that if an acquire operation occurs on a buffer range, then that buffer range must be made
+				visible afterwards. Therefore, even though semaphore signalling & waiting performs availability & visibility operations
+				automatically, those availability operations occur after any release operations, and those visibility operations occur
+				before any acquire operations. This means the buffer memory barriers still have to perform the preceeding availability
+				and proceeding visibility operations.
+			*/
+
 			// Availability operation: (vkCmdCopyBuffer; DL-in) -> device domain
 			// Release operation: DL-in -> compute QF
 			onetimeBufferMemoryBarriers[inoIndex].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR;
@@ -2143,11 +2154,7 @@ bool create_commands(Gpu_t* gpu)
 			computeBufferMemoryBarriers[inoIndex][0].srcStageMask  = VK_PIPELINE_STAGE_2_NONE;
 			computeBufferMemoryBarriers[inoIndex][0].srcAccessMask = VK_ACCESS_2_NONE;
 			computeBufferMemoryBarriers[inoIndex][0].dstStageMask  = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
-#if IN_BUFFER_TYPE == 1
 			computeBufferMemoryBarriers[inoIndex][0].dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT;
-#elif IN_BUFFER_TYPE == 2
-			computeBufferMemoryBarriers[inoIndex][0].dstAccessMask = VK_ACCESS_2_UNIFORM_READ_BIT;
-#endif // IN_BUFFER_TYPE
 			computeBufferMemoryBarriers[inoIndex][0].srcQueueFamilyIndex = transferQueueFamilyIndex;
 			computeBufferMemoryBarriers[inoIndex][0].dstQueueFamilyIndex = computeQueueFamilyIndex;
 			computeBufferMemoryBarriers[inoIndex][0].buffer = deviceLocalBuffers[i];
@@ -2426,10 +2433,10 @@ bool create_commands(Gpu_t* gpu)
 	vkDestroyPipelineLayout(device, pipelineLayout, allocator);
 	gpu->pipelineLayout = VK_NULL_HANDLE;
 
-	VkSemaphoreTypeCreateInfo semaphoreTypeCreateInfo;
-	semaphoreTypeCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+	VkSemaphoreTypeCreateInfoKHR semaphoreTypeCreateInfo;
+	semaphoreTypeCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO_KHR;
 	semaphoreTypeCreateInfo.pNext = NULL;
-	semaphoreTypeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+	semaphoreTypeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE_KHR;
 	semaphoreTypeCreateInfo.initialValue = 0;
 
 	VkSemaphoreCreateInfo semaphoreCreateInfo;
@@ -2660,8 +2667,8 @@ bool submit_commands(Gpu_t* gpu)
 		inoutBuffersPerHeap * sizeof(VkSemaphoreSubmitInfoKHR) +     // Transfer-to-compute wait semaphore submission information
 		inoutBuffersPerHeap * sizeof(VkSemaphoreSubmitInfoKHR) +     // Compute-to-transfer signal semaphore submission information
 		inoutBuffersPerHeap * sizeof(VkSemaphoreSubmitInfoKHR) +     // Compute-to-transfer wait semaphore submission information
-		inoutBuffersPerHeap * sizeof(VkSemaphoreWaitInfo) +          // Transfer semaphore wait information
-		inoutBuffersPerHeap * sizeof(VkSemaphoreWaitInfo);           // Compute semaphore wait information
+		inoutBuffersPerHeap * sizeof(VkSemaphoreWaitInfoKHR) +       // Transfer semaphore wait information
+		inoutBuffersPerHeap * sizeof(VkSemaphoreWaitInfoKHR);        // Compute semaphore wait information
 
 	data.memory = malloc(size);
 #ifndef NDEBUG
@@ -2688,23 +2695,10 @@ bool submit_commands(Gpu_t* gpu)
 	VkSemaphoreSubmitInfoKHR* computeToTransferSignalSemaphoreSubmitInfos = (VkSemaphoreSubmitInfoKHR*) (transferToComputeWaitSemaphoreSubmitInfos   + inoutBuffersPerHeap);
 	VkSemaphoreSubmitInfoKHR* computeToTransferWaitSemaphoreSubmitInfos   = (VkSemaphoreSubmitInfoKHR*) (computeToTransferSignalSemaphoreSubmitInfos + inoutBuffersPerHeap);
 
-	VkSemaphoreWaitInfo* transferSemaphoreWaitInfos = (VkSemaphoreWaitInfo*) (computeToTransferWaitSemaphoreSubmitInfos + inoutBuffersPerHeap);
-	VkSemaphoreWaitInfo* computeSemaphoreWaitInfos  = (VkSemaphoreWaitInfo*) (transferSemaphoreWaitInfos                + inoutBuffersPerHeap);
+	VkSemaphoreWaitInfoKHR* transferSemaphoreWaitInfos = (VkSemaphoreWaitInfoKHR*) (computeToTransferWaitSemaphoreSubmitInfos + inoutBuffersPerHeap);
+	VkSemaphoreWaitInfoKHR* computeSemaphoreWaitInfos  = (VkSemaphoreWaitInfoKHR*) (transferSemaphoreWaitInfos                + inoutBuffersPerHeap);
 
 	clock_t bmarkStart = clock();
-
-#if END_ON == 1
-	int threadResult;
-	pthread_t waitThread;
-	GET_THRD_RESULT(pthread_create(&waitThread, NULL, wait_for_input, NULL))
-#ifndef NDEBUG
-	if (threadResult) {
-		PCREATE_FAILURE(&waitThread, NULL, wait_for_input, NULL)
-		free_SubmitCommandsData(data);
-		return false;
-	}
-#endif // NDEBUG
-#endif // END_ON
 
 	uint32_t inoIndex = 0;
 	for (uint32_t i = 0; i < deviceMemoriesPerHeap; i++) {
@@ -2762,8 +2756,8 @@ bool submit_commands(Gpu_t* gpu)
 	onetimeSubmitInfo.signalSemaphoreInfoCount = 1;
 	onetimeSubmitInfo.pSignalSemaphoreInfos = &onetimeToComputeSignalSemaphoreSubmitInfo;
 
-	VkSemaphoreWaitInfo onetimeSemaphoreWaitInfo;
-	onetimeSemaphoreWaitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
+	VkSemaphoreWaitInfoKHR onetimeSemaphoreWaitInfo;
+	onetimeSemaphoreWaitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO_KHR;
 	onetimeSemaphoreWaitInfo.pNext = NULL;
 	onetimeSemaphoreWaitInfo.flags = 0;
 	onetimeSemaphoreWaitInfo.semaphoreCount = 1;
@@ -2829,14 +2823,14 @@ bool submit_commands(Gpu_t* gpu)
 		transferSubmitInfos[i].signalSemaphoreInfoCount = 1;
 		transferSubmitInfos[i].pSignalSemaphoreInfos = &transferToComputeSignalSemaphoreSubmitInfos[i];
 
-		computeSemaphoreWaitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
+		computeSemaphoreWaitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO_KHR;
 		computeSemaphoreWaitInfos[i].pNext = NULL;
 		computeSemaphoreWaitInfos[i].flags = 0;
 		computeSemaphoreWaitInfos[i].semaphoreCount = 1;
 		computeSemaphoreWaitInfos[i].pSemaphores = &semaphores[i];
 		computeSemaphoreWaitInfos[i].pValues = &computeToTransferSignalSemaphoreSubmitInfos[i].value;
 
-		transferSemaphoreWaitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
+		transferSemaphoreWaitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO_KHR;
 		transferSemaphoreWaitInfos[i].pNext = NULL;
 		transferSemaphoreWaitInfos[i].flags = 0;
 		transferSemaphoreWaitInfos[i].semaphoreCount = 1;
@@ -2881,10 +2875,23 @@ bool submit_commands(Gpu_t* gpu)
 	for (uint32_t i = 0; i < inoutBuffersPerHeap; i++)
 		computeSubmitInfos[i].pWaitSemaphoreInfos = &transferToComputeWaitSemaphoreSubmitInfos[i];
 
-	GET_RESULT(vkWaitSemaphores(device, &onetimeSemaphoreWaitInfo, UINT64_MAX))
+#if END_ON == 1
+	int threadResult;
+	pthread_t waitThread;
+	GET_THRD_RESULT(pthread_create(&waitThread, NULL, wait_for_input, NULL))
+#ifndef NDEBUG
+	if (threadResult) {
+		PCREATE_FAILURE(&waitThread, NULL, wait_for_input, NULL)
+		free_SubmitCommandsData(data);
+		return false;
+	}
+#endif // NDEBUG
+#endif // END_ON
+
+	GET_RESULT(vkWaitSemaphoresKHR(device, &onetimeSemaphoreWaitInfo, UINT64_MAX))
 #ifndef NDEBUG
 	if (result != VK_SUCCESS) {
-		VULKAN_FAILURE(vkWaitSemaphores, 3, 'p', device, 'p', &onetimeSemaphoreWaitInfo, 'u', UINT64_MAX)
+		VULKAN_FAILURE(vkWaitSemaphoresKHR, 3, 'p', device, 'p', &onetimeSemaphoreWaitInfo, 'u', UINT64_MAX)
 		free_SubmitCommandsData(data);
 		return false;
 	}
@@ -2930,7 +2937,7 @@ bool submit_commands(Gpu_t* gpu)
 #if END_ON == 1
 	for (uint64_t i = 0; !atomic_load_explicit(&input, memory_order_acquire); i++) {
 #elif END_ON == 2
-	for (uint64_t i = 0; i < 50; i++) {
+	for (uint64_t i = 0; i < 30; i++) {
 #elif END_ON == 3
 	for (uint64_t i = 0; !count; i++) {
 #endif // END_ON
@@ -2953,10 +2960,10 @@ bool submit_commands(Gpu_t* gpu)
 			float transferBmark = 0.0F;
 
 			clock_t waitComputeSemaphoreBmarkStart = clock();
-			GET_RESULT(vkWaitSemaphores(device, &computeSemaphoreWaitInfos[j], UINT64_MAX))
+			GET_RESULT(vkWaitSemaphoresKHR(device, &computeSemaphoreWaitInfos[j], UINT64_MAX))
 #ifndef NDEBUG
 			if (result != VK_SUCCESS) {
-				VULKAN_FAILURE(vkWaitSemaphores, 3, 'p', device, 'p', &computeSemaphoreWaitInfos[j], 'u', UINT64_MAX)
+				VULKAN_FAILURE(vkWaitSemaphoresKHR, 3, 'p', device, 'p', &computeSemaphoreWaitInfos[j], 'u', UINT64_MAX)
 				free_SubmitCommandsData(data);
 				return false;
 			}
@@ -2987,10 +2994,10 @@ bool submit_commands(Gpu_t* gpu)
 			transferToComputeWaitSemaphoreSubmitInfos[j].value += 2;
 
 			clock_t waitTransferSemaphoreBmarkStart = clock();
-			GET_RESULT(vkWaitSemaphores(device, &transferSemaphoreWaitInfos[j], UINT64_MAX))
+			GET_RESULT(vkWaitSemaphoresKHR(device, &transferSemaphoreWaitInfos[j], UINT64_MAX))
 #ifndef NDEBUG
 			if (result != VK_SUCCESS) {
-				VULKAN_FAILURE(vkWaitSemaphores, 3, 'p', device, 'p', &transferSemaphoreWaitInfos[j], 'u', UINT64_MAX)
+				VULKAN_FAILURE(vkWaitSemaphoresKHR, 3, 'p', device, 'p', &transferSemaphoreWaitInfos[j], 'u', UINT64_MAX)
 				free_SubmitCommandsData(data);
 				return false;
 			}

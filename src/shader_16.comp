@@ -36,7 +36,7 @@ layout(binding = 1) writeonly buffer OutBuffer
 void main(void)
 {
 	uvec4 n = startingValues[gl_GlobalInvocationID.x];
-	uint steps = 0U;
+	uint16_t steps = uint16_t(0);
 
 	// Loop until n == 1
 	do {
@@ -51,7 +51,7 @@ void main(void)
 		// Check if 2^32 | n
 		while (n.x == 0) {
 			n = uvec4(n.yzw, 0);
-			steps += 32U;
+			steps += uint16_t(32);
 		}
 
 		// Calculate # trailing zero bits (by Sean Eron Anderson: https://graphics.stanford.edu/~seander/bithacks.html)
@@ -61,11 +61,11 @@ void main(void)
 		copy = uvec4(n.yzw, 0);
 		n >>= factorsOf2;
 		n += copy << (32U - factorsOf2);
-		steps += factorsOf2 + 1U;
+		steps += uint16_t(factorsOf2) + uint16_t(1);
 	}
 	while (n != uvec4(1, 0, 0, 0));
 
-	stepCounts[gl_GlobalInvocationID.x] = uint16_t(steps);
+	stepCounts[gl_GlobalInvocationID.x] = steps;
 }
 
 #elif INT_SIZE == 256
@@ -73,7 +73,7 @@ void main(void)
 void main(void)
 {
 	uvec4 n[] = uvec4[](startingValues[gl_GlobalInvocationID.x], uvec4(0));
-	uint steps = 0U;
+	uint16_t steps = uint16_t(0);
 
 	// Loop until n == 1
 	do {
@@ -95,7 +95,7 @@ void main(void)
 		while (n[0].x == 0) {
 			n[0] = uvec4(n[0].yzw, n[1].x);
 			n[1] = uvec4(n[1].yzw, 0);
-			steps += 32U;
+			steps += uint16_t(32);
 		}
 
 		// Calculate # trailing zero bits (by Sean Eron Anderson: https://graphics.stanford.edu/~seander/bithacks.html)
@@ -107,30 +107,11 @@ void main(void)
 		n[1] >>= factorsOf2;
 		n[0]     += uvec4(copy[0].yzw, copy[1].x) << (32U - factorsOf2);
 		n[1].xyz += copy[1].yzw                   << (32U - factorsOf2);
-		steps += factorsOf2 + 1U;
+		steps += uint16_t(factorsOf2) + uint16_t(1);
 	}
 	while (n != uvec4[](uvec4(1, 0, 0, 0), uvec4(0)));
 
-	stepCounts[gl_GlobalInvocationID.x] = uint16_t(steps);
+	stepCounts[gl_GlobalInvocationID.x] = steps;
 }
 
 #endif // INT_SIZE
-
-/*
-Notes to self:
-
-If a number doesn't go to one, either by tending to infinity or looping, then the execution of this shader will
-timeout, causing a VK_ERROR_DEVICE_LOST. Therefore, if a VK_ERROR_DEVICE_LOST is ever recieved, check the numbers that
-were being tested.
-
-Inout-buffers must be split into in-buffers and out-buffers due to the interaction between buffer block memory layouts
-and specialisation constants. Members of buffer blocks are assigned an offset based on their position in the layout by
-summing the sizes of all previously declared members. For arrays, this size equates to the product of the array length
-and the size of an array element. Array lengths can be specified post-compilation via specialisation constants.
-However, the layouts of buffer memory blocks cannot be altered post-compilation. As such, if the in-buffer and
-out-buffer arrays were in the same buffer block, their array lengths would be determined at pipeline creation, but
-their layout offsets would be determined at compilation using the specialisation constant's default value, likely
-resulting in the two arrays overlapping in memory.
-
-Did the benchmarking: in-buffers are faster as SSBOs than UBOs.
-*/

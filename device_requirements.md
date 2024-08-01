@@ -1,11 +1,12 @@
 # GPU Requirements
 
-The full requirements of the chosen `VkPhysicalDevice` object.
+The full requirements of the selected `VkPhysicalDevice` object.
 
 ## Extensions
 
 - `VK_KHR_maintenance4`
 - `VK_KHR_synchronization2`
+- `VK_KHR_timeline_semaphore`
 - `VK_EXT_memory_budget` (optional)
 - `VK_EXT_memory_priority` (optional)
 
@@ -13,16 +14,12 @@ The full requirements of the chosen `VkPhysicalDevice` object.
 
 `VkPhysicalDeviceFeatures`
 
-- `shaderInt16`
+- `shaderInt16` (optional)
 - `shaderInt64` (optional)
 
 `VkPhysicalDevice16BitStorageFeatures`
 
 - `storageBuffer16BitAccess`
-
-`VkPhysicalDeviceTimelineSemaphoreFeatures`
-
-- `timelineSemaphore` (guaranteed by `VK_API_VERSION_1_2`)
 
 `VkPhysicalDeviceMaintenance4FeaturesKHR`
 
@@ -32,6 +29,10 @@ The full requirements of the chosen `VkPhysicalDevice` object.
 
 - `synchronization2` (guaranteed by `VK_KHR_synchronization2`)
 
+`VkPhysicalDeviceTimelineSemaphoreFeaturesKHR`
+
+- `timelineSemaphore` (guaranteed by `VK_KHR_timeline_semaphore`)
+
 `VkPhysicalDeviceMemoryPriorityFeaturesEXT`
 
 - `memoryPriority` (optional, guaranteed by `VK_EXT_memory_priority`)
@@ -40,18 +41,15 @@ The full requirements of the chosen `VkPhysicalDevice` object.
 
 `VkPhysicalDeviceProperties`
 
-- `apiVersion` >= `VK_API_VERSION_1_2`
+- `apiVersion` >= `VK_API_VERSION_1_1`
 
 `VkPhysicalDeviceLimits`
 
-- `maxUniformBufferRange` >= 16 (guaranteed >= 16 384)
 - `maxStorageBufferRange` >= 16 (guaranteed >= 134 217 728)
 - `maxMemoryAllocationCount` >= 2 (guaranteed >= 4 096)
 - `maxBoundDescriptorSets` >= 1 (guaranteed >= 4)
-- `maxPerStageDescriptorUniformBuffers` >= 1 (guaranteed >= 12)
 - `maxPerStageDescriptorStorageBuffers` >= 2 (guaranteed >= 4)
 - `maxPerStageResources` >= 2 (guaranteed >= 128)
-- `maxDescriptorSetUniformBuffers` >= 1 (guaranteed >= 72)
 - `maxDescriptorSetStorageBuffers` >= 2 (guaranteed >= 24)
 - `maxComputeWorkGroupCount[0]` >= 1 (guaranteed >= 65 535)
 - `maxComputeWorkGroupCount[1]` >= 1 (guaranteed >= 65 535)

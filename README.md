@@ -62,14 +62,15 @@ primarily written in C, and the shaders are written in GLSL.
 - pthreads
 - glslc
 - volk
-- Vulkan 1.2
+- Vulkan 1.1
   - `VK_EXT_debug_utils` (recommended for debug)
   - `VK_LAYER_KHRONOS_validation` (recommended for debug)
   - `VK_KHR_maintenance4`
   - `VK_KHR_synchronization2`
+  - `VK_KHR_timeline_semaphore`
   - `VK_EXT_memory_budget` (recommended)
   - `VK_EXT_memory_priority` (recommended)
-  - `VkPhysicalDeviceFeatures::shaderInt16`
+  - `VkPhysicalDeviceFeatures::shaderInt16` (recommended)
   - `VkPhysicalDeviceFeatures::shaderInt64` (recommended)
   - `VkPhysicalDevice16BitStorageFeatures::storageBuffer16BitAccess`
 
@@ -105,10 +106,10 @@ file will be read by the program if run again.
 ## Inout-buffers
 
 To facilitate this use of the GPU, _inout-buffers_ are used. Inout-buffers are ranges of GPU memory
-within `VkBuffer` objects and consist of an _in-buffer_ and _out-buffer_. In-buffers are storage
-buffers or uniform buffers and contain an array of 128-bit unsigned integer starting values.
-Out-buffers are storage buffers and contain an array of 16-bit unsigned integer total stopping
-times (step counts).
+within `VkBuffer` objects and consist of an _in-buffer_ and _out-buffer_. In-buffers are shader
+storage buffer objects (SSBOs) and contain an array of 128-bit unsigned integer starting values.
+Out-buffers are also SSBOs and contain an array of 16-bit unsigned integer total stopping times
+(step counts).
 
 The main loop consists of the CPU writing starting values to in-buffers; the GPU reading starting
 values from in-buffers, iterating through Collatz sequences, and writing step counts to
@@ -163,15 +164,14 @@ commands via queries. If 1, the `vkCmdCopyBuffer` and `vkCmdDispatch` commands w
 `LOG_VULKAN_ALLOCATIONS` is a boolean value describing whether or not the program will log memory
 allocations performed by the Vulkan API via a `VkAllocationCallbacks` object.
 
-`EXT_LAYERS` is a boolean value describing whether or not the Khronos
+`EXTENSION_LAYERS` is a boolean value describing whether or not the Khronos
 [extension layers](https://github.com/KhronosGroup/Vulkan-ExtensionLayer) will be enabled, if
 present. This includes `VK_LAYER_KHRONOS_synchronization2`. This value should be 1 if
 `VK_KHR_synchronization2` is not present.
 
-`IN_BUFFER_TYPE` is an integer value describing the type of buffer object in-buffers will be
-treated as. If 1, in-buffers will be shader storage buffer objects (SSBOs). If 2, in-buffers will
-be uniform buffer objects (UBOs). If this value is changed, the corresponding macro in the compute
-shaders must be changed accordingly.
+`VALIDATION_LAYERS` is a boolean value describing whether or not the Khronos
+[validation layers](https://github.com/KhronosGroup/Vulkan-ValidationLayers) will be enabled, if
+present. This includes `VK_LAYER_KHRONOS_validation`.
 
 `END_ON` is an integer value describing when the program will terminate. If 1, the program will end
 on user input, namely when either of the __enter__ or __return__ keys are pressed. If 2, the

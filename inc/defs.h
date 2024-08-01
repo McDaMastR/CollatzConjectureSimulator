@@ -30,13 +30,15 @@
 // * ===== Macros =====
 
 #define PROGRAM_NAME "Collatz Conjecture Simulator"
-#define VK_LAYER_KHRONOS_VALIDATION_LAYER_NAME "VK_LAYER_KHRONOS_validation"
-#define VK_LAYER_KHRONOS_SYNCHRONIZATION_2_LAYER_NAME "VK_LAYER_KHRONOS_synchronization2"
+#define VK_KHR_VALIDATION_LAYER_NAME "VK_LAYER_KHRONOS_validation"
+#define VK_KHR_SYNCHRONIZATION_2_LAYER_NAME "VK_LAYER_KHRONOS_synchronization2"
 
 #define DEBUG_LOG_NAME "debug_log.txt"
 #define ALLOC_LOG_NAME "alloc_log.txt"
-#define SHADER32_NAME "shader.spv"
-#define SHADER64_NAME "shader64.spv"
+#define SHADER_16_64_NAME "shader_16_64.spv"
+#define SHADER_16_NAME "shader_16.spv"
+#define SHADER_64_NAME "shader_64.spv"
+#define SHADER_NOEXT_NAME "shader.spv"
 #define PIPELINE_CACHE_NAME "pipeline_cache.bin"
 
 // Milliseconds per clock
@@ -77,12 +79,10 @@
 #define LOG_VULKAN_ALLOCATIONS 0
 
 // Whether to use Khronos extension layers
-#define EXT_LAYERS 0
+#define EXTENSION_LAYERS 0
 
-// If 1, use Shader Storage Buffer Object (SSBO)
-// If 2, use Uniform Buffer Object (UBO)
-// If changing, must change in shaders as well
-#define IN_BUFFER_TYPE 1
+// Whether to use Khronos validation layers
+#define VALIDATION_LAYERS 0
 
 // When to end program
 // 1 -> On user input
@@ -143,15 +143,9 @@
 #endif // NDEBUG
 
 #define HOST_VISIBLE_BUFFER_USAGE VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
+#define DEVICE_LOCAL_BUFFER_USAGE VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+#define IN_BUFFER_DESCRIPTOR_TYPE  VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
 #define OUT_BUFFER_DESCRIPTOR_TYPE VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
-
-#if IN_BUFFER_TYPE == 1
-	#define DEVICE_LOCAL_BUFFER_USAGE VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
-	#define IN_BUFFER_DESCRIPTOR_TYPE VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
-#elif IN_BUFFER_TYPE == 2
-	#define DEVICE_LOCAL_BUFFER_USAGE VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
-	#define IN_BUFFER_DESCRIPTOR_TYPE VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
-#endif // IN_BUFFER_TYPE
 
 
 // * ===== Typedefs =====
@@ -252,6 +246,7 @@ typedef struct Gpu
 
 	float timestampPeriod;
 
+	bool usingShaderInt16;
 	bool usingShaderInt64;
 	bool usingMemoryBudget;
 	bool usingMemoryPriority;

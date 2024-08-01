@@ -19,25 +19,18 @@
 #version 450 core
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 
-#define IN_BUFFER_TYPE 1 // Buffer type of in-buffer (1 = SSBO, 2 = UBO)
-#define INT_SIZE 128 // Size of integer used to iterate over Collatz sequence (128 or 256 bits)
 #define UINT_MAX 0XFFFFFFFFU
 
 layout(local_size_x_id = 0) in;
-layout(constant_id = 1) const uint valuesPerInoutBuffer = 1U;
 
-#if IN_BUFFER_TYPE == 1
 layout(binding = 0) readonly buffer InBuffer
-#elif IN_BUFFER_TYPE == 2
-layout(binding = 0) uniform InBuffer
-#endif // IN_BUFFER_TYPE
 {
-	u64vec2 startingValues[valuesPerInoutBuffer];
+	u64vec2 startingValues[];
 };
 
 layout(binding = 1) writeonly buffer OutBuffer
 {
-	uint16_t stepCounts[valuesPerInoutBuffer];
+	uint16_t stepCounts[];
 };
 
 #if INT_SIZE == 128
@@ -45,7 +38,7 @@ layout(binding = 1) writeonly buffer OutBuffer
 void main(void)
 {
 	u64vec2 n = startingValues[gl_GlobalInvocationID.x];
-	uint16_t steps = uint16_t(0);
+	uint steps = 0U;
 
 	// Loop until n == 1
 	do {
@@ -58,7 +51,7 @@ void main(void)
 		// Check if 2^32 | n
 		while ((n.x & UINT_MAX) == 0) {
 			n = u64vec2((n.x >> 32) + (n.y << 32), n.y >> 32);
-			steps += uint16_t(32);
+			steps += 32U;
 		}
 
 		// Calculate # trailing zero bits (by Sean Eron Anderson: https://graphics.stanford.edu/~seander/bithacks.html)
@@ -69,11 +62,11 @@ void main(void)
 		uint64_t copy3 = n.y;
 		n >>= factorsOf2;
 		n.x += copy3 << (64 - factorsOf2);
-		steps += uint16_t(factorsOf2) + uint16_t(1);
+		steps += factorsOf2 + 1U;
 	}
 	while (n != u64vec2(1, 0));
 
-	stepCounts[gl_GlobalInvocationID.x] = steps;
+	stepCounts[gl_GlobalInvocationID.x] = uint16_t(steps);
 }
 
 #elif INT_SIZE == 256
@@ -81,7 +74,7 @@ void main(void)
 void main(void)
 {
 	u64vec4 n = u64vec4(startingValues[gl_GlobalInvocationID.x], 0, 0);
-	uint16_t steps = uint16_t(0);
+	uint steps = 0U;
 
 	// Loop until n == 1
 	do {
@@ -96,7 +89,7 @@ void main(void)
 		// Check if 2^32 | n
 		while ((n.x & UINT_MAX) == 0) {
 			n = u64vec4((n.xyz >> 32) + (n.yzw << 32), n.w >> 32);
-			steps += uint16_t(32);
+			steps += 32U;
 		}
 
 		// Calculate # trailing zero bits (by Sean Eron Anderson: https://graphics.stanford.edu/~seander/bithacks.html)
@@ -107,11 +100,11 @@ void main(void)
 		u64vec3 copy3 = n.yzw;
 		n >>= factorsOf2;
 		n.xyz += copy3 << (64 - factorsOf2);
-		steps += uint16_t(factorsOf2) + uint16_t(1);
+		steps += factorsOf2 + 1U;
 	}
 	while (n != u64vec4(1, 0, 0, 0));
 
-	stepCounts[gl_GlobalInvocationID.x] = steps;
+	stepCounts[gl_GlobalInvocationID.x] = uint16_t(steps);
 }
 
 #endif // INT_SIZE
