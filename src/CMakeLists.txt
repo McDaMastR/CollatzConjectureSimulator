@@ -5,13 +5,10 @@ find_package(Threads REQUIRED)
 find_package(volk REQUIRED)
 
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE main.c gpu.c debug.c)
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/inc)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Threads::Threads volk::volk)
 
-set_target_properties(
-	${CMAKE_PROJECT_NAME} PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin
-)
+set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+target_compile_features(${CMAKE_PROJECT_NAME} PRIVATE c_std_11)
 
 if (WIN32)
 	target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE VK_USE_PLATFORM_WIN32_KHR)

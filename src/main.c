@@ -25,6 +25,7 @@ int main(void)
 	Gpu_t gpu = {0}; // Stack-allocate majority of variables
 
 	CHECK_RESULT(create_instance())
+	CHECK_RESULT(select_device(&gpu))
 	CHECK_RESULT(create_device(&gpu))
 	CHECK_RESULT(manage_memory(&gpu))
 	CHECK_RESULT(create_buffers(&gpu))

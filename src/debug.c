@@ -84,7 +84,7 @@ static void print_debug_callback(
 {
 	clock_t time = PROGRAM_TIME;
 	fprintf(stream,
-		"Vulkan debug callback %llu (%ld ms)\n",
+		"Debug callback %llu (%ld ms)\n",
 		userData, time
 	);
 
@@ -153,22 +153,22 @@ VkBool32 debug_callback(
 	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 	void* pUserData)
 {
-	uint64_t* callbackCount = (uint64_t*) pUserData;
+	(*(uint64_t*) pUserData)++;
+	uint64_t callbackCount = *(uint64_t*) pUserData;
 
 	if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-		print_debug_callback(stderr, messageSeverity, messageTypes, pCallbackData, *callbackCount);
+		print_debug_callback(stderr, messageSeverity, messageTypes, pCallbackData, callbackCount);
 	else if (messageTypes & ~(VkDebugUtilsMessageTypeFlagsEXT) VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
-		print_debug_callback(stdout, messageSeverity, messageTypes, pCallbackData, *callbackCount);
+		print_debug_callback(stdout, messageSeverity, messageTypes, pCallbackData, callbackCount);
 
 	FILE* file = fopen(DEBUG_LOG_NAME, "a");
 	if (file) {
-		print_debug_callback(file, messageSeverity, messageTypes, pCallbackData, *callbackCount);
+		print_debug_callback(file, messageSeverity, messageTypes, pCallbackData, callbackCount);
 		fclose(file);
 	}
 	else
 		FOPEN_FAILURE(DEBUG_LOG_NAME, "a")
 
-	(*callbackCount)++;
 	return VK_FALSE;
 }
 
@@ -187,11 +187,11 @@ static void print_allocation_callback(
 	clock_t time = PROGRAM_TIME;
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 	fprintf(stream,
-		"Vulkan host allocation callback %llu (%ld ms)\n"
+		"Allocation callback %llu (%ld ms)\n"
 		"Size: %zu\n"
 		"Alignment: %zu\n"
-		"Allocation scope: %s\n"
-		"Allocated address: %p\n\n",
+		"Scope: %s\n"
+		"Address: %p\n\n",
 		userData, time, size, alignment, sAllocationScope, memory
 	);
 }
@@ -202,21 +202,21 @@ void* allocation_callback(
 	size_t alignment,
 	VkSystemAllocationScope allocationScope)
 {
-	uint64_t* allocationCount = &((AllocationCallbackCounts_t*) pUserData)->allocationCount;
+	((AllocationCallbackCounts_t*) pUserData)->allocationCount++;
+	uint64_t allocationCount = ((AllocationCallbackCounts_t*) pUserData)->allocationCount;
 
 	void* memory = size ? _aligned_malloc(size, alignment) : NULL;
 	if (!memory && size)
-		print_allocation_callback(stderr, *allocationCount, size, alignment, allocationScope, memory);
+		print_allocation_callback(stderr, allocationCount, size, alignment, allocationScope, memory);
 
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
 	if (file) {
-		print_allocation_callback(file, *allocationCount, size, alignment, allocationScope, memory);
+		print_allocation_callback(file, allocationCount, size, alignment, allocationScope, memory);
 		fclose(file);
 	}
 	else
 		FOPEN_FAILURE(ALLOC_LOG_NAME, "a")
 
-	(*allocationCount)++;
 	return memory;
 }
 
@@ -233,11 +233,11 @@ static void print_reallocation_callback(
 	clock_t time = PROGRAM_TIME;
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 	fprintf(stream,
-		"Vulkan host reallocation callback %llu (%ld ms)\n"
+		"Reallocation callback %llu (%ld ms)\n"
 		"Original size: %zu\n"
 		"Allocated size: %zu\n"
 		"Alignment: %zu\n"
-		"Allocation scope: %s\n"
+		"Scope: %s\n"
 		"Original address: %p\n"
 		"Allocated address: %p\n\n",
 		userData, time, originalSize, size, alignment, sAllocationScope, originalAddr, memory
@@ -251,22 +251,22 @@ void* reallocation_callback(
 	size_t alignment,
 	VkSystemAllocationScope allocationScope)
 {
-	uint64_t* reallocationCount = &((AllocationCallbackCounts_t*) pUserData)->reallocationCount;
+	((AllocationCallbackCounts_t*) pUserData)->reallocationCount++;
+	uint64_t reallocationCount = ((AllocationCallbackCounts_t*) pUserData)->reallocationCount;
 
 	size_t originalSize = pOriginal ? _aligned_msize(pOriginal, alignment, (size_t) 0) : 0;
 	void* memory = pOriginal || size ? _aligned_realloc(pOriginal, size, alignment) : NULL;
 	if (!memory && size)
-		print_reallocation_callback(stderr, *reallocationCount, originalSize, size, alignment, allocationScope, pOriginal, memory);
+		print_reallocation_callback(stderr, reallocationCount, originalSize, size, alignment, allocationScope, pOriginal, memory);
 
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
 	if (file) {
-		print_reallocation_callback(file, *reallocationCount, originalSize, size, alignment, allocationScope, pOriginal, memory);
+		print_reallocation_callback(file, reallocationCount, originalSize, size, alignment, allocationScope, pOriginal, memory);
 		fclose(file);
 	}
 	else
 		FOPEN_FAILURE(ALLOC_LOG_NAME, "a")
 
-	(*reallocationCount)++;
 	return memory;
 }
 
@@ -277,8 +277,8 @@ static void print_free_callback(
 {
 	clock_t time = PROGRAM_TIME;
 	fprintf(stream,
-		"Vulkan host free callback %llu (%ld ms)\n"
-		"Freed address: %p\n\n",
+		"Free callback %llu (%ld ms)\n"
+		"Address: %p\n\n",
 		userData, time, memory
 	);
 }
@@ -287,19 +287,18 @@ void free_callback(
 	void* pUserData,
 	void* pMemory)
 {
-	uint64_t* freeCount = &((AllocationCallbackCounts_t*) pUserData)->freeCount;
+	((AllocationCallbackCounts_t*) pUserData)->freeCount++;
+	uint64_t freeCount = ((AllocationCallbackCounts_t*) pUserData)->freeCount;
 
 	_aligned_free(pMemory);
 
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
 	if (file) {
-		print_free_callback(file, *freeCount, pMemory);
+		print_free_callback(file, freeCount, pMemory);
 		fclose(file);
 	}
 	else
 		FOPEN_FAILURE(ALLOC_LOG_NAME, "a")
-
-	(*freeCount)++;
 }
 
 static void print_internal_allocation_callback(
@@ -313,10 +312,10 @@ static void print_internal_allocation_callback(
 	const char* sAllocationType = string_VkInternalAllocationType(allocationType);
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 	fprintf(stream,
-		"Vulkan host internal allocation callback %llu (%ld ms)\n"
+		"Internal allocation callback %llu (%ld ms)\n"
 		"Size: %zu\n"
-		"Allocation type: %s\n"
-		"Allocation scope: %s\n\n",
+		"Type: %s\n"
+		"Scope: %s\n\n",
 		userData, time, size, sAllocationType, sAllocationScope
 	);
 }
@@ -327,17 +326,16 @@ void internal_allocation_callback(
 	VkInternalAllocationType allocationType,
 	VkSystemAllocationScope allocationScope)
 {
-	uint64_t* internalAllocationCount = &((AllocationCallbackCounts_t*) pUserData)->internalAllocationCount;
+	((AllocationCallbackCounts_t*) pUserData)->internalAllocationCount++;
+	uint64_t internalAllocationCount = ((AllocationCallbackCounts_t*) pUserData)->internalAllocationCount;
 
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
 	if (file) {
-		print_internal_allocation_callback(file, *internalAllocationCount, size, allocationType, allocationScope);
+		print_internal_allocation_callback(file, internalAllocationCount, size, allocationType, allocationScope);
 		fclose(file);
 	}
 	else
 		FOPEN_FAILURE(ALLOC_LOG_NAME, "a")
-
-	(*internalAllocationCount)++;
 }
 
 static void print_internal_free_callback(
@@ -351,10 +349,10 @@ static void print_internal_free_callback(
 	const char* sAllocationType = string_VkInternalAllocationType(allocationType);
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 	fprintf(stream,
-		"Vulkan host internal free callback %llu (%ld ms)\n"
+		"Internal free callback %llu (%ld ms)\n"
 		"Size: %zu\n"
-		"Allocation type: %s\n"
-		"Allocation scope: %s\n\n",
+		"Type: %s\n"
+		"Scope: %s\n\n",
 		userData, time, size, sAllocationType, sAllocationScope
 	);
 }
@@ -365,17 +363,16 @@ void internal_free_callback(
 	VkInternalAllocationType allocationType,
 	VkSystemAllocationScope allocationScope)
 {
-	uint64_t* internalFreeCount = &((AllocationCallbackCounts_t*) pUserData)->internalFreeCount;
+	((AllocationCallbackCounts_t*) pUserData)->internalFreeCount++;
+	uint64_t internalFreeCount = ((AllocationCallbackCounts_t*) pUserData)->internalFreeCount;
 
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
 	if (file) {
-		print_internal_free_callback(file, *internalFreeCount, size, allocationType, allocationScope);
+		print_internal_free_callback(file, internalFreeCount, size, allocationType, allocationScope);
 		fclose(file);
 	}
 	else
 		FOPEN_FAILURE(ALLOC_LOG_NAME, "a")
-
-	(*internalFreeCount)++;
 }
 
 #endif // LOG_VULKAN_ALLOCATIONS

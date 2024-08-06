@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(CollatzConjectureSimulator VERSION 1.3 LANGUAGES C)
+project(CollatzConjectureSimulator VERSION 1.4 LANGUAGES C)
 
 add_subdirectory(src)
 

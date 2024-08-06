@@ -63,16 +63,10 @@ primarily written in C, and the shaders are written in GLSL.
 - glslc
 - volk
 - Vulkan 1.1
-  - `VK_EXT_debug_utils` (recommended for debug)
-  - `VK_LAYER_KHRONOS_validation` (recommended for debug)
-  - `VK_KHR_maintenance4`
-  - `VK_KHR_synchronization2`
-  - `VK_KHR_timeline_semaphore`
-  - `VK_EXT_memory_budget` (recommended)
-  - `VK_EXT_memory_priority` (recommended)
-  - `VkPhysicalDeviceFeatures::shaderInt16` (recommended)
-  - `VkPhysicalDeviceFeatures::shaderInt64` (recommended)
-  - `VkPhysicalDevice16BitStorageFeatures::storageBuffer16BitAccess`
+  - `maintenance4`
+  - `storageBuffer16BitAccess`
+  - `synchronization2`
+  - `timelineSemaphore`
 
 ## Building and Running
 

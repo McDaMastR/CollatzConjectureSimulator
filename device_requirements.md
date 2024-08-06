@@ -9,6 +9,7 @@ The full requirements of the selected `VkPhysicalDevice` object.
 - `VK_KHR_timeline_semaphore`
 - `VK_EXT_memory_budget` (optional)
 - `VK_EXT_memory_priority` (optional)
+- `VK_EXT_subgroup_size_control` (optional)
 
 ## Features
 
@@ -36,6 +37,10 @@ The full requirements of the selected `VkPhysicalDevice` object.
 `VkPhysicalDeviceMemoryPriorityFeaturesEXT`
 
 - `memoryPriority` (optional, guaranteed by `VK_EXT_memory_priority`)
+
+`VkPhysicalDeviceSubgroupSizeControlFeaturesEXT`
+
+- `subgroupSizeControl` (optional, guaranteed by `VK_EXT_subgroup_size_control`)
 
 ## Properties
 
@@ -101,12 +106,12 @@ The full requirements of the selected `VkPhysicalDevice` object.
 
 `VkQueueFamilyProperties`
 
-- `queueFlags` includes `VK_QUEUE_COMPUTE_BIT` (guaranteed)
+- `queueFlags` includes `VK_QUEUE_COMPUTE_BIT`
 - `queueCount` >= 1 (guaranteed >= 1)
 
 ### Transfer queue family
 
 `VkQueueFamilyProperties`
 
-- `queueFlags` includes `VK_QUEUE_TRANSFER_BIT` (guaranteed)
+- `queueFlags` includes `VK_QUEUE_TRANSFER_BIT` (guaranteed by `VK_QUEUE_COMPUTE_BIT`)
 - `queueCount` >= 1 (guaranteed >= 1)

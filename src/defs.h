@@ -48,7 +48,7 @@
 #define PROGRAM_TIME (clock() * MS_PER_CLOCK)
 
 // Set a 128-bit integer to a given value
-#define SET_128BIT_INT(val, top, bottom) (val) = (top); (val) <<= 64; (val) |= (bottom);
+#define SET_128BIT_INT(val, top, bottom) {(val) = (top); (val) <<= 64; (val) |= (bottom);}
 
 // Get the top 64 bits of a 128-bit integer
 #define GET_TOP_128BIT_INT(val) ((uint64_t) ((val) >> 64))
@@ -136,19 +136,14 @@
 	#define BEGIN_FUNC printf("BEGIN %s\n", __func__);
 	#define END_FUNC printf("END %s\n\n", __func__);
 
-	#define SET_DEBUG_NAME()                                                        \
-		GET_RESULT(vkSetDebugUtilsObjectNameEXT(device, &debugUtilsObjectNameInfo)) \
-		if (result != VK_SUCCESS)                                                   \
-			VULKAN_FAILURE(vkSetDebugUtilsObjectNameEXT, 2, 'p', device, 'p', &debugUtilsObjectNameInfo)
+	#define SET_DEBUG_NAME()                                                          \
+		GET_RESULT(vkSetDebugUtilsObjectNameEXT(g_device, &debugUtilsObjectNameInfo)) \
+		if (result)                                                                   \
+			VULKAN_FAILURE(vkSetDebugUtilsObjectNameEXT, 2, 'p', g_device, 'p', &debugUtilsObjectNameInfo)
 #endif // NDEBUG
 
-#define HOST_VISIBLE_BUFFER_USAGE VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
-#define DEVICE_LOCAL_BUFFER_USAGE VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
-#define IN_BUFFER_DESCRIPTOR_TYPE  VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
-#define OUT_BUFFER_DESCRIPTOR_TYPE VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
 
-
-// * ===== Typedefs =====
+// * ===== Datatypes =====
 
 // Data type of values to test
 #if defined(__SIZEOF_INT128__) && __SIZEOF_INT128__ == 16
@@ -170,7 +165,7 @@ typedef struct AllocationCallbackCounts
 	uint64_t internalFreeCount;
 } AllocationCallbackCounts_t;
 
-// Structure containing all relevant Vulkan info
+// Structure containing most relevant Vulkan info
 typedef struct Gpu
 {
 	VkDeviceMemory* hostVisibleDeviceMemories; // Count = deviceMemoriesPerHeap
@@ -180,29 +175,29 @@ typedef struct Gpu
 	VkBuffer* deviceLocalBuffers; // Count = buffersPerHeap
 
 	VkDescriptorSetLayout descriptorSetLayout;
-	VkDescriptorPool descriptorPool;
-	VkDescriptorSet* descriptorSets; // Count = inoutBuffersPerHeap
+	VkDescriptorPool      descriptorPool;
+	VkDescriptorSet*      descriptorSets; // Count = inoutBuffersPerHeap
 
-	VkShaderModule shaderModule;
-	VkPipelineCache pipelineCache;
+	VkShaderModule   shaderModule;
+	VkPipelineCache  pipelineCache;
 	VkPipelineLayout pipelineLayout;
-	VkPipeline pipeline;
+	VkPipeline       pipeline;
 
 	VkCommandPool onetimeCommandPool;
 	VkCommandPool transferCommandPool;
 	VkCommandPool computeCommandPool;
 
-	VkCommandBuffer onetimeCommandBuffer;
+	VkCommandBuffer  onetimeCommandBuffer;
 	VkCommandBuffer* transferCommandBuffers; // Count = inoutBuffersPerHeap
-	VkCommandBuffer* computeCommandBuffers; // Count = inoutBuffersPerHeap
+	VkCommandBuffer* computeCommandBuffers;  // Count = inoutBuffersPerHeap
 
-	VkSemaphore onetimeSemaphore;
+	VkSemaphore  onetimeSemaphore;
 	VkSemaphore* semaphores; // Count = inoutBuffersPerHeap
 
 	VkQueryPool queryPool;
 
-	value_t** mappedHostVisibleInBuffers; // Count = inoutBuffersPerHeap, valuesPerInoutBuffer
-	step_t** mappedHostVisibleOutBuffers; // Count = inoutBuffersPerHeap, valuesPerInoutBuffer
+	value_t** mappedHostVisibleInBuffers;  // Count = inoutBuffersPerHeap, valuesPerInoutBuffer
+	step_t**  mappedHostVisibleOutBuffers; // Count = inoutBuffersPerHeap, valuesPerInoutBuffer
 
 	VkDeviceSize inBufferAlignment;
 	VkDeviceSize outBufferAlignment;
@@ -234,8 +229,8 @@ typedef struct Gpu
 	uint32_t computeWorkGroupSize;
 
 	uint32_t hostVisibleMemoryHeapIndex;
-	uint32_t deviceLocalMemoryHeapIndex;
 	uint32_t hostVisibleMemoryTypeIndex;
+	uint32_t deviceLocalMemoryHeapIndex;
 	uint32_t deviceLocalMemoryTypeIndex;
 
 	uint32_t transferQueueFamilyIndex;
@@ -250,6 +245,9 @@ typedef struct Gpu
 	bool usingShaderInt64;
 	bool usingMemoryBudget;
 	bool usingMemoryPriority;
+	bool usingSubgroupSizeControl;
+	bool usingPortabilitySubset;
+	bool usingNonCoherent;
 
 	void* dynamicMemory;
 } Gpu_t;
@@ -260,6 +258,10 @@ typedef struct Gpu
 // Creates Vulkan instance
 // Returns true if successful, false otherwise
 bool create_instance(void);
+
+// Selects physical device
+// Returns true if successful, false otherwise
+bool select_device(Gpu_t* gpu);
 
 // Creates logical device
 // Returns true if successful, false otherwise
