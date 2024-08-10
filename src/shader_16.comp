@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#version 450 core
+#version 460 core
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 
 layout(local_size_x_id = 0) in;
@@ -42,8 +42,8 @@ void main(void)
 	do {
 		// 3n + 1
 		uvec4 copy = n;
-		n <<= 1U;
-		n += uvec4(1, copy.xyz >> 31U) + copy;
+		n <<= 1;
+		n += uvec4(1, copy.xyz >> 31) + copy;
 		n.y += uint(copy.x > n.x);
 		n.z += uint(copy.y > n.y);
 		n.w += uint(copy.z > n.z);
@@ -55,12 +55,12 @@ void main(void)
 		}
 
 		// Calculate # trailing zero bits (by Sean Eron Anderson: https://graphics.stanford.edu/~seander/bithacks.html)
-		uint factorsOf2 = (floatBitsToUint(float(n.x & -n.x)) >> 23U) - 0X7FU;
+		uint factorsOf2 = (floatBitsToUint(float(n.x & -n.x)) >> 23) - 0x7f;
 
 		// n/2 for each factor of 2
 		copy = uvec4(n.yzw, 0);
 		n >>= factorsOf2;
-		n += copy << (32U - factorsOf2);
+		n += copy << (32 - factorsOf2);
 		steps += uint16_t(factorsOf2) + uint16_t(1);
 	}
 	while (n != uvec4(1, 0, 0, 0));
@@ -79,10 +79,10 @@ void main(void)
 	do {
 		// 3n + 1
 		uvec4 copy[] = n;
-		n[0] <<= 1U;
-		n[1] <<= 1U;
-		n[0] += uvec4(1,                copy[0].xyz >> 31U) + copy[0];
-		n[1] += uvec4(copy[0].w >> 31U, copy[1].xyz >> 31U) + copy[1];
+		n[0] <<= 1;
+		n[1] <<= 1;
+		n[0] += uvec4(1,               copy[0].xyz >> 31) + copy[0];
+		n[1] += uvec4(copy[0].w >> 31, copy[1].xyz >> 31) + copy[1];
 		n[0].y += uint(copy[0].x > n[0].x);
 		n[0].z += uint(copy[0].y > n[0].y);
 		n[0].w += uint(copy[0].z > n[0].z);
@@ -99,14 +99,14 @@ void main(void)
 		}
 
 		// Calculate # trailing zero bits (by Sean Eron Anderson: https://graphics.stanford.edu/~seander/bithacks.html)
-		uint factorsOf2 = (floatBitsToUint(float(n[0].x & -n[0].x)) >> 23U) - 0X7FU;
+		uint factorsOf2 = (floatBitsToUint(float(n[0].x & -n[0].x)) >> 23) - 0x7f;
 
 		// n/2 for each factor of 2
 		copy = n;
 		n[0] >>= factorsOf2;
 		n[1] >>= factorsOf2;
-		n[0]     += uvec4(copy[0].yzw, copy[1].x) << (32U - factorsOf2);
-		n[1].xyz += copy[1].yzw                   << (32U - factorsOf2);
+		n[0]     += uvec4(copy[0].yzw, copy[1].x) << (32 - factorsOf2);
+		n[1].xyz += copy[1].yzw                   << (32 - factorsOf2);
 		steps += uint16_t(factorsOf2) + uint16_t(1);
 	}
 	while (n != uvec4[](uvec4(1, 0, 0, 0), uvec4(0)));
@@ -114,4 +114,4 @@ void main(void)
 	stepCounts[gl_GlobalInvocationID.x] = steps;
 }
 
-#endif // INT_SIZE
+#endif

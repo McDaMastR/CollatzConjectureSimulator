@@ -4,7 +4,7 @@ The full requirements of the selected `VkPhysicalDevice` object.
 
 ## Extensions
 
-- `VK_KHR_maintenance4`
+- `VK_KHR_maintenance4` (optional)
 - `VK_KHR_synchronization2`
 - `VK_KHR_timeline_semaphore`
 - `VK_EXT_memory_budget` (optional)
@@ -24,7 +24,7 @@ The full requirements of the selected `VkPhysicalDevice` object.
 
 `VkPhysicalDeviceMaintenance4FeaturesKHR`
 
-- `maintenance4` (guaranteed by `VK_KHR_maintenance4`)
+- `maintenance4` (optional, guaranteed by `VK_KHR_maintenance4`)
 
 `VkPhysicalDeviceSynchronization2FeaturesKHR`
 

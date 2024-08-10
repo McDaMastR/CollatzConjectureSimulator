@@ -63,7 +63,6 @@ primarily written in C, and the shaders are written in GLSL.
 - glslc
 - volk
 - Vulkan 1.1
-  - `maintenance4`
   - `storageBuffer16BitAccess`
   - `synchronization2`
   - `timelineSemaphore`
@@ -147,7 +146,7 @@ values from exactly where it last ended.
 
 `MAX_HEAP_MEMORY` is a floating-point value within the interval $(0, 1)$, describing the maximum
 proportion of available memory in a `VkMemoryHeap` the program can allocate via `vkAllocateMemory`.
-For example, a value of 0.8F means at most 80% of available memory in any GPU memory heap will be
+For example, a value of 0.8f means at most 80% of available memory in any GPU memory heap will be
 allocated for inout-buffers. If `VK_EXT_memory_budget` is present, _available memory_ refers to the
 `VkPhysicalDeviceMemoryBudgetPropertiesEXT::heapBudget` of a memory heap. Elsewise, it refers to
 the corresponding `VkMemoryHeap::size`.

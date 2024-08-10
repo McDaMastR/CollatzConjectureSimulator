@@ -375,7 +375,7 @@ void internal_free_callback(
 		FOPEN_FAILURE(ALLOC_LOG_NAME, "a")
 }
 
-#endif // LOG_VULKAN_ALLOCATIONS
+#endif
 
 
 // ===== Failure functions =====
