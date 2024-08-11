@@ -457,18 +457,21 @@ bool select_device(Gpu_t* gpu)
 		bool hasDedicatedCompute  = false;
 		bool hasDedicatedTransfer = false;
 
-		bool hasDedicatedDeviceLocal  = false;
+		bool hasDeviceNonHost = false;
+		bool hasDeviceLocal   = false;
+
 		bool hasHostCachedNonCoherent = false;
 		bool hasHostCached            = false;
 		bool hasHostNonCoherent       = false;
+		bool hasHostVisible           = false;
 
 		bool hasMaintenance4        = false;
+		bool hasPortabilitySubset   = false;
 		bool hasSynchronization2    = false;
 		bool hasTimelineSemaphore   = false;
 		bool hasMemoryBudget        = false;
 		bool hasMemoryPriority      = false;
 		bool hasSubgroupSizeControl = false;
-		bool hasPortabilitySubset   = false;
 
 		for (uint32_t j = 0; j < queueFamilyPropertyCounts[i]; j++) {
 			VkQueueFlags queueFlags = queueFamiliesProperties2[i][j].queueFamilyProperties.queueFlags;
@@ -485,34 +488,52 @@ bool select_device(Gpu_t* gpu)
 		for (uint32_t j = 0; j < physicalDevicesMemoryProperties2[i].memoryProperties.memoryTypeCount; j++) {
 			VkMemoryPropertyFlags propertyFlags = physicalDevicesMemoryProperties2[i].memoryProperties.memoryTypes[j].propertyFlags;
 
-			bool isDeviceLocal  = propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-			bool isHostCached   = propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
-			bool isHostCoherent = propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-			bool isHostVisible  = propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+			bool isDeviceLocal     = propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+			bool isHostVisible     = propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+			bool isHostCoherent    = propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+			bool isHostCached      = propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+			bool isLazilyAllocated = propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;
+			bool isProtected       = propertyFlags & VK_MEMORY_PROPERTY_PROTECTED_BIT;
+			bool isDeviceCoherent  = propertyFlags & VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD;
 
-			if (isDeviceLocal && !isHostVisible) hasDedicatedDeviceLocal  = true;
-			if (isHostCached && !isHostCoherent) hasHostCachedNonCoherent = true;
-			if (isHostCached)                    hasHostCached            = true;
-			if (!isHostCoherent)                 hasHostNonCoherent       = true;
+			if (isLazilyAllocated) continue;
+			if (isProtected)       continue;
+			if (isDeviceCoherent)  continue;
+
+			if (isDeviceLocal) {
+				hasDeviceLocal = true;
+				if (!isHostVisible) hasDeviceNonHost = true;
+			}
+
+			if (isHostVisible) {
+				hasHostVisible = true;
+				if (isHostCached && !isHostCoherent) hasHostCachedNonCoherent = true;
+				if (isHostCached)                    hasHostCached            = true;
+				if (!isHostCoherent)                 hasHostNonCoherent       = true;
+			}
 		}
 
 		for (uint32_t j = 0; j < extensionPropertyCounts[i]; j++) {
 			const char* extensionName = extensionsProperties[i][j].extensionName;
 
 			if      (!strcmp(extensionName, VK_KHR_MAINTENANCE_4_EXTENSION_NAME))         hasMaintenance4        = true;
+			else if (!strcmp(extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))    hasPortabilitySubset   = true;
 			else if (!strcmp(extensionName, VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME))     hasSynchronization2    = true;
 			else if (!strcmp(extensionName, VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME))    hasTimelineSemaphore   = true;
 			else if (!strcmp(extensionName, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME))         hasMemoryBudget        = true;
 			else if (!strcmp(extensionName, VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME))       hasMemoryPriority      = true;
 			else if (!strcmp(extensionName, VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME)) hasSubgroupSizeControl = true;
-			else if (!strcmp(extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))    hasPortabilitySubset   = true;
 		}
 
 		uint32_t currentScore = 1;
 
 		if (!hasApiVersion11)             continue;
 		if (!hasStorageBuffer16BitAccess) continue;
-		if (!hasCompute)                  continue;
+
+		if (!hasDeviceLocal) continue;
+		if (!hasHostVisible) continue;
+
+		if (!hasCompute) continue;
 
 		if (!hasSynchronization2)  continue;
 		if (!hasTimelineSemaphore) continue;
@@ -522,7 +543,8 @@ bool select_device(Gpu_t* gpu)
 		if (hasShaderInt16) currentScore += 1000;
 		if (hasShaderInt64) currentScore += 1000;
 
-		if (hasDedicatedDeviceLocal)  currentScore += 1000;
+		if (hasDeviceNonHost) currentScore += 50;
+
 		if (hasHostCachedNonCoherent) currentScore += 1000;
 		else if (hasHostCached)       currentScore += 500;
 		else if (hasHostNonCoherent)  currentScore += 100;
@@ -571,106 +593,39 @@ bool select_device(Gpu_t* gpu)
 		bool isDedicatedTransfer = queueFlags == VK_QUEUE_TRANSFER_BIT;
 		bool isTransfer          = queueFlags &  VK_QUEUE_TRANSFER_BIT;
 
-		if (isDedicatedCompute && !hasDedicatedCompute) {
-			hasDedicatedCompute = true;
-			hasCompute          = true;
-			computeQueueFamilyIndex = i;
+		if (isCompute) {
+			if (isDedicatedCompute && !hasDedicatedCompute) {
+				hasDedicatedCompute = true;
+				hasCompute          = true;
+				computeQueueFamilyIndex = i;
+			}
+
+			else if (!hasCompute) {
+				hasCompute = true;
+				computeQueueFamilyIndex = i;
+			}
 		}
 
-		else if (isCompute && !hasCompute) {
-			hasCompute = true;
-			computeQueueFamilyIndex = i;
-		}
+		if (isTransfer) {
+			if (isDedicatedTransfer && !hasDedicatedTransfer) {
+				hasDedicatedTransfer = true;
+				hasTransfer          = true;
+				transferQueueFamilyIndex = i;
+			}
 
-		if (isDedicatedTransfer && !hasDedicatedTransfer) {
-			hasDedicatedTransfer = true;
-			hasTransfer          = true;
-			transferQueueFamilyIndex = i;
-		}
-
-		else if (isTransfer && !hasTransfer) {
-			hasTransfer = true;
-			transferQueueFamilyIndex = i;
+			else if (!hasTransfer) {
+				hasTransfer = true;
+				transferQueueFamilyIndex = i;
+			}
 		}
 	}
 
 	if (!hasTransfer) transferQueueFamilyIndex = computeQueueFamilyIndex;
 
-	uint32_t hostVisibleMemoryHeapIndex = ~0U;
-	uint32_t hostVisibleMemoryTypeIndex = ~0U;
-	uint32_t deviceLocalMemoryHeapIndex = ~0U;
-	uint32_t deviceLocalMemoryTypeIndex = ~0U;
-
-	bool hasDedicatedDeviceLocal  = false;
-	bool hasDeviceLocal           = false;
-	bool hasHostCachedNonCoherent = false;
-	bool hasHostCached            = false;
-	bool hasHostNonCoherent       = false;
-	bool hasHostVisible           = false;
-
-	for (uint32_t i = 0; i < physicalDevicesMemoryProperties2[pdvIndex].memoryProperties.memoryTypeCount; i++) {
-		VkMemoryPropertyFlags propertyFlags = physicalDevicesMemoryProperties2[pdvIndex].memoryProperties.memoryTypes[i].propertyFlags;
-		uint32_t              heapIndex     = physicalDevicesMemoryProperties2[pdvIndex].memoryProperties.memoryTypes[i].heapIndex;
-
-		bool isDeviceLocal  = propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-		bool isHostCached   = propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
-		bool isHostCoherent = propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-		bool isHostVisible  = propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-
-		if (isDeviceLocal && !isHostVisible && !hasDedicatedDeviceLocal) {
-			hasDedicatedDeviceLocal = true;
-			hasDeviceLocal          = true;
-			deviceLocalMemoryTypeIndex = i;
-			deviceLocalMemoryHeapIndex = heapIndex;
-		}
-
-		else if (isDeviceLocal && !hasDeviceLocal) {
-			hasDeviceLocal = true;
-			deviceLocalMemoryTypeIndex = i;
-			deviceLocalMemoryHeapIndex = heapIndex;
-		}
-
-		if (isHostCached && !isHostCoherent && !hasHostCachedNonCoherent) {
-			hasHostCachedNonCoherent = true;
-			hasHostCached            = true;
-			hasHostNonCoherent       = true;
-			hasHostVisible           = true;
-			hostVisibleMemoryTypeIndex = i;
-			hostVisibleMemoryHeapIndex = heapIndex;
-		}
-
-		else if (isHostCached && !hasHostCached) {
-			hasHostCached      = true;
-			hasHostNonCoherent = false;
-			hasHostVisible     = true;
-			hostVisibleMemoryTypeIndex = i;
-			hostVisibleMemoryHeapIndex = heapIndex;
-		}
-
-		else if (!isHostCoherent && !hasHostCached && !hasHostNonCoherent) {
-			hasHostCached      = false;
-			hasHostNonCoherent = true;
-			hasHostVisible     = true;
-			hostVisibleMemoryTypeIndex = i;
-			hostVisibleMemoryHeapIndex = heapIndex;
-		}
-
-		else if (isHostVisible && !hasHostVisible) {
-			hasHostVisible = true;
-			hostVisibleMemoryTypeIndex = i;
-			hostVisibleMemoryHeapIndex = heapIndex;
-		}
-	}
-
 	g_physicalDevice = physicalDevices[pdvIndex];
 
 	gpu->computeQueueFamilyIndex  = computeQueueFamilyIndex;
 	gpu->transferQueueFamilyIndex = transferQueueFamilyIndex;
-
-	gpu->hostVisibleMemoryHeapIndex = hostVisibleMemoryHeapIndex;
-	gpu->hostVisibleMemoryTypeIndex = hostVisibleMemoryTypeIndex;
-	gpu->deviceLocalMemoryHeapIndex = deviceLocalMemoryHeapIndex;
-	gpu->deviceLocalMemoryTypeIndex = deviceLocalMemoryTypeIndex;
 
 	gpu->usingShaderInt16         = usingShaderInt16;
 	gpu->usingShaderInt64         = usingShaderInt64;
@@ -679,7 +634,6 @@ bool select_device(Gpu_t* gpu)
 	gpu->usingMemoryPriority      = usingMemoryPriority;
 	gpu->usingSubgroupSizeControl = usingSubgroupSizeControl;
 	gpu->usingPortabilitySubset   = usingPortabilitySubset;
-	gpu->usingNonCoherent         = hasHostNonCoherent;
 
 #if QUERY_BENCHMARKING
 	gpu->transferQueueTimestampValidBits = queueFamiliesProperties2[pdvIndex][transferQueueFamilyIndex].queueFamilyProperties.timestampValidBits;
@@ -692,10 +646,6 @@ bool select_device(Gpu_t* gpu)
 		"\tScore:               %u\n"
 		"\tTransfer QF index:   %u\n"
 		"\tCompute QF index:    %u\n"
-		"\tDL type index:       %u\n"
-		"\tHV type index:       %u\n"
-		"\tDL heap index:       %u\n"
-		"\tHV heap index:       %u\n"
 		"\tshaderInt16:         %d\n"
 		"\tshaderInt64:         %d\n"
 		"\tmaintenance4         %d\n"
@@ -705,10 +655,6 @@ bool select_device(Gpu_t* gpu)
 		highestScore,
 		transferQueueFamilyIndex,
 		computeQueueFamilyIndex,
-		deviceLocalMemoryTypeIndex,
-		hostVisibleMemoryTypeIndex,
-		deviceLocalMemoryHeapIndex,
-		hostVisibleMemoryHeapIndex,
 		usingShaderInt16,
 		usingShaderInt64,
 		usingMaintenance4,
@@ -732,7 +678,6 @@ bool create_device(Gpu_t* gpu)
 	bool usingShaderInt16         = gpu->usingShaderInt16;
 	bool usingShaderInt64         = gpu->usingShaderInt64;
 	bool usingMaintenance4        = gpu->usingMaintenance4;
-	bool usingMemoryBudget        = gpu->usingMemoryBudget;
 	bool usingMemoryPriority      = gpu->usingMemoryPriority;
 	bool usingSubgroupSizeControl = gpu->usingSubgroupSizeControl;
 	bool usingPortabilitySubset   = gpu->usingPortabilitySubset;
@@ -740,7 +685,7 @@ bool create_device(Gpu_t* gpu)
 	VkResult result;
 
 	uint32_t enabledExtensionCount = 0;
-	const char* enabledExtensions[7];
+	const char* enabledExtensions[6];
 
 	enabledExtensions[enabledExtensionCount] = VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME;
 	enabledExtensionCount++;
@@ -750,11 +695,6 @@ bool create_device(Gpu_t* gpu)
 
 	if (usingMaintenance4) {
 		enabledExtensions[enabledExtensionCount] = VK_KHR_MAINTENANCE_4_EXTENSION_NAME;
-		enabledExtensionCount++;
-	}
-
-	if (usingMemoryBudget) {
-		enabledExtensions[enabledExtensionCount] = VK_EXT_MEMORY_BUDGET_EXTENSION_NAME;
 		enabledExtensionCount++;
 	}
 
@@ -1053,12 +993,8 @@ bool manage_memory(Gpu_t* gpu)
 {
 	BEGIN_FUNC
 
-	uint32_t hostVisibleMemoryHeapIndex = gpu->hostVisibleMemoryHeapIndex;
-	uint32_t deviceLocalMemoryHeapIndex = gpu->deviceLocalMemoryHeapIndex;
-
 	bool usingMaintenance4 = gpu->usingMaintenance4;
 	bool usingMemoryBudget = gpu->usingMemoryBudget;
-	bool usingNonCoherent  = gpu->usingNonCoherent;
 
 	VkPhysicalDeviceMaintenance4PropertiesKHR physicalDeviceMaintenance4Properties;
 	physicalDeviceMaintenance4Properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_PROPERTIES_KHR;
@@ -1084,9 +1020,6 @@ bool manage_memory(Gpu_t* gpu)
 
 	vkGetPhysicalDeviceMemoryProperties2(g_physicalDevice, &physicalDeviceMemoryProperties2);
 
-	VkDeviceSize minStorageBufferOffsetAlignment = physicalDeviceProperties2.properties.limits.minStorageBufferOffsetAlignment;
-	VkDeviceSize nonCoherentAtomSize             = physicalDeviceProperties2.properties.limits.nonCoherentAtomSize;
-
 	VkDeviceSize maxMemoryAllocationSize = physicalDeviceMaintenance3Properties.maxMemoryAllocationSize;
 	VkDeviceSize maxBufferSize           = usingMaintenance4 ? physicalDeviceMaintenance4Properties.maxBufferSize : maxMemoryAllocationSize;
 
@@ -1094,6 +1027,109 @@ bool manage_memory(Gpu_t* gpu)
 	uint32_t maxMemoryAllocationCount = physicalDeviceProperties2.properties.limits.maxMemoryAllocationCount;
 	uint32_t maxComputeWorkGroupCount = physicalDeviceProperties2.properties.limits.maxComputeWorkGroupCount[0];
 	uint32_t maxComputeWorkGroupSize  = physicalDeviceProperties2.properties.limits.maxComputeWorkGroupSize[0];
+	uint32_t memoryTypeCount          = physicalDeviceMemoryProperties2.memoryProperties.memoryTypeCount;
+
+	VkMemoryRequirements hostVisibleMemoryRequirements;
+	VkMemoryRequirements deviceLocalMemoryRequirements;
+
+	if (usingMaintenance4) {
+		hostVisibleMemoryRequirements = get_buffer_requirements_main4(1, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+		deviceLocalMemoryRequirements = get_buffer_requirements_main4(1, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+	}
+	else {
+		hostVisibleMemoryRequirements = get_buffer_requirements_noext(1, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+#ifndef NDEBUG
+		if (hostVisibleMemoryRequirements.size == 0) return false;
+#endif
+
+		deviceLocalMemoryRequirements = get_buffer_requirements_noext(1, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+#ifndef NDEBUG
+		if (deviceLocalMemoryRequirements.size == 0) return false;
+#endif
+	}
+
+	VkDeviceSize hostVisibleBufferAlignment = hostVisibleMemoryRequirements.alignment;
+	VkDeviceSize deviceLocalBufferAlignment = deviceLocalMemoryRequirements.alignment;
+
+	uint32_t deviceLocalMemoryTypeBits = deviceLocalMemoryRequirements.memoryTypeBits;
+	uint32_t hostVisibleMemoryTypeBits = hostVisibleMemoryRequirements.memoryTypeBits;
+
+	uint32_t deviceLocalMemoryHeapIndex = ~0U;
+	uint32_t deviceLocalMemoryTypeIndex = ~0U;
+	uint32_t hostVisibleMemoryHeapIndex = ~0U;
+	uint32_t hostVisibleMemoryTypeIndex = ~0U;
+
+	bool hasDeviceNonHost = false;
+	bool hasDeviceLocal   = false;
+
+	bool hasHostCachedNonCoherent = false;
+	bool hasHostCached            = false;
+	bool hasHostNonCoherent       = false;
+	bool hasHostVisible           = false;
+
+	for (uint32_t i = 0; i < memoryTypeCount; i++) {
+		uint32_t memoryTypeBit = 1U << i;
+
+		VkMemoryPropertyFlags propertyFlags = physicalDeviceMemoryProperties2.memoryProperties.memoryTypes[i].propertyFlags;
+		uint32_t              heapIndex     = physicalDeviceMemoryProperties2.memoryProperties.memoryTypes[i].heapIndex;
+
+		bool isDeviceLocal    = propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+		bool isHostVisible    = propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+		bool isHostCoherent   = propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		bool isHostCached     = propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+		bool isProtected      = propertyFlags & VK_MEMORY_PROPERTY_PROTECTED_BIT;
+		bool isDeviceCoherent = propertyFlags & VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD;
+
+		if (isProtected)      continue;
+		if (isDeviceCoherent) continue;
+
+		if (isDeviceLocal && deviceLocalMemoryTypeBits & memoryTypeBit) {
+			if (!isHostVisible && !hasDeviceNonHost) {
+				hasDeviceNonHost     = true;
+				hasDeviceLocal       = true;
+				deviceLocalMemoryTypeIndex = i;
+				deviceLocalMemoryHeapIndex = heapIndex;
+			}
+
+			else if (!hasDeviceLocal) {
+				hasDeviceLocal = true;
+				deviceLocalMemoryTypeIndex = i;
+				deviceLocalMemoryHeapIndex = heapIndex;
+			}
+		}
+
+		if (isHostVisible && hostVisibleMemoryTypeBits & memoryTypeBit) {
+			if (isHostCached && !isHostCoherent && !hasHostCachedNonCoherent) {
+				hasHostCachedNonCoherent = true;
+				hasHostCached            = true;
+				hasHostNonCoherent       = true;
+				hasHostVisible           = true;
+				hostVisibleMemoryTypeIndex = i;
+				hostVisibleMemoryHeapIndex = heapIndex;
+			}
+
+			else if (isHostCached && !hasHostCached) {
+				hasHostCached      = true;
+				hasHostNonCoherent = false;
+				hasHostVisible     = true;
+				hostVisibleMemoryTypeIndex = i;
+				hostVisibleMemoryHeapIndex = heapIndex;
+			}
+
+			else if (!isHostCoherent && !hasHostCached && !hasHostNonCoherent) {
+				hasHostNonCoherent = true;
+				hasHostVisible     = true;
+				hostVisibleMemoryTypeIndex = i;
+				hostVisibleMemoryHeapIndex = heapIndex;
+			}
+
+			else if (!hasHostVisible) {
+				hasHostVisible = true;
+				hostVisibleMemoryTypeIndex = i;
+				hostVisibleMemoryHeapIndex = heapIndex;
+			}
+		}
+	}
 
 	VkDeviceSize bytesPerHostVisibleHeap;
 	VkDeviceSize bytesPerDeviceLocalHeap;
@@ -1133,27 +1169,28 @@ bool manage_memory(Gpu_t* gpu)
 		bytesPerBuffer -= excessBytes % buffersPerDeviceMemory ? 1 : 0;
 	}
 
-	uint32_t valuesPerInoutBuffer  = maxStorageBufferRange / sizeof(value_t);
-	uint32_t computeWorkGroupSize  = maxComputeWorkGroupSize;
+	uint32_t valuesPerInoutBuffer = maxStorageBufferRange / sizeof(value_t);
+	uint32_t computeWorkGroupSize = maxComputeWorkGroupSize;
+
+	// Round down to power of two
+	for (unsigned i = 0; computeWorkGroupSize & (computeWorkGroupSize - 1); i++)
+		computeWorkGroupSize &= ~(1U << i);
+
 	uint32_t computeWorkGroupCount = valuesPerInoutBuffer / computeWorkGroupSize;
-	computeWorkGroupCount = maxComputeWorkGroupCount < computeWorkGroupCount ? maxComputeWorkGroupCount : computeWorkGroupCount;
+	computeWorkGroupCount          = maxComputeWorkGroupCount < computeWorkGroupCount ? maxComputeWorkGroupCount : computeWorkGroupCount;
 
 	valuesPerInoutBuffer               = computeWorkGroupSize * computeWorkGroupCount;
 	VkDeviceSize bytesPerInoutBuffer   = valuesPerInoutBuffer * (sizeof(value_t) + sizeof(step_t));
 	uint32_t     inoutBuffersPerBuffer = bytesPerBuffer / bytesPerInoutBuffer;
 
-	if (bytesPerBuffer % bytesPerInoutBuffer > computeWorkGroupSize * (sizeof(value_t) + sizeof(step_t))) {
+	if (bytesPerBuffer % bytesPerInoutBuffer > inoutBuffersPerBuffer * computeWorkGroupSize * (sizeof(value_t) + sizeof(step_t))) {
 		uint32_t excessValues = valuesPerInoutBuffer - bytesPerBuffer % bytesPerInoutBuffer / (sizeof(value_t) + sizeof(step_t));
 		inoutBuffersPerBuffer++;
 		valuesPerInoutBuffer -= excessValues / inoutBuffersPerBuffer;
 		valuesPerInoutBuffer -= excessValues % inoutBuffersPerBuffer ? 1 : 0;
-		valuesPerInoutBuffer -= valuesPerInoutBuffer % computeWorkGroupSize;
+		valuesPerInoutBuffer &= ~(computeWorkGroupSize - 1U);
 		computeWorkGroupCount = valuesPerInoutBuffer / computeWorkGroupSize;
 	}
-
-	VkDeviceSize inoutBufferAlignment = usingNonCoherent && nonCoherentAtomSize > minStorageBufferOffsetAlignment ? nonCoherentAtomSize : minStorageBufferOffsetAlignment;
-
-	valuesPerInoutBuffer -= valuesPerInoutBuffer % (inoutBufferAlignment / sizeof(step_t));
 
 	VkDeviceSize bytesPerInBuffer  = valuesPerInoutBuffer * sizeof(value_t);
 	VkDeviceSize bytesPerOutBuffer = valuesPerInoutBuffer * sizeof(step_t);
@@ -1161,8 +1198,14 @@ bool manage_memory(Gpu_t* gpu)
 	bytesPerInoutBuffer = bytesPerInBuffer + bytesPerOutBuffer;
 	bytesPerBuffer      = bytesPerInoutBuffer * inoutBuffersPerBuffer;
 
-	VkMemoryRequirements hostVisibleMemoryRequirements;
-	VkMemoryRequirements deviceLocalMemoryRequirements;
+	// maxComputeWorkGroupSize is guaranteed to be at least 128
+	// => computeWorkGroupSize is a multiple of 128
+	// valuesPerInoutBuffer is a multiple of computeWorkGroupSize
+	// => valuesPerInoutBuffer is a multiple of 128
+	// bytesPerInBuffer and bytesPerOutBuffer are multiples of valuesPerInoutBuffer * 2
+	// => bytesPerInBuffer and bytesPerOutBuffer are multiples of 256
+	// nonCoherentAtomSize and minStorageBufferOffsetAlignment are guaranteed to be at most 256
+	// => bytesPerInBuffer and bytesPerOutBuffer are multiples of nonCoherentAtomSize and minStorageBufferOffsetAlignment
 
 	if (usingMaintenance4) {
 		hostVisibleMemoryRequirements = get_buffer_requirements_main4(bytesPerBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
@@ -1182,9 +1225,6 @@ bool manage_memory(Gpu_t* gpu)
 
 	VkDeviceSize bytesPerHostVisibleBuffer = hostVisibleMemoryRequirements.size;
 	VkDeviceSize bytesPerDeviceLocalBuffer = deviceLocalMemoryRequirements.size;
-
-	VkDeviceSize hostVisibleBufferAlignment = hostVisibleMemoryRequirements.alignment;
-	VkDeviceSize deviceLocalBufferAlignment = deviceLocalMemoryRequirements.alignment;
 
 	VkDeviceSize hostVisibleBufferPadding = (hostVisibleBufferAlignment - (bytesPerHostVisibleBuffer & (hostVisibleBufferAlignment - 1))) & (hostVisibleBufferAlignment - 1);
 	VkDeviceSize deviceLocalBufferPadding = (deviceLocalBufferAlignment - (bytesPerDeviceLocalBuffer & (deviceLocalBufferAlignment - 1))) & (deviceLocalBufferAlignment - 1);
@@ -1225,13 +1265,26 @@ bool manage_memory(Gpu_t* gpu)
 	gpu->buffersPerHeap              = buffersPerHeap;
 	gpu->deviceMemoriesPerHeap       = deviceMemoriesPerHeap;
 
+	gpu->hostVisibleMemoryHeapIndex = hostVisibleMemoryHeapIndex;
+	gpu->deviceLocalMemoryHeapIndex = deviceLocalMemoryHeapIndex;
+
+	gpu->hostVisibleMemoryTypeIndex = hostVisibleMemoryTypeIndex;
+	gpu->deviceLocalMemoryTypeIndex = deviceLocalMemoryTypeIndex;
+
 	gpu->computeWorkGroupCount = computeWorkGroupCount;
 	gpu->computeWorkGroupSize  = computeWorkGroupSize;
 
+	gpu->hostNonCoherent = hasHostNonCoherent;
+
 	printf(
 		"Memory information:\n"
-		"\tHV-buffer padding:         0x%llx\n"
-		"\tDL-buffer padding:         0x%llx\n"
+		"\tHV memory heap index:      %u\n"
+		"\tDL memory heap index:      %u\n"
+		"\tHV memory type index:      %u\n"
+		"\tDL memory type index:      %u\n"
+		"\tHV non-coherent memory:    %d\n"
+		"\tHV buffer padding:         0x%llx\n"
+		"\tDL buffer padding:         0x%llx\n"
 		"\tCompute workgroup size:    %u\n"
 		"\tCompute workgroup count:   %u\n"
 		"\tValues per inout-buffer:   %u\n"
@@ -1239,6 +1292,11 @@ bool manage_memory(Gpu_t* gpu)
 		"\tBuffers per device memory: %u\n"
 		"\tDevice memories per heap:  %u\n"
 		"\tValues per heap:           %u\n\n",
+		hostVisibleMemoryHeapIndex,
+		deviceLocalMemoryHeapIndex,
+		hostVisibleMemoryTypeIndex,
+		deviceLocalMemoryTypeIndex,
+		hasHostNonCoherent,
 		hostVisibleBufferPadding,
 		deviceLocalBufferPadding,
 		computeWorkGroupSize,
@@ -1571,19 +1629,18 @@ bool create_descriptors(Gpu_t* gpu)
 {
 	BEGIN_FUNC
 
-	const VkBuffer* restrict deviceLocalBuffers = gpu->deviceLocalBuffers;
+	const VkBuffer*  restrict deviceLocalBuffers = gpu->deviceLocalBuffers;
+	VkDescriptorSet* restrict descriptorSets     = gpu->descriptorSets;
 
 	VkDeviceSize bytesPerInBuffer    = gpu->bytesPerInBuffer;
 	VkDeviceSize bytesPerOutBuffer   = gpu->bytesPerOutBuffer;
 	VkDeviceSize bytesPerInoutBuffer = gpu->bytesPerInoutBuffer;
 
-	uint32_t inoutBuffersPerBuffer           = gpu->inoutBuffersPerBuffer;
-	uint32_t inoutBuffersPerHeap             = gpu->inoutBuffersPerHeap;
-	uint32_t buffersPerDeviceMemory          = gpu->buffersPerDeviceMemory;
-	uint32_t buffersPerHeap                  = gpu->buffersPerHeap;
-	uint32_t deviceMemoriesPerHeap           = gpu->deviceMemoriesPerHeap;
-	uint32_t transferQueueTimestampValidBits = gpu->transferQueueTimestampValidBits;
-	uint32_t computeQueueTimestampValidBits  = gpu->computeQueueTimestampValidBits;
+	uint32_t inoutBuffersPerBuffer  = gpu->inoutBuffersPerBuffer;
+	uint32_t inoutBuffersPerHeap    = gpu->inoutBuffersPerHeap;
+	uint32_t buffersPerDeviceMemory = gpu->buffersPerDeviceMemory;
+	uint32_t buffersPerHeap         = gpu->buffersPerHeap;
+	uint32_t deviceMemoriesPerHeap  = gpu->deviceMemoriesPerHeap;
 
 	CreateDescriptorsData_t data = {0};
 	VkResult result;
@@ -1638,26 +1695,27 @@ bool create_descriptors(Gpu_t* gpu)
 	descriptorPoolCreateInfo.poolSizeCount = sizeof(descriptorPoolSizes) / sizeof(descriptorPoolSizes[0]);
 	descriptorPoolCreateInfo.pPoolSizes    = descriptorPoolSizes;
 
-	GET_RESULT(vkCreateDescriptorSetLayout(g_device, &descriptorSetLayoutCreateInfo, g_allocator, &gpu->descriptorSetLayout))
+	VkDescriptorSetLayout descriptorSetLayout;
+	GET_RESULT(vkCreateDescriptorSetLayout(g_device, &descriptorSetLayoutCreateInfo, g_allocator, &descriptorSetLayout))
 #ifndef NDEBUG
 	if (result) {
-		VULKAN_FAILURE(vkCreateDescriptorSetLayout, 4, 'p', g_device, 'p', &descriptorSetLayoutCreateInfo, 'p', g_allocator, 'p', &gpu->descriptorSetLayout)
+		VULKAN_FAILURE(vkCreateDescriptorSetLayout, 4, 'p', g_device, 'p', &descriptorSetLayoutCreateInfo, 'p', g_allocator, 'p', &descriptorSetLayout)
 		free_CreateDescriptorsData(data);
 		return false;
 	}
 #endif
+	gpu->descriptorSetLayout = descriptorSetLayout;
 
-	GET_RESULT(vkCreateDescriptorPool(g_device, &descriptorPoolCreateInfo, g_allocator, &gpu->descriptorPool))
+	VkDescriptorPool descriptorPool;
+	GET_RESULT(vkCreateDescriptorPool(g_device, &descriptorPoolCreateInfo, g_allocator, &descriptorPool))
 #ifndef NDEBUG
 	if (result) {
-		VULKAN_FAILURE(vkCreateDescriptorPool, 4, 'p', g_device, 'p', &descriptorPoolCreateInfo, 'p', g_allocator, 'p', &gpu->descriptorPool)
+		VULKAN_FAILURE(vkCreateDescriptorPool, 4, 'p', g_device, 'p', &descriptorPoolCreateInfo, 'p', g_allocator, 'p', &descriptorPool)
 		free_CreateDescriptorsData(data);
 		return false;
 	}
 #endif
-
-	VkDescriptorSetLayout descriptorSetLayout = gpu->descriptorSetLayout;
-	VkDescriptorPool      descriptorPool      = gpu->descriptorPool;
+	gpu->descriptorPool = descriptorPool;
 
 	for (uint32_t i = 0; i < inoutBuffersPerHeap; i++)
 		descriptorSetLayouts[i] = descriptorSetLayout;
@@ -1669,16 +1727,14 @@ bool create_descriptors(Gpu_t* gpu)
 	descriptorSetAllocateInfo.descriptorSetCount = inoutBuffersPerHeap;
 	descriptorSetAllocateInfo.pSetLayouts        = descriptorSetLayouts;
 
-	GET_RESULT(vkAllocateDescriptorSets(g_device, &descriptorSetAllocateInfo, gpu->descriptorSets))
+	GET_RESULT(vkAllocateDescriptorSets(g_device, &descriptorSetAllocateInfo, descriptorSets))
 #ifndef NDEBUG
 	if (result) {
-		VULKAN_FAILURE(vkAllocateDescriptorSets, 3, 'p', g_device, 'p', &descriptorSetAllocateInfo, 'p', gpu->descriptorSets)
+		VULKAN_FAILURE(vkAllocateDescriptorSets, 3, 'p', g_device, 'p', &descriptorSetAllocateInfo, 'p', descriptorSets)
 		free_CreateDescriptorsData(data);
 		return false;
 	}
 #endif
-
-	VkDescriptorSet* descriptorSets = gpu->descriptorSets;
 
 	uint32_t inoIndex = 0; // Inout-buffer index
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
@@ -1705,25 +1761,6 @@ bool create_descriptors(Gpu_t* gpu)
 	}
 
 	vkUpdateDescriptorSets(g_device, inoutBuffersPerHeap, writeDescriptorSets, 0, NULL);
-
-	if (transferQueueTimestampValidBits || computeQueueTimestampValidBits) {
-		VkQueryPoolCreateInfo queryPoolCreateInfo;
-		queryPoolCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-		queryPoolCreateInfo.pNext = NULL;
-		queryPoolCreateInfo.flags              = 0;
-		queryPoolCreateInfo.queryType          = VK_QUERY_TYPE_TIMESTAMP;
-		queryPoolCreateInfo.queryCount         = inoutBuffersPerHeap * 4;
-		queryPoolCreateInfo.pipelineStatistics = 0;
-
-		GET_RESULT(vkCreateQueryPool(g_device, &queryPoolCreateInfo, g_allocator, &gpu->queryPool))
-#ifndef NDEBUG
-		if (result) {
-			VULKAN_FAILURE(vkCreateQueryPool, 4, 'p', g_device, 'p', &queryPoolCreateInfo, 'p', g_allocator, 'p', &gpu->queryPool)
-			free_CreateDescriptorsData(data);
-			return false;
-		}
-#endif
-	}
 
 	free_CreateDescriptorsData(data);
 
@@ -1775,7 +1812,10 @@ bool create_pipeline(Gpu_t* gpu)
 
 	VkDescriptorSetLayout descriptorSetLayout = gpu->descriptorSetLayout;
 
-	uint32_t computeWorkGroupSize = gpu->computeWorkGroupSize;
+	uint32_t inoutBuffersPerHeap             = gpu->inoutBuffersPerHeap;
+	uint32_t computeWorkGroupSize            = gpu->computeWorkGroupSize;
+	uint32_t transferQueueTimestampValidBits = gpu->transferQueueTimestampValidBits;
+	uint32_t computeQueueTimestampValidBits  = gpu->computeQueueTimestampValidBits;
 
 	bool usingShaderInt16         = gpu->usingShaderInt16;
 	bool usingShaderInt64         = gpu->usingShaderInt64;
@@ -1935,36 +1975,38 @@ bool create_pipeline(Gpu_t* gpu)
 	pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
 	pipelineLayoutCreateInfo.pPushConstantRanges    = NULL;
 
-	GET_RESULT(vkCreateShaderModule(g_device, &shaderModuleCreateInfo, g_allocator, &gpu->shaderModule))
+	VkShaderModule shaderModule;
+	GET_RESULT(vkCreateShaderModule(g_device, &shaderModuleCreateInfo, g_allocator, &shaderModule))
 #ifndef NDEBUG
 	if (result) {
-		VULKAN_FAILURE(vkCreateShaderModule, 4, 'p', g_device, 'p', &shaderModuleCreateInfo, 'p', g_allocator, 'p', &gpu->shaderModule)
+		VULKAN_FAILURE(vkCreateShaderModule, 4, 'p', g_device, 'p', &shaderModuleCreateInfo, 'p', g_allocator, 'p', &shaderModule)
 		free_CreatePipelineData(data);
 		return false;
 	}
 #endif
+	gpu->shaderModule = shaderModule;
 
-	GET_RESULT(vkCreatePipelineCache(g_device, &pipelineCacheCreateInfo, g_allocator, &gpu->pipelineCache))
+	VkPipelineCache pipelineCache;
+	GET_RESULT(vkCreatePipelineCache(g_device, &pipelineCacheCreateInfo, g_allocator, &pipelineCache))
 #ifndef NDEBUG
 	if (result) {
-		VULKAN_FAILURE(vkCreatePipelineCache, 4, 'p', g_device, 'p', &pipelineCacheCreateInfo, 'p', g_allocator, 'p', &gpu->pipelineCache)
+		VULKAN_FAILURE(vkCreatePipelineCache, 4, 'p', g_device, 'p', &pipelineCacheCreateInfo, 'p', g_allocator, 'p', &pipelineCache)
 		free_CreatePipelineData(data);
 		return false;
 	}
 #endif
+	gpu->pipelineCache = pipelineCache;
 
-	GET_RESULT(vkCreatePipelineLayout(g_device, &pipelineLayoutCreateInfo, g_allocator, &gpu->pipelineLayout))
+	VkPipelineLayout pipelineLayout;
+	GET_RESULT(vkCreatePipelineLayout(g_device, &pipelineLayoutCreateInfo, g_allocator, &pipelineLayout))
 #ifndef NDEBUG
 	if (result) {
-		VULKAN_FAILURE(vkCreatePipelineLayout, 4, 'p', g_device, 'p', &pipelineLayoutCreateInfo, 'p', g_allocator, 'p', &gpu->pipelineLayout)
+		VULKAN_FAILURE(vkCreatePipelineLayout, 4, 'p', g_device, 'p', &pipelineLayoutCreateInfo, 'p', g_allocator, 'p', &pipelineLayout)
 		free_CreatePipelineData(data);
 		return false;
 	}
 #endif
-
-	VkShaderModule   shaderModule   = gpu->shaderModule;
-	VkPipelineCache  pipelineCache  = gpu->pipelineCache;
-	VkPipelineLayout pipelineLayout = gpu->pipelineLayout;
+	gpu->pipelineLayout = pipelineLayout;
 
 	vkDestroyDescriptorSetLayout(g_device, descriptorSetLayout, g_allocator);
 	gpu->descriptorSetLayout = VK_NULL_HANDLE;
@@ -2012,6 +2054,25 @@ bool create_pipeline(Gpu_t* gpu)
 
 	vkDestroyShaderModule(g_device, shaderModule, g_allocator);
 	gpu->shaderModule = VK_NULL_HANDLE;
+
+	if (transferQueueTimestampValidBits || computeQueueTimestampValidBits) {
+		VkQueryPoolCreateInfo queryPoolCreateInfo;
+		queryPoolCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+		queryPoolCreateInfo.pNext = NULL;
+		queryPoolCreateInfo.flags              = 0;
+		queryPoolCreateInfo.queryType          = VK_QUERY_TYPE_TIMESTAMP;
+		queryPoolCreateInfo.queryCount         = inoutBuffersPerHeap * 4;
+		queryPoolCreateInfo.pipelineStatistics = 0;
+
+		GET_RESULT(vkCreateQueryPool(g_device, &queryPoolCreateInfo, g_allocator, &gpu->queryPool))
+#ifndef NDEBUG
+		if (result) {
+			VULKAN_FAILURE(vkCreateQueryPool, 4, 'p', g_device, 'p', &queryPoolCreateInfo, 'p', g_allocator, 'p', &gpu->queryPool)
+			free_CreatePipelineData(data);
+			return false;
+		}
+#endif
+	}
 
 	free_CreatePipelineData(data);
 
@@ -2110,36 +2171,38 @@ bool create_commands(Gpu_t* gpu)
 	computeCommandPoolCreateInfo.flags            = 0;
 	computeCommandPoolCreateInfo.queueFamilyIndex = computeQueueFamilyIndex;
 
-	GET_RESULT(vkCreateCommandPool(g_device, &onetimeCommandPoolCreateInfo, g_allocator, &gpu->onetimeCommandPool))
+	VkCommandPool onetimeCommandPool;
+	GET_RESULT(vkCreateCommandPool(g_device, &onetimeCommandPoolCreateInfo, g_allocator, &onetimeCommandPool))
 #ifndef NDEBUG
 	if (result) {
-		VULKAN_FAILURE(vkCreateCommandPool, 4, 'p', g_device, 'p', &onetimeCommandPoolCreateInfo, 'p', g_allocator, 'p', &gpu->onetimeCommandPool)
+		VULKAN_FAILURE(vkCreateCommandPool, 4, 'p', g_device, 'p', &onetimeCommandPoolCreateInfo, 'p', g_allocator, 'p', &onetimeCommandPool)
 		free_CreateCommandsData(data);
 		return false;
 	}
 #endif
+	gpu->onetimeCommandPool = onetimeCommandPool;
 
-	GET_RESULT(vkCreateCommandPool(g_device, &transferCommandPoolCreateInfo, g_allocator, &gpu->transferCommandPool))
+	VkCommandPool transferCommandPool;
+	GET_RESULT(vkCreateCommandPool(g_device, &transferCommandPoolCreateInfo, g_allocator, &transferCommandPool))
 #ifndef NDEBUG
 	if (result) {
-		VULKAN_FAILURE(vkCreateCommandPool, 4, 'p', g_device, 'p', &transferCommandPoolCreateInfo, 'p', g_allocator, 'p', &gpu->transferCommandPool)
+		VULKAN_FAILURE(vkCreateCommandPool, 4, 'p', g_device, 'p', &transferCommandPoolCreateInfo, 'p', g_allocator, 'p', &transferCommandPool)
 		free_CreateCommandsData(data);
 		return false;
 	}
 #endif
+	gpu->transferCommandPool = transferCommandPool;
 
-	GET_RESULT(vkCreateCommandPool(g_device, &computeCommandPoolCreateInfo, g_allocator, &gpu->computeCommandPool))
+	VkCommandPool computeCommandPool;
+	GET_RESULT(vkCreateCommandPool(g_device, &computeCommandPoolCreateInfo, g_allocator, &computeCommandPool))
 #ifndef NDEBUG
 	if (result) {
-		VULKAN_FAILURE(vkCreateCommandPool, 4, 'p', g_device, 'p', &computeCommandPoolCreateInfo, 'p', g_allocator, 'p', &gpu->computeCommandPool)
+		VULKAN_FAILURE(vkCreateCommandPool, 4, 'p', g_device, 'p', &computeCommandPoolCreateInfo, 'p', g_allocator, 'p', &computeCommandPool)
 		free_CreateCommandsData(data);
 		return false;
 	}
 #endif
-
-	VkCommandPool onetimeCommandPool  = gpu->onetimeCommandPool;
-	VkCommandPool transferCommandPool = gpu->transferCommandPool;
-	VkCommandPool computeCommandPool  = gpu->computeCommandPool;
+	gpu->computeCommandPool = computeCommandPool;
 
 	VkCommandBufferAllocateInfo onetimeCommandBufferAllocateInfo;
 	onetimeCommandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -2162,14 +2225,16 @@ bool create_commands(Gpu_t* gpu)
 	computeCommandBufferAllocateInfo.commandPool        = computeCommandPool;
 	computeCommandBufferAllocateInfo.commandBufferCount = inoutBuffersPerHeap;
 
-	GET_RESULT(vkAllocateCommandBuffers(g_device, &onetimeCommandBufferAllocateInfo, &gpu->onetimeCommandBuffer))
+	VkCommandBuffer onetimeCommandBuffer;
+	GET_RESULT(vkAllocateCommandBuffers(g_device, &onetimeCommandBufferAllocateInfo, &onetimeCommandBuffer))
 #ifndef NDEBUG
 	if (result) {
-		VULKAN_FAILURE(vkAllocateCommandBuffers, 3, 'p', g_device, 'p', &onetimeCommandBufferAllocateInfo, 'p', &gpu->onetimeCommandBuffer)
+		VULKAN_FAILURE(vkAllocateCommandBuffers, 3, 'p', g_device, 'p', &onetimeCommandBufferAllocateInfo, 'p', &onetimeCommandBuffer)
 		free_CreateCommandsData(data);
 		return false;
 	}
 #endif
+	gpu->onetimeCommandBuffer = onetimeCommandBuffer;
 
 	GET_RESULT(vkAllocateCommandBuffers(g_device, &transferCommandBufferAllocateInfo, transferCommandBuffers))
 #ifndef NDEBUG
@@ -2188,8 +2253,6 @@ bool create_commands(Gpu_t* gpu)
 		return false;
 	}
 #endif
-
-	VkCommandBuffer onetimeCommandBuffer = gpu->onetimeCommandBuffer;
 
 	for (uint32_t i = 0; i < inoutBuffersPerBuffer; i++) {
 		inBufferCopies[i].srcOffset = bytesPerInoutBuffer * i;
@@ -2665,7 +2728,7 @@ bool submit_commands(Gpu_t* gpu)
 	uint32_t computeQueueTimestampValidBits  = gpu->computeQueueTimestampValidBits;
 
 	float timestampPeriod = gpu->timestampPeriod;
-	bool usingNonCoherent = gpu->usingNonCoherent;
+	bool hostNonCoherent  = gpu->hostNonCoherent;
 
 	SubmitCommandsData_t data = {0};
 	VkResult result;
@@ -2749,28 +2812,28 @@ bool submit_commands(Gpu_t* gpu)
 		transferWaitSemaphoreSubmitInfos[i].pNext = NULL;
 		transferWaitSemaphoreSubmitInfos[i].semaphore   = semaphores[i];
 		transferWaitSemaphoreSubmitInfos[i].value       = 0;
-		transferWaitSemaphoreSubmitInfos[i].stageMask   = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		transferWaitSemaphoreSubmitInfos[i].stageMask   = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // Need to include acquire operation
 		transferWaitSemaphoreSubmitInfos[i].deviceIndex = 0;
 
 		transferSignalSemaphoreSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
 		transferSignalSemaphoreSubmitInfos[i].pNext = NULL;
 		transferSignalSemaphoreSubmitInfos[i].semaphore   = semaphores[i];
 		transferSignalSemaphoreSubmitInfos[i].value       = 1;
-		transferSignalSemaphoreSubmitInfos[i].stageMask   = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		transferSignalSemaphoreSubmitInfos[i].stageMask   = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // Need to include release operation
 		transferSignalSemaphoreSubmitInfos[i].deviceIndex = 0;
 
 		computeWaitSemaphoreSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
 		computeWaitSemaphoreSubmitInfos[i].pNext = NULL;
 		computeWaitSemaphoreSubmitInfos[i].semaphore   = semaphores[i];
 		computeWaitSemaphoreSubmitInfos[i].value       = 1;
-		computeWaitSemaphoreSubmitInfos[i].stageMask   = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		computeWaitSemaphoreSubmitInfos[i].stageMask   = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // Need to include acquire operation
 		computeWaitSemaphoreSubmitInfos[i].deviceIndex = 0;
 
 		computeSignalSemaphoreSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
 		computeSignalSemaphoreSubmitInfos[i].pNext = NULL;
 		computeSignalSemaphoreSubmitInfos[i].semaphore   = semaphores[i];
 		computeSignalSemaphoreSubmitInfos[i].value       = 2;
-		computeSignalSemaphoreSubmitInfos[i].stageMask   = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		computeSignalSemaphoreSubmitInfos[i].stageMask   = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // Need to include release operation
 		computeSignalSemaphoreSubmitInfos[i].deviceIndex = 0;
 
 		transferSubmitInfos2[i].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR;
@@ -2832,7 +2895,7 @@ bool submit_commands(Gpu_t* gpu)
 	for (uint32_t i = 0; i < inoutBuffersPerHeap; i++)
 		writeInBuffer(mappedHostVisibleInBuffers[i], &testedValues[i], valuesPerInoutBuffer, valuesPerHeap);
 
-	if (usingNonCoherent) {
+	if (hostNonCoherent) {
 		GET_RESULT(vkFlushMappedMemoryRanges(g_device, inoutBuffersPerHeap, hostVisibleInBuffersMappedMemoryRanges))
 #ifndef NDEBUG
 		if (result) {
@@ -2892,7 +2955,7 @@ bool submit_commands(Gpu_t* gpu)
 	for (uint32_t i = 0; i < inoutBuffersPerHeap; i++)
 		writeInBuffer(mappedHostVisibleInBuffers[i], &testedValues[i], valuesPerInoutBuffer, valuesPerHeap);
 
-	if (usingNonCoherent) {
+	if (hostNonCoherent) {
 		GET_RESULT(vkFlushMappedMemoryRanges(g_device, inoutBuffersPerHeap, hostVisibleInBuffersMappedMemoryRanges))
 #ifndef NDEBUG
 		if (result) {
@@ -3013,7 +3076,7 @@ bool submit_commands(Gpu_t* gpu)
 				transferBmark = (timestamps[1] - timestamps[0]) * timestampPeriod / 1000000;
 			}
 
-			if (usingNonCoherent) {
+			if (hostNonCoherent) {
 				GET_RESULT(vkInvalidateMappedMemoryRanges(g_device, 1, &hostVisibleOutBuffersMappedMemoryRanges[j]))
 #ifndef NDEBUG
 				if (result) {
@@ -3032,7 +3095,7 @@ bool submit_commands(Gpu_t* gpu)
 			writeInBuffer(mappedHostVisibleInBuffers[j], &testedValues[j], valuesPerInoutBuffer, valuesPerHeap);
 			clock_t writeBmarkEnd = clock();
 
-			if (usingNonCoherent) {
+			if (hostNonCoherent) {
 				GET_RESULT(vkFlushMappedMemoryRanges(g_device, 1, &hostVisibleInBuffersMappedMemoryRanges[j]))
 #ifndef NDEBUG
 				if (result) {

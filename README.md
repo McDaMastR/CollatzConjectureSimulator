@@ -152,7 +152,8 @@ allocated for inout-buffers. If `VK_EXT_memory_budget` is present, _available me
 the corresponding `VkMemoryHeap::size`.
 
 `QUERY_BENCHMARKING` is a boolean value describing whether or not the program will benchmark Vulkan
-commands via queries. If 1, the `vkCmdCopyBuffer` and `vkCmdDispatch` commands will be benchmarked.
+commands via queries. If 1, the `vkCmdCopyBuffer` and `vkCmdDispatchBase` commands will be
+benchmarked.
 
 `LOG_VULKAN_ALLOCATIONS` is a boolean value describing whether or not the program will log memory
 allocations performed by the Vulkan API via a `VkAllocationCallbacks` object.

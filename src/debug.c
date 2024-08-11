@@ -104,7 +104,7 @@ static void print_debug_callback(
 	fprintf(stream,
 		"ID: %s (0x%x)\n",
 		pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "",
-		(unsigned int) pCallbackData->messageIdNumber
+		(unsigned) pCallbackData->messageIdNumber
 	);
 
 	// VkDebugUtilsLabelEXT active in the current VkQueue
@@ -668,7 +668,7 @@ void print_vulkan_failure(
 	int line,
 	const char* func,
 	VkResult result,
-	unsigned int count,
+	unsigned count,
 	...)
 {
 	clock_t time = PROGRAM_TIME;
@@ -683,26 +683,26 @@ void print_vulkan_failure(
 	va_list args;
 	va_start(args, count);
 
-	for (unsigned int i = 0; i < count; i++)
+	for (unsigned i = 0; i < count; i++)
 		switch (va_arg(args, int)) {
-			case 'c': fprintf(stderr, "\t%u = %c\n"	 , i, va_arg(args, int		   )); break;
-			case 's': fprintf(stderr, "\t%u = %s\n"	 , i, va_arg(args, const char* )); break;
-			case 'i': fprintf(stderr, "\t%u = %i\n"	 , i, va_arg(args, int		   )); break;
-			case 'd': fprintf(stderr, "\t%u = %d\n"	 , i, va_arg(args, int		   )); break;
-			case 'u': fprintf(stderr, "\t%u = %u\n"	 , i, va_arg(args, unsigned int)); break;
-			case 'o': fprintf(stderr, "\t%u = 0%o\n" , i, va_arg(args, unsigned int)); break;
-			case 'x': fprintf(stderr, "\t%u = 0x%x\n", i, va_arg(args, unsigned int)); break;
-			case 'X': fprintf(stderr, "\t%u = 0X%X\n", i, va_arg(args, unsigned int)); break;
-			case 'f': fprintf(stderr, "\t%u = %f\n"	 , i, va_arg(args, double	   )); break;
-			case 'F': fprintf(stderr, "\t%u = %F\n"	 , i, va_arg(args, double	   )); break;
-			case 'e': fprintf(stderr, "\t%u = %e\n"	 , i, va_arg(args, double	   )); break;
-			case 'E': fprintf(stderr, "\t%u = %E\n"	 , i, va_arg(args, double	   )); break;
-			case 'a': fprintf(stderr, "\t%u = %a\n"	 , i, va_arg(args, double	   )); break;
-			case 'A': fprintf(stderr, "\t%u = %A\n"	 , i, va_arg(args, double	   )); break;
-			case 'g': fprintf(stderr, "\t%u = %g\n"	 , i, va_arg(args, double	   )); break;
-			case 'G': fprintf(stderr, "\t%u = %G\n"	 , i, va_arg(args, double	   )); break;
-			case 'p': fprintf(stderr, "\t%u = %p\n"	 , i, va_arg(args, void*	   )); break;
-			default	: fprintf(stderr, "\t%u = Unknown type\n", i); va_arg(args, int	); break;
+			case 'c': fprintf(stderr, "\t%u = %c\n"	 , i, va_arg(args, int		  )); break;
+			case 's': fprintf(stderr, "\t%u = %s\n"	 , i, va_arg(args, const char*)); break;
+			case 'i': fprintf(stderr, "\t%u = %i\n"	 , i, va_arg(args, int		  )); break;
+			case 'd': fprintf(stderr, "\t%u = %d\n"	 , i, va_arg(args, int		  )); break;
+			case 'u': fprintf(stderr, "\t%u = %u\n"	 , i, va_arg(args, unsigned   )); break;
+			case 'o': fprintf(stderr, "\t%u = 0%o\n" , i, va_arg(args, unsigned   )); break;
+			case 'x': fprintf(stderr, "\t%u = 0x%x\n", i, va_arg(args, unsigned   )); break;
+			case 'X': fprintf(stderr, "\t%u = 0X%X\n", i, va_arg(args, unsigned   )); break;
+			case 'f': fprintf(stderr, "\t%u = %f\n"	 , i, va_arg(args, double	  )); break;
+			case 'F': fprintf(stderr, "\t%u = %F\n"	 , i, va_arg(args, double	  )); break;
+			case 'e': fprintf(stderr, "\t%u = %e\n"	 , i, va_arg(args, double	  )); break;
+			case 'E': fprintf(stderr, "\t%u = %E\n"	 , i, va_arg(args, double	  )); break;
+			case 'a': fprintf(stderr, "\t%u = %a\n"	 , i, va_arg(args, double	  )); break;
+			case 'A': fprintf(stderr, "\t%u = %A\n"	 , i, va_arg(args, double	  )); break;
+			case 'g': fprintf(stderr, "\t%u = %g\n"	 , i, va_arg(args, double	  )); break;
+			case 'G': fprintf(stderr, "\t%u = %G\n"	 , i, va_arg(args, double	  )); break;
+			case 'p': fprintf(stderr, "\t%u = %p\n"	 , i, va_arg(args, void*	  )); break;
+			default	: fprintf(stderr, "\t%u = Unknown type\n", i); va_arg(args, int); break;
 		}
 
 	va_end(args);

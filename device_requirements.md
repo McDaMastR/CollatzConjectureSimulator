@@ -79,18 +79,24 @@ The full requirements of the selected `VkPhysicalDevice` object.
 
 ## Memory properties
 
-### Device-local memory
+### Device local memory
 
 `VkMemoryType`
 
 - `propertyFlags` includes `VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT` (guaranteed)
 - `propertyFlags` not includes `VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT` (optional)
+- `propertyFlags` not includes `VK_MEMORY_PROPERTY_HOST_COHERENT_BIT` (optional, guaranteed by no `VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT`)
+- `propertyFlags` not includes `VK_MEMORY_PROPERTY_HOST_CACHED_BIT` (optional, guaranteed by no `VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT`)
+- `propertyFlags` not includes `VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT`
+- `propertyFlags` not includes `VK_MEMORY_PROPERTY_PROTECTED_BIT`
+- `propertyFlags` not includes `VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD`
+- `propertyFlags` not includes `VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD` (guaranteed by no `VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD`)
 
 `VkMemoryHeap`
 
-- `flags` includes `VK_MEMORY_HEAP_DEVICE_LOCAL_BIT` (guaranteed)
+- `flags` includes `VK_MEMORY_HEAP_DEVICE_LOCAL_BIT` (guaranteed by `VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT`)
 
-### Host-visible memory
+### Host visible memory
 
 `VkMemoryType`
 
@@ -98,7 +104,14 @@ The full requirements of the selected `VkPhysicalDevice` object.
 - `propertyFlags` includes `VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT` (guaranteed)
 - `propertyFlags` not includes `VK_MEMORY_PROPERTY_HOST_COHERENT_BIT` (optional)
 - `propertyFlags` includes `VK_MEMORY_PROPERTY_HOST_CACHED_BIT` (optional)
-- `propertyFlags` not includes `VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT` (guaranteed)
+- `propertyFlags` not includes `VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT` (guaranteed by `VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT`)
+- `propertyFlags` not includes `VK_MEMORY_PROPERTY_PROTECTED_BIT` (guaranteed by `VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT`)
+- `propertyFlags` not includes `VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD`
+- `propertyFlags` not includes `VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD` (guaranteed by no `VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD`)
+
+`VkMemoryHeap`
+
+- `flags` not includes `VK_MEMORY_HEAP_DEVICE_LOCAL_BIT` (optional, guaranteed by no `VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT`)
 
 ## Queue family properties
 

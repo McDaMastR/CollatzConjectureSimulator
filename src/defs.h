@@ -110,7 +110,7 @@
 
 #define VINIT_FAILURE() print_vinit_failure(__LINE__, result);
 #define VINSTVERS_FAILURE(vers) print_vinstvers_failure(__LINE__, vers);
-#define VULKAN_FAILURE(func, count, ...) print_vulkan_failure(__LINE__, #func, result, (unsigned int) (count), __VA_ARGS__);
+#define VULKAN_FAILURE(func, count, ...) print_vulkan_failure(__LINE__, #func, result, (unsigned) (count), __VA_ARGS__);
 
 #define CHECK_RESULT(func) if (!func) {destroy_gpu(&gpu); puts("EXIT FAILURE"); return EXIT_FAILURE;}
 
@@ -218,9 +218,9 @@ typedef struct Gpu
 	uint32_t computeWorkGroupSize;
 
 	uint32_t hostVisibleMemoryHeapIndex;
-	uint32_t hostVisibleMemoryTypeIndex;
-
 	uint32_t deviceLocalMemoryHeapIndex;
+
+	uint32_t hostVisibleMemoryTypeIndex;
 	uint32_t deviceLocalMemoryTypeIndex;
 
 	uint32_t transferQueueFamilyIndex;
@@ -231,6 +231,7 @@ typedef struct Gpu
 
 	float timestampPeriod;
 
+	bool hostNonCoherent;
 	bool usingShaderInt16;
 	bool usingShaderInt64;
 	bool usingMaintenance4;
@@ -238,7 +239,6 @@ typedef struct Gpu
 	bool usingMemoryPriority;
 	bool usingSubgroupSizeControl;
 	bool usingPortabilitySubset;
-	bool usingNonCoherent;
 
 	void* dynamicMemory;
 } Gpu_t;
@@ -315,7 +315,7 @@ void print_pdestroy_failure(int line, int result, const pthread_mutex_t* m);
 
 void print_vinit_failure    (int line, VkResult result);
 void print_vinstvers_failure(int line, uint32_t apiVersion);
-void print_vulkan_failure   (int line, const char* func, VkResult result, unsigned int count, ...);
+void print_vulkan_failure   (int line, const char* func, VkResult result, unsigned count, ...);
 
 // Callback functions
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback              (VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
