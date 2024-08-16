@@ -27,8 +27,8 @@ This second output can again be used as an input, resulting in a third output $f
 By applying the Collatz function recursively, the sequence of successive inputs and outputs will
 form a _Collatz sequence_. If a Collatz sequence includes the value $1$, then the number of
 elements in the sequence from the starting value to the first instance of the value $1$ is the
-_total stopping time_ of that Collatz sequence. That is, given a starting value $n$ and total
-stopping time $k$, $f^k(n) = 1$.
+_total stopping time_. That is, given a starting value $n$ and total stopping time $k$, $f^k(n) =
+1$.
 
 The Collatz Conjecture states that for all positive integer starting values $n$, finite recursive
 application of the Collatz function will eventually result in the value $1$. Using mathematical
@@ -54,18 +54,19 @@ primarily written in C, and the shaders are written in GLSL.
 
 ## Program Requirements
 
-- C11
+- [C](https://en.wikipedia.org/wiki/C_(programming_language))11
   - `_Atomic`
   - `__int128`
   - Little endian
-- CMake 3.21
-- pthreads
-- glslc
-- volk
-- Vulkan 1.1
+- [CMake](https://cmake.org) 3.21
+- [pthreads](https://en.wikipedia.org/wiki/Pthreads)
+- [glslc](https://github.com/google/shaderc)
+- [Vulkan](https://www.vulkan.org) 1.1
   - `storageBuffer16BitAccess`
   - `synchronization2`
   - `timelineSemaphore`
+- [volk](https://github.com/zeux/volk)
+- [Vulkan Utility Libraries](https://github.com/KhronosGroup/Vulkan-Utility-Libraries)
 
 ## Building and Running
 
@@ -77,13 +78,17 @@ To generate the build system for the program, navigate the terminal to the proje
 execute the following command. To specify a debug or release build system, add
 `-DCMAKE_BUILD_TYPE=Debug` or `-DCMAKE_BUILD_TYPE=Release`, respectively.
 
-    cmake -S . -B build
+```text
+cmake -S . -B build
+```
 
 A `build` directory will be created containing the build system. To build the program, execute the
 following command. To specify a debug or release build, add `--config Debug` or `--config Release`,
 respectively.
 
-    cmake --build build
+```text
+cmake --build build
+```
 
 A `bin` directory will be created containing the compiled compute shaders and program executable.
 To run the program, execute `CollatzConjectureSimulator.exe` from within the `bin` directory. If
@@ -92,7 +97,7 @@ not executed inside the `bin` directory, the program will be unable to locate th
 If in debug, a `debug_log.txt` file will be created during execution containing all debug callbacks
 from the Vulkan API via a `VkDebugUtilsMessengerEXT` object, if `VK_EXT_debug_utils` is present. If
 logging Vulkan allocations, an `alloc_log.txt` file will be created during execution containing all
-allocation callbacks from the Vulkan API via a `VkAllocationCallbacks` object. After execution, a
+allocation callbacks from the Vulkan API via a `VkAllocationCallbacks` object. During execution, a
 `pipeline_cache.bin` file will be created containing the data from a `VkPipelineCache` object. This
 file will be read by the program if run again.
 
@@ -108,8 +113,8 @@ The main loop consists of the CPU writing starting values to in-buffers; the GPU
 values from in-buffers, iterating through Collatz sequences, and writing step counts to
 out-buffers; and the CPU reading steps counts from out-buffers. The number of inout-buffers is
 dependent on the system's specifications. There are one or more inout-buffers per `VkBuffer`
-object, one or more `VkBuffer` objects per `VkDeviceMemory` object, and two or more
-`VkDeviceMemory` objects.
+object, one `VkBuffer` object per `VkDeviceMemory` object, and two or more `VkDeviceMemory`
+objects.
 
 The program attempts to minimise the time spent idle by the CPU and GPU due to one waiting for the
 other to complete execution. Such as the GPU waiting for starting values, or the CPU waiting for
@@ -125,12 +130,12 @@ inout-buffers, simultaneously. Starting values are written to HV-in, copied from
 and read from DL-in. Step counts are written to DL-out, copied from DL-out to HV-out, and read from
 HV-out.
 
-CPU -> HV-in -> DL-in -> GPU -> DL-out -> HV-out -> CPU
+<p align="center">CPU -> HV-in -> DL-in -> GPU -> DL-out -> HV-out -> CPU</p>
 
 ## Preprocessor configurations
 
-The program defines various preprocessor macros in `defs.h` whose definitions can be changed to
-configure the behaviour of the program.
+The program defines various preprocessor macros in [defs.h](src/defs.h) whose definitions can be
+changed to configure the behaviour of the program.
 
 `MIN_TEST_VALUE_TOP` and `MIN_TEST_VALUE_BOTTOM` are the upper and lower 64 bits, respectively, of
 the 128-bit starting value the program will test first. Subsequent tested starting values will
@@ -160,12 +165,17 @@ allocations performed by the Vulkan API via a `VkAllocationCallbacks` object.
 
 `EXTENSION_LAYERS` is a boolean value describing whether or not the Khronos
 [extension layers](https://github.com/KhronosGroup/Vulkan-ExtensionLayer) will be enabled, if
-present. This includes `VK_LAYER_KHRONOS_synchronization2`. This value should be 1 if
-`VK_KHR_synchronization2` is not present.
+present. This includes `VK_LAYER_KHRONOS_synchronization2` and
+`VK_LAYER_KHRONOS_timeline_semaphore`. This value should be 1 if either `VK_KHR_synchronization2`
+or `VK_KHR_timeline_semaphore` are not present.
+
+`PROFILE_LAYERS` is a boolean value describing whether or not the Khronos
+[profiles layer](https://github.com/KhronosGroup/Vulkan-Profiles) will be enabled, namely
+`VK_LAYER_KHRONOS_profiles`.
 
 `VALIDATION_LAYERS` is a boolean value describing whether or not the Khronos
-[validation layers](https://github.com/KhronosGroup/Vulkan-ValidationLayers) will be enabled, if
-present. This includes `VK_LAYER_KHRONOS_validation`.
+[validation layer](https://github.com/KhronosGroup/Vulkan-ValidationLayers) will be enabled, namely
+`VK_LAYER_KHRONOS_validation`.
 
 `END_ON` is an integer value describing when the program will terminate. If 1, the program will end
 on user input, namely when either of the __enter__ or __return__ keys are pressed. If 2, the

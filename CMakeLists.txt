@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(CollatzConjectureSimulator VERSION 1.6 LANGUAGES C)
+project(CollatzConjectureSimulator VERSION 1.7 LANGUAGES C)
 
 add_subdirectory(src)
 
@@ -20,8 +20,8 @@ add_custom_command(
 	OUTPUT ${CMAKE_SOURCE_DIR}/bin/shader_16_64.spv
 	COMMAND
 		${glslc_exe}
-		--target-env=vulkan1.1 -O
-		-DINT_SIZE=${INT_SIZE}
+		--target-env=vulkan1.1
+		-DINT_SIZE=${INT_SIZE} -O
 		-o ${CMAKE_SOURCE_DIR}/bin/shader_16_64.spv
 		${CMAKE_SOURCE_DIR}/src/shader_16_64.comp
 	DEPENDS ${CMAKE_SOURCE_DIR}/src/shader_16_64.comp
@@ -32,8 +32,8 @@ add_custom_command(
 	OUTPUT ${CMAKE_SOURCE_DIR}/bin/shader_16.spv
 	COMMAND
 		${glslc_exe}
-		--target-env=vulkan1.1 -O
-		-DINT_SIZE=${INT_SIZE}
+		--target-env=vulkan1.1
+		-DINT_SIZE=${INT_SIZE} -O
 		-o ${CMAKE_SOURCE_DIR}/bin/shader_16.spv
 		${CMAKE_SOURCE_DIR}/src/shader_16.comp
 	DEPENDS ${CMAKE_SOURCE_DIR}/src/shader_16.comp
@@ -44,8 +44,8 @@ add_custom_command(
 	OUTPUT ${CMAKE_SOURCE_DIR}/bin/shader_64.spv
 	COMMAND
 		${glslc_exe}
-		--target-env=vulkan1.1 -O
-		-DINT_SIZE=${INT_SIZE}
+		--target-env=vulkan1.1
+		-DINT_SIZE=${INT_SIZE} -O
 		-o ${CMAKE_SOURCE_DIR}/bin/shader_64.spv
 		${CMAKE_SOURCE_DIR}/src/shader_64.comp
 	DEPENDS ${CMAKE_SOURCE_DIR}/src/shader_64.comp
@@ -56,8 +56,8 @@ add_custom_command(
 	OUTPUT ${CMAKE_SOURCE_DIR}/bin/shader.spv
 	COMMAND
 		${glslc_exe}
-		--target-env=vulkan1.1 -O
-		-DINT_SIZE=${INT_SIZE}
+		--target-env=vulkan1.1
+		-DINT_SIZE=${INT_SIZE} -O
 		-o ${CMAKE_SOURCE_DIR}/bin/shader.spv
 		${CMAKE_SOURCE_DIR}/src/shader.comp
 	DEPENDS ${CMAKE_SOURCE_DIR}/src/shader.comp

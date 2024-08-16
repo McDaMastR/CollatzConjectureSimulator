@@ -32,14 +32,17 @@
 #define PROGRAM_NAME "Collatz Conjecture Simulator"
 #define VK_KHR_VALIDATION_LAYER_NAME "VK_LAYER_KHRONOS_validation"
 #define VK_KHR_SYNCHRONIZATION_2_LAYER_NAME "VK_LAYER_KHRONOS_synchronization2"
+#define VK_KHR_TIMELINE_SEMAPHORE_LAYER_NAME "VK_LAYER_KHRONOS_timeline_semaphore"
+#define VK_KHR_PROFILES_LAYER_NAME "VK_LAYER_KHRONOS_profiles"
 
 #define DEBUG_LOG_NAME "debug_log.txt"
 #define ALLOC_LOG_NAME "alloc_log.txt"
+#define PIPELINE_CACHE_NAME "pipeline_cache.bin"
+
 #define SHADER_16_64_NAME "shader_16_64.spv"
 #define SHADER_16_NAME "shader_16.spv"
 #define SHADER_64_NAME "shader_64.spv"
 #define SHADER_NOEXT_NAME "shader.spv"
-#define PIPELINE_CACHE_NAME "pipeline_cache.bin"
 
 #define MS_PER_CLOCK (1000.0f / CLOCKS_PER_SEC)
 #define PROGRAM_TIME (clock() * MS_PER_CLOCK)
@@ -75,10 +78,13 @@
 // Whether to log all memory allocations from Vulkan
 #define LOG_VULKAN_ALLOCATIONS 0
 
-// Whether to use Khronos extension layers
-#define EXTENSION_LAYERS 1
+// Whether to use the Khronos extension layers, if present
+#define EXTENSION_LAYERS 0
 
-// Whether to use Khronos validation layers
+// Whether to use the Khronos profiles layer, if present
+#define PROFILE_LAYERS 0
+
+// Whether to use the Khronos validation layer, if present
 #define VALIDATION_LAYERS 0
 
 // When to end program
@@ -97,8 +103,8 @@
 #define FOPEN_FAILURE(name, mode) print_fopen_failure(__LINE__, file, (const char*) (name), (const char*) (mode));
 #define FSEEK_FAILURE(off, ori) print_fseek_failure(__LINE__, fileResult, file, (long) (off), (int) (ori));
 #define FTELL_FAILURE() print_ftell_failure(__LINE__, fileSize, file);
-#define FREAD_FAILURE(buf, size, count) print_fread_failure(__LINE__, readResult, (const void*) (buf), (size_t) (size), (size_t) (count), file);
-#define FWRITE_FAILURE(str, size, count) print_fwrite_failure(__LINE__, writeResult, (const void*) (str), (size_t) (size), (size_t) (count), file);
+#define FREAD_FAILURE(buf, size, count) print_fread_failure(__LINE__, ioResult, (const void*) (buf), (size_t) (size), (size_t) (count), file);
+#define FWRITE_FAILURE(str, size, count) print_fwrite_failure(__LINE__, ioResult, (const void*) (str), (size_t) (size), (size_t) (count), file);
 
 #define PCREATE_FAILURE(thrd, atr, func, arg) print_pcreate_failure(__LINE__, threadResult, (const pthread_t*) (thrd), (const pthread_attr_t*) (atr), #func, (const void*) (arg));
 #define PJOIN_FAILURE(thrd, res) print_pjoin_failure(__LINE__, threadResult, (pthread_t) (thrd), (const void* const*) (res));
@@ -118,8 +124,7 @@
 	#define GET_RESULT(func) func;
 	#define GET_INIT_RESULT(func) func;
 	#define GET_FILE_RESULT(func) func;
-	#define GET_READ_RESULT(func) func;
-	#define GET_WRITE_RESULT(func) func;
+	#define GET_IO_RESULT(func) func;
 	#define GET_THRD_RESULT(func) func;
 	#define BEGIN_FUNC
 	#define END_FUNC
@@ -127,8 +132,7 @@
 	#define GET_RESULT(func) result = func;
 	#define GET_INIT_RESULT(func) initResult = func;
 	#define GET_FILE_RESULT(func) fileResult = func;
-	#define GET_READ_RESULT(func) readResult = func;
-	#define GET_WRITE_RESULT(func) writeResult = func;
+	#define GET_IO_RESULT(func) ioResult = func;
 	#define GET_THRD_RESULT(func) threadResult = func;
 	#define BEGIN_FUNC printf("BEGIN %s\n", __func__);
 	#define END_FUNC printf("END %s\n\n", __func__);
@@ -146,34 +150,34 @@
 #if defined(__SIZEOF_INT128__) && __SIZEOF_INT128__ == 16
 	__extension__ typedef unsigned __int128 value_t;
 #else
-	#error "Compiler must support 128-bit unsigned integers via the '__int128' type"
+	#error "Compiler must support 128-bit unsigned integers via the '__int128' datatype"
 #endif
 
 // Data type of step counts
 typedef uint16_t step_t;
 
 // All Vulkan allocation callback counts
-typedef struct AllocationCallbackCounts
+typedef struct AllocationCallbackData
 {
 	uint64_t allocationCount;
 	uint64_t reallocationCount;
 	uint64_t freeCount;
 	uint64_t internalAllocationCount;
 	uint64_t internalFreeCount;
-} AllocationCallbackCounts_t;
+} AllocationCallbackData_t;
 
 // Relevant Vulkan info
 typedef struct Gpu
 {
-	VkDeviceMemory* hostVisibleDeviceMemories; // Count = deviceMemoriesPerHeap
-	VkDeviceMemory* deviceLocalDeviceMemories; // Count = deviceMemoriesPerHeap
-
 	VkBuffer* hostVisibleBuffers; // Count = buffersPerHeap
 	VkBuffer* deviceLocalBuffers; // Count = buffersPerHeap
 
+	VkDeviceMemory* hostVisibleDeviceMemories; // Count = buffersPerHeap
+	VkDeviceMemory* deviceLocalDeviceMemories; // Count = buffersPerHeap
+
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkDescriptorPool      descriptorPool;
-	VkDescriptorSet*      descriptorSets; // Count = inoutBuffersPerHeap
+	VkDescriptorSet*      descriptorSets; // Count = inoutsPerHeap
 
 	VkShaderModule   shaderModule;
 	VkPipelineCache  pipelineCache;
@@ -185,43 +189,37 @@ typedef struct Gpu
 	VkCommandPool computeCommandPool;
 
 	VkCommandBuffer  onetimeCommandBuffer;
-	VkCommandBuffer* transferCommandBuffers; // Count = inoutBuffersPerHeap
-	VkCommandBuffer* computeCommandBuffers;  // Count = inoutBuffersPerHeap
+	VkCommandBuffer* transferCommandBuffers; // Count = inoutsPerHeap
+	VkCommandBuffer* computeCommandBuffers;  // Count = inoutsPerHeap
 
-	VkSemaphore* semaphores; // Count = inoutBuffersPerHeap
+	VkSemaphore* semaphores; // Count = inoutsPerHeap
 	VkQueryPool  queryPool;
 
-	value_t** mappedHostVisibleInBuffers;  // Count = inoutBuffersPerHeap, valuesPerInoutBuffer
-	step_t**  mappedHostVisibleOutBuffers; // Count = inoutBuffersPerHeap, valuesPerInoutBuffer
+	value_t** mappedInBuffers;  // Count = inoutsPerHeap, valuesPerInout
+	step_t**  mappedOutBuffers; // Count = inoutsPerHeap, valuesPerInout
 
-	VkDeviceSize bytesPerInBuffer;
-	VkDeviceSize bytesPerOutBuffer;
-	VkDeviceSize bytesPerInoutBuffer;
+	VkDeviceSize bytesPerIn;
+	VkDeviceSize bytesPerOut;
+	VkDeviceSize bytesPerInout;
 	VkDeviceSize bytesPerBuffer;
-	VkDeviceSize bytesPerHostVisibleBuffer;
-	VkDeviceSize bytesPerDeviceLocalBuffer;
-	VkDeviceSize bytesPerHostVisibleDeviceMemory;
-	VkDeviceSize bytesPerDeviceLocalDeviceMemory;
+	VkDeviceSize bytesPerHostVisibleMemory;
+	VkDeviceSize bytesPerDeviceLocalMemory;
 
-	uint32_t valuesPerInoutBuffer;
+	uint32_t valuesPerInout;
 	uint32_t valuesPerBuffer;
-	uint32_t valuesPerDeviceMemory;
 	uint32_t valuesPerHeap;
-	uint32_t inoutBuffersPerBuffer;
-	uint32_t inoutBuffersPerDeviceMemory;
-	uint32_t inoutBuffersPerHeap;
-	uint32_t buffersPerDeviceMemory;
+	uint32_t inoutsPerBuffer;
+	uint32_t inoutsPerHeap;
 	uint32_t buffersPerHeap;
-	uint32_t deviceMemoriesPerHeap;
 
-	uint32_t computeWorkGroupCount;
-	uint32_t computeWorkGroupSize;
+	uint32_t workgroupCount;
+	uint32_t workgroupSize;
 
-	uint32_t hostVisibleMemoryHeapIndex;
-	uint32_t deviceLocalMemoryHeapIndex;
+	uint32_t hostVisibleHeapIndex;
+	uint32_t deviceLocalHeapIndex;
 
-	uint32_t hostVisibleMemoryTypeIndex;
-	uint32_t deviceLocalMemoryTypeIndex;
+	uint32_t hostVisibleTypeIndex;
+	uint32_t deviceLocalTypeIndex;
 
 	uint32_t transferQueueFamilyIndex;
 	uint32_t computeQueueFamilyIndex;
@@ -232,13 +230,16 @@ typedef struct Gpu
 	float timestampPeriod;
 
 	bool hostNonCoherent;
-	bool usingShaderInt16;
-	bool usingShaderInt64;
 	bool usingMaintenance4;
+	bool usingMaintenance5;
 	bool usingMemoryBudget;
 	bool usingMemoryPriority;
-	bool usingSubgroupSizeControl;
+	bool usingPipelineCreationCacheControl;
 	bool usingPortabilitySubset;
+	bool usingShaderInt16;
+	bool usingShaderInt64;
+	bool usingSubgroupSizeControl;
+	bool usingUniformAndStorageBuffer8BitAccess;
 
 	void* dynamicMemory;
 } Gpu_t;

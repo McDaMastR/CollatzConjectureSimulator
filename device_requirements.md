@@ -4,11 +4,14 @@ The full requirements of the selected `VkPhysicalDevice` object.
 
 ## Extensions
 
+- `VK_KHR_8bit_storage` (optional)
 - `VK_KHR_maintenance4` (optional)
+- `VK_KHR_maintenance5` (optional)
 - `VK_KHR_synchronization2`
 - `VK_KHR_timeline_semaphore`
 - `VK_EXT_memory_budget` (optional)
 - `VK_EXT_memory_priority` (optional)
+- `VK_EXT_pipeline_creation_cache_control` (optional)
 - `VK_EXT_subgroup_size_control` (optional)
 
 ## Features
@@ -22,9 +25,18 @@ The full requirements of the selected `VkPhysicalDevice` object.
 
 - `storageBuffer16BitAccess`
 
+`VkPhysicalDevice8BitStorageFeaturesKHR`
+
+- `storageBuffer8BitAccess` (optional, guaranteed by `VK_KHR_8bit_storage`)
+- `uniformAndStorageBuffer8BitAccess` (optional)
+
 `VkPhysicalDeviceMaintenance4FeaturesKHR`
 
 - `maintenance4` (optional, guaranteed by `VK_KHR_maintenance4`)
+
+`VkPhysicalDeviceMaintenance5FeaturesKHR`
+
+- `maintenance5` (optional, guaranteed by `VK_KHR_maintenance5`)
 
 `VkPhysicalDeviceSynchronization2FeaturesKHR`
 
@@ -37,6 +49,10 @@ The full requirements of the selected `VkPhysicalDevice` object.
 `VkPhysicalDeviceMemoryPriorityFeaturesEXT`
 
 - `memoryPriority` (optional, guaranteed by `VK_EXT_memory_priority`)
+
+`VkPhysicalDevicePipelineCreationCacheControlFeaturesEXT`
+
+- `pipelineCreationCacheControl` (optional, guaranteed by `VK_EXT_pipeline_creation_cache_control`)
 
 `VkPhysicalDeviceSubgroupSizeControlFeaturesEXT`
 

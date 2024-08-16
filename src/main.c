@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#define VOLK_IMPLEMENTATION
 #include "defs.h"
 
 int main(void)

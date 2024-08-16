@@ -26,7 +26,7 @@
 
 bool init_debug_logfile(void)
 {
-	time_t currentTime = time(NULL);
+	time_t  currentTime = time(NULL);
 	clock_t programTime = PROGRAM_TIME;
 
 	FILE* file = fopen(DEBUG_LOG_NAME, "w");
@@ -50,7 +50,7 @@ bool init_debug_logfile(void)
 
 bool init_alloc_logfile(void)
 {
-	time_t currentTime = time(NULL);
+	time_t  currentTime = time(NULL);
 	clock_t programTime = PROGRAM_TIME;
 
 	FILE* file = fopen(ALLOC_LOG_NAME, "w");
@@ -80,20 +80,20 @@ static void print_debug_callback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT messageTypes,
 	const VkDebugUtilsMessengerCallbackDataEXT* restrict pCallbackData,
-	uint64_t userData)
+	uint64_t callbackCount)
 {
 	clock_t time = PROGRAM_TIME;
 	fprintf(stream,
 		"Debug callback %llu (%ld ms)\n",
-		userData, time
+		callbackCount, time
 	);
 
 	const char* sMessageSeverity = string_VkDebugUtilsMessageSeverityFlagBitsEXT(messageSeverity);
 	fprintf(stream, "Severity: %s\n", sMessageSeverity);
 
-	fputs("Types:", stream);
+	fputs("Types:   ", stream);
 	for (uint8_t i = 0; i < CHAR_BIT * sizeof(messageTypes); i++) {
-		VkDebugUtilsMessageTypeFlagBitsEXT messageType = messageTypes & 1U << i;
+		VkDebugUtilsMessageTypeFlagBitsEXT messageType = messageTypes & (1U << i);
 		if (messageType) {
 			const char* sMessageType = string_VkDebugUtilsMessageTypeFlagBitsEXT(messageType);
 			fprintf(stream, " %s", sMessageType);
@@ -102,46 +102,52 @@ static void print_debug_callback(
 	putc('\n', stream);
 
 	fprintf(stream,
-		"ID: %s (0x%x)\n",
+		"ID:       %s (0x%x)\n",
 		pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "",
 		(unsigned) pCallbackData->messageIdNumber
 	);
 
 	// VkDebugUtilsLabelEXT active in the current VkQueue
-	fprintf(stream, "Queue labels (%u):\n", pCallbackData->queueLabelCount);
-	for (uint32_t i = 0; i < pCallbackData->queueLabelCount; i++) {
-		fprintf(stream,
-			"\t%s (R%f G%f B%f A%f)\n",
-			pCallbackData->pQueueLabels[i].pLabelName,
-			(double) pCallbackData->pQueueLabels[i].color[0],
-			(double) pCallbackData->pQueueLabels[i].color[1],
-			(double) pCallbackData->pQueueLabels[i].color[2],
-			(double) pCallbackData->pQueueLabels[i].color[3]
-		);
+	if (pCallbackData->queueLabelCount) {
+		fprintf(stream, "Queue labels (%u):\n", pCallbackData->queueLabelCount);
+		for (uint32_t i = 0; i < pCallbackData->queueLabelCount; i++) {
+			fprintf(stream,
+				"\t%s (%f, %f, %f, %f)\n",
+				pCallbackData->pQueueLabels[i].pLabelName,
+				(double) pCallbackData->pQueueLabels[i].color[0],
+				(double) pCallbackData->pQueueLabels[i].color[1],
+				(double) pCallbackData->pQueueLabels[i].color[2],
+				(double) pCallbackData->pQueueLabels[i].color[3]
+			);
+		}
 	}
-	
+
 	// VkDebugUtilsLabelEXT active in the current VkCommandBuffer
-	fprintf(stream, "Command buffer labels (%u):\n", pCallbackData->cmdBufLabelCount);
-	for (uint32_t i = 0; i < pCallbackData->cmdBufLabelCount; i++) {
-		fprintf(stream,
-			"\t%s (R%f G%f B%f A%f)\n",
-			pCallbackData->pCmdBufLabels[i].pLabelName,
-			(double) pCallbackData->pCmdBufLabels[i].color[0],
-			(double) pCallbackData->pCmdBufLabels[i].color[1],
-			(double) pCallbackData->pCmdBufLabels[i].color[2],
-			(double) pCallbackData->pCmdBufLabels[i].color[3]
-		);
+	if (pCallbackData->cmdBufLabelCount) {
+		fprintf(stream, "Command buffer labels (%u):\n", pCallbackData->cmdBufLabelCount);
+		for (uint32_t i = 0; i < pCallbackData->cmdBufLabelCount; i++) {
+			fprintf(stream,
+				"\t%s (%f, %f, %f, %f)\n",
+				pCallbackData->pCmdBufLabels[i].pLabelName,
+				(double) pCallbackData->pCmdBufLabels[i].color[0],
+				(double) pCallbackData->pCmdBufLabels[i].color[1],
+				(double) pCallbackData->pCmdBufLabels[i].color[2],
+				(double) pCallbackData->pCmdBufLabels[i].color[3]
+			);
+		}
 	}
 
 	// VkDebugUtilsObjectNameInfoEXT related to the callback
-	fprintf(stream, "Objects (%u):\n", pCallbackData->objectCount);
-	for (uint32_t i = 0; i < pCallbackData->objectCount; i++) {
-		fprintf(stream,
-			"\t%s (Type: %s, Handle: 0x%llx)\n",
-			pCallbackData->pObjects[i].pObjectName ? pCallbackData->pObjects[i].pObjectName : "",
-			string_VkObjectType(pCallbackData->pObjects[i].objectType),
-			pCallbackData->pObjects[i].objectHandle
-		);
+	if (pCallbackData->objectCount) {
+		fprintf(stream, "Objects (%u):\n", pCallbackData->objectCount);
+		for (uint32_t i = 0; i < pCallbackData->objectCount; i++) {
+			fprintf(stream,
+				"\t%s (%s, 0x%llx)\n",
+				pCallbackData->pObjects[i].pObjectName ? pCallbackData->pObjects[i].pObjectName : "",
+				string_VkObjectType(pCallbackData->pObjects[i].objectType),
+				pCallbackData->pObjects[i].objectHandle
+			);
+		}
 	}
 
 	fprintf(stream, "%s\n\n", pCallbackData->pMessage);
@@ -178,7 +184,7 @@ VkBool32 debug_callback(
 
 static void print_allocation_callback(
 	FILE* restrict stream,
-	uint64_t userData,
+	uint64_t allocationCount,
 	size_t size,
 	size_t alignment,
 	VkSystemAllocationScope allocationScope,
@@ -188,11 +194,11 @@ static void print_allocation_callback(
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 	fprintf(stream,
 		"Allocation callback %llu (%ld ms)\n"
-		"Size: %zu\n"
+		"Size:      %zu\n"
 		"Alignment: %zu\n"
-		"Scope: %s\n"
-		"Address: %p\n\n",
-		userData, time, size, alignment, sAllocationScope, memory
+		"Scope:     %s\n"
+		"Address:   %p\n\n",
+		allocationCount, time, size, alignment, sAllocationScope, memory
 	);
 }
 
@@ -202,8 +208,8 @@ void* allocation_callback(
 	size_t alignment,
 	VkSystemAllocationScope allocationScope)
 {
-	((AllocationCallbackCounts_t*) pUserData)->allocationCount++;
-	uint64_t allocationCount = ((AllocationCallbackCounts_t*) pUserData)->allocationCount;
+	((AllocationCallbackData_t*) pUserData)->allocationCount++;
+	uint64_t allocationCount = ((AllocationCallbackData_t*) pUserData)->allocationCount;
 
 	void* memory = size ? _aligned_malloc(size, alignment) : NULL;
 	if (!memory && size)
@@ -222,7 +228,7 @@ void* allocation_callback(
 
 static void print_reallocation_callback(
 	FILE* restrict stream,
-	uint64_t userData,
+	uint64_t reallocationCount,
 	size_t originalSize,
 	size_t size,
 	size_t alignment,
@@ -234,13 +240,13 @@ static void print_reallocation_callback(
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 	fprintf(stream,
 		"Reallocation callback %llu (%ld ms)\n"
-		"Original size: %zu\n"
-		"Allocated size: %zu\n"
-		"Alignment: %zu\n"
-		"Scope: %s\n"
-		"Original address: %p\n"
+		"Original size:     %zu\n"
+		"Allocated size:    %zu\n"
+		"Alignment:         %zu\n"
+		"Scope:             %s\n"
+		"Original address:  %p\n"
 		"Allocated address: %p\n\n",
-		userData, time, originalSize, size, alignment, sAllocationScope, originalAddr, memory
+		reallocationCount, time, originalSize, size, alignment, sAllocationScope, originalAddr, memory
 	);
 }
 
@@ -251,8 +257,8 @@ void* reallocation_callback(
 	size_t alignment,
 	VkSystemAllocationScope allocationScope)
 {
-	((AllocationCallbackCounts_t*) pUserData)->reallocationCount++;
-	uint64_t reallocationCount = ((AllocationCallbackCounts_t*) pUserData)->reallocationCount;
+	((AllocationCallbackData_t*) pUserData)->reallocationCount++;
+	uint64_t reallocationCount = ((AllocationCallbackData_t*) pUserData)->reallocationCount;
 
 	size_t originalSize = pOriginal ? _aligned_msize(pOriginal, alignment, (size_t) 0) : 0;
 	void* memory = pOriginal || size ? _aligned_realloc(pOriginal, size, alignment) : NULL;
@@ -272,14 +278,14 @@ void* reallocation_callback(
 
 static void print_free_callback(
 	FILE* restrict stream,
-	uint64_t userData,
+	uint64_t freeCount,
 	const void* restrict memory)
 {
 	clock_t time = PROGRAM_TIME;
 	fprintf(stream,
 		"Free callback %llu (%ld ms)\n"
 		"Address: %p\n\n",
-		userData, time, memory
+		freeCount, time, memory
 	);
 }
 
@@ -287,8 +293,8 @@ void free_callback(
 	void* pUserData,
 	void* pMemory)
 {
-	((AllocationCallbackCounts_t*) pUserData)->freeCount++;
-	uint64_t freeCount = ((AllocationCallbackCounts_t*) pUserData)->freeCount;
+	((AllocationCallbackData_t*) pUserData)->freeCount++;
+	uint64_t freeCount = ((AllocationCallbackData_t*) pUserData)->freeCount;
 
 	_aligned_free(pMemory);
 
@@ -303,7 +309,7 @@ void free_callback(
 
 static void print_internal_allocation_callback(
 	FILE* restrict stream,
-	uint64_t userData,
+	uint64_t internalAllocationCount,
 	size_t size,
 	VkInternalAllocationType allocationType,
 	VkSystemAllocationScope allocationScope)
@@ -313,10 +319,10 @@ static void print_internal_allocation_callback(
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 	fprintf(stream,
 		"Internal allocation callback %llu (%ld ms)\n"
-		"Size: %zu\n"
-		"Type: %s\n"
+		"Size:  %zu\n"
+		"Type:  %s\n"
 		"Scope: %s\n\n",
-		userData, time, size, sAllocationType, sAllocationScope
+		internalAllocationCount, time, size, sAllocationType, sAllocationScope
 	);
 }
 
@@ -326,8 +332,8 @@ void internal_allocation_callback(
 	VkInternalAllocationType allocationType,
 	VkSystemAllocationScope allocationScope)
 {
-	((AllocationCallbackCounts_t*) pUserData)->internalAllocationCount++;
-	uint64_t internalAllocationCount = ((AllocationCallbackCounts_t*) pUserData)->internalAllocationCount;
+	((AllocationCallbackData_t*) pUserData)->internalAllocationCount++;
+	uint64_t internalAllocationCount = ((AllocationCallbackData_t*) pUserData)->internalAllocationCount;
 
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
 	if (file) {
@@ -340,7 +346,7 @@ void internal_allocation_callback(
 
 static void print_internal_free_callback(
 	FILE* restrict stream,
-	uint64_t userData,
+	uint64_t internalFreeCount,
 	size_t size,
 	VkInternalAllocationType allocationType,
 	VkSystemAllocationScope allocationScope)
@@ -350,10 +356,10 @@ static void print_internal_free_callback(
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 	fprintf(stream,
 		"Internal free callback %llu (%ld ms)\n"
-		"Size: %zu\n"
-		"Type: %s\n"
+		"Size:  %zu\n"
+		"Type:  %s\n"
 		"Scope: %s\n\n",
-		userData, time, size, sAllocationType, sAllocationScope
+		internalFreeCount, time, size, sAllocationType, sAllocationScope
 	);
 }
 
@@ -363,8 +369,8 @@ void internal_free_callback(
 	VkInternalAllocationType allocationType,
 	VkSystemAllocationScope allocationScope)
 {
-	((AllocationCallbackCounts_t*) pUserData)->internalFreeCount++;
-	uint64_t internalFreeCount = ((AllocationCallbackCounts_t*) pUserData)->internalFreeCount;
+	((AllocationCallbackData_t*) pUserData)->internalFreeCount++;
+	uint64_t internalFreeCount = ((AllocationCallbackData_t*) pUserData)->internalFreeCount;
 
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
 	if (file) {
