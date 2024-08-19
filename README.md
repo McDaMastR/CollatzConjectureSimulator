@@ -65,17 +65,11 @@ primarily written in C, and the shaders are written in GLSL.
   - `storageBuffer16BitAccess`
   - `synchronization2`
   - `timelineSemaphore`
-- [volk](https://github.com/zeux/volk)
-- [Vulkan Utility Libraries](https://github.com/KhronosGroup/Vulkan-Utility-Libraries)
 
 ## Building and Running
 
-The program is built via CMake. It uses `find_package` to locate the pthreads and volk libraries,
-and `find_program` to locate the glslc executable. The compute shaders are added as a custom
-target and are compiled into SPIR-V when building.
-
-To generate the build system for the program, navigate the terminal to the project directory and
-execute the following command. To specify a debug or release build system, add
+The program is built via CMake. To generate the build system, navigate the terminal to the project
+directory and execute the following command. To specify a debug or release build system, add
 `-DCMAKE_BUILD_TYPE=Debug` or `-DCMAKE_BUILD_TYPE=Release`, respectively.
 
 ```text

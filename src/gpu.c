@@ -460,6 +460,7 @@ bool select_device(Gpu_t* gpu)
 	uint32_t pdvIndex     = ~0U; // Physical device index
 	uint32_t highestScore = 0;
 
+	bool usingBufferDeviceAddress               = false;
 	bool usingMaintenance4                      = false;
 	bool usingMaintenance5                      = false;
 	bool usingMemoryBudget                      = false;
@@ -493,6 +494,7 @@ bool select_device(Gpu_t* gpu)
 		bool hasHostVisible           = false;
 
 		bool has8BitStorage                  = false;
+		bool hasBufferDeviceAddress          = false;
 		bool hasMaintenance4                 = false;
 		bool hasMaintenance5                 = false;
 		bool hasPortabilitySubset            = false;
@@ -547,6 +549,7 @@ bool select_device(Gpu_t* gpu)
 			const char* extensionName = extensionsProperties[i][j].extensionName;
 
 			if      (!strcmp(extensionName, VK_KHR_8BIT_STORAGE_EXTENSION_NAME))                    has8BitStorage                  = true;
+			else if (!strcmp(extensionName, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME))           hasBufferDeviceAddress          = true;
 			else if (!strcmp(extensionName, VK_KHR_MAINTENANCE_4_EXTENSION_NAME))                   hasMaintenance4                 = true;
 			else if (!strcmp(extensionName, VK_KHR_MAINTENANCE_5_EXTENSION_NAME))                   hasMaintenance5                 = true;
 			else if (!strcmp(extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))              hasPortabilitySubset            = true;
@@ -585,6 +588,7 @@ bool select_device(Gpu_t* gpu)
 		if (hasDedicatedTransfer) currentScore += 100;
 		if (hasDedicatedCompute)  currentScore += 100;
 
+		if (hasBufferDeviceAddress)                                 currentScore += 10;
 		if (hasMaintenance4)                                        currentScore += 10;
 		if (hasMaintenance5)                                        currentScore += 10;
 		if (hasMemoryBudget)                                        currentScore += 10;
@@ -597,6 +601,7 @@ bool select_device(Gpu_t* gpu)
 			highestScore = currentScore;
 			pdvIndex     = i;
 
+			usingBufferDeviceAddress               = hasBufferDeviceAddress;
 			usingMaintenance4                      = hasMaintenance4;
 			usingMaintenance5                      = hasMaintenance5;
 			usingMemoryBudget                      = hasMemoryBudget;
@@ -673,6 +678,7 @@ bool select_device(Gpu_t* gpu)
 	gpu->transferQueueFamilyIndex = transferQueueFamilyIndex;
 	gpu->computeQueueFamilyIndex  = computeQueueFamilyIndex;
 
+	gpu->usingBufferDeviceAddress               = usingBufferDeviceAddress;
 	gpu->usingMaintenance4                      = usingMaintenance4;
 	gpu->usingMaintenance5                      = usingMaintenance5;
 	gpu->usingMemoryBudget                      = usingMemoryBudget;
@@ -695,6 +701,7 @@ bool select_device(Gpu_t* gpu)
 		"\tScore:                             %u\n"
 		"\tTransfer QF index:                 %u\n"
 		"\tCompute QF index:                  %u\n"
+		"\tbufferDeviceAddress                %d\n"
 		"\tmaintenance4                       %d\n"
 		"\tmaintenance5                       %d\n"
 		"\tmemoryPriority:                    %d\n"
@@ -707,6 +714,7 @@ bool select_device(Gpu_t* gpu)
 		highestScore,
 		transferQueueFamilyIndex,
 		computeQueueFamilyIndex,
+		usingBufferDeviceAddress,
 		usingMaintenance4,
 		usingMaintenance5,
 		usingMemoryPriority,
@@ -730,6 +738,7 @@ bool create_device(Gpu_t* gpu)
 	uint32_t computeQueueFamilyIndex  = gpu->computeQueueFamilyIndex;
 	uint32_t transferQueueFamilyIndex = gpu->transferQueueFamilyIndex;
 
+	bool usingBufferDeviceAddress               = gpu->usingBufferDeviceAddress;
 	bool usingMaintenance4                      = gpu->usingMaintenance4;
 	bool usingMaintenance5                      = gpu->usingMaintenance5;
 	bool usingMemoryBudget                      = gpu->usingMemoryBudget;
@@ -744,7 +753,7 @@ bool create_device(Gpu_t* gpu)
 	VkResult result;
 
 	uint32_t enabledExtensionCount = 0;
-	const char* enabledExtensions[13];
+	const char* enabledExtensions[14];
 
 	enabledExtensions[enabledExtensionCount] = VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME;
 	enabledExtensionCount++;
@@ -754,6 +763,11 @@ bool create_device(Gpu_t* gpu)
 
 	if (usingUniformAndStorageBuffer8BitAccess) {
 		enabledExtensions[enabledExtensionCount] = VK_KHR_8BIT_STORAGE_EXTENSION_NAME;
+		enabledExtensionCount++;
+	}
+
+	if (usingBufferDeviceAddress) {
+		enabledExtensions[enabledExtensionCount] = VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME;
 		enabledExtensionCount++;
 	}
 
@@ -875,6 +889,13 @@ bool create_device(Gpu_t* gpu)
 	physicalDevice8BitStorageFeatures.uniformAndStorageBuffer8BitAccess = VK_TRUE;
 	physicalDevice8BitStorageFeatures.storagePushConstant8              = VK_FALSE;
 
+	VkPhysicalDeviceBufferDeviceAddressFeaturesKHR physicalDeviceBufferDeviceAddressFeatures;
+	physicalDeviceBufferDeviceAddressFeatures.sType                            = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR;
+	physicalDeviceBufferDeviceAddressFeatures.pNext                            = NULL;
+	physicalDeviceBufferDeviceAddressFeatures.bufferDeviceAddress              = VK_TRUE;
+	physicalDeviceBufferDeviceAddressFeatures.bufferDeviceAddressCaptureReplay = VK_FALSE;
+	physicalDeviceBufferDeviceAddressFeatures.bufferDeviceAddressMultiDevice   = VK_FALSE;
+
 	VkPhysicalDeviceMaintenance4FeaturesKHR physicalDeviceMaintenance4Features;
 	physicalDeviceMaintenance4Features.sType        = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_FEATURES_KHR;
 	physicalDeviceMaintenance4Features.pNext        = NULL;
@@ -921,6 +942,11 @@ bool create_device(Gpu_t* gpu)
 
 	*next = &physicalDeviceTimelineSemaphoreFeatures;
 	next  = &physicalDeviceTimelineSemaphoreFeatures.pNext;
+
+	if (usingBufferDeviceAddress) {
+		*next = &physicalDeviceBufferDeviceAddressFeatures;
+		next  = &physicalDeviceBufferDeviceAddressFeatures.pNext;
+	}
 
 	if (usingMaintenance4) {
 		*next = &physicalDeviceMaintenance4Features;

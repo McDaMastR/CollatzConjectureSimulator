@@ -5,6 +5,7 @@ The full requirements of the selected `VkPhysicalDevice` object.
 ## Extensions
 
 - `VK_KHR_8bit_storage` (optional)
+- `VK_KHR_buffer_device_address` (optional)
 - `VK_KHR_maintenance4` (optional)
 - `VK_KHR_maintenance5` (optional)
 - `VK_KHR_synchronization2`
@@ -29,6 +30,10 @@ The full requirements of the selected `VkPhysicalDevice` object.
 
 - `storageBuffer8BitAccess` (optional, guaranteed by `VK_KHR_8bit_storage`)
 - `uniformAndStorageBuffer8BitAccess` (optional)
+
+`VkPhysicalDeviceBufferDeviceAddressFeaturesKHR`
+
+- `bufferDeviceAddress` (optional, guaranteed by `VK_KHR_buffer_device_address`)
 
 `VkPhysicalDeviceMaintenance4FeaturesKHR`
 

@@ -18,9 +18,7 @@
 
 #pragma once
 
-#define VK_ENABLE_BETA_EXTENSIONS
 #include <volk.h> // vulkan.h, stddef.h, stdint.h
-
 #include <pthread.h> // stddef.h, limits.h, time.h
 #include <stdbool.h>
 #include <stdlib.h> // limits.h
@@ -230,6 +228,7 @@ typedef struct Gpu
 	float timestampPeriod;
 
 	bool hostNonCoherent;
+	bool usingBufferDeviceAddress;
 	bool usingMaintenance4;
 	bool usingMaintenance5;
 	bool usingMemoryBudget;

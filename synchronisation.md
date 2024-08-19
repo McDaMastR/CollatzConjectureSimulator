@@ -55,7 +55,7 @@ A description of Vulkan synchronisation within the program.
 | ---------------- | ----------------------------- | ---------------------------- | ------------------------ |
 | acquire          |                               | DL-in                        | vkCmdPipelineBarrier2KHR |
 | visibility       | device domain                 | (dispatch operations; DL-in) |                          |
-| read             | DL-in                         |                              | vkCmdDispatch            |
+| read             | DL-in                         |                              | vkCmdDispatchBase        |
 | write            |                               | DL-out                       |                          |
 | availability     | (dispatch operations; DL-out) | device domain                | vkCmdPipelineBarrier2KHR |
 | release          | DL-out                        |                              |                          |

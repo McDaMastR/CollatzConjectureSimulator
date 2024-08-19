@@ -19,8 +19,6 @@
 #version 460 core
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 
-#define UINT_MAX 0xffffffff
-
 layout(local_size_x_id = 0) in;
 
 layout(binding = 0) readonly buffer InBuffer
@@ -38,31 +36,31 @@ layout(binding = 1) writeonly buffer OutBuffer
 void main(void)
 {
 	u64vec2 n = startingValues[gl_GlobalInvocationID.x];
-	uint steps = 0;
+	uint steps = 0U;
 
 	// Loop until n == 1
 	do {
 		// 3n + 1
 		u64vec2 copy1 = n;
-		n <<= 1;
-		n += u64vec2(1, copy1.x >> 63) + copy1;
+		n <<= 1U;
+		n += u64vec2(1, copy1.x >> 63U) + copy1;
 		n.y += uint64_t(copy1.x > n.x);
 
-		// Check if 2^32 | n
-		while ((n.x & UINT_MAX) == 0) {
-			n = u64vec2((n.x >> 32) + (n.y << 32), n.y >> 32);
-			steps += 32;
+		// Check if 2^32 divides n
+		while (uint(n.x) == 0U) {
+			n = u64vec2((n.x >> 32U) + (n.y << 32U), n.y >> 32U);
+			steps += 32U;
 		}
 
 		// Calculate # trailing zero bits (by Sean Eron Anderson: https://graphics.stanford.edu/~seander/bithacks.html)
-		uint copy2 = uint(n.x & UINT_MAX);
-		uint factorsOf2 = (floatBitsToUint(float(copy2 & -copy2)) >> 23) - 0x7f;
+		uint copy2 = uint(n.x);
+		uint factorsOf2 = (floatBitsToUint(float(copy2 & -copy2)) >> 23U) - 0x7fU;
 
 		// n/2 for each factor of 2
 		uint64_t copy3 = n.y;
 		n >>= factorsOf2;
-		n.x += copy3 << (64 - factorsOf2);
-		steps += factorsOf2 + 1;
+		n.x += copy3 << (64U - factorsOf2);
+		steps += factorsOf2 + 1U;
 	}
 	while (n != u64vec2(1, 0));
 
@@ -74,33 +72,33 @@ void main(void)
 void main(void)
 {
 	u64vec4 n = u64vec4(startingValues[gl_GlobalInvocationID.x], 0, 0);
-	uint steps = 0;
+	uint steps = 0U;
 
 	// Loop until n == 1
 	do {
 		// 3n + 1
 		u64vec4 copy1 = n;
-		n <<= 1;
-		n += u64vec4(1, copy1.xyz >> 63) + copy1;
+		n <<= 1U;
+		n += u64vec4(1, copy1.xyz >> 63U) + copy1;
 		n.y += uint64_t(copy1.x > n.x);
 		n.z += uint64_t(copy1.y > n.y);
 		n.w += uint64_t(copy1.z > n.z);
 
-		// Check if 2^32 | n
-		while ((n.x & UINT_MAX) == 0) {
-			n = u64vec4((n.xyz >> 32) + (n.yzw << 32), n.w >> 32);
-			steps += 32;
+		// Check if 2^32 divides n
+		while (uint(n.x) == 0U) {
+			n = u64vec4((n.xyz >> 32U) + (n.yzw << 32U), n.w >> 32U);
+			steps += 32U;
 		}
 
 		// Calculate # trailing zero bits (by Sean Eron Anderson: https://graphics.stanford.edu/~seander/bithacks.html)
-		uint copy2 = uint(n.x & UINT_MAX);
-		uint factorsOf2 = (floatBitsToUint(float(copy2 & -copy2)) >> 23) - 0x7f;
+		uint copy2 = uint(n.x);
+		uint factorsOf2 = (floatBitsToUint(float(copy2 & -copy2)) >> 23U) - 0x7fU;
 
 		// n/2 for each factor of 2
 		u64vec3 copy3 = n.yzw;
 		n >>= factorsOf2;
-		n.xyz += copy3 << (64 - factorsOf2);
-		steps += factorsOf2 + 1;
+		n.xyz += copy3 << (64U - factorsOf2);
+		steps += factorsOf2 + 1U;
 	}
 	while (n != u64vec4(1, 0, 0, 0));
 
