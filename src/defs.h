@@ -1,177 +1,89 @@
 /* 
- * Collatz Conjecture Simulator
- * Copyright (C) 2024  Seth Isaiah McDonald <seth.i.mcdonald@gmail.com>
+ * Copyright (C) 2024  Seth McDonald <seth.i.mcdonald@gmail.com>
  * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * This file is part of Collatz Conjecture Simulator.
  * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Collatz Conjecture Simulator is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  * 
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Collatz Conjecture Simulator is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE. See the GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along with Collatz Conjecture
+ * Simulator. If not, see <https://www.gnu.org/licenses/>.
  */
 
 #pragma once
 
-#include <volk.h> // vulkan.h, stddef.h, stdint.h
-#include <pthread.h> // stddef.h, limits.h, time.h
-#include <stdbool.h>
-#include <stdlib.h> // limits.h
-#include <stdio.h>
 
+// ===== Attribute macros =====
 
-// * ===== Macros =====
+// NOTE: These are mainly for compiler warnings.
 
-#define PROGRAM_NAME "Collatz Conjecture Simulator"
-#define VK_KHR_VALIDATION_LAYER_NAME "VK_LAYER_KHRONOS_validation"
-#define VK_KHR_SYNCHRONIZATION_2_LAYER_NAME "VK_LAYER_KHRONOS_synchronization2"
-#define VK_KHR_TIMELINE_SEMAPHORE_LAYER_NAME "VK_LAYER_KHRONOS_timeline_semaphore"
-#define VK_KHR_PROFILES_LAYER_NAME "VK_LAYER_KHRONOS_profiles"
+#ifndef __has_attribute
+	#define __has_attribute(attr) 0
+#endif
 
-#define DEBUG_LOG_NAME "debug_log.txt"
-#define ALLOC_LOG_NAME "alloc_log.txt"
-#define PIPELINE_CACHE_NAME "pipeline_cache.bin"
-
-#define SHADER_16_64_NAME "shader_16_64.spv"
-#define SHADER_16_NAME "shader_16.spv"
-#define SHADER_64_NAME "shader_64.spv"
-#define SHADER_NOEXT_NAME "shader.spv"
-
-#define MS_PER_CLOCK (1000.0f / CLOCKS_PER_SEC)
-#define PROGRAM_TIME (clock() * MS_PER_CLOCK)
-
-// Get top 64 bits of 128-bit integer
-#define TOP_128BIT_INT(val) ((uint64_t) ((val) >> 64))
-
-// Get bottom 64 bits of 128-bit integer
-#define BOTTOM_128BIT_INT(val) ((uint64_t) ((val) & ~0ULL))
-
-// Set 128-bit integer to given 128-bit value (split into top and bottom 64 bits)
-#define SET_128BIT_INT(val, top, bottom) {(val) = (top); (val) <<= 64; (val) |= (bottom);}
-
-// First starting value to test (MUST BE ODD)
-#define MIN_TEST_VALUE_TOP    0x0000000000000000ULL
-#define MIN_TEST_VALUE_BOTTOM 0x0000000000000003ULL
-#define SET_MIN_TEST_VALUE(val) SET_128BIT_INT(val, MIN_TEST_VALUE_TOP, MIN_TEST_VALUE_BOTTOM)
-
-// Starting value with highest step count found so far
-#define MAX_STEP_VALUE_TOP    0x0000000000000000ULL
-#define MAX_STEP_VALUE_BOTTOM 0x0000000000000001ULL
-#define SET_MAX_STEP_VALUE(val) SET_128BIT_INT(val, MAX_STEP_VALUE_TOP, MAX_STEP_VALUE_BOTTOM)
-
-// Highest step count found so far
-#define MAX_STEP_COUNT 0U
-
-// Maximum proportion of available GPU heap memory to use
-#define MAX_HEAP_MEMORY 0.8f
-
-// Whether to benchmark Vulkan commands via queries
-#define QUERY_BENCHMARKING 1
-
-// Whether to log all memory allocations from Vulkan
-#define LOG_VULKAN_ALLOCATIONS 0
-
-// Whether to use the Khronos extension layers, if present
-#define EXTENSION_LAYERS 0
-
-// Whether to use the Khronos profiles layer, if present
-#define PROFILE_LAYERS 0
-
-// Whether to use the Khronos validation layer, if present
-#define VALIDATION_LAYERS 0
-
-// When to end program
-// 1 -> On user input
-// 2 -> On # loops completed
-// 3 -> On new highest step count
-#define END_ON 1
-
-// Just a newline
-#define NEWLINE putchar('\n');
-
-#define MALLOC_FAILURE(ptr) print_malloc_failure(__LINE__, (const void*) (ptr), size);
-#define CALLOC_FAILURE(ptr, num, size) print_calloc_failure(__LINE__, (const void*) (ptr), (size_t) (num), (size_t) (size));
-#define REALLOC_FAILURE(ptr, mem, size) print_realloc_failure(__LINE__, (const void*) (ptr), (const void*) (mem), (size_t) (size));
-
-#define FOPEN_FAILURE(name, mode) print_fopen_failure(__LINE__, file, (const char*) (name), (const char*) (mode));
-#define FSEEK_FAILURE(off, ori) print_fseek_failure(__LINE__, fileResult, file, (long) (off), (int) (ori));
-#define FTELL_FAILURE() print_ftell_failure(__LINE__, fileSize, file);
-#define FREAD_FAILURE(buf, size, count) print_fread_failure(__LINE__, ioResult, (const void*) (buf), (size_t) (size), (size_t) (count), file);
-#define FWRITE_FAILURE(str, size, count) print_fwrite_failure(__LINE__, ioResult, (const void*) (str), (size_t) (size), (size_t) (count), file);
-
-#define PCREATE_FAILURE(thrd, atr, func, arg) print_pcreate_failure(__LINE__, threadResult, (const pthread_t*) (thrd), (const pthread_attr_t*) (atr), #func, (const void*) (arg));
-#define PJOIN_FAILURE(thrd, res) print_pjoin_failure(__LINE__, threadResult, (pthread_t) (thrd), (const void* const*) (res));
-#define PCANCEL_FAILURE(thrd) print_pcancel_failure(__LINE__, threadResult, (pthread_t) (thrd));
-#define PINIT_FAILURE(mtx, atr) print_pinit_failure(__LINE__, threadResult, (const pthread_mutex_t*) (mtx), (const pthread_mutexattr_t*) (atr));
-#define PLOCK_FAILURE(mtx) print_plock_failure(__LINE__, threadResult, (const pthread_mutex_t*) (mtx));
-#define PUNLOCK_FAILURE(mtx) print_punlock_failure(__LINE__, threadResult, (const pthread_mutex_t*) (mtx));
-#define PDESTROY_FAILURE(mtx) print_pdestroy_failure(__LINE__, threadResult, (const pthread_mutex_t*) (mtx));
-
-#define VINIT_FAILURE() print_vinit_failure(__LINE__, result);
-#define VINSTVERS_FAILURE(vers) print_vinstvers_failure(__LINE__, vers);
-#define VULKAN_FAILURE(func, count, ...) print_vulkan_failure(__LINE__, #func, result, (unsigned) (count), __VA_ARGS__);
-
-#define CHECK_RESULT(func) if (!func) {destroy_gpu(&gpu); puts("EXIT FAILURE"); return EXIT_FAILURE;}
-
-#ifdef NDEBUG
-	#define GET_RESULT(func) func;
-	#define GET_INIT_RESULT(func) func;
-	#define GET_FILE_RESULT(func) func;
-	#define GET_IO_RESULT(func) func;
-	#define GET_THRD_RESULT(func) func;
-	#define BEGIN_FUNC
-	#define END_FUNC
+#if __has_attribute(cold)
+	#define COLD_FUNC __attribute__((cold))
 #else
-	#define GET_RESULT(func) result = func;
-	#define GET_INIT_RESULT(func) initResult = func;
-	#define GET_FILE_RESULT(func) fileResult = func;
-	#define GET_IO_RESULT(func) ioResult = func;
-	#define GET_THRD_RESULT(func) threadResult = func;
-	#define BEGIN_FUNC printf("BEGIN %s\n", __func__);
-	#define END_FUNC printf("END %s\n\n", __func__);
+	#define COLD_FUNC
+#endif
 
-	#define SET_DEBUG_NAME()                                                          \
-		GET_RESULT(vkSetDebugUtilsObjectNameEXT(g_device, &debugUtilsObjectNameInfo)) \
-		if (result)                                                                   \
-			VULKAN_FAILURE(vkSetDebugUtilsObjectNameEXT, 2, 'p', g_device, 'p', &debugUtilsObjectNameInfo)
+#if __has_attribute(const)
+	#define CONST_FUNC __attribute__((const))
+#else
+	#define CONST_FUNC
+#endif
+
+#if __has_attribute(nonnull)
+	#define NONNULL_ARGS __attribute__((nonnull))
+#else
+	#define NONNULL_ARGS
+#endif
+
+#if __has_attribute(access)
+	#define NO_ACCESS(index) __attribute__((access(none, index)))
+#else
+	#define NO_ACCESS(index)
 #endif
 
 
-// * ===== Datatypes =====
+// ===== Datatypes =====
 
-// Data type of tested values
 #if defined(__SIZEOF_INT128__) && __SIZEOF_INT128__ == 16
-	__extension__ typedef unsigned __int128 value_t;
+	__extension__ typedef unsigned __int128 Value;
 #else
-	#error "Compiler must support 128-bit unsigned integers via the '__int128' datatype"
+	#error "Compiler must support 128-bit unsigned integers via the __int128 datatype"
 #endif
 
-// Data type of step counts
-typedef uint16_t step_t;
+typedef uint16_t Steps;
 
-// All Vulkan allocation callback counts
-typedef struct AllocationCallbackData
+typedef struct DyArray DyArray;
+
+typedef struct CallbackData
 {
-	uint64_t allocationCount;
-	uint64_t reallocationCount;
-	uint64_t freeCount;
-	uint64_t internalAllocationCount;
-	uint64_t internalFreeCount;
-} AllocationCallbackData_t;
+	const char* funcName;
+	uint64_t    lineNum;
+} CallbackData;
 
-// Relevant Vulkan info
 typedef struct Gpu
 {
-	VkBuffer* hostVisibleBuffers; // Count = buffersPerHeap
-	VkBuffer* deviceLocalBuffers; // Count = buffersPerHeap
+	VkDebugUtilsMessengerEXT debugUtilsMessenger;
 
-	VkDeviceMemory* hostVisibleDeviceMemories; // Count = buffersPerHeap
+	VkPhysicalDevice physicalDevice;
+	VkDevice device;
+
+	VkQueue transferQueue;
+	VkQueue computeQueue;
+
+	VkBuffer* deviceLocalBuffers; // Count = buffersPerHeap
+	VkBuffer* hostVisibleBuffers; // Count = buffersPerHeap
+
 	VkDeviceMemory* deviceLocalDeviceMemories; // Count = buffersPerHeap
+	VkDeviceMemory* hostVisibleDeviceMemories; // Count = buffersPerHeap
 
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkDescriptorPool      descriptorPool;
@@ -193,8 +105,8 @@ typedef struct Gpu
 	VkSemaphore* semaphores; // Count = inoutsPerHeap
 	VkQueryPool  queryPool;
 
-	value_t** mappedInBuffers;  // Count = inoutsPerHeap, valuesPerInout
-	step_t**  mappedOutBuffers; // Count = inoutsPerHeap, valuesPerInout
+	Value** mappedInBuffers;  // Count = inoutsPerHeap, valuesPerInout
+	Steps** mappedOutBuffers; // Count = inoutsPerHeap, valuesPerInout
 
 	VkDeviceSize bytesPerIn;
 	VkDeviceSize bytesPerOut;
@@ -228,99 +140,185 @@ typedef struct Gpu
 	float timestampPeriod;
 
 	bool hostNonCoherent;
+	bool using8BitStorage;
 	bool usingBufferDeviceAddress;
 	bool usingMaintenance4;
-	bool usingMaintenance5;
 	bool usingMemoryBudget;
 	bool usingMemoryPriority;
 	bool usingPipelineCreationCacheControl;
 	bool usingPortabilitySubset;
 	bool usingShaderInt16;
 	bool usingShaderInt64;
+	bool usingSpirv14;
 	bool usingSubgroupSizeControl;
-	bool usingUniformAndStorageBuffer8BitAccess;
+	bool usingVulkan12;
+	bool usingVulkan13;
 
 	void* dynamicMemory;
-} Gpu_t;
+} Gpu;
 
 
-// * ===== Functions =====
+// ===== Global variables =====
 
-// Creates Vulkan instance
-// Returns true if successful, false otherwise
-bool create_instance(void);
+// NOTE: All global variables are initialised in config.c
 
-// Selects physical device
-// Returns true if successful, false otherwise
-bool select_device(Gpu_t* gpu);
+// Configuration variables (constant)
+extern const uint64_t MIN_TEST_VALUE_TOP;
+extern const uint64_t MIN_TEST_VALUE_BOTTOM;
 
-// Creates logical device
-// Returns true if successful, false otherwise
-bool create_device(Gpu_t* gpu);
+extern const uint64_t MAX_STEP_VALUE_TOP;
+extern const uint64_t MAX_STEP_VALUE_BOTTOM;
 
-// Calculates values describing memory management
-// Returns true if successful, false otherwise
-bool manage_memory(Gpu_t* gpu);
+extern const Steps MAX_STEP_COUNT;
 
-// Allocates memory and creates buffers
-// Returns true if successful, false otherwise
-bool create_buffers(Gpu_t* gpu);
+extern const float MAX_HEAP_MEMORY;
 
-// Creates descriptor sets
-// Returns true if successful, false otherwise
-bool create_descriptors(Gpu_t* gpu);
+extern const bool QUERY_BENCHMARKING;
+extern const bool LOG_VULKAN_ALLOCATIONS;
 
-// Creates compute pipeline
-// Returns true if successful, false otherwise
-bool create_pipeline(Gpu_t* gpu);
+extern const bool EXTENSION_LAYERS;
+extern const bool PROFILE_LAYERS;
+extern const bool VALIDATION_LAYERS;
 
-// Creates command buffers and semaphores
-// Returns true if successful, false otherwise
-bool create_commands(Gpu_t* gpu);
+extern const bool PREFER_INT16;
+extern const bool PREFER_INT64;
 
-// Starts main loop
-// Returns true if successful, false otherwise
-bool submit_commands(Gpu_t* gpu);
+extern const int ITER_SIZE;
 
-// Destroys all Vulkan handles, frees all allocated memory
-// Returns true if successful, false otherwise
-bool destroy_gpu(Gpu_t* gpu);
+// String variables (constant)
+extern const char* const PROGRAM_NAME;
 
-// Initialise the debug logfile
-// Returns true if successful, false otherwise
+extern const char* const DEBUG_LOG_NAME;
+extern const char* const ALLOC_LOG_NAME;
+extern const char* const PIPELINE_CACHE_NAME;
+
+extern const char* const VK_KHR_PROFILES_LAYER_NAME;
+extern const char* const VK_KHR_VALIDATION_LAYER_NAME;
+extern const char* const VK_KHR_SYNCHRONIZATION_2_LAYER_NAME;
+extern const char* const VK_KHR_TIMELINE_SEMAPHORE_LAYER_NAME;
+
+// Runtime variables (mutable)
+extern CallbackData           g_callbackData;
+extern VkAllocationCallbacks  g_allocationCallbacks;
+extern VkAllocationCallbacks* g_allocator;
+
+
+// ===== Functions =====
+
+// NOTE: If return type is bool, then function returns true on success, and false elsewise
+
+// Main functions
+bool create_instance(Gpu* gpu);
+bool select_device(Gpu* gpu);
+bool create_device(Gpu* gpu);
+bool manage_memory(Gpu* gpu);
+bool create_buffers(Gpu* gpu);
+bool create_descriptors(Gpu* gpu);
+bool create_pipeline(Gpu* gpu);
+bool create_commands(Gpu* gpu);
+bool submit_commands(Gpu* gpu);
+bool destroy_gpu(Gpu* gpu);
+
+void* wait_for_input(void* ptr) NONNULL_ARGS;
+
+void writeInBuffer(Value* mappedInBuffer, Value* firstValue, uint32_t valuesPerInoutBuffer, uint32_t valuesPerHeap) NONNULL_ARGS;
+void readOutBuffer(const Steps* mappedOutBuffer, Value* firstValue, Value* prev, Steps* longest, DyArray* highestStepValues, DyArray* highestStepCounts, uint32_t valuesPerInoutBuffer) NONNULL_ARGS;
+
+// Utility functions
+uint32_t floor_pow2(uint32_t n) CONST_FUNC;
+float get_benchmark(clock_t start, clock_t end) CONST_FUNC;
+
+bool set_debug_name               (VkDevice device, VkObjectType type, uint64_t handle, const char* name);
+bool get_buffer_requirements_noext(VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* memoryRequirements) NONNULL_ARGS;
+bool get_buffer_requirements_main4(VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* memoryRequirements) NONNULL_ARGS;
+
+bool file_size (const char* filename, size_t* size) NONNULL_ARGS;
+bool read_file (const char* filename, void* data, size_t size) NONNULL_ARGS;
+bool write_file(const char* filename, const void* data, size_t size) NONNULL_ARGS;
+
+// Logfile functions
 bool init_debug_logfile(void);
-
-// Initialise the allocation logfile
-// Returns true if successful, false otherwise
 bool init_alloc_logfile(void);
 
 // Failure functions
-void print_malloc_failure (int line, const void* ptr, size_t _Size);
-void print_calloc_failure (int line, const void* ptr, size_t _NumOfElements, size_t _SizeOfElements);
-void print_realloc_failure(int line, const void* ptr, const void* _Memory, size_t _NewSize);
+NO_ACCESS(2) void print_malloc_failure(int line, const void* ptr, size_t size) COLD_FUNC;
+NO_ACCESS(2) void print_calloc_failure(int line, const void* ptr, size_t numOfElements, size_t sizeOfElements) COLD_FUNC;
 
-void print_fopen_failure (int line, const FILE* file, const char* _Filename, const char* _Mode);
-void print_fseek_failure (int line, int result, const FILE* _File, long _Offset, int _Origin);
-void print_ftell_failure (int line, long result, const FILE* _File);
-void print_fread_failure (int line, size_t result, const void* _DstBuf, size_t _ElementSize, size_t _Count, const FILE* _File);
-void print_fwrite_failure(int line, size_t result, const void* _Str, size_t _Size, size_t _Count, const FILE* _File);
+NO_ACCESS(2) NO_ACCESS(3) void print_realloc_failure(int line, const void* ptr, const void* memory, size_t newSize) COLD_FUNC;
 
-void print_pcreate_failure (int line, int result, const pthread_t* th, const pthread_attr_t* attr, const char* func, const void* arg);
-void print_pjoin_failure   (int line, int result, pthread_t t, const void* const* res);
-void print_pcancel_failure (int line, int result, pthread_t t);
-void print_pinit_failure   (int line, int result, const pthread_mutex_t* m, const pthread_mutexattr_t* a);
-void print_plock_failure   (int line, int result, const pthread_mutex_t* m);
-void print_punlock_failure (int line, int result, const pthread_mutex_t* m);
-void print_pdestroy_failure(int line, int result, const pthread_mutex_t* m);
+NO_ACCESS(2) void print_fopen_failure(int line, const FILE* file, const char* filename, const char* mode) COLD_FUNC;
+NO_ACCESS(3) void print_fseek_failure(int line, int  result, const FILE* file, long offset, int origin) COLD_FUNC;
+NO_ACCESS(3) void print_ftell_failure(int line, long result, const FILE* file) COLD_FUNC;
 
-void print_vinit_failure    (int line, VkResult result);
-void print_vinstvers_failure(int line, uint32_t apiVersion);
-void print_vulkan_failure   (int line, const char* func, VkResult result, unsigned count, ...);
+NO_ACCESS(3) NO_ACCESS(6) void print_fread_failure (int line, size_t result, const void* dstBuf, size_t elementSize, size_t count, const FILE* file) COLD_FUNC;
+NO_ACCESS(3) NO_ACCESS(6) void print_fwrite_failure(int line, size_t result, const void* str,    size_t size,        size_t count, const FILE* file) COLD_FUNC;
+
+NO_ACCESS(3) NO_ACCESS(4) NO_ACCESS(5) void print_pcreate_failure(int line, int result, const pthread_t* th, const pthread_attr_t* attr, const void* arg) COLD_FUNC;
+
+NO_ACCESS(4) void print_pjoin_failure(int line, int result, pthread_t t, const void* const* res) COLD_FUNC;
+
+void print_pcancel_failure(int line, int result, pthread_t t) COLD_FUNC;
+
+void print_vkinit_failure(int line, VkResult result) COLD_FUNC;
+void print_vkvers_failure(int line, uint32_t apiVersion) COLD_FUNC;
+void print_vulkan_failure(int line, const char* func, VkResult result) COLD_FUNC;
 
 // Callback functions
-VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback              (VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
-VKAPI_ATTR void*    VKAPI_CALL allocation_callback         (void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
-VKAPI_ATTR void*    VKAPI_CALL reallocation_callback       (void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
-VKAPI_ATTR void     VKAPI_CALL free_callback               (void* pUserData, void* pMemory);
-VKAPI_ATTR void     VKAPI_CALL internal_allocation_callback(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope);
-VKAPI_ATTR void     VKAPI_CALL internal_free_callback      (void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope);
+VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
+
+VKAPI_ATTR void* VKAPI_CALL allocation_callback  (void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
+VKAPI_ATTR void* VKAPI_CALL reallocation_callback(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
+VKAPI_ATTR void  VKAPI_CALL free_callback        (void* pUserData, void* pMemory);
+
+VKAPI_ATTR void VKAPI_CALL internal_allocation_callback(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope);
+VKAPI_ATTR void VKAPI_CALL internal_free_callback      (void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope);
+
+
+// ===== Helper macros =====
+
+#define MS_PER_CLOCK (1000.f / CLOCKS_PER_SEC)
+#define PROGRAM_TIME() ((clock_t) (clock() * MS_PER_CLOCK))
+
+#define NEWLINE() putchar('\n');
+
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(*(arr)))
+
+#define TOP_128BIT_INT(val)    ((uint64_t) ((val) >> 64))
+#define BOTTOM_128BIT_INT(val) ((uint64_t) ((val) & ~0ULL))
+
+#define SET_128BIT_INT(val, top, bottom) { (val) = (top); (val) <<= 64; (val) |= (bottom); }
+
+#define MALLOC_FAILURE(res, size)       print_malloc_failure (__LINE__, (const void*) (res), (size_t) (size));
+#define CALLOC_FAILURE(res, num, size)  print_calloc_failure (__LINE__, (const void*) (res), (size_t) (num), (size_t) (size));
+#define REALLOC_FAILURE(res, ptr, size) print_realloc_failure(__LINE__, (const void*) (res), (const void*) (ptr), (size_t) (size));
+
+#define FOPEN_FAILURE(res, name, mode)     print_fopen_failure(__LINE__, (const FILE*) (res), (const char*) (name), (const char*) (mode));
+#define FSEEK_FAILURE(res, file, off, ori) print_fseek_failure(__LINE__, (int) (res), (const FILE*) (file), (long) (off), (int) (ori));
+#define FTELL_FAILURE(res, file)           print_ftell_failure(__LINE__, (long) (res), (const FILE*) (file));
+
+#define FREAD_FAILURE(res, buf, size, count, file)  print_fread_failure (__LINE__, (size_t) (res), (const void*) (buf), (size_t) (size), (size_t) (count), (const FILE*) (file));
+#define FWRITE_FAILURE(res, str, size, count, file) print_fwrite_failure(__LINE__, (size_t) (res), (const void*) (str), (size_t) (size), (size_t) (count), (const FILE*) (file));
+
+#define PCREATE_FAILURE(res, thr, atr, arg) print_pcreate_failure(__LINE__, (int) (res), (const pthread_t*) (thr), (const pthread_attr_t*) (atr), (const void*) (arg));
+#define PJOIN_FAILURE(res, thr, _res)       print_pjoin_failure  (__LINE__, (int) (res), (pthread_t) (thr), (const void* const*) (_res));
+#define PCANCEL_FAILURE(res, thr)           print_pcancel_failure(__LINE__, (int) (res), (pthread_t) (thr));
+
+#define VKINIT_FAILURE(res)  print_vkinit_failure(__LINE__, (VkResult) (res));
+#define VKVERS_FAILURE(ver)  print_vkvers_failure(__LINE__, (uint32_t) (ver));
+#define VULKAN_FAILURE(func) print_vulkan_failure(__LINE__, #func, vkres);
+
+#define CHECK_RESULT(func) if (!(func)) { destroy_gpu(&gpu); puts("EXIT FAILURE"); return EXIT_FAILURE; }
+
+#ifdef NDEBUG
+	#define BEGIN_FUNC
+	#define END_FUNC
+
+	#define VK_CALL(func, ...)     (func)(__VA_ARGS__);
+	#define VK_CALL_RES(func, ...) vkres = (func)(__VA_ARGS__);
+#else
+	#define BEGIN_FUNC printf("BEGIN %s\n", __func__);
+	#define END_FUNC   printf("END %s\n\n", __func__);
+
+	#define VK_CALL(func, ...)     { g_callbackData.funcName = #func; g_callbackData.lineNum = __LINE__; (func)(__VA_ARGS__); }
+	#define VK_CALL_RES(func, ...) { g_callbackData.funcName = #func; g_callbackData.lineNum = __LINE__; vkres = (func)(__VA_ARGS__); }
+#endif

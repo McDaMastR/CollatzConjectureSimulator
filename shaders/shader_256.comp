@@ -1,0 +1,99 @@
+/* 
+ * Copyright (C) 2024  Seth McDonald <seth.i.mcdonald@gmail.com>
+ * 
+ * This file is part of Collatz Conjecture Simulator.
+ * 
+ * Collatz Conjecture Simulator is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
+ * 
+ * Collatz Conjecture Simulator is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE. See the GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along with Collatz Conjecture
+ * Simulator. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#version 460 core
+#extension GL_EXT_control_flow_attributes : require
+#extension GL_EXT_control_flow_attributes2 : require
+#extension GL_EXT_shader_16bit_storage : require
+
+#if SPV_VER >= 14
+	#define ATTR_MIN_ITER(I) [[min_iterations(I)]]
+	#define ATTR_MAX_ITER(I) [[max_iterations(I)]]
+	#define ATTR_MIN_MAX_ITER(Imin, Imax) [[min_iterations(Imin), max_iterations(Imax)]]
+#else
+	#define ATTR_MIN_ITER(I)
+	#define ATTR_MAX_ITER(I)
+	#define ATTR_MIN_MAX_ITER(Imin, Imax)
+#endif
+
+layout(local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, std430) restrict readonly buffer InBuffer
+{
+	uvec4 startingValues[];
+} inBuffer;
+
+layout(set = 0, binding = 1, std430) restrict writeonly buffer OutBuffer
+{
+	uint16_t stepCounts[];
+} outBuffer;
+
+void main(void)
+{
+	uint index = gl_GlobalInvocationID.x;
+
+	uvec4 n[2];
+	n[0] = inBuffer.startingValues[index];
+	n[1] = uvec4(0);
+	lowp uint steps = 0;
+
+	uvec4 left[2];
+	uvec4 right[2];
+	uvec4 _2n_1[2];
+
+	// Loop until n == 1
+	ATTR_MIN_ITER(1)
+	do {
+		// 3n + 1
+		steps += 1;
+
+		left[0]  = n[0] << 1U;
+		left[1]  = n[1] << 1U;
+		right[0] = n[0] >> 31U;
+		right[1] = n[1] >> 31U;
+		_2n_1[0] = left[0] | uvec4(1,          right[0].xyz);
+		_2n_1[1] = left[1] | uvec4(right[0].w, right[1].xyz);
+
+		n[0] += _2n_1[0];
+		n[1] += _2n_1[1];
+
+		[[unroll]]
+		for (uint i = 0; i < n.length() * n[0].length() - 1; i++) {
+			lowp uint carry = uint(_2n_1[i / 4][i % 4] > n[i / 4][i % 4]);
+			n[(i + 1) / 4][(i + 1) % 4] += carry;
+		}
+
+		// n/2 for each factor of 2
+		ATTR_MIN_MAX_ITER(1, 8)
+		do {
+			lowp uint factors = findLSB(n[0].x) & 31U;
+			steps += factors;
+
+			right[0] = n[0] >> factors;
+			right[1] = n[1] >> factors;
+			left[0]  = n[0] << (32 - factors);
+			left[1]  = n[1] << (32 - factors);
+
+			n[0] = right[0] | uvec4(left[0].yzw, left[1].x);
+			n[1] = right[1] | uvec4(left[1].yzw, 0);
+		}
+		while ((n[0].x & 1) == 0);
+	}
+	while (n != uvec4[](uvec4(1, 0, 0, 0), uvec4(0)));
+
+	outBuffer.stepCounts[index] = uint16_t(steps);
+}

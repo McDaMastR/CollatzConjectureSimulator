@@ -54,13 +54,20 @@ primarily written in C, and the shaders are written in GLSL.
 
 ## Program Requirements
 
+The system requirements that must be met for the program to build and run correctly. The full
+requirements of the GPU are given in [device_requirements.md](device_requirements.md).
+
+- [Little endian](https://en.wikipedia.org/wiki/Endianness)
+- [CMake](https://cmake.org) 3.21
+- [pthreads](https://en.wikipedia.org/wiki/Pthreads)
+- [glslang](https://github.com/KhronosGroup/glslang)
+- [SPIR-V Tools](https://github.com/KhronosGroup/SPIRV-Tools)
+  - `spirv-link`
+  - `spirv-opt`
+  - `spirv-dis`
 - [C](https://en.wikipedia.org/wiki/C_(programming_language))11
   - `_Atomic`
   - `__int128`
-  - Little endian
-- [CMake](https://cmake.org) 3.21
-- [pthreads](https://en.wikipedia.org/wiki/Pthreads)
-- [glslc](https://github.com/google/shaderc)
 - [Vulkan](https://www.vulkan.org) 1.1
   - `storageBuffer16BitAccess`
   - `synchronization2`
@@ -69,31 +76,41 @@ primarily written in C, and the shaders are written in GLSL.
 ## Building and Running
 
 The program is built via CMake. To generate the build system, navigate the terminal to the project
-directory and execute the following command. To specify a debug or release build system, add
-`-DCMAKE_BUILD_TYPE=Debug` or `-DCMAKE_BUILD_TYPE=Release`, respectively.
+directory and execute the following command.
 
-```text
+```bash
 cmake -S . -B build
 ```
 
-A `build` directory will be created containing the build system. To build the program, execute the
-following command. To specify a debug or release build, add `--config Debug` or `--config Release`,
-respectively.
+Several options can be specified to customise the build system. `CMAKE_BUILD_TYPE` can be set to
+Debug or Release to specify a debug or release build variant, respectively. If not set, it defaults
+to Debug. `DEBUG_SHADERS` is a boolean specifying whether to include debug information in generated
+SPIR-V, and defaults to OFF. `OPTIMISE_SHADERS` is a boolean specifying whether to optimise
+generated SPIR-V using `spirv-opt`, and defaults to ON. `USING_DISASSEMBLER` is a boolean
+specifying whether to disassemble generated SPIR-V using `spirv-dis`, and defaults to OFF.
 
-```text
+Once the above command has finished, a `build` directory will have been created containing the
+build system. To now build the program, execute the following command.
+
+```bash
 cmake --build build
 ```
 
-A `bin` directory will be created containing the compiled compute shaders and program executable.
-To run the program, execute `CollatzConjectureSimulator.exe` from within the `bin` directory. If
-not executed inside the `bin` directory, the program will be unable to locate the compiled shaders.
+To specify a debug or release build, add `--config Debug` or `--config Release`, respectively, to
+the command. By default, only the executable will be built. To instead build the SPIR-V, add
+`--target Shaders`.
 
-If in debug, a `debug_log.txt` file will be created during execution containing all debug callbacks
-from the Vulkan API via a `VkDebugUtilsMessengerEXT` object, if `VK_EXT_debug_utils` is present. If
-logging Vulkan allocations, an `alloc_log.txt` file will be created during execution containing all
-allocation callbacks from the Vulkan API via a `VkAllocationCallbacks` object. During execution, a
-`pipeline_cache.bin` file will be created containing the data from a `VkPipelineCache` object. This
-file will be read by the program if run again.
+The above command will create a `bin` directory containing the SPIR-V and executable. If built in
+debug, the executable will be named `CollatzSim-Debug`. Otherwise, it will be named `CollatzSim`.
+The executable must be run from within the `bin` directory, else the program will be unable to
+locate the generated SPIR-V.
+
+During the program's execution, a `pipeline_cache.bin` file will be created containing the data
+from a `VkPipelineCache` object. This file will be read by the program if run again. If in debug,
+a `debug.log` file will be created containing all debug callbacks from the Vulkan API via a
+`VkDebugUtilsMessengerEXT` object, if `VK_EXT_debug_utils` is present. If logging Vulkan
+allocations, an `alloc.log` file will be created containing all allocation callbacks from the
+Vulkan API via a `VkAllocationCallbacks` object.
 
 ## Inout-buffers
 
@@ -126,13 +143,13 @@ HV-out.
 
 <p align="center">CPU -> HV-in -> DL-in -> GPU -> DL-out -> HV-out -> CPU</p>
 
-## Preprocessor configurations
+## Program configurations
 
-The program defines various preprocessor macros in [defs.h](src/defs.h) whose definitions can be
-changed to configure the behaviour of the program.
+The program defines various global constants in [config.c](src/config.c) whose values can be
+altered to configure the behaviour of the program.
 
 `MIN_TEST_VALUE_TOP` and `MIN_TEST_VALUE_BOTTOM` are the upper and lower 64 bits, respectively, of
-the 128-bit starting value the program will test first. Subsequent tested starting values will
+the 128-bit starting value that will be tested first. Subsequent tested starting values will
 linearly increase from there onwards.
 
 `MAX_STEP_VALUE_TOP` and `MAX_STEP_VALUE_BOTTOM` are the upper and lower 64 bits, respectively, of
@@ -141,38 +158,43 @@ from 1 to `MIN_TEST_VALUE`, the starting value with the highest step count is `M
 
 `MAX_STEP_COUNT` is the step count of the starting value `MAX_STEP_VALUE`. By configuring
 `MIN_TEST_VALUE`, `MAX_STEP_VALUE`, and `MAX_STEP_COUNT`, the program can resume testing starting
-values from exactly where it last ended.
+values from where it last ended.
 
 `MAX_HEAP_MEMORY` is a floating-point value within the interval $(0, 1)$, describing the maximum
-proportion of available memory in a `VkMemoryHeap` the program can allocate via `vkAllocateMemory`.
-For example, a value of 0.8f means at most 80% of available memory in any GPU memory heap will be
+proportion of available memory in a `VkMemoryHeap` that can be allocated via `vkAllocateMemory`.
+For example, a value of 0.8 means at most 80% of available memory in any GPU memory heap will be
 allocated for inout-buffers. If `VK_EXT_memory_budget` is present, _available memory_ refers to the
 `VkPhysicalDeviceMemoryBudgetPropertiesEXT::heapBudget` of a memory heap. Elsewise, it refers to
-the corresponding `VkMemoryHeap::size`.
+the corresponding `VkMemoryHeap::size`. By default, `MAX_HEAP_MEMORY` is set to 0.4.
 
-`QUERY_BENCHMARKING` is a boolean value describing whether or not the program will benchmark Vulkan
-commands via queries. If 1, the `vkCmdCopyBuffer` and `vkCmdDispatchBase` commands will be
-benchmarked.
+`QUERY_BENCHMARKING` is a boolean describing whether Vulkan commands will be benchmarked via
+queries. If true, the `vkCmdCopyBuffer` and `vkCmdDispatchBase` commands will be benchmarked. By
+default, it is set to true.
 
-`LOG_VULKAN_ALLOCATIONS` is a boolean value describing whether or not the program will log memory
-allocations performed by the Vulkan API via a `VkAllocationCallbacks` object.
+`LOG_VULKAN_ALLOCATIONS` is a boolean describing whether memory allocations performed by the Vulkan
+API will be logged via a `VkAllocationCallbacks` object. If true, performance may be significantly
+reduced. By default, it is set to false.
 
-`EXTENSION_LAYERS` is a boolean value describing whether or not the Khronos
-[extension layers](https://github.com/KhronosGroup/Vulkan-ExtensionLayer) will be enabled, if
-present. This includes `VK_LAYER_KHRONOS_synchronization2` and
-`VK_LAYER_KHRONOS_timeline_semaphore`. This value should be 1 if either `VK_KHR_synchronization2`
-or `VK_KHR_timeline_semaphore` are not present.
+`EXTENSION_LAYERS` is a boolean describing whether the Khronos
+[extension layers](https://github.com/KhronosGroup/Vulkan-ExtensionLayer)
+`VK_LAYER_KHRONOS_synchronization2` and `VK_LAYER_KHRONOS_timeline_semaphore` will be enabled, if
+present. This should be set to true if either `VK_KHR_synchronization2` or
+`VK_KHR_timeline_semaphore` are not present. By default, it is set to false.
 
-`PROFILE_LAYERS` is a boolean value describing whether or not the Khronos
-[profiles layer](https://github.com/KhronosGroup/Vulkan-Profiles) will be enabled, namely
-`VK_LAYER_KHRONOS_profiles`.
+`PROFILE_LAYERS` is a boolean describing whether the Khronos
+[profiles layer](https://github.com/KhronosGroup/Vulkan-Profiles) `VK_LAYER_KHRONOS_profiles` will
+be enabled, if present. By default, it is set to false.
 
-`VALIDATION_LAYERS` is a boolean value describing whether or not the Khronos
-[validation layer](https://github.com/KhronosGroup/Vulkan-ValidationLayers) will be enabled, namely
-`VK_LAYER_KHRONOS_validation`.
+`VALIDATION_LAYERS` is a boolean describing whether the Khronos
+[validation layer](https://github.com/KhronosGroup/Vulkan-ValidationLayers)
+`VK_LAYER_KHRONOS_validation` will be enabled, if present. By default, it is set to false.
 
-`END_ON` is an integer value describing when the program will terminate. If 1, the program will end
-on user input, namely when either of the __enter__ or __return__ keys are pressed. If 2, the
-program will end when the main loop has performed a particular number of loops, such as 20 or
-10 000. If 3, the program will end when a new starting value is found to have the highest step
-count so far.
+`PREFER_INT16` is a boolean describing whether SPIR-V modules which utilise the `Int16` capability
+will be prioritised, if the `shaderInt16` feature is enabled. By default, it is set to false.
+
+`PREFER_INT64` is a boolean describing whether SPIR-V modules which utilise the `Int64` capability
+will be prioritised, if the `shaderInt64` feature is enabled. By default, it is set to false.
+
+`ITER_SIZE` is an integer describing the integer size to emulate when iterating through Collatz
+sequences. The possible values are 128 and 256, corresponding to 128-bit and 256-bit integer sizes,
+respectively. By default, it is set to 128.

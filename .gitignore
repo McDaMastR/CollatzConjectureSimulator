@@ -2,12 +2,4 @@
 .vscode
 bin
 build
-diagrams
-studies
-
-# Files
-benchmarks.xlsx
-best.txt
-myinfo.txt
-program_values.txt
-step_counts.txt
+tests

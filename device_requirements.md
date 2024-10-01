@@ -7,7 +7,6 @@ The full requirements of the selected `VkPhysicalDevice` object.
 - `VK_KHR_8bit_storage` (optional)
 - `VK_KHR_buffer_device_address` (optional)
 - `VK_KHR_maintenance4` (optional)
-- `VK_KHR_maintenance5` (optional)
 - `VK_KHR_synchronization2`
 - `VK_KHR_timeline_semaphore`
 - `VK_EXT_memory_budget` (optional)
@@ -38,10 +37,6 @@ The full requirements of the selected `VkPhysicalDevice` object.
 `VkPhysicalDeviceMaintenance4FeaturesKHR`
 
 - `maintenance4` (optional, guaranteed by `VK_KHR_maintenance4`)
-
-`VkPhysicalDeviceMaintenance5FeaturesKHR`
-
-- `maintenance5` (optional, guaranteed by `VK_KHR_maintenance5`)
 
 `VkPhysicalDeviceSynchronization2FeaturesKHR`
 
@@ -141,11 +136,11 @@ The full requirements of the selected `VkPhysicalDevice` object.
 `VkQueueFamilyProperties`
 
 - `queueFlags` includes `VK_QUEUE_COMPUTE_BIT`
-- `queueCount` >= 1 (guaranteed >= 1)
+- `queueCount` >= 1 (guaranteed)
 
 ### Transfer queue family
 
 `VkQueueFamilyProperties`
 
 - `queueFlags` includes `VK_QUEUE_TRANSFER_BIT` (guaranteed by `VK_QUEUE_COMPUTE_BIT`)
-- `queueCount` >= 1 (guaranteed >= 1)
+- `queueCount` >= 1 (guaranteed)

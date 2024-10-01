@@ -1,66 +1,11 @@
 cmake_minimum_required(VERSION 3.21)
-project(CollatzConjectureSimulator VERSION 1.8 LANGUAGES C)
+project(CollatzConjectureSimulator VERSION 2.0.0 LANGUAGES C)
+
+if(NOT CMAKE_BUILD_TYPE)
+	message(WARNING "Build variant not specified - defaulting to Debug")
+	set(CMAKE_BUILD_TYPE Debug)
+endif()
 
 add_subdirectory(external)
+add_subdirectory(shaders)
 add_subdirectory(src)
-
-set(INT_SIZE 128)
-
-find_program(glslc_exe NAMES glslc REQUIRED)
-add_custom_target(
-	Shaders
-	ALL
-	DEPENDS
-		${CMAKE_SOURCE_DIR}/bin/shader_16_64.spv
-		${CMAKE_SOURCE_DIR}/bin/shader_16.spv
-		${CMAKE_SOURCE_DIR}/bin/shader_64.spv
-		${CMAKE_SOURCE_DIR}/bin/shader.spv
-)
-
-add_custom_command(
-	OUTPUT ${CMAKE_SOURCE_DIR}/bin/shader_16_64.spv
-	COMMAND
-		${glslc_exe}
-		--target-env=vulkan1.1
-		-DINT_SIZE=${INT_SIZE} -O
-		-o ${CMAKE_SOURCE_DIR}/bin/shader_16_64.spv
-		${CMAKE_SOURCE_DIR}/src/shader_16_64.comp
-	DEPENDS ${CMAKE_SOURCE_DIR}/src/shader_16_64.comp
-	VERBATIM
-)
-
-add_custom_command(
-	OUTPUT ${CMAKE_SOURCE_DIR}/bin/shader_16.spv
-	COMMAND
-		${glslc_exe}
-		--target-env=vulkan1.1
-		-DINT_SIZE=${INT_SIZE} -O
-		-o ${CMAKE_SOURCE_DIR}/bin/shader_16.spv
-		${CMAKE_SOURCE_DIR}/src/shader_16.comp
-	DEPENDS ${CMAKE_SOURCE_DIR}/src/shader_16.comp
-	VERBATIM
-)
-
-add_custom_command(
-	OUTPUT ${CMAKE_SOURCE_DIR}/bin/shader_64.spv
-	COMMAND
-		${glslc_exe}
-		--target-env=vulkan1.1
-		-DINT_SIZE=${INT_SIZE} -O
-		-o ${CMAKE_SOURCE_DIR}/bin/shader_64.spv
-		${CMAKE_SOURCE_DIR}/src/shader_64.comp
-	DEPENDS ${CMAKE_SOURCE_DIR}/src/shader_64.comp
-	VERBATIM
-)
-
-add_custom_command(
-	OUTPUT ${CMAKE_SOURCE_DIR}/bin/shader.spv
-	COMMAND
-		${glslc_exe}
-		--target-env=vulkan1.1
-		-DINT_SIZE=${INT_SIZE} -O
-		-o ${CMAKE_SOURCE_DIR}/bin/shader.spv
-		${CMAKE_SOURCE_DIR}/src/shader.comp
-	DEPENDS ${CMAKE_SOURCE_DIR}/src/shader.comp
-	VERBATIM
-)
