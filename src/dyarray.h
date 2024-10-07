@@ -17,12 +17,23 @@
 
 #pragma once
 
+#include "config.h"
+
 
 /**
  * @brief A dynamically sized array.
  */
-typedef struct DyArray DyArray;
+typedef struct DyArray_T* DyArray;
 
+
+/**
+ * @brief Destroys a DyArray object.
+ * 
+ * This function destroys a dynamic array and frees all memory associated with it.
+ * 
+ * @param[in,out] array The dynamic array to destroy. Must not be NULL.
+ */
+void DyArray_destroy(DyArray array) NONNULL_ARGS(1);
 
 /**
  * @brief Creates a new DyArray object.
@@ -35,16 +46,7 @@ typedef struct DyArray DyArray;
  * 
  * @return The new dynamic array, or NULL.
  */
-DyArray* DyArray_create(size_t size, size_t count);
-
-/**
- * @brief Destroys a DyArray object.
- * 
- * This function destroys a dynamic array and frees all memory associated with it.
- * 
- * @param[in,out] array The dynamic array to destroy. Must not be NULL.
- */
-void DyArray_destroy(DyArray* array) NONNULL_ARGS;
+DyArray DyArray_create(size_t size, size_t count) FREE_FUNC(DyArray_destroy, 1) WARN_UNUSED_RET;
 
 
 /**
@@ -55,7 +57,7 @@ void DyArray_destroy(DyArray* array) NONNULL_ARGS;
  * @param[in] array The dynamic array. Must not be NULL.
  * @return The number of elements in the dynamic array.
  */
-size_t DyArray_size(const DyArray* array) NONNULL_ARGS;
+size_t DyArray_size(DyArray array) NONNULL_ARGS(1) RE_ACCESS(1) WARN_UNUSED_RET;
 
 /**
  * @brief Retrieves the raw array of a DyArray object.
@@ -65,7 +67,7 @@ size_t DyArray_size(const DyArray* array) NONNULL_ARGS;
  * @param[in] array The dynamic array. Must not be NULL.
  * @return The raw array.
  */
-void* DyArray_raw(const DyArray* array) NONNULL_ARGS;
+void* DyArray_raw(DyArray array) NONNULL_ARGS(1) RE_ACCESS(1) WARN_UNUSED_RET;
 
 
 /**
@@ -77,7 +79,7 @@ void* DyArray_raw(const DyArray* array) NONNULL_ARGS;
  * @param[out] value A pointer to the memory to copy the retrieved value into. Must not be NULL.
  * @param[in] index The index of the element to retrieve. Must be less than the size of the array.
  */
-void DyArray_get(const DyArray* array, void* value, size_t index) NONNULL_ARGS;
+void DyArray_get(DyArray array, void* value, size_t index) NONNULL_ARGS(1, 2) RE_ACCESS(1) WR_ACCESS(2);
 
 /**
  * @brief Sets an element from a DyArray object.
@@ -88,7 +90,27 @@ void DyArray_get(const DyArray* array, void* value, size_t index) NONNULL_ARGS;
  * @param[out] value A pointer to the value to set the element to. Must not be NULL.
  * @param[in] index The index of the element to set. Must be less than the size of the array.
  */
-void DyArray_set(DyArray* array, const void* value, size_t index) NONNULL_ARGS;
+void DyArray_set(DyArray array, const void* value, size_t index) NONNULL_ARGS(1, 2) RW_ACCESS(1) RE_ACCESS(2);
+
+/**
+ * @brief Retrieves the last element from a DyArray object.
+ * 
+ * This function copies the value of the last element in a dynamic array into @p value.
+ * 
+ * @param[in] array The dynamic array. Must not be NULL.
+ * @param[out] value A pointer to the memory to copy the retrieved value into. Must not be NULL.
+ */
+void DyArray_last(DyArray array, void* value) NONNULL_ARGS(1, 2) RE_ACCESS(1) WR_ACCESS(2);
+
+/**
+ * @brief Retrieves the first element from a DyArray object.
+ * 
+ * This function copies the value of the first element in a dynamic array into @p value.
+ * 
+ * @param[in] array The dynamic array. Must not be NULL.
+ * @param[out] value A pointer to the memory to copy the retrieved value into. Must not be NULL.
+ */
+void DyArray_first(DyArray array, void* value) NONNULL_ARGS(1, 2) RE_ACCESS(1) WR_ACCESS(2);
 
 
 /**
@@ -102,7 +124,7 @@ void DyArray_set(DyArray* array, const void* value, size_t index) NONNULL_ARGS;
  * 
  * @return A pointer to the new element, or NULL.
  */
-void* DyArray_append(DyArray* array, const void* value) NONNULL_ARGS;
+void* DyArray_append(DyArray array, const void* value) NONNULL_ARGS(1, 2) RW_ACCESS(1) RE_ACCESS(2);
 
 /**
  * @brief Prepends an element to a DyArray object.
@@ -115,4 +137,4 @@ void* DyArray_append(DyArray* array, const void* value) NONNULL_ARGS;
  * 
  * @return A pointer to the new element, or NULL.
  */
-void* DyArray_prepend(DyArray* array, const void* value) NONNULL_ARGS;
+void* DyArray_prepend(DyArray array, const void* value) NONNULL_ARGS(1, 2) RW_ACCESS(1) RE_ACCESS(2);

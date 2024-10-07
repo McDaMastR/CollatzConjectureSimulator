@@ -15,7 +15,11 @@
  * Simulator. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "defs.h"
+#include "gpu.h"
+#include "debug.h"
+
+#define CHECK_RESULT(func) if (EXPECT_FALSE(!(func(&gpu)))) { destroy_gpu(&gpu); puts("EXIT FAILURE"); return EXIT_FAILURE; }
+
 
 int main(void)
 {
@@ -23,15 +27,15 @@ int main(void)
 
 	Gpu gpu = {0}; // Stack-allocate majority of variables
 
-	CHECK_RESULT(create_instance(&gpu))
-	CHECK_RESULT(select_device(&gpu))
-	CHECK_RESULT(create_device(&gpu))
-	CHECK_RESULT(manage_memory(&gpu))
-	CHECK_RESULT(create_buffers(&gpu))
-	CHECK_RESULT(create_descriptors(&gpu))
-	CHECK_RESULT(create_pipeline(&gpu))
-	CHECK_RESULT(create_commands(&gpu))
-	CHECK_RESULT(submit_commands(&gpu))
+	CHECK_RESULT(create_instance)
+	CHECK_RESULT(select_device)
+	CHECK_RESULT(create_device)
+	CHECK_RESULT(manage_memory)
+	CHECK_RESULT(create_buffers)
+	CHECK_RESULT(create_descriptors)
+	CHECK_RESULT(create_pipeline)
+	CHECK_RESULT(create_commands)
+	CHECK_RESULT(submit_commands)
 
 	destroy_gpu(&gpu);
 

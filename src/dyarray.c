@@ -15,27 +15,33 @@
  * Simulator. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "defs.h"
 #include "dyarray.h"
+#include "debug.h"
 
 
-static const float ALLOC_RATE = 1.5f;
-
-struct DyArray
+struct DyArray_T
 {
-	size_t size; // # bytes per element
-	size_t count; // # elements currently in array
+	size_t size;     // # bytes per element
+	size_t count;    // # elements currently in array
 	size_t capacity; // Maximum # elements that could fit in allocated memory
-	void*  array; // Raw array
+	void*  array;    // Raw array
 };
 
 
-DyArray* DyArray_create(size_t size, size_t count)
+void DyArray_destroy(restrict DyArray array)
 {
-	DyArray* array = (DyArray*) malloc(sizeof(DyArray));
+	free(array->array);
+	free(array);
+}
+
+DyArray DyArray_create(size_t size, size_t count)
+{
+	ASSUME(size > 0);
+
+	DyArray array = (DyArray) malloc(sizeof(struct DyArray_T));
 #ifndef NDEBUG
 	if (!array) {
-		MALLOC_FAILURE(array, sizeof(DyArray))
+		MALLOC_FAILURE(array, sizeof(struct DyArray_T))
 		return NULL;
 	}
 #endif
@@ -45,7 +51,7 @@ DyArray* DyArray_create(size_t size, size_t count)
 	array->capacity = count;
 	array->array    = NULL;
 
-	if (count) {
+	if (EXPECT_TRUE(count)) {
 		void* raw = malloc(count * size);
 #ifndef NDEBUG
 		if (!raw) {
@@ -61,26 +67,22 @@ DyArray* DyArray_create(size_t size, size_t count)
 	return array;
 }
 
-void DyArray_destroy(DyArray* restrict array)
-{
-	free(array->array);
-	free(array);
-}
 
-
-size_t DyArray_size(const DyArray* restrict array)
+size_t DyArray_size(restrict DyArray array)
 {
 	return array->count;
 }
 
-void* DyArray_raw(const DyArray* restrict array)
+void* DyArray_raw(restrict DyArray array)
 {
 	return array->array;
 }
 
 
-void DyArray_get(const DyArray* restrict array, void* restrict value, size_t index)
+void DyArray_get(restrict DyArray array, void* restrict value, size_t index)
 {
+	ASSUME(array->size > 0);
+
 	size_t size = array->size;
 
 	const void* element = (char*) array->array + index * size;
@@ -88,8 +90,10 @@ void DyArray_get(const DyArray* restrict array, void* restrict value, size_t ind
 	memcpy(value, element, size);
 }
 
-void DyArray_set(DyArray* restrict array, const void* restrict value, size_t index)
+void DyArray_set(restrict DyArray array, const void* restrict value, size_t index)
 {
+	ASSUME(array->size > 0);
+
 	size_t size = array->size;
 
 	void* element = (char*) array->array + index * size;
@@ -97,16 +101,41 @@ void DyArray_set(DyArray* restrict array, const void* restrict value, size_t ind
 	memcpy(element, value, size);
 }
 
-
-void* DyArray_append(DyArray* restrict array, const void* restrict value)
+void DyArray_last(restrict DyArray array, void* restrict value)
 {
+	ASSUME(array->size > 0);
+
+	size_t size  = array->size;
+	size_t count = array->count;
+
+	const void* element = (char*) array->array + (count - 1) * size;
+
+	memcpy(value, element, size);
+}
+
+void DyArray_first(restrict DyArray array, void* restrict value)
+{
+	ASSUME(array->size > 0);
+
+	size_t size = array->size;
+
+	const void* element = array->array;
+
+	memcpy(value, element, size);
+}
+
+
+void* DyArray_append(restrict DyArray array, const void* restrict value)
+{
+	ASSUME(array->size > 0);
+
 	size_t size     = array->size;
 	size_t count    = array->count;
 	size_t capacity = array->capacity;
 	void*  raw      = array->array;
 
-	if (count == capacity) {
-		capacity = (size_t) ((float) (capacity + 1) * ALLOC_RATE);
+	if (EXPECT_FALSE(count == capacity)) {
+		capacity += (capacity + 1) / 2 + 1;
 
 		void* raw2 = realloc(raw, capacity * size);
 #ifndef NDEBUG
@@ -123,24 +152,25 @@ void* DyArray_append(DyArray* restrict array, const void* restrict value)
 	}
 
 	void* element = (char*) raw + count * size;
-	count++;
 
 	memcpy(element, value, size);
 
-	array->count = count;
+	array->count = count + 1;
 
 	return element;
 }
 
-void* DyArray_prepend(DyArray* restrict array, const void* restrict value)
+void* DyArray_prepend(restrict DyArray array, const void* restrict value)
 {
+	ASSUME(array->size > 0);
+
 	size_t size     = array->size;
 	size_t count    = array->count;
 	size_t capacity = array->capacity;
 	void*  raw      = array->array;
 
-	if (count == capacity) {
-		capacity = (size_t) ((float) (capacity + 1) * ALLOC_RATE);
+	if (EXPECT_FALSE(count == capacity)) {
+		capacity += (capacity + 1) / 2 + 1;
 
 		void* raw2 = realloc(raw, capacity * size);
 #ifndef NDEBUG
@@ -156,14 +186,12 @@ void* DyArray_prepend(DyArray* restrict array, const void* restrict value)
 		array->array    = raw;
 	}
 
-	memmove((char*) raw + size, raw, count * size);
-	count++;
-
 	void* element = raw;
 
+	memmove((char*) raw + size, raw, count * size);
 	memcpy(element, value, size);
 
-	array->count = count;
+	array->count = count + 1;
 
 	return element;
 }

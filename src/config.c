@@ -15,15 +15,19 @@
  * Simulator. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "defs.h"
+#include "config.h"
+#include "debug.h"
+
 
 // First starting value to test (must be odd)
-const uint64_t MIN_TEST_VALUE_TOP    = 0x0000000000000000ULL;
-const uint64_t MIN_TEST_VALUE_BOTTOM = 0x0000000000000003ULL;
+const uint64_t MIN_TEST_VALUE_UPPER = 0x0000000000000000ULL;
+const uint64_t MIN_TEST_VALUE_LOWER = 0x0000000000000003ULL;
+const Value    MIN_TEST_VALUE       = INT128(MIN_TEST_VALUE_UPPER, MIN_TEST_VALUE_LOWER);
 
 // Starting value with highest step count found so far
-const uint64_t MAX_STEP_VALUE_TOP    = 0x0000000000000000ULL;
-const uint64_t MAX_STEP_VALUE_BOTTOM = 0x0000000000000001ULL;
+const uint64_t MAX_STEP_VALUE_UPPER = 0x0000000000000000ULL;
+const uint64_t MAX_STEP_VALUE_LOWER = 0x0000000000000001ULL;
+const Value    MAX_STEP_VALUE       = INT128(MAX_STEP_VALUE_UPPER, MAX_STEP_VALUE_LOWER);
 
 const Steps MAX_STEP_COUNT = 0; // Highest step count found so far
 
@@ -54,14 +58,9 @@ const char* const VK_KHR_SYNCHRONIZATION_2_LAYER_NAME  = "VK_LAYER_KHRONOS_synch
 const char* const VK_KHR_TIMELINE_SEMAPHORE_LAYER_NAME = "VK_LAYER_KHRONOS_timeline_semaphore";
 
 
-VkAllocationCallbacks* g_allocator = LOG_VULKAN_ALLOCATIONS ? &g_allocationCallbacks : NULL;
+const VkAllocationCallbacks* const g_allocator = LOG_VULKAN_ALLOCATIONS ? &g_allocationCallbacks : NULL;
 
-CallbackData g_callbackData = {
-	.funcName = "",
-	.lineNum  = 0
-};
-
-VkAllocationCallbacks g_allocationCallbacks = {
+const VkAllocationCallbacks g_allocationCallbacks = {
 	.pUserData             = &g_callbackData,
 	.pfnAllocation         = allocation_callback,
 	.pfnReallocation       = reallocation_callback,
@@ -69,3 +68,6 @@ VkAllocationCallbacks g_allocationCallbacks = {
 	.pfnInternalAllocation = internal_allocation_callback,
 	.pfnInternalFree       = internal_free_callback
 };
+
+
+const float MS_PER_CLOCK = 1000.f / CLOCKS_PER_SEC;

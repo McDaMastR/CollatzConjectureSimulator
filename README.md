@@ -40,34 +40,35 @@ logic:
 
 ## The Simulation
 
-This program aims to find the Collatz sequences with the greatest total stopping times. That is,
-positive integer values $n$ such that of the set of integers in the interval $[1, n]$, the starting
-value with the greatest total stopping time is $n$. Total stopping times are calculated by
-iterating through Collatz sequences and counting each step (application of the Collatz function)
-until a value of $1$ is found.
+Collatz Conjecture Simulator aims to find the Collatz sequences with the greatest total stopping
+times. That is, positive integer values $n$ such that of the set of integers in the interval
+$[1, n]$, the starting value with the greatest total stopping time is $n$. Total stopping times are
+calculated by iterating through Collatz sequences and counting each step (application of the
+Collatz function) until a value of $1$ is found.
 
 Due to every iteration through a Collatz sequence being computationally independent of any other,
 it is possible to calculate the total stopping times of multiple starting values simultaneously. As
 such, the program uses the GPU to iterate through multiple Collatz sequences in parallel. The GPU
-is accessed via the Vulkan API, and uses compute shaders to perform the iterations. The program is
-primarily written in C, and the shaders are written in GLSL.
+is accessed via the Vulkan API, and uses compute shaders to perform the iterations. Collatz
+Conjecture Simulator is primarily written in C, and the shaders are written in GLSL.
 
 ## Program Requirements
 
-The system requirements that must be met for the program to build and run correctly. The full
-requirements of the GPU are given in [device_requirements.md](device_requirements.md).
+The general environment and system requirements that must be met for Collatz Conjecture Simulator
+to build and run correctly. The full requirements of the GPU are given in
+[device_requirements.md](device_requirements.md).
 
 - [Little endian](https://en.wikipedia.org/wiki/Endianness)
-- [CMake](https://cmake.org) 3.21
+- [CMake](https://cmake.org) 3.23
 - [pthreads](https://en.wikipedia.org/wiki/Pthreads)
 - [glslang](https://github.com/KhronosGroup/glslang)
 - [SPIR-V Tools](https://github.com/KhronosGroup/SPIRV-Tools)
   - `spirv-link`
   - `spirv-opt`
   - `spirv-dis`
-- [C](https://en.wikipedia.org/wiki/C_(programming_language))11
-  - `_Atomic`
-  - `__int128`
+- [C](https://en.wikipedia.org/wiki/C_(programming_language))17
+  - `_Atomic` (Optional C11 feature)
+  - `__int128` (GNU C extension)
 - [Vulkan](https://www.vulkan.org) 1.1
   - `storageBuffer16BitAccess`
   - `synchronization2`
@@ -75,42 +76,44 @@ requirements of the GPU are given in [device_requirements.md](device_requirement
 
 ## Building and Running
 
-The program is built via CMake. To generate the build system, navigate the terminal to the project
-directory and execute the following command.
+Collatz Conjecture Simulator is built via CMake. Comprehensive documentation regarding usage of
+CMake can be found [here](https://cmake.org/cmake/help/latest/). To generate the build system,
+navigate the terminal to the project directory and execute the following command.
 
 ```bash
 cmake -S . -B build
 ```
 
-Several options can be specified to customise the build system. `CMAKE_BUILD_TYPE` can be set to
-Debug or Release to specify a debug or release build variant, respectively. If not set, it defaults
-to Debug. `DEBUG_SHADERS` is a boolean specifying whether to include debug information in generated
-SPIR-V, and defaults to OFF. `OPTIMISE_SHADERS` is a boolean specifying whether to optimise
-generated SPIR-V using `spirv-opt`, and defaults to ON. `USING_DISASSEMBLER` is a boolean
-specifying whether to disassemble generated SPIR-V using `spirv-dis`, and defaults to OFF.
+Several options can be optionally specified to customise the build system by appending
+`-D OPTION=CONFIG` to the above command. `CMAKE_BUILD_TYPE` specifies the build variant and can be
+set to _Debug_, _Release_, _MinSizeRel_, or _RelWithDebInfo_. If not set, it defaults to _Debug_.
+`DEBUG_SHADERS` specifies whether to include debug information in generated SPIR-V, and defaults to
+_OFF_. `OPTIMISE_SHADERS` specifies whether to optimise generated SPIR-V using `spirv-opt`, and
+defaults to _ON_. `USING_DISASSEMBLER` specifies whether to disassemble generated SPIR-V using
+`spirv-dis`, and defaults to _OFF_.
 
 Once the above command has finished, a `build` directory will have been created containing the
-build system. To now build the program, execute the following command.
+build system. To now build Collatz Conjecture Simulator, execute the following command.
 
 ```bash
 cmake --build build
 ```
 
-To specify a debug or release build, add `--config Debug` or `--config Release`, respectively, to
-the command. By default, only the executable will be built. To instead build the SPIR-V, add
-`--target Shaders`.
+By default, only the executable will be built. To instead build the SPIR-V, add `--target Shaders`.
+To build both, also add `--target CollatzSim`. To specify the build configuration, add
+`--config CONFIG` (only applies for multi-config generators).
 
 The above command will create a `bin` directory containing the SPIR-V and executable. If built in
-debug, the executable will be named `CollatzSim-Debug`. Otherwise, it will be named `CollatzSim`.
-The executable must be run from within the `bin` directory, else the program will be unable to
-locate the generated SPIR-V.
+debug, the executable will be named `CollatzSimDebug`. Otherwise, it will be named `CollatzSim`.
+The executable must be run from within the `bin` directory, else it will be unable to locate the
+generated SPIR-V.
 
-During the program's execution, a `pipeline_cache.bin` file will be created containing the data
-from a `VkPipelineCache` object. This file will be read by the program if run again. If in debug,
-a `debug.log` file will be created containing all debug callbacks from the Vulkan API via a
-`VkDebugUtilsMessengerEXT` object, if `VK_EXT_debug_utils` is present. If logging Vulkan
-allocations, an `alloc.log` file will be created containing all allocation callbacks from the
-Vulkan API via a `VkAllocationCallbacks` object.
+During the execution of Collatz Conjecture Simulator, a `pipeline_cache.bin` file will be created
+containing the data from a `VkPipelineCache` object. This file will be read by the program if run
+again. If in debug, a `debug.log` file will be created containing all debug callbacks from the
+Vulkan API via a `VkDebugUtilsMessengerEXT` object, if `VK_EXT_debug_utils` is present. If logging
+Vulkan allocations, an `alloc.log` file will be created containing all allocation callbacks from
+the Vulkan API via a `VkAllocationCallbacks` object.
 
 ## Inout-buffers
 
@@ -127,13 +130,13 @@ dependent on the system's specifications. There are one or more inout-buffers pe
 object, one `VkBuffer` object per `VkDeviceMemory` object, and two or more `VkDeviceMemory`
 objects.
 
-The program attempts to minimise the time spent idle by the CPU and GPU due to one waiting for the
-other to complete execution. Such as the GPU waiting for starting values, or the CPU waiting for
-step counts. This is done by having an even number of `VkDeviceMemory` objects, where half contain
-memory close to the GPU (device local memory), and half contain memory visible to both the CPU and
-GPU (host visible memory). There are therefore four types of memory ranges: host visible in-buffers
-(HV-in), host visible out-buffers (HV-out), device local in-buffers (DL-in), and device local
-out-buffers (DL-out).
+Collatz Conjecture Simulator attempts to minimise the time spent idle by the CPU and GPU due to one
+waiting for the other to complete execution. Such as the GPU waiting for starting values, or the
+CPU waiting for step counts. This is done by having an even number of `VkDeviceMemory` objects,
+where half contain memory close to the GPU (device local memory), and half contain memory visible
+to both the CPU and GPU (host visible memory). There are therefore four types of memory ranges:
+host visible in-buffers (HV-in), host visible out-buffers (HV-out), device local in-buffers
+(DL-in), and device local out-buffers (DL-out).
 
 Rather than the CPU and GPU taking turns executing, both processors spend time running in parallel.
 The CPU reads and writes host visible inout-buffers, and the GPU reads and writes device local
@@ -145,16 +148,15 @@ HV-out.
 
 ## Program configurations
 
-The program defines various global constants in [config.c](src/config.c) whose values can be
-altered to configure the behaviour of the program.
+Collatz Conjecture Simulator defines various global constants in [config.c](src/config.c) whose
+values can be altered to configure the behaviour of the program.
 
-`MIN_TEST_VALUE_TOP` and `MIN_TEST_VALUE_BOTTOM` are the upper and lower 64 bits, respectively, of
-the 128-bit starting value that will be tested first. Subsequent tested starting values will
-linearly increase from there onwards.
+`MIN_TEST_VALUE` is the 128-bit starting value that will be tested first. Subsequent tested
+starting values will linearly increase from there onwards.
 
-`MAX_STEP_VALUE_TOP` and `MAX_STEP_VALUE_BOTTOM` are the upper and lower 64 bits, respectively, of
-the 128-bit starting value with the current highest step count. That is, in the set of integers
-from 1 to `MIN_TEST_VALUE`, the starting value with the highest step count is `MAX_STEP_VALUE`.
+`MAX_STEP_VALUE` is the 128-bit starting value with the current highest step count. That is, in the
+set of integers from 1 to `MIN_TEST_VALUE`, the starting value with the highest step count is
+`MAX_STEP_VALUE`.
 
 `MAX_STEP_COUNT` is the step count of the starting value `MAX_STEP_VALUE`. By configuring
 `MIN_TEST_VALUE`, `MAX_STEP_VALUE`, and `MAX_STEP_COUNT`, the program can resume testing starting
@@ -172,7 +174,7 @@ queries. If true, the `vkCmdCopyBuffer` and `vkCmdDispatchBase` commands will be
 default, it is set to true.
 
 `LOG_VULKAN_ALLOCATIONS` is a boolean describing whether memory allocations performed by the Vulkan
-API will be logged via a `VkAllocationCallbacks` object. If true, performance may be significantly
+API will be logged via a `VkAllocationCallbacks` object. If true, performance may be noticeably
 reduced. By default, it is set to false.
 
 `EXTENSION_LAYERS` is a boolean describing whether the Khronos

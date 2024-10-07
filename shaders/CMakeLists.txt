@@ -21,7 +21,7 @@ endif()
 
 macro(compile_intermediate INPUT INTERMEDIATE SPV_MAJOR SPV_MINOR ENTRY_POINT)
 	add_custom_command(
-		OUTPUT  ${INTERMEDIATE}
+		OUTPUT ${INTERMEDIATE}
 		COMMAND ${GLSLANG_EXE} --target-env vulkan1.3 --target-env spirv${SPV_MAJOR}.${SPV_MINOR} -DSPV_VER=${SPV_MAJOR}${SPV_MINOR} "$<IF:${USING_DEBUG_INFO},-gV,-g0;--quiet>" --sep main -e ${ENTRY_POINT} -o ${INTERMEDIATE} ${INPUT}
 		DEPENDS ${INPUT}
 		COMMAND_EXPAND_LISTS
@@ -32,7 +32,7 @@ endmacro()
 if(USING_OPTIMISER)
 	macro(link_intermediates INTERMEDIATES OUTPUT SPV_MAJOR SPV_MINOR)
 		add_custom_command(
-			OUTPUT  ${OUTPUT}
+			OUTPUT ${OUTPUT}
 			COMMAND ${SPV_LNK_EXE} --target-env spv${SPV_MAJOR}.${SPV_MINOR} -o ${OUTPUT} ${INTERMEDIATES}
 			COMMAND ${SPV_OPT_EXE} --target-env=spv${SPV_MAJOR}.${SPV_MINOR} "$<$<NOT:${USING_DEBUG_INFO}>:--strip-debug;--strip-nonsemantic>" --unify-const -O --compact-ids -o ${OUTPUT} ${OUTPUT}
 			DEPENDS ${INTERMEDIATES}
@@ -43,7 +43,7 @@ if(USING_OPTIMISER)
 else()
 	macro(link_intermediates INTERMEDIATES OUTPUT SPV_MAJOR SPV_MINOR)
 		add_custom_command(
-			OUTPUT  ${OUTPUT}
+			OUTPUT ${OUTPUT}
 			COMMAND ${SPV_LNK_EXE} --target-env spv${SPV_MAJOR}.${SPV_MINOR} -o ${OUTPUT} ${INTERMEDIATES}
 			DEPENDS ${INTERMEDIATES}
 			COMMAND_EXPAND_LISTS
@@ -54,7 +54,7 @@ endif()
 
 macro(disassemble_output INPUT OUTPUT)
 	add_custom_command(
-		OUTPUT  ${OUTPUT}
+		OUTPUT ${OUTPUT}
 		COMMAND ${SPV_DIS_EXE} --nested-indent --comment -o ${OUTPUT} ${INPUT}
 		DEPENDS ${INPUT}
 		COMMAND_EXPAND_LISTS

@@ -15,14 +15,40 @@
  * Simulator. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "defs.h"
+#include "util.h"
+#include "debug.h"
 
-uint32_t floor_pow2(uint32_t n)
+
+char* stime(void)
 {
-	for (uint32_t i = 0; n & (n - 1); i++)
-		n &= ~(1U << i);
+	time_t t = time(NULL);
+	return ctime(&t);
+}
 
-	return n;
+clock_t program_time(void)
+{
+	clock_t t = clock();
+	return (clock_t) ((float) t * MS_PER_CLOCK);
+}
+
+uint32_t clz(uint32_t x)
+{
+	ASSUME(x != 0);
+
+#if __has_builtin(__builtin_clz)
+	return (uint32_t) __builtin_clz(x);
+#else
+	uint32_t c;
+	for (c = 0; x & (1U << (31U - c)) == 0; c++);
+	return c;
+#endif
+}
+
+uint32_t floor_pow2(uint32_t x)
+{
+	ASSUME(x != 0);
+
+	return 1U << (31U - clz(x));
 }
 
 float get_benchmark(clock_t start, clock_t end)
@@ -55,9 +81,8 @@ bool get_buffer_requirements_noext(VkDevice device, VkDeviceSize size, VkBufferU
 	VkResult vkres;
 
 	VkBufferCreateInfo bufferCreateInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-	bufferCreateInfo.size        = size;
-	bufferCreateInfo.usage       = usage;
-	bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	bufferCreateInfo.size  = size;
+	bufferCreateInfo.usage = usage;
 
 	VkBuffer buffer;
 	VK_CALL_RES(vkCreateBuffer, device, &bufferCreateInfo, g_allocator, &buffer)
@@ -85,9 +110,8 @@ bool get_buffer_requirements_noext(VkDevice device, VkDeviceSize size, VkBufferU
 bool get_buffer_requirements_main4(VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict memoryRequirements)
 {
 	VkBufferCreateInfo bufferCreateInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-	bufferCreateInfo.size        = size;
-	bufferCreateInfo.usage       = usage;
-	bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	bufferCreateInfo.size  = size;
+	bufferCreateInfo.usage = usage;
 
 	VkDeviceBufferMemoryRequirementsKHR deviceBufferMemoryRequirements = {VK_STRUCTURE_TYPE_DEVICE_BUFFER_MEMORY_REQUIREMENTS_KHR};
 	deviceBufferMemoryRequirements.pCreateInfo = &bufferCreateInfo;

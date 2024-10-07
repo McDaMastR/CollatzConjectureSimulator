@@ -15,14 +15,17 @@
  * Simulator. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "defs.h"
+#include "debug.h"
+#include "util.h"
 
 
-// ===== Global variables =====
+CallbackData g_callbackData = {
+	.funcName = "",
+	.lineNum  = 0
+};
 
-#ifndef NDEBUG
+
 static uint64_t g_debugCallbackCount = 0;
-#endif
 
 static uint64_t g_allocCount         = 0;
 static uint64_t g_reallocCount       = 0;
@@ -33,13 +36,11 @@ static uint64_t g_internalFreeCount  = 0;
 static size_t g_totalAllocSize = 0;
 
 
-// ===== Initialisation functions =====
-
 bool init_debug_logfile(void)
 {
-	clock_t programTime = PROGRAM_TIME();
-	time_t currentTime = time(NULL);
-	const char* sCurrentTime = ctime(&currentTime);
+	clock_t programTime = program_time();
+
+	const char* sCurrentTime = stime();
 
 	FILE* file = fopen(DEBUG_LOG_NAME, "w");
 #ifndef NDEBUG
@@ -63,9 +64,8 @@ bool init_debug_logfile(void)
 
 bool init_alloc_logfile(void)
 {
-	clock_t programTime = PROGRAM_TIME();
-	time_t currentTime = time(NULL);
-	const char* sCurrentTime = ctime(&currentTime);
+	clock_t programTime = program_time();
+	const char* sCurrentTime = stime();
 
 	FILE* file = fopen(ALLOC_LOG_NAME, "w");
 #ifndef NDEBUG
@@ -88,8 +88,6 @@ bool init_alloc_logfile(void)
 }
 
 
-// ===== Debug callback functions =====
-
 #ifndef NDEBUG
 
 static void print_debug_callback(
@@ -101,7 +99,7 @@ static void print_debug_callback(
 	const char* restrict func,
 	uint64_t line)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 	const char* sMessageSeverity = string_VkDebugUtilsMessageSeverityFlagBitsEXT(messageSeverity);
 
 	fprintf(stream,
@@ -121,7 +119,7 @@ static void print_debug_callback(
 		}
 	}
 
-	const char* messageIdName = pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "";
+	const char* messageIdName = pCallbackData->pMessageIdName ?: "";
 	uint32_t messageIdNumber  = (uint32_t) pCallbackData->messageIdNumber;
 
 	fprintf(stream, "\nID:       %s (0x%08x)\n", messageIdName, messageIdNumber);
@@ -167,10 +165,11 @@ static void print_debug_callback(
 		fprintf(stream, "Objects (%u):\n", objectCount);
 
 		for (uint32_t i = 0; i < objectCount; i++) {
-			const char* objectName = pCallbackData->pObjects[i].pObjectName ? pCallbackData->pObjects[i].pObjectName : "";
-			VkObjectType objectType = pCallbackData->pObjects[i].objectType;
+			const char*  objectName   = pCallbackData->pObjects[i].pObjectName ?: "";
+			VkObjectType objectType   = pCallbackData->pObjects[i].objectType;
+			uint64_t     objectHandle = pCallbackData->pObjects[i].objectHandle;
+
 			const char* sObjectType = string_VkObjectType(objectType);
-			uint64_t objectHandle = pCallbackData->pObjects[i].objectHandle;
 
 			fprintf(stream, "\t%s (%s, 0x%016llx)\n", objectName, sObjectType, objectHandle);
 		}
@@ -184,8 +183,8 @@ static void print_debug_callback(
 VkBool32 debug_callback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-	void* pUserData)
+	const VkDebugUtilsMessengerCallbackDataEXT* restrict pCallbackData,
+	void* restrict pUserData)
 {
 	CallbackData data = *(CallbackData*) pUserData;
 
@@ -213,8 +212,6 @@ VkBool32 debug_callback(
 #endif
 
 
-// ===== Allocation callback functions =====
-
 static void print_allocation_callback(
 	FILE* restrict stream,
 	uint64_t allocationCount,
@@ -226,7 +223,7 @@ static void print_allocation_callback(
 	VkSystemAllocationScope allocationScope,
 	const void* restrict memory)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 
 	fprintf(stream,
@@ -242,7 +239,7 @@ static void print_allocation_callback(
 }
 
 void* allocation_callback(
-	void* pUserData,
+	void* restrict pUserData,
 	size_t size,
 	size_t alignment,
 	VkSystemAllocationScope allocationScope)
@@ -289,7 +286,7 @@ static void print_reallocation_callback(
 	const void* restrict originalAddr,
 	const void* restrict memory)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 
 	fprintf(stream,
@@ -307,8 +304,8 @@ static void print_reallocation_callback(
 }
 
 void* reallocation_callback(
-	void* pUserData,
-	void* pOriginal,
+	void* restrict pUserData,
+	void* restrict pOriginal,
 	size_t size,
 	size_t alignment,
 	VkSystemAllocationScope allocationScope)
@@ -362,7 +359,7 @@ static void print_free_callback(
 	size_t size,
 	const void* restrict memory)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 
 	fprintf(stream,
 		"Free callback %llu (%ld ms)\n"
@@ -375,8 +372,8 @@ static void print_free_callback(
 }
 
 void free_callback(
-	void* pUserData,
-	void* pMemory)
+	void* restrict pUserData,
+	void* restrict pMemory)
 {
 	CallbackData data = *(CallbackData*) pUserData;
 
@@ -414,7 +411,7 @@ static void print_internal_allocation_callback(
 	VkInternalAllocationType allocationType,
 	VkSystemAllocationScope allocationScope)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 	const char* sAllocationType = string_VkInternalAllocationType(allocationType);
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 
@@ -429,7 +426,7 @@ static void print_internal_allocation_callback(
 }
 
 void internal_allocation_callback(
-	void* pUserData,
+	void* restrict pUserData,
 	size_t size,
 	VkInternalAllocationType allocationType,
 	VkSystemAllocationScope allocationScope)
@@ -459,7 +456,7 @@ static void print_internal_free_callback(
 	VkInternalAllocationType allocationType,
 	VkSystemAllocationScope allocationScope)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 	const char* sAllocationType = string_VkInternalAllocationType(allocationType);
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 
@@ -474,7 +471,7 @@ static void print_internal_free_callback(
 }
 
 void internal_free_callback(
-	void* pUserData,
+	void* restrict pUserData,
 	size_t size,
 	VkInternalAllocationType allocationType,
 	VkSystemAllocationScope allocationScope)
@@ -496,14 +493,12 @@ void internal_free_callback(
 }
 
 
-// ===== Failure functions =====
-
 void print_malloc_failure(
 	int line,
 	const void* ptr,
 	size_t size)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 
 	fprintf(stderr,
 		"Memory failure at line %d (%ld ms)\n"
@@ -520,7 +515,7 @@ void print_calloc_failure(
 	size_t numOfElements,
 	size_t sizeOfElements)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 
 	fprintf(stderr,
 		"Memory failure at line %d (%ld ms)\n"
@@ -538,7 +533,7 @@ void print_realloc_failure(
 	const void* memory,
 	size_t newSize)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 
 	fprintf(stderr,
 		"Memory failure at line %d (%ld ms)\n"
@@ -556,7 +551,7 @@ void print_fopen_failure(
 	const char* filename,
 	const char* mode)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 
 	fprintf(stderr,
 		"IO error at line %d (%ld ms)\n"
@@ -575,7 +570,7 @@ void print_fseek_failure(
 	long offset,
 	int origin)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 
 	fprintf(stderr,
 		"IO error at line %d (%ld ms)\n"
@@ -593,7 +588,7 @@ void print_ftell_failure(
 	long result,
 	const FILE* file)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 
 	fprintf(stderr,
 		"IO error at line %d (%ld ms)\n"
@@ -612,7 +607,7 @@ void print_fread_failure(
 	size_t count,
 	const FILE* file)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 
 	fprintf(stderr,
 		"IO error at line %d (%ld ms)\n"
@@ -634,7 +629,7 @@ void print_fwrite_failure(
 	size_t count,
 	const FILE* file)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 
 	fprintf(stderr,
 		"IO error at line %d (%ld ms)\n"
@@ -655,7 +650,7 @@ void print_pcreate_failure(
 	const pthread_attr_t* attr,
 	const void* arg)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 
 	fprintf(stderr,
 		"Thread failure at line %d (%ld ms)\n"
@@ -675,7 +670,7 @@ void print_pjoin_failure(
 	pthread_t t,
 	const void* const* res)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 
 	fprintf(stderr,
 		"Thread failure at line %d (%ld ms)\n"
@@ -692,7 +687,7 @@ void print_pcancel_failure(
 	int result,
 	pthread_t t)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 
 	fprintf(stderr,
 		"Thread failure at line %d (%ld ms)\n"
@@ -707,7 +702,7 @@ void print_vkinit_failure(
 	int line,
 	VkResult result)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 	const char* sResult = string_VkResult(result);
 
 	fprintf(stderr,
@@ -721,7 +716,7 @@ void print_vkvers_failure(
 	int line,
 	uint32_t apiVersion)
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 	uint32_t variant = VK_API_VERSION_VARIANT(apiVersion);
 	uint32_t major = VK_API_VERSION_MAJOR(apiVersion);
 	uint32_t minor = VK_API_VERSION_MINOR(apiVersion);
@@ -740,7 +735,7 @@ void print_vulkan_failure(
 	VkResult result
 )
 {
-	clock_t time = PROGRAM_TIME();
+	clock_t time = program_time();
 	const char* sResult = string_VkResult(result);
 
 	fprintf(stderr,
