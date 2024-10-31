@@ -58,7 +58,7 @@ The general environment and system requirements that must be met for Collatz Con
 to build and run correctly. The full requirements of the GPU are given in
 [device_requirements.md](device_requirements.md).
 
-- [Little endian](https://en.wikipedia.org/wiki/Endianness)
+- [Little endian](https://en.wikipedia.org/wiki/Endianness) (CPU and GPU)
 - [CMake](https://cmake.org) 3.23
 - [pthreads](https://en.wikipedia.org/wiki/Pthreads)
 - [glslang](https://github.com/KhronosGroup/glslang)
@@ -70,7 +70,6 @@ to build and run correctly. The full requirements of the GPU are given in
   - `_Atomic` (Optional C11 feature)
   - `__int128` (GNU C extension)
 - [Vulkan](https://www.vulkan.org) 1.1
-  - `storageBuffer16BitAccess`
   - `synchronization2`
   - `timelineSemaphore`
 
@@ -87,10 +86,13 @@ cmake -S . -B build
 Several options can be optionally specified to customise the build system by appending
 `-D OPTION=CONFIG` to the above command. `CMAKE_BUILD_TYPE` specifies the build variant and can be
 set to _Debug_, _Release_, _MinSizeRel_, or _RelWithDebInfo_. If not set, it defaults to _Debug_.
-`DEBUG_SHADERS` specifies whether to include debug information in generated SPIR-V, and defaults to
-_OFF_. `OPTIMISE_SHADERS` specifies whether to optimise generated SPIR-V using `spirv-opt`, and
-defaults to _ON_. `USING_DISASSEMBLER` specifies whether to disassemble generated SPIR-V using
-`spirv-dis`, and defaults to _OFF_.
+`EXCESS_WARNINGS` specifies whether to compile the program with a potentially excessive amount of
+warnings, and defaults to _OFF_. `STATIC_ANALYSIS` specifies whether to statically analyse the
+program during compilation if compiling with GCC, and defaults to _OFF_. `DEBUG_SHADERS` specifies
+whether to include debug information in generated SPIR-V, and defaults to _OFF_. `OPTIMISE_SHADERS`
+specifies whether to optimise generated SPIR-V using `spirv-opt`, and defaults to _ON_.
+`USING_DISASSEMBLER` specifies whether to disassemble generated SPIR-V using `spirv-dis`, and
+defaults to _OFF_.
 
 Once the above command has finished, a `build` directory will have been created containing the
 build system. To now build Collatz Conjecture Simulator, execute the following command.
@@ -99,7 +101,7 @@ build system. To now build Collatz Conjecture Simulator, execute the following c
 cmake --build build
 ```
 
-By default, only the executable will be built. To instead build the SPIR-V, add `--target Shaders`.
+By default, only the executable will be built. To instead build the SPIR-V, add `--target Spirv`.
 To build both, also add `--target CollatzSim`. To specify the build configuration, add
 `--config CONFIG` (only applies for multi-config generators).
 
@@ -107,13 +109,6 @@ The above command will create a `bin` directory containing the SPIR-V and execut
 debug, the executable will be named `CollatzSimDebug`. Otherwise, it will be named `CollatzSim`.
 The executable must be run from within the `bin` directory, else it will be unable to locate the
 generated SPIR-V.
-
-During the execution of Collatz Conjecture Simulator, a `pipeline_cache.bin` file will be created
-containing the data from a `VkPipelineCache` object. This file will be read by the program if run
-again. If in debug, a `debug.log` file will be created containing all debug callbacks from the
-Vulkan API via a `VkDebugUtilsMessengerEXT` object, if `VK_EXT_debug_utils` is present. If logging
-Vulkan allocations, an `alloc.log` file will be created containing all allocation callbacks from
-the Vulkan API via a `VkAllocationCallbacks` object.
 
 ## Inout-buffers
 
@@ -146,57 +141,14 @@ HV-out.
 
 <p align="center">CPU -> HV-in -> DL-in -> GPU -> DL-out -> HV-out -> CPU</p>
 
-## Program configurations
+## Artificial Intelligence
 
-Collatz Conjecture Simulator defines various global constants in [config.c](src/config.c) whose
-values can be altered to configure the behaviour of the program.
+The author of Collatz Conjecture Simulator is not a lawyer, but strongly believes the usage of
+GPLv3-licensed works in the training and development of AI is necessarily violating of said
+licence. However, in case of the event the GPLv3 does not in itself prohibit the usage of works
+licensed under it in the training of AI, the following shall unconditionally apply.
 
-`MIN_TEST_VALUE` is the 128-bit starting value that will be tested first. Subsequent tested
-starting values will linearly increase from there onwards.
-
-`MAX_STEP_VALUE` is the 128-bit starting value with the current highest step count. That is, in the
-set of integers from 1 to `MIN_TEST_VALUE`, the starting value with the highest step count is
-`MAX_STEP_VALUE`.
-
-`MAX_STEP_COUNT` is the step count of the starting value `MAX_STEP_VALUE`. By configuring
-`MIN_TEST_VALUE`, `MAX_STEP_VALUE`, and `MAX_STEP_COUNT`, the program can resume testing starting
-values from where it last ended.
-
-`MAX_HEAP_MEMORY` is a floating-point value within the interval $(0, 1)$, describing the maximum
-proportion of available memory in a `VkMemoryHeap` that can be allocated via `vkAllocateMemory`.
-For example, a value of 0.8 means at most 80% of available memory in any GPU memory heap will be
-allocated for inout-buffers. If `VK_EXT_memory_budget` is present, _available memory_ refers to the
-`VkPhysicalDeviceMemoryBudgetPropertiesEXT::heapBudget` of a memory heap. Elsewise, it refers to
-the corresponding `VkMemoryHeap::size`. By default, `MAX_HEAP_MEMORY` is set to 0.4.
-
-`QUERY_BENCHMARKING` is a boolean describing whether Vulkan commands will be benchmarked via
-queries. If true, the `vkCmdCopyBuffer` and `vkCmdDispatchBase` commands will be benchmarked. By
-default, it is set to true.
-
-`LOG_VULKAN_ALLOCATIONS` is a boolean describing whether memory allocations performed by the Vulkan
-API will be logged via a `VkAllocationCallbacks` object. If true, performance may be noticeably
-reduced. By default, it is set to false.
-
-`EXTENSION_LAYERS` is a boolean describing whether the Khronos
-[extension layers](https://github.com/KhronosGroup/Vulkan-ExtensionLayer)
-`VK_LAYER_KHRONOS_synchronization2` and `VK_LAYER_KHRONOS_timeline_semaphore` will be enabled, if
-present. This should be set to true if either `VK_KHR_synchronization2` or
-`VK_KHR_timeline_semaphore` are not present. By default, it is set to false.
-
-`PROFILE_LAYERS` is a boolean describing whether the Khronos
-[profiles layer](https://github.com/KhronosGroup/Vulkan-Profiles) `VK_LAYER_KHRONOS_profiles` will
-be enabled, if present. By default, it is set to false.
-
-`VALIDATION_LAYERS` is a boolean describing whether the Khronos
-[validation layer](https://github.com/KhronosGroup/Vulkan-ValidationLayers)
-`VK_LAYER_KHRONOS_validation` will be enabled, if present. By default, it is set to false.
-
-`PREFER_INT16` is a boolean describing whether SPIR-V modules which utilise the `Int16` capability
-will be prioritised, if the `shaderInt16` feature is enabled. By default, it is set to false.
-
-`PREFER_INT64` is a boolean describing whether SPIR-V modules which utilise the `Int64` capability
-will be prioritised, if the `shaderInt64` feature is enabled. By default, it is set to false.
-
-`ITER_SIZE` is an integer describing the integer size to emulate when iterating through Collatz
-sequences. The possible values are 128 and 256, corresponding to 128-bit and 256-bit integer sizes,
-respectively. By default, it is set to 128.
+Collatz Conjecture Simulator includes in its terms and conditions regarding copying, distribution,
+and modification, in addition to those provided by version 3 of the GNU General Public Licence, the
+strict and absolute prohibition of its usage by Artificial Intelligence (AI) software, including
+but not limited to the training, prompting, or generation of AI models or algorithms.

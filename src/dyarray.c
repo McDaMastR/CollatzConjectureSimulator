@@ -23,9 +23,29 @@ struct DyArray_T
 {
 	size_t size;     // # bytes per element
 	size_t count;    // # elements currently in array
-	size_t capacity; // Maximum # elements that could fit in allocated memory
+	size_t capacity; // # elements that could fit in allocated memory
 	void*  array;    // Raw array
 };
+
+
+static void* DyArray_stretch(restrict DyArray array)
+{
+	ASSUME(array->size != 0);
+
+	size_t size     = array->size;
+	size_t capacity = array->capacity;
+	void*  raw      = array->array;
+
+	capacity += (capacity + 1) / 2 + 1;
+
+	void* raw2 = realloc(raw, capacity * size);
+	if (EXPECT_FALSE(!raw2)) { REALLOC_FAILURE(raw2, raw, capacity * size); return NULL; }
+
+	array->capacity = capacity;
+	array->array    = raw2;
+
+	return raw2;
+}
 
 
 void DyArray_destroy(restrict DyArray array)
@@ -36,15 +56,10 @@ void DyArray_destroy(restrict DyArray array)
 
 DyArray DyArray_create(size_t size, size_t count)
 {
-	ASSUME(size > 0);
+	ASSUME(size != 0);
 
 	DyArray array = (DyArray) malloc(sizeof(struct DyArray_T));
-#ifndef NDEBUG
-	if (!array) {
-		MALLOC_FAILURE(array, sizeof(struct DyArray_T))
-		return NULL;
-	}
-#endif
+	if (EXPECT_FALSE(!array)) { MALLOC_FAILURE(array, sizeof(struct DyArray_T)); return NULL; }
 
 	array->size     = size;
 	array->count    = 0;
@@ -53,20 +68,13 @@ DyArray DyArray_create(size_t size, size_t count)
 
 	if (EXPECT_TRUE(count)) {
 		void* raw = malloc(count * size);
-#ifndef NDEBUG
-		if (!raw) {
-			MALLOC_FAILURE(raw, count * size)
-			free(array);
-			return NULL;
-		}
-#endif
+		if (EXPECT_FALSE(!raw)) { MALLOC_FAILURE(raw, count * size); free(array); return NULL; }
 
 		array->array = raw;
 	}
 
 	return array;
 }
-
 
 size_t DyArray_size(restrict DyArray array)
 {
@@ -78,56 +86,63 @@ void* DyArray_raw(restrict DyArray array)
 	return array->array;
 }
 
-
 void DyArray_get(restrict DyArray array, void* restrict value, size_t index)
 {
-	ASSUME(array->size > 0);
+	ASSUME(array->size != 0);
+	ASSUME(array->array != NULL);
 
-	size_t size = array->size;
+	size_t      size = array->size;
+	const void* raw  = array->array;
 
-	const void* element = (char*) array->array + index * size;
+	const void* element = (const char*) raw + index * size;
 
 	memcpy(value, element, size);
 }
 
 void DyArray_set(restrict DyArray array, const void* restrict value, size_t index)
 {
-	ASSUME(array->size > 0);
+	ASSUME(array->size != 0);
+	ASSUME(array->array != NULL);
 
 	size_t size = array->size;
+	void*  raw  = array->array;
 
-	void* element = (char*) array->array + index * size;
+	void* element = (char*) raw + index * size;
 
 	memcpy(element, value, size);
 }
 
 void DyArray_last(restrict DyArray array, void* restrict value)
 {
-	ASSUME(array->size > 0);
+	ASSUME(array->size != 0);
+	ASSUME(array->count != 0);
+	ASSUME(array->array != NULL);
 
-	size_t size  = array->size;
-	size_t count = array->count;
+	size_t      size  = array->size;
+	size_t      count = array->count;
+	const void* raw   = array->array;
 
-	const void* element = (char*) array->array + (count - 1) * size;
+	const void* element = (const char*) raw + (count - 1) * size;
 
 	memcpy(value, element, size);
 }
 
 void DyArray_first(restrict DyArray array, void* restrict value)
 {
-	ASSUME(array->size > 0);
+	ASSUME(array->size != 0);
+	ASSUME(array->array != NULL);
 
-	size_t size = array->size;
+	size_t      size = array->size;
+	const void* raw  = array->array;
 
-	const void* element = array->array;
+	const void* element = raw;
 
 	memcpy(value, element, size);
 }
 
-
 void* DyArray_append(restrict DyArray array, const void* restrict value)
 {
-	ASSUME(array->size > 0);
+	ASSUME(array->size != 0);
 
 	size_t size     = array->size;
 	size_t count    = array->count;
@@ -135,20 +150,10 @@ void* DyArray_append(restrict DyArray array, const void* restrict value)
 	void*  raw      = array->array;
 
 	if (EXPECT_FALSE(count == capacity)) {
-		capacity += (capacity + 1) / 2 + 1;
-
-		void* raw2 = realloc(raw, capacity * size);
-#ifndef NDEBUG
-		if (!raw2) {
-			REALLOC_FAILURE(raw2, raw, capacity * size)
-			return NULL;
-		}
-#endif
+		void* raw2 = DyArray_stretch(array);
+		if (EXPECT_FALSE(!raw2)) { return NULL; }
 
 		raw = raw2;
-
-		array->capacity = capacity;
-		array->array    = raw;
 	}
 
 	void* element = (char*) raw + count * size;
@@ -162,7 +167,7 @@ void* DyArray_append(restrict DyArray array, const void* restrict value)
 
 void* DyArray_prepend(restrict DyArray array, const void* restrict value)
 {
-	ASSUME(array->size > 0);
+	ASSUME(array->size != 0);
 
 	size_t size     = array->size;
 	size_t count    = array->count;
@@ -170,25 +175,15 @@ void* DyArray_prepend(restrict DyArray array, const void* restrict value)
 	void*  raw      = array->array;
 
 	if (EXPECT_FALSE(count == capacity)) {
-		capacity += (capacity + 1) / 2 + 1;
-
-		void* raw2 = realloc(raw, capacity * size);
-#ifndef NDEBUG
-		if (!raw2) {
-			REALLOC_FAILURE(raw2, raw, capacity * size)
-			return NULL;
-		}
-#endif
+		void* raw2 = DyArray_stretch(array);
+		if (EXPECT_FALSE(!raw2)) { return NULL; }
 
 		raw = raw2;
-
-		array->capacity = capacity;
-		array->array    = raw;
 	}
 
 	void* element = raw;
 
-	memmove((char*) raw + size, raw, count * size);
+	memmove((char*) element + size, element, count * size);
 	memcpy(element, value, size);
 
 	array->count = count + 1;

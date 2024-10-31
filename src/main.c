@@ -18,14 +18,14 @@
 #include "gpu.h"
 #include "debug.h"
 
-#define CHECK_RESULT(func) if (EXPECT_FALSE(!(func(&gpu)))) { destroy_gpu(&gpu); puts("EXIT FAILURE"); return EXIT_FAILURE; }
+#define CHECK_RESULT(func) if ( EXPECT_FALSE( !func(&gpu) ) ) { destroy_gpu(&gpu); puts("EXIT FAILURE"); return EXIT_FAILURE; }
 
 
-int main(void)
+int main(int argc, char** argv)
 {
-	BEGIN_FUNC
-
 	Gpu gpu = {0}; // Stack-allocate majority of variables
+
+	parse_cmdline(&gpu, argc, argv);
 
 	CHECK_RESULT(create_instance)
 	CHECK_RESULT(select_device)
@@ -39,6 +39,5 @@ int main(void)
 
 	destroy_gpu(&gpu);
 
-	END_FUNC
 	return EXIT_SUCCESS;
 }

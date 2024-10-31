@@ -46,7 +46,7 @@ void DyArray_destroy(DyArray array) NONNULL_ARGS(1);
  * 
  * @return The new dynamic array, or NULL.
  */
-DyArray DyArray_create(size_t size, size_t count) FREE_FUNC(DyArray_destroy, 1) WARN_UNUSED_RET;
+DyArray DyArray_create(size_t size, size_t count) FREE_FUNC(DyArray_destroy, 1) USE_RET;
 
 
 /**
@@ -57,7 +57,7 @@ DyArray DyArray_create(size_t size, size_t count) FREE_FUNC(DyArray_destroy, 1) 
  * @param[in] array The dynamic array. Must not be NULL.
  * @return The number of elements in the dynamic array.
  */
-size_t DyArray_size(DyArray array) NONNULL_ARGS(1) RE_ACCESS(1) WARN_UNUSED_RET;
+size_t DyArray_size(DyArray array) NONNULL_ARGS(1) RE_ACCESS(1) USE_RET;
 
 /**
  * @brief Retrieves the raw array of a DyArray object.
@@ -67,7 +67,7 @@ size_t DyArray_size(DyArray array) NONNULL_ARGS(1) RE_ACCESS(1) WARN_UNUSED_RET;
  * @param[in] array The dynamic array. Must not be NULL.
  * @return The raw array.
  */
-void* DyArray_raw(DyArray array) NONNULL_ARGS(1) RE_ACCESS(1) WARN_UNUSED_RET;
+void* DyArray_raw(DyArray array) NONNULL_ARGS(1) RE_ACCESS(1) USE_RET;
 
 
 /**

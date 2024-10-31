@@ -19,46 +19,40 @@
 #include "debug.h"
 
 
-// First starting value to test (must be odd)
-const uint64_t MIN_TEST_VALUE_UPPER = 0x0000000000000000ULL;
-const uint64_t MIN_TEST_VALUE_LOWER = 0x0000000000000003ULL;
-const Value    MIN_TEST_VALUE       = INT128(MIN_TEST_VALUE_UPPER, MIN_TEST_VALUE_LOWER);
-
-// Starting value with highest step count found so far
-const uint64_t MAX_STEP_VALUE_UPPER = 0x0000000000000000ULL;
-const uint64_t MAX_STEP_VALUE_LOWER = 0x0000000000000001ULL;
-const Value    MAX_STEP_VALUE       = INT128(MAX_STEP_VALUE_UPPER, MAX_STEP_VALUE_LOWER);
-
-const Steps MAX_STEP_COUNT = 0; // Highest step count found so far
-
-const float MAX_HEAP_MEMORY = .4f; // Maximum proportion of available GPU heap memory to use
-
-const bool QUERY_BENCHMARKING     = true; // Whether to benchmark Vulkan commands via queries
-const bool LOG_VULKAN_ALLOCATIONS = false; // Whether to log all memory allocations from Vulkan
-
-const bool EXTENSION_LAYERS  = false; // Whether to use the Khronos extension layers, if present
-const bool PROFILE_LAYERS    = false; // Whether to use the Khronos profiles layer, if present
-const bool VALIDATION_LAYERS = false; // Whether to use the Khronos validation layer, if present
-
-const bool PREFER_INT16 = false; // Whether to prefer shaders that use 16-bit integers over 32-bit integers where appropriate
-const bool PREFER_INT64 = false; // Whether to prefer shaders that use 64-bit integers over 32-bit integers where appropriate
-
-const int ITER_SIZE = 128; // The integer size for shaders to use when iterating (must be 128 or 256)
-
-
 const char* const PROGRAM_NAME = "Collatz Conjecture Simulator";
 
 const char* const DEBUG_LOG_NAME      = "debug.log";
 const char* const ALLOC_LOG_NAME      = "alloc.log";
 const char* const PIPELINE_CACHE_NAME = "pipeline_cache.bin";
+const char* const PROGRESS_NAME       = "position.txt";
 
 const char* const VK_KHR_PROFILES_LAYER_NAME           = "VK_LAYER_KHRONOS_profiles";
 const char* const VK_KHR_VALIDATION_LAYER_NAME         = "VK_LAYER_KHRONOS_validation";
 const char* const VK_KHR_SYNCHRONIZATION_2_LAYER_NAME  = "VK_LAYER_KHRONOS_synchronization2";
 const char* const VK_KHR_TIMELINE_SEMAPHORE_LAYER_NAME = "VK_LAYER_KHRONOS_timeline_semaphore";
 
+const char* const VK_KHR_8BIT_STORAGE_EXTENSION_NAME                   = "VK_KHR_8bit_storage";
+const char* const VK_KHR_16BIT_STORAGE_EXTENSION_NAME                  = "VK_KHR_16bit_storage";
+const char* const VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME          = "VK_KHR_buffer_device_address";
+const char* const VK_KHR_MAINTENANCE_4_EXTENSION_NAME                  = "VK_KHR_maintenance4";
+const char* const VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME = "VK_KHR_pipeline_executable_properties";
+const char* const VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME        = "VK_KHR_portability_enumeration";
+const char* const VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME             = "VK_KHR_portability_subset";
+const char* const VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME          = "VK_KHR_shader_float_controls";
+const char* const VK_KHR_SPIRV_1_4_EXTENSION_NAME                      = "VK_KHR_spirv_1_4";
+const char* const VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME              = "VK_KHR_synchronization2";
+const char* const VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME             = "VK_KHR_timeline_semaphore";
 
-const VkAllocationCallbacks* const g_allocator = LOG_VULKAN_ALLOCATIONS ? &g_allocationCallbacks : NULL;
+const char* const VK_EXT_DEBUG_UTILS_EXTENSION_NAME                     = "VK_EXT_debug_utils";
+const char* const VK_EXT_MEMORY_BUDGET_EXTENSION_NAME                   = "VK_EXT_memory_budget";
+const char* const VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME                 = "VK_EXT_memory_priority";
+const char* const VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME = "VK_EXT_pipeline_creation_cache_control";
+const char* const VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME           = "VK_EXT_subgroup_size_control";
+
+const char* const VK_INTEL_PERFORMANCE_QUERY_EXTENSION_NAME = "VK_INTEL_performance_query";
+
+
+const VkAllocationCallbacks* g_allocator = NULL;
 
 const VkAllocationCallbacks g_allocationCallbacks = {
 	.pUserData             = &g_callbackData,

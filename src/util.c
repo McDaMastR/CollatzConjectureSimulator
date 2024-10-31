@@ -35,7 +35,7 @@ uint32_t clz(uint32_t x)
 {
 	ASSUME(x != 0);
 
-#if __has_builtin(__builtin_clz)
+#if has_builtin(clz)
 	return (uint32_t) __builtin_clz(x);
 #else
 	uint32_t c;
@@ -47,7 +47,6 @@ uint32_t clz(uint32_t x)
 uint32_t floor_pow2(uint32_t x)
 {
 	ASSUME(x != 0);
-
 	return 1U << (31U - clz(x));
 }
 
@@ -56,7 +55,7 @@ float get_benchmark(clock_t start, clock_t end)
 	return (float) (end - start) * MS_PER_CLOCK;
 }
 
-bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const char* restrict name)
+bool set_debug_name(restrict VkDevice device, VkObjectType type, uint64_t handle, const char* restrict name)
 {
 	VkResult vkres;
 
@@ -66,17 +65,12 @@ bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const c
 	debugUtilsObjectNameInfo.pObjectName  = name;
 
 	VK_CALL_RES(vkSetDebugUtilsObjectNameEXT, device, &debugUtilsObjectNameInfo)
-#ifndef NDEBUG
-	if (vkres) {
-		VULKAN_FAILURE(vkSetDebugUtilsObjectNameEXT)
-		return false;
-	}
-#endif
+	if (EXPECT_FALSE(vkres)) { return false; }
 
 	return true;
 }
 
-bool get_buffer_requirements_noext(VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict memoryRequirements)
+bool get_buffer_requirements_noext(restrict VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict memoryRequirements)
 {
 	VkResult vkres;
 
@@ -86,12 +80,7 @@ bool get_buffer_requirements_noext(VkDevice device, VkDeviceSize size, VkBufferU
 
 	VkBuffer buffer;
 	VK_CALL_RES(vkCreateBuffer, device, &bufferCreateInfo, g_allocator, &buffer)
-#ifndef NDEBUG
-	if (vkres) {
-		VULKAN_FAILURE(vkCreateBuffer)
-		return false;
-	}
-#endif
+	if (EXPECT_FALSE(vkres)) { return false; }
 
 	VkBufferMemoryRequirementsInfo2 bufferMemoryRequirementsInfo2 = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2};
 	bufferMemoryRequirementsInfo2.buffer = buffer;
@@ -103,11 +92,10 @@ bool get_buffer_requirements_noext(VkDevice device, VkDeviceSize size, VkBufferU
 	VK_CALL(vkDestroyBuffer, device, buffer, g_allocator)
 
 	*memoryRequirements = memoryRequirements2.memoryRequirements;
-
 	return true;
 }
 
-bool get_buffer_requirements_main4(VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict memoryRequirements)
+bool get_buffer_requirements_main4(restrict VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict memoryRequirements)
 {
 	VkBufferCreateInfo bufferCreateInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
 	bufferCreateInfo.size  = size;
@@ -121,7 +109,6 @@ bool get_buffer_requirements_main4(VkDevice device, VkDeviceSize size, VkBufferU
 	VK_CALL(vkGetDeviceBufferMemoryRequirementsKHR, device, &deviceBufferMemoryRequirements, &memoryRequirements2)
 
 	*memoryRequirements = memoryRequirements2.memoryRequirements;
-
 	return true;
 }
 
@@ -134,22 +121,10 @@ bool file_size(const char* restrict filename, size_t* restrict size)
 	}
 
 	int ires = fseek(file, 0, SEEK_END);
-#ifndef NDEBUG
-	if (ires) {
-		FSEEK_FAILURE(ires, file, 0, SEEK_END)
-		fclose(file);
-		return false;
-	}
-#endif
+	if (EXPECT_FALSE(ires)) { FSEEK_FAILURE(ires, file, 0, SEEK_END); fclose(file); return false; }
 
 	long lres = ftell(file);
-#ifndef NDEBUG
-	if (lres == -1) {
-		FTELL_FAILURE(lres, file)
-		fclose(file);
-		return false;
-	}
-#endif
+	if (EXPECT_FALSE(lres == -1)) { FTELL_FAILURE(lres, file); fclose(file); return false; }
 
 	*size = (size_t) lres;
 
@@ -160,21 +135,10 @@ bool file_size(const char* restrict filename, size_t* restrict size)
 bool read_file(const char* restrict filename, void* restrict data, size_t size)
 {
 	FILE* file = fopen(filename, "rb");
-#ifndef NDEBUG
-	if (!file) {
-		FOPEN_FAILURE(file, filename, "rb")
-		return false;
-	}
-#endif
+	if (EXPECT_FALSE(!file)) { FOPEN_FAILURE(file, filename, "rb"); return false; }
 
 	size_t sres = fread(data, sizeof(char), size, file);
-#ifndef NDEBUG
-	if (sres != size) {
-		FREAD_FAILURE(sres, data, sizeof(char), size, file)
-		fclose(file);
-		return false;
-	}
-#endif
+	if (EXPECT_FALSE(sres != size)) { FREAD_FAILURE(sres, data, sizeof(char), size, file); fclose(file); return false; }
 
 	fclose(file);
 	return true;
@@ -183,22 +147,155 @@ bool read_file(const char* restrict filename, void* restrict data, size_t size)
 bool write_file(const char* restrict filename, const void* restrict data, size_t size)
 {
 	FILE* file = fopen(filename, "wb");
-#ifndef NDEBUG
-	if (!file) {
-		FOPEN_FAILURE(file, filename, "wb")
-		return false;
-	}
-#endif
+	if (EXPECT_FALSE(!file)) { FOPEN_FAILURE(file, filename, "wb"); return false; }
 
 	size_t sres = fwrite(data, sizeof(char), size, file);
-#ifndef NDEBUG
-	if (sres != size) {
-		FWRITE_FAILURE(sres, data, sizeof(char), size, file)
-		fclose(file);
-		return false;
-	}
-#endif
+	if (EXPECT_FALSE(sres != size)) { FWRITE_FAILURE(sres, data, sizeof(char), size, file); fclose(file); return false; }
 
 	fclose(file);
 	return true;
+}
+
+
+typedef struct AlignedInfo
+{
+	void* start;
+	size_t size;
+} AlignedInfo;
+
+
+void* aligned_malloc(size_t size, size_t alignment)
+{
+	ASSUME(size != 0);
+	ASSUME((alignment & (alignment - 1)) == 0);
+
+	void*     memory;
+	uintptr_t address;
+
+#if defined(_MSC_VER) || defined(__MINGW32__)
+	if (alignment < alignof(size_t)) { alignment = alignof(size_t); }
+
+	memory = _aligned_offset_malloc(size + sizeof(size_t), alignment, sizeof(size_t));
+	if (EXPECT_FALSE(!memory)) { return NULL; }
+
+	address = (uintptr_t) memory;
+
+	size_t* info = (size_t*) address;
+	*info = size;
+
+	address += sizeof(size_t);
+	memory = (void*) address;
+#else
+	if (alignment < alignof(AlignedInfo)) { alignment = alignof(AlignedInfo); }
+
+	int ires = posix_memalign(&memory, alignment, size + alignment + sizeof(AlignedInfo));
+	if (EXPECT_FALSE(ires)) { return NULL; }
+
+	address = (uintptr_t) memory;
+	address += ((sizeof(AlignedInfo) - 1) / alignment + 1) * alignment;
+	address -= sizeof(AlignedInfo);
+
+	AlignedInfo* info = (AlignedInfo*) address;
+	info->start = memory;
+	info->size  = size;
+
+	address += sizeof(AlignedInfo);
+	memory = (void*) address;
+#endif
+
+	return memory;
+}
+
+void* aligned_realloc(void* restrict memory, size_t size, size_t alignment)
+{
+	ASSUME(size != 0);
+	ASSUME((alignment & (alignment - 1)) == 0);
+
+	void* newMemory;
+
+	uintptr_t address = (uintptr_t) memory;
+
+#if defined(_MSC_VER) || defined(__MINGW32__)
+	address -= sizeof(size_t);
+	memory = (void*) address;
+
+	if (alignment < alignof(size_t)) { alignment = alignof(size_t); }
+
+	newMemory = _aligned_offset_realloc(memory, size + sizeof(size_t), alignment, sizeof(size_t));
+	if (EXPECT_FALSE(!newMemory)) { return NULL; }
+
+	address = (uintptr_t) newMemory;
+
+	size_t* info = (size_t*) address;
+	*info = size;
+
+	address += sizeof(size_t);
+	newMemory = (void*) address;
+#else
+	address -= sizeof(AlignedInfo);
+
+	AlignedInfo* info = (AlignedInfo*) address;
+	void*  prevMemory = info->start;
+	size_t prevSize   = info->size;
+
+	size_t minSize = size < prevSize ? size : prevSize;
+
+	if (alignment < alignof(AlignedInfo)) { alignment = alignof(AlignedInfo); }
+
+	int ires = posix_memalign(&newMemory, alignment, size + alignment + sizeof(AlignedInfo));
+	if (EXPECT_FALSE(ires)) { return NULL; }
+
+	address = (uintptr_t) newMemory;
+	address += ((sizeof(AlignedInfo) - 1) / alignment + 1) * alignment;
+	address -= sizeof(AlignedInfo);
+
+	info = (AlignedInfo*) address;
+	info->start = newMemory;
+	info->size  = size;
+
+	address += sizeof(AlignedInfo);
+	newMemory = (void*) address;
+
+	memcpy(newMemory, memory, minSize);
+	free(prevMemory);
+#endif
+
+	return newMemory;
+}
+
+void* aligned_free(void* restrict memory)
+{
+	uintptr_t address = (uintptr_t) memory;
+
+#if defined(_MSC_VER) || defined(__MINGW32__)
+	address -= sizeof(size_t);
+	memory = (void*) address;
+	_aligned_free(memory);
+#else
+	address -= sizeof(AlignedInfo);
+	AlignedInfo* info = (AlignedInfo*) address;
+	memory = info->start;
+	free(memory);
+#endif
+
+	return NULL;
+}
+
+size_t aligned_size(const void* restrict memory)
+{
+	size_t size;
+
+	uintptr_t address = (uintptr_t) memory;
+
+#if defined(_MSC_VER) || defined(__MINGW32__)
+	address -= sizeof(size_t);
+	size_t* info = (size_t*) address;
+	size = *info;
+#else
+	address -= sizeof(AlignedInfo);
+	AlignedInfo* info = (AlignedInfo*) address;
+	size = info->size;
+#endif
+
+	return size;
 }

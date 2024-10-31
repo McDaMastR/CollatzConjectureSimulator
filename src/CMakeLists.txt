@@ -3,6 +3,12 @@ add_executable(CollatzSim)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
+option(EXCESS_WARNINGS "Whether to compile the program with potentially excessive warnings"   OFF)
+option(STATIC_ANALYSIS "Whether to perform static analysis on the program during compilation" OFF)
+
+set(USING_EXCESS_WARNINGS "$<BOOL:${EXCESS_WARNINGS}>")
+set(USING_STATIC_ANALYSIS "$<BOOL:${STATIC_ANALYSIS}>")
+
 set(COMPILE_WARNINGS_GNU
 	-Wall                     -Wextra
 	-Walloc-zero              -Walloca
@@ -58,7 +64,7 @@ set_target_properties(
 
 target_compile_definitions(CollatzSim
 	PRIVATE
-		"$<$<CONFIG:RELEASE,MINSIZEREL,RELWITHDEBINFO>:NDEBUG=1>"
+		"$<$<NOT:$<CONFIG:DEBUG>>:NDEBUG=1>"
 )
 
 target_compile_options(CollatzSim
@@ -67,9 +73,9 @@ target_compile_options(CollatzSim
 		"$<$<AND:$<C_COMPILER_ID:GNU,CLANG>,$<CONFIG:RELEASE>>:-O3>"
 		"$<$<AND:$<C_COMPILER_ID:GNU,CLANG>,$<CONFIG:MINSIZEREL>>:-Os>"
 		"$<$<AND:$<C_COMPILER_ID:GNU,CLANG>,$<CONFIG:RELWITHDEBINFO>>:-O2;-g>"
-		"$<$<AND:$<C_COMPILER_ID:GNU>,$<CONFIG:DEBUG,RELWITHDEBINFO>>:-fanalyzer>"
-		"$<$<AND:$<C_COMPILER_ID:GNU>,$<CONFIG:DEBUG,RELWITHDEBINFO>>:${COMPILE_WARNINGS_GNU}>"
-		"$<$<AND:$<C_COMPILER_ID:CLANG>,$<CONFIG:DEBUG,RELWITHDEBINFO>>:${COMPILE_WARNINGS_CLANG}>"
+		"$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:GNU>>:${COMPILE_WARNINGS_GNU}>"
+		"$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:CLANG>>:${COMPILE_WARNINGS_CLANG}>"
+		"$<$<AND:${USING_STATIC_ANALYSIS},$<C_COMPILER_ID:GNU>>:-fanalyzer>"
 )
 
 target_link_libraries(CollatzSim
@@ -85,8 +91,12 @@ target_precompile_headers(CollatzSim
 		<vulkan/vk_enum_string_helper.h>
 		<pthread.h>
 
+		<inttypes.h>
+		<stdalign.h>
 		<stdatomic.h>
 		<stdbool.h>
+		<stddef.h>
+		<stdint.h>
 		<stdio.h>
 		<stdlib.h>
 		<string.h>

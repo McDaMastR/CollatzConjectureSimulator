@@ -93,11 +93,13 @@ typedef struct Gpu
 
 	bool hostNonCoherent;
 	bool using8BitStorage;
+	bool using16BitStorage;
 	bool usingBufferDeviceAddress;
 	bool usingMaintenance4;
 	bool usingMemoryBudget;
 	bool usingMemoryPriority;
 	bool usingPipelineCreationCacheControl;
+	bool usingPipelineExecutableProperties;
 	bool usingPortabilitySubset;
 	bool usingShaderInt16;
 	bool usingShaderInt64;
@@ -106,24 +108,56 @@ typedef struct Gpu
 	bool usingVulkan12;
 	bool usingVulkan13;
 
+	int   iterSize;
+	float maxMemory;
+
+	bool preferInt16;
+	bool preferInt64;
+
+	bool extensionLayers;
+	bool profileLayers;
+	bool validationLayers;
+
+	bool queryBenchmarking;
+	bool logAllocations;
+	bool capturePipelines;
+
+	bool restartCount;
+
 	void* dynamicMemory;
 } Gpu;
+
+typedef struct ValueInfo
+{
+	Value val0mod1off2;
+	Value val0mod1off1;
+	Value val0mod1off0;
+
+	Value val1mod3off2;
+	Value val1mod3off1;
+	Value val1mod3off0;
+
+	Value curValue;
+	Steps curCount;
+} ValueInfo;
 
 
 // If the return type is bool, then that function returns true on success, and false elsewise
 
-bool create_instance(Gpu* gpu)    NONNULL_ARGS(1);
-bool select_device(Gpu* gpu)      NONNULL_ARGS(1);
-bool create_device(Gpu* gpu)      NONNULL_ARGS(1);
-bool manage_memory(Gpu* gpu)      NONNULL_ARGS(1);
-bool create_buffers(Gpu* gpu)     NONNULL_ARGS(1);
-bool create_descriptors(Gpu* gpu) NONNULL_ARGS(1);
-bool create_pipeline(Gpu* gpu)    NONNULL_ARGS(1);
-bool create_commands(Gpu* gpu)    NONNULL_ARGS(1);
-bool submit_commands(Gpu* gpu)    NONNULL_ARGS(1);
-bool destroy_gpu(Gpu* gpu)        NONNULL_ARGS(1);
+void parse_cmdline(Gpu* gpu, int argc, char** argv) NONNULL_ARGS(1, 3) WR_ACCESS(1) RE_ACCESS(3);
+
+bool create_instance(Gpu* gpu)    NONNULL_ARGS(1) RW_ACCESS(1);
+bool select_device(Gpu* gpu)      NONNULL_ARGS(1) RW_ACCESS(1);
+bool create_device(Gpu* gpu)      NONNULL_ARGS(1) RW_ACCESS(1);
+bool manage_memory(Gpu* gpu)      NONNULL_ARGS(1) RW_ACCESS(1);
+bool create_buffers(Gpu* gpu)     NONNULL_ARGS(1) RW_ACCESS(1);
+bool create_descriptors(Gpu* gpu) NONNULL_ARGS(1) RW_ACCESS(1);
+bool create_pipeline(Gpu* gpu)    NONNULL_ARGS(1) RW_ACCESS(1);
+bool create_commands(Gpu* gpu)    NONNULL_ARGS(1) RW_ACCESS(1);
+bool submit_commands(Gpu* gpu)    NONNULL_ARGS(1) RW_ACCESS(1);
+bool destroy_gpu(Gpu* gpu)        NONNULL_ARGS(1) RW_ACCESS(1);
 
 void* wait_for_input(void* ptr) NONNULL_ARGS(1) WR_ACCESS(1);
 
 void writeInBuffer(Value* mappedInBuffer, Value* firstValue, uint32_t valuesPerInout, uint32_t valuesPerHeap) NONNULL_ARGS(1, 2) WR_ACCESS(1) RW_ACCESS(2);
-void readOutBuffer(const Steps* mappedOutBuffer, Value* firstValue, DyArray highestStepValues, DyArray highestStepCounts, uint32_t valuesPerInout) NONNULL_ARGS(1, 2, 3, 4) RE_ACCESS(1) RW_ACCESS(2) RW_ACCESS(3) RW_ACCESS(4);
+void readOutBuffer(const Steps* mappedOutBuffer, ValueInfo* prevValues, DyArray highestStepValues, DyArray highestStepCounts, uint32_t valuesPerInout) NONNULL_ARGS(1, 2, 3, 4) RE_ACCESS(1) RW_ACCESS(2) RW_ACCESS(3) RW_ACCESS(4);

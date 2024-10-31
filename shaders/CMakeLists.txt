@@ -19,10 +19,10 @@ if(DISASSEMBLE_SHADERS AND NOT SPV_DIS_EXE)
 	message(WARNING "SPIR-V disassembler not found - shaders will not be disassembled")
 endif()
 
-macro(compile_intermediate INPUT INTERMEDIATE SPV_MAJOR SPV_MINOR ENTRY_POINT)
+macro(compile_intermediate INPUT INTERMEDIATE SPV_MAJOR SPV_MINOR STO16 INT16 INT64 ITER_SIZE)
 	add_custom_command(
 		OUTPUT ${INTERMEDIATE}
-		COMMAND ${GLSLANG_EXE} --target-env vulkan1.3 --target-env spirv${SPV_MAJOR}.${SPV_MINOR} -DSPV_VER=${SPV_MAJOR}${SPV_MINOR} "$<IF:${USING_DEBUG_INFO},-gV,-g0;--quiet>" --sep main -e ${ENTRY_POINT} -o ${INTERMEDIATE} ${INPUT}
+		COMMAND ${GLSLANG_EXE} --target-env vulkan1.3 --target-env spirv${SPV_MAJOR}.${SPV_MINOR} --quiet "$<IF:${USING_DEBUG_INFO},-gV,-g0>" -DSPV_VER=${SPV_MAJOR}${SPV_MINOR} -DITER_SIZE=${ITER_SIZE} -DSTO16=${STO16} -DINT16=${INT16} -DINT64=${INT64} --sep main -e main${ITER_SIZE} -o ${INTERMEDIATE} ${INPUT}
 		DEPENDS ${INPUT}
 		COMMAND_EXPAND_LISTS
 		VERBATIM
@@ -34,7 +34,7 @@ if(USING_OPTIMISER)
 		add_custom_command(
 			OUTPUT ${OUTPUT}
 			COMMAND ${SPV_LNK_EXE} --target-env spv${SPV_MAJOR}.${SPV_MINOR} -o ${OUTPUT} ${INTERMEDIATES}
-			COMMAND ${SPV_OPT_EXE} --target-env=spv${SPV_MAJOR}.${SPV_MINOR} "$<$<NOT:${USING_DEBUG_INFO}>:--strip-debug;--strip-nonsemantic>" --unify-const -O --compact-ids -o ${OUTPUT} ${OUTPUT}
+			COMMAND ${SPV_OPT_EXE} --target-env=spv${SPV_MAJOR}.${SPV_MINOR} "$<$<NOT:${USING_DEBUG_INFO}>:--strip-debug;--strip-nonsemantic>" --remove-unused-interface-variables -O --unify-const --trim-capabilities --compact-ids -o ${OUTPUT} ${OUTPUT}
 			DEPENDS ${INTERMEDIATES}
 			COMMAND_EXPAND_LISTS
 			VERBATIM
@@ -62,39 +62,56 @@ macro(disassemble_output INPUT OUTPUT)
 	)
 endmacro()
 
-add_custom_target(Shaders)
+function(compile_shader INPUT_GLSL SPV_MAJOR SPV_MINOR STO16 INT16 INT64)
+	set(SPV_VER v${SPV_MAJOR}${SPV_MINOR})
+	set(SHADER_NAME spirv)
 
-function(compile_shader SHADER_NAME)
-	set(INPUT_128 ${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_NAME}_128.comp)
-	set(INPUT_256 ${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_NAME}_256.comp)
+	if(STO16)
+		list(APPEND SHADER_NAME sto16)
+	endif()
+	if(INT16)
+		list(APPEND SHADER_NAME int16)
+	endif()
+	if(INT64)
+		list(APPEND SHADER_NAME int64)
+	endif()
 
-	set(SPV_MAJOR 1)
-	foreach(SPV_MINOR RANGE 3 6)
-		set(SPV_VER v${SPV_MAJOR}${SPV_MINOR})
+	list(JOIN SHADER_NAME - SHADER_NAME)
 
-		set(INTERMEDIATE_128 ${CMAKE_CURRENT_BINARY_DIR}/${SPV_VER}/${SHADER_NAME}_128.spv)
-		set(INTERMEDIATE_256 ${CMAKE_CURRENT_BINARY_DIR}/${SPV_VER}/${SHADER_NAME}_256.spv)
-		set(INTERMEDIATES ${INTERMEDIATE_128} ${INTERMEDIATE_256})
+	set(INTERMEDIATE_128 ${CMAKE_CURRENT_BINARY_DIR}/${SPV_VER}/${SHADER_NAME}-128.spv)
+	set(INTERMEDIATE_256 ${CMAKE_CURRENT_BINARY_DIR}/${SPV_VER}/${SHADER_NAME}-256.spv)
+	set(INTERMEDIATES ${INTERMEDIATE_128} ${INTERMEDIATE_256})
 
-		set(OUTPUT_SPV_${SPV_VER} ${CMAKE_SOURCE_DIR}/bin/${SPV_VER}/${SHADER_NAME}.spv)
-		set(OUTPUT_ASM_${SPV_VER} ${CMAKE_SOURCE_DIR}/bin/${SPV_VER}/${SHADER_NAME}.spvasm)
+	set(OUTPUT_SPV ${CMAKE_SOURCE_DIR}/bin/${SPV_VER}/${SHADER_NAME}.spv)
+	set(OUTPUT_ASM ${CMAKE_SOURCE_DIR}/bin/${SPV_VER}/${SHADER_NAME}.spvasm)
 
-		list(APPEND OUTPUT_SPV ${OUTPUT_SPV_${SPV_VER}})
-		list(APPEND OUTPUT_ASM ${OUTPUT_ASM_${SPV_VER}})
+	set(ALL_SPV ${ALL_SPV} ${OUTPUT_SPV} PARENT_SCOPE)
+	set(ALL_ASM ${ALL_ASM} ${OUTPUT_ASM} PARENT_SCOPE)
 
-		compile_intermediate(${INPUT_128} ${INTERMEDIATE_128} ${SPV_MAJOR} ${SPV_MINOR} main128)
-		compile_intermediate(${INPUT_256} ${INTERMEDIATE_256} ${SPV_MAJOR} ${SPV_MINOR} main256)
+	compile_intermediate(${INPUT_GLSL} ${INTERMEDIATE_128} ${SPV_MAJOR} ${SPV_MINOR} ${STO16} ${INT16} ${INT64} 128)
+	compile_intermediate(${INPUT_GLSL} ${INTERMEDIATE_256} ${SPV_MAJOR} ${SPV_MINOR} ${STO16} ${INT16} ${INT64} 256)
 
-		link_intermediates("${INTERMEDIATES}" ${OUTPUT_SPV_${SPV_VER}} ${SPV_MAJOR} ${SPV_MINOR})
-		disassemble_output(${OUTPUT_SPV_${SPV_VER}} ${OUTPUT_ASM_${SPV_VER}})
-	endforeach()
-
-	add_custom_target(${SHADER_NAME} DEPENDS ${OUTPUT_SPV} "$<${USING_DISASSEMBLER}:${OUTPUT_ASM}>")
-	add_dependencies(Shaders ${SHADER_NAME})
+	link_intermediates("${INTERMEDIATES}" ${OUTPUT_SPV} ${SPV_MAJOR} ${SPV_MINOR})
+	disassemble_output(${OUTPUT_SPV} ${OUTPUT_ASM})
 endfunction()
 
-set(SHADERS shader shader_16 shader_64 shader_16_64)
+add_custom_target(Spirv)
 
-foreach(SHADER_NAME IN LISTS SHADERS)
-	compile_shader(${SHADER_NAME})
+set(INPUT_GLSL ${CMAKE_CURRENT_SOURCE_DIR}/shader.comp)
+set(SPV_MAJOR 1)
+
+foreach(SPV_MINOR RANGE 3 6)
+	foreach(INT64 0 1)
+		foreach(INT16 0 1)
+			foreach(STO16 0 1)
+				compile_shader(${INPUT_GLSL} ${SPV_MAJOR} ${SPV_MINOR} ${STO16} ${INT16} ${INT64})
+			endforeach()
+		endforeach()
+	endforeach()
+
+	add_custom_target(Spirv-${SPV_MAJOR}-${SPV_MINOR} DEPENDS ${ALL_SPV} "$<${USING_DISASSEMBLER}:${ALL_ASM}>")
+	add_dependencies(Spirv Spirv-${SPV_MAJOR}-${SPV_MINOR})
+
+	unset(ALL_SPV)
+	unset(ALL_ASM)
 endforeach()

@@ -23,7 +23,7 @@ The full requirements of the selected `VkPhysicalDevice` object.
 
 `VkPhysicalDevice16BitStorageFeatures`
 
-- `storageBuffer16BitAccess`
+- `storageBuffer16BitAccess` (optional)
 
 `VkPhysicalDevice8BitStorageFeaturesKHR`
 
