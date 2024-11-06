@@ -1,8 +1,20 @@
 # Collatz Conjecture Simulator
 
-A C program to efficiently determine the total stopping time of the Collatz sequence of any 128-bit
-integer starting value, and output all starting values $n$ whose total stopping time is the greatest
-of all integers in the interval $[1, n]$.
+A program to efficiently determine the total stopping time of the Collatz sequence of any 128-bit
+integer starting value, and output all starting values $n$ whose total stopping time is the
+greatest of all integers in the interval $[1, n]$.
+
+## Mathematical Notation
+
+For the purposes of this document, the following mathematical symbols will represent the
+corresponding concepts.
+
+- $\Z$ represents the set of all integers.
+- $\Z^+$ represents the set of all positive integers.
+- $\Z^{0+}$ represents the set of all non-negative integers.
+- $f(n)$ represents the Collatz function applied to $n$.
+- $f^k(n)$ represents the Collatz function applied recursively $k$ times to $n$.
+- $s(n)$ represents the total stopping time of the starting value $n$.
 
 ## The Collatz Conjecture
 
@@ -15,8 +27,8 @@ one.
 ```math
 f(n) =
  \begin{cases}
-  n/2  & \text{if } n \equiv 0 \pmod 2\\
-  3n+1 & \text{if } n \equiv 1 \pmod 2
+  n/2    & \text{if } n \equiv 0 \pmod 2 \\
+  3n + 1 & \text{if } n \equiv 1 \pmod 2
  \end{cases}
 ```
 
@@ -27,15 +39,15 @@ This second output can again be used as an input, resulting in a third output $f
 By applying the Collatz function recursively, the sequence of successive inputs and outputs will
 form a _Collatz sequence_. If a Collatz sequence includes the value $1$, then the number of
 elements in the sequence from the starting value to the first instance of the value $1$ is the
-_total stopping time_. That is, given a starting value $n$ and total stopping time $k$, $f^k(n) =
-1$.
+_total stopping time_. That is, given a starting value $n$ and total stopping time $k$,
+$f^k(n) = 1$.
 
 The Collatz Conjecture states that for all positive integer starting values $n$, finite recursive
 application of the Collatz function will eventually result in the value $1$. Using mathematical
 logic:
 
 ```math
-\forall n \in \mathbb{Z}_{> 0}, \exists k \in \mathbb{Z}_{\geq 0} : f^k(n) = 1
+\forall n \in \Z^+, \exists k \in \Z^{0+} : f^k(n) = 1
 ```
 
 ## The Simulation
@@ -58,7 +70,6 @@ The general environment and system requirements that must be met for Collatz Con
 to build and run correctly. The full requirements of the GPU are given in
 [device_requirements.md](device_requirements.md).
 
-- [Little endian](https://en.wikipedia.org/wiki/Endianness) (CPU and GPU)
 - [CMake](https://cmake.org) 3.23
 - [pthreads](https://en.wikipedia.org/wiki/Pthreads)
 - [glslang](https://github.com/KhronosGroup/glslang)
@@ -140,6 +151,40 @@ and read from DL-in. Step counts are written to DL-out, copied from DL-out to HV
 HV-out.
 
 <p align="center">CPU -> HV-in -> DL-in -> GPU -> DL-out -> HV-out -> CPU</p>
+
+## Starting Value Selection
+
+It can be mathematically demonstrated that particular sets of starting values will always generate
+Collatz sequences that contain a smaller value. For example, the set of even starting values. Given
+a starting value $n \in \Z^+$ such that $n \equiv 0 \pmod 2$, $n$ can be represented as
+$n = 2x, x \in \Z^+$. Applying the Collatz function to $n$ thus results in the following.
+
+```math
+f(2x) = x
+```
+
+The Collatz sequences of all even $n$ must have exactly one step between $n$ and the first value
+less than $n$, namely $n/2$. As such, the step count of $n$ is one more than the step count of
+$n/2$. By knowing $s(x)$, $s(2x)$ can be calculated as $s(2x) = s(x) + 1$.
+
+Another set of interest is the set of starting values $n \in \Z^+$ such that $n \equiv 1 \pmod 4$.
+Starting values $n$ in this set can be represented as $n = 4x + 1, x \in \Z^+$. Thus, recursively
+applying the Collatz function to $n$ results in the following.
+
+```math
+f(4x  + 1) = 12x + 4 \\
+f(12x + 4) = 6x  + 2 \\
+f(6x  + 2) = 3x  + 1
+```
+
+Therefore, if $n \equiv 1 \pmod 4$, then $f^3(n) < n$ and $s(n) = s(f^3(n)) + 3$. This removes the
+requirement to iterate through the Collatz sequences of such starting values to calculate their
+step counts.
+
+Hence, Collatz Conjecture Simulator only iterates through the Collatz sequences of starting values
+$n \in \Z^+$ such that $n \equiv 3 \pmod 4$. This improves performance by allowing larger intervals
+of starting values to be tested per dispatch command, and it more evenly distributes the workload
+between the CPU and GPU.
 
 ## Artificial Intelligence
 

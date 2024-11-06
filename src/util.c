@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024  Seth McDonald <seth.i.mcdonald@gmail.com>
+ * Copyright (C) 2024 Seth McDonald <seth.i.mcdonald@gmail.com>
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -19,6 +19,13 @@
 #include "debug.h"
 
 
+Endianness get_endianness(void)
+{
+	int x = 1;
+	char c = *(char*) &x;
+	return c ? ENDIANNESS_LITTLE : ENDIANNESS_BIG;
+}
+
 char* stime(void)
 {
 	time_t t = time(NULL);
@@ -29,6 +36,156 @@ clock_t program_time(void)
 {
 	clock_t t = clock();
 	return (clock_t) ((float) t * MS_PER_CLOCK);
+}
+
+uint16_t maxu16(uint16_t x, uint16_t y)
+{
+	return x > y ? x : y;
+}
+
+uint16_t minu16(uint16_t x, uint16_t y)
+{
+	return x < y ? x : y;
+}
+
+uint32_t maxu32(uint32_t x, uint32_t y)
+{
+	return x > y ? x : y;
+}
+
+uint32_t minu32(uint32_t x, uint32_t y)
+{
+	return x < y ? x : y;
+}
+
+uint64_t maxu64(uint64_t x, uint64_t y)
+{
+	return x > y ? x : y;
+}
+
+uint64_t minu64(uint64_t x, uint64_t y)
+{
+	return x < y ? x : y;
+}
+
+uint16_t maxu16v(size_t count, ...)
+{
+	ASSUME(count != 0);
+
+	va_list args;
+	va_start(args, count);
+
+	uint_fast16_t max = 0;
+
+	for (size_t i = 0; i < count; i++) {
+		uint_fast16_t arg = (uint_fast16_t) va_arg(args, unsigned int);
+		if (max < arg) {
+			max = arg;
+		}
+	}
+
+	va_end(args);
+	return (uint16_t) max;
+}
+
+uint16_t minu16v(size_t count, ...)
+{
+	ASSUME(count != 0);
+
+	va_list args;
+	va_start(args, count);
+
+	uint_fast16_t min = UINT16_MAX;
+
+	for (size_t i = 0; i < count; i++) {
+		uint_fast16_t arg = (uint_fast16_t) va_arg(args, unsigned int);
+		if (min > arg) {
+			min = arg;
+		}
+	}
+
+	va_end(args);
+	return (uint16_t) min;
+}
+
+uint32_t maxu32v(size_t count, ...)
+{
+	ASSUME(count != 0);
+
+	va_list args;
+	va_start(args, count);
+
+	uint_fast32_t max = 0;
+
+	for (size_t i = 0; i < count; i++) {
+		uint_fast32_t arg = (uint_fast32_t) va_arg(args, uint32_t);
+		if (max < arg) {
+			max = arg;
+		}
+	}
+
+	va_end(args);
+	return (uint32_t) max;
+}
+
+uint32_t minu32v(size_t count, ...)
+{
+	ASSUME(count != 0);
+
+	va_list args;
+	va_start(args, count);
+
+	uint_fast32_t min = UINT32_MAX;
+
+	for (size_t i = 0; i < count; i++) {
+		uint_fast32_t arg = (uint_fast32_t) va_arg(args, uint32_t);
+		if (min > arg) {
+			min = arg;
+		}
+	}
+
+	va_end(args);
+	return (uint32_t) min;
+}
+
+uint64_t maxu64v(size_t count, ...)
+{
+	ASSUME(count != 0);
+
+	va_list args;
+	va_start(args, count);
+
+	uint_fast64_t max = 0;
+
+	for (size_t i = 0; i < count; i++) {
+		uint_fast64_t arg = (uint_fast64_t) va_arg(args, uint64_t);
+		if (max < arg) {
+			max = arg;
+		}
+	}
+
+	va_end(args);
+	return (uint64_t) max;
+}
+
+uint64_t minu64v(size_t count, ...)
+{
+	ASSUME(count != 0);
+
+	va_list args;
+	va_start(args, count);
+
+	uint_fast64_t min = UINT64_MAX;
+
+	for (size_t i = 0; i < count; i++) {
+		uint_fast64_t arg = (uint_fast64_t) va_arg(args, uint64_t);
+		if (min > arg) {
+			min = arg;
+		}
+	}
+
+	va_end(args);
+	return (uint64_t) min;
 }
 
 uint32_t clz(uint32_t x)
@@ -55,7 +212,7 @@ float get_benchmark(clock_t start, clock_t end)
 	return (float) (end - start) * MS_PER_CLOCK;
 }
 
-bool set_debug_name(restrict VkDevice device, VkObjectType type, uint64_t handle, const char* restrict name)
+bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const char* restrict name)
 {
 	VkResult vkres;
 
@@ -64,13 +221,13 @@ bool set_debug_name(restrict VkDevice device, VkObjectType type, uint64_t handle
 	debugUtilsObjectNameInfo.objectHandle = handle;
 	debugUtilsObjectNameInfo.pObjectName  = name;
 
-	VK_CALL_RES(vkSetDebugUtilsObjectNameEXT, device, &debugUtilsObjectNameInfo)
+	VK_CALL_RES(vkSetDebugUtilsObjectNameEXT, device, &debugUtilsObjectNameInfo);
 	if (EXPECT_FALSE(vkres)) { return false; }
 
 	return true;
 }
 
-bool get_buffer_requirements_noext(restrict VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict memoryRequirements)
+bool get_buffer_requirements_noext(VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict memoryRequirements)
 {
 	VkResult vkres;
 
@@ -79,7 +236,7 @@ bool get_buffer_requirements_noext(restrict VkDevice device, VkDeviceSize size, 
 	bufferCreateInfo.usage = usage;
 
 	VkBuffer buffer;
-	VK_CALL_RES(vkCreateBuffer, device, &bufferCreateInfo, g_allocator, &buffer)
+	VK_CALL_RES(vkCreateBuffer, device, &bufferCreateInfo, g_allocator, &buffer);
 	if (EXPECT_FALSE(vkres)) { return false; }
 
 	VkBufferMemoryRequirementsInfo2 bufferMemoryRequirementsInfo2 = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2};
@@ -87,15 +244,15 @@ bool get_buffer_requirements_noext(restrict VkDevice device, VkDeviceSize size, 
 
 	VkMemoryRequirements2 memoryRequirements2 = {VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2};
 
-	VK_CALL(vkGetBufferMemoryRequirements2, device, &bufferMemoryRequirementsInfo2, &memoryRequirements2)
+	VK_CALL(vkGetBufferMemoryRequirements2, device, &bufferMemoryRequirementsInfo2, &memoryRequirements2);
 
-	VK_CALL(vkDestroyBuffer, device, buffer, g_allocator)
+	VK_CALL(vkDestroyBuffer, device, buffer, g_allocator);
 
 	*memoryRequirements = memoryRequirements2.memoryRequirements;
 	return true;
 }
 
-bool get_buffer_requirements_main4(restrict VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict memoryRequirements)
+bool get_buffer_requirements_main4(VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict memoryRequirements)
 {
 	VkBufferCreateInfo bufferCreateInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
 	bufferCreateInfo.size  = size;
@@ -106,7 +263,7 @@ bool get_buffer_requirements_main4(restrict VkDevice device, VkDeviceSize size, 
 
 	VkMemoryRequirements2 memoryRequirements2 = {VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2};
 
-	VK_CALL(vkGetDeviceBufferMemoryRequirementsKHR, device, &deviceBufferMemoryRequirements, &memoryRequirements2)
+	VK_CALL(vkGetDeviceBufferMemoryRequirementsKHR, device, &deviceBufferMemoryRequirements, &memoryRequirements2);
 
 	*memoryRequirements = memoryRequirements2.memoryRequirements;
 	return true;
@@ -238,7 +395,7 @@ void* aligned_realloc(void* restrict memory, size_t size, size_t alignment)
 	void*  prevMemory = info->start;
 	size_t prevSize   = info->size;
 
-	size_t minSize = size < prevSize ? size : prevSize;
+	size_t minSize = minz(size, prevSize);
 
 	if (alignment < alignof(AlignedInfo)) { alignment = alignof(AlignedInfo); }
 

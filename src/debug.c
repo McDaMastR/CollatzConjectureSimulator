@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024  Seth McDonald <seth.i.mcdonald@gmail.com>
+ * Copyright (C) 2024 Seth McDonald <seth.i.mcdonald@gmail.com>
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -599,7 +599,7 @@ void print_vkvers_failure(int line, uint32_t result)
 	);
 }
 
-void print_vulkan_failure(int line, const char* func, VkResult result)
+void print_vulkan_failure(int line, VkResult result, const char* func)
 {
 	clock_t time = program_time();
 	const char* sResult = string_VkResult(result);

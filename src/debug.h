@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024  Seth McDonald <seth.i.mcdonald@gmail.com>
+ * Copyright (C) 2024 Seth McDonald <seth.i.mcdonald@gmail.com>
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "config.h"
+#include "defs.h"
 
 
 // Datatypes
@@ -55,7 +55,7 @@ void print_pcancel_failure(int line, int result, pthread_t  thread)             
 
 void print_vkinit_failure(int line, VkResult result)                   COLD_FUNC;
 void print_vkvers_failure(int line, uint32_t result)                   COLD_FUNC;
-void print_vulkan_failure(int line, const char* func, VkResult result) COLD_FUNC NONNULL_ARGS(2) NULTSTR_ARG(2) RE_ACCESS(2);
+void print_vulkan_failure(int line, VkResult result, const char* func) COLD_FUNC NONNULL_ARGS_ALL NULTSTR_ARG(3) RE_ACCESS(3);
 
 
 // Callback functions
@@ -87,20 +87,36 @@ VKAPI_ATTR void VKAPI_CALL internal_free_callback      (void* pUserData, size_t 
 
 #define VKINIT_FAILURE(res)  print_vkinit_failure(__LINE__, (VkResult) (res))
 #define VKVERS_FAILURE(res)  print_vkvers_failure(__LINE__, (uint32_t) (res))
-#define VULKAN_FAILURE(func) print_vulkan_failure(__LINE__, #func, vkres)
+#define VULKAN_FAILURE(func) print_vulkan_failure(__LINE__, vkres, #func)
 
 #ifdef NDEBUG
-	#define VK_CALL(func, ...)     { (func)(__VA_ARGS__); }
-	#define VK_CALL_RES(func, ...) { vkres = (func)(__VA_ARGS__); if ( EXPECT_FALSE(vkres != VK_SUCCESS) ) { VULKAN_FAILURE(func); } }
-#else
-	#define VK_CALL(func, ...) { g_callbackData.funcName = #func; g_callbackData.lineNum = __LINE__; (func)(__VA_ARGS__); }
+	#define VK_CALL(func, ...)   \
+		do {                     \
+			(func)(__VA_ARGS__); \
+		} while (0)
+
 	#define VK_CALL_RES(func, ...)                     \
-		{                                              \
+		do {                                           \
+			vkres = (func)(__VA_ARGS__);               \
+			if ( EXPECT_FALSE(vkres != VK_SUCCESS) ) { \
+				VULKAN_FAILURE(func);                  \
+			}                                          \
+		} while (0)
+#else
+	#define VK_CALL(func, ...)                 \
+		do {                                   \
+			g_callbackData.funcName = #func;   \
+			g_callbackData.lineNum = __LINE__; \
+			(func)(__VA_ARGS__);               \
+		} while (0)
+
+	#define VK_CALL_RES(func, ...)                     \
+		do {                                           \
 			g_callbackData.funcName = #func;           \
 			g_callbackData.lineNum  = __LINE__;        \
 			vkres = (func)(__VA_ARGS__);               \
 			if ( EXPECT_FALSE(vkres != VK_SUCCESS) ) { \
 				VULKAN_FAILURE(func);                  \
 			}                                          \
-		}
+		} while (0)
 #endif

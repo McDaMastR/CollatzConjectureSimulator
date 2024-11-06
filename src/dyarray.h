@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024  Seth McDonald <seth.i.mcdonald@gmail.com>
+ * Copyright (C) 2024 Seth McDonald <seth.i.mcdonald@gmail.com>
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "config.h"
+#include "defs.h"
 
 
 /**
@@ -33,7 +33,7 @@ typedef struct DyArray_T* DyArray;
  * 
  * @param[in,out] array The dynamic array to destroy. Must not be NULL.
  */
-void DyArray_destroy(DyArray array) NONNULL_ARGS(1);
+void DyArray_destroy(DyArray array) NONNULL_ARGS_ALL;
 
 /**
  * @brief Creates a new DyArray object.
@@ -57,7 +57,7 @@ DyArray DyArray_create(size_t size, size_t count) FREE_FUNC(DyArray_destroy, 1) 
  * @param[in] array The dynamic array. Must not be NULL.
  * @return The number of elements in the dynamic array.
  */
-size_t DyArray_size(DyArray array) NONNULL_ARGS(1) RE_ACCESS(1) USE_RET;
+size_t DyArray_size(DyArray array) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
 
 /**
  * @brief Retrieves the raw array of a DyArray object.
@@ -67,7 +67,7 @@ size_t DyArray_size(DyArray array) NONNULL_ARGS(1) RE_ACCESS(1) USE_RET;
  * @param[in] array The dynamic array. Must not be NULL.
  * @return The raw array.
  */
-void* DyArray_raw(DyArray array) NONNULL_ARGS(1) RE_ACCESS(1) USE_RET;
+void* DyArray_raw(DyArray array) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
 
 
 /**
@@ -79,7 +79,7 @@ void* DyArray_raw(DyArray array) NONNULL_ARGS(1) RE_ACCESS(1) USE_RET;
  * @param[out] value A pointer to the memory to copy the retrieved value into. Must not be NULL.
  * @param[in] index The index of the element to retrieve. Must be less than the size of the array.
  */
-void DyArray_get(DyArray array, void* value, size_t index) NONNULL_ARGS(1, 2) RE_ACCESS(1) WR_ACCESS(2);
+void DyArray_get(DyArray array, void* value, size_t index) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
 
 /**
  * @brief Sets an element from a DyArray object.
@@ -90,7 +90,7 @@ void DyArray_get(DyArray array, void* value, size_t index) NONNULL_ARGS(1, 2) RE
  * @param[out] value A pointer to the value to set the element to. Must not be NULL.
  * @param[in] index The index of the element to set. Must be less than the size of the array.
  */
-void DyArray_set(DyArray array, const void* value, size_t index) NONNULL_ARGS(1, 2) RW_ACCESS(1) RE_ACCESS(2);
+void DyArray_set(DyArray array, const void* value, size_t index) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
 
 /**
  * @brief Retrieves the last element from a DyArray object.
@@ -100,7 +100,7 @@ void DyArray_set(DyArray array, const void* value, size_t index) NONNULL_ARGS(1,
  * @param[in] array The dynamic array. Must not be NULL.
  * @param[out] value A pointer to the memory to copy the retrieved value into. Must not be NULL.
  */
-void DyArray_last(DyArray array, void* value) NONNULL_ARGS(1, 2) RE_ACCESS(1) WR_ACCESS(2);
+void DyArray_last(DyArray array, void* value) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
 
 /**
  * @brief Retrieves the first element from a DyArray object.
@@ -110,7 +110,7 @@ void DyArray_last(DyArray array, void* value) NONNULL_ARGS(1, 2) RE_ACCESS(1) WR
  * @param[in] array The dynamic array. Must not be NULL.
  * @param[out] value A pointer to the memory to copy the retrieved value into. Must not be NULL.
  */
-void DyArray_first(DyArray array, void* value) NONNULL_ARGS(1, 2) RE_ACCESS(1) WR_ACCESS(2);
+void DyArray_first(DyArray array, void* value) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
 
 
 /**
@@ -124,7 +124,7 @@ void DyArray_first(DyArray array, void* value) NONNULL_ARGS(1, 2) RE_ACCESS(1) W
  * 
  * @return A pointer to the new element, or NULL.
  */
-void* DyArray_append(DyArray array, const void* value) NONNULL_ARGS(1, 2) RW_ACCESS(1) RE_ACCESS(2);
+void* DyArray_append(DyArray array, const void* value) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
 
 /**
  * @brief Prepends an element to a DyArray object.
@@ -137,4 +137,4 @@ void* DyArray_append(DyArray array, const void* value) NONNULL_ARGS(1, 2) RW_ACC
  * 
  * @return A pointer to the new element, or NULL.
  */
-void* DyArray_prepend(DyArray array, const void* value) NONNULL_ARGS(1, 2) RW_ACCESS(1) RE_ACCESS(2);
+void* DyArray_prepend(DyArray array, const void* value) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);

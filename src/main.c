@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024  Seth McDonald <seth.i.mcdonald@gmail.com>
+ * Copyright (C) 2024 Seth McDonald <seth.i.mcdonald@gmail.com>
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -18,24 +18,34 @@
 #include "gpu.h"
 #include "debug.h"
 
-#define CHECK_RESULT(func) if ( EXPECT_FALSE( !func(&gpu) ) ) { destroy_gpu(&gpu); puts("EXIT FAILURE"); return EXIT_FAILURE; }
+
+#define CHECK_RESULT(func)                  \
+	do {                                    \
+		bres = (func)(&gpu);                \
+		if ( EXPECT_FALSE(!bres) ) {        \
+			destroy_gpu(&gpu);              \
+			puts("EXIT FAILURE AT " #func); \
+			return EXIT_FAILURE;            \
+		}                                   \
+	} while (0)
 
 
 int main(int argc, char** argv)
 {
-	Gpu gpu = {0}; // Stack-allocate majority of variables
+	Gpu gpu = {0};
 
-	parse_cmdline(&gpu, argc, argv);
+	bool bres = parse_cmdline(&gpu, argc, argv);
+	if (!bres) { return EXIT_SUCCESS; }
 
-	CHECK_RESULT(create_instance)
-	CHECK_RESULT(select_device)
-	CHECK_RESULT(create_device)
-	CHECK_RESULT(manage_memory)
-	CHECK_RESULT(create_buffers)
-	CHECK_RESULT(create_descriptors)
-	CHECK_RESULT(create_pipeline)
-	CHECK_RESULT(create_commands)
-	CHECK_RESULT(submit_commands)
+	CHECK_RESULT(create_instance);
+	CHECK_RESULT(select_device);
+	CHECK_RESULT(create_device);
+	CHECK_RESULT(manage_memory);
+	CHECK_RESULT(create_buffers);
+	CHECK_RESULT(create_descriptors);
+	CHECK_RESULT(create_pipeline);
+	CHECK_RESULT(create_commands);
+	CHECK_RESULT(submit_commands);
 
 	destroy_gpu(&gpu);
 

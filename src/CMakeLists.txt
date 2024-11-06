@@ -64,6 +64,9 @@ set_target_properties(
 
 target_compile_definitions(CollatzSim
 	PRIVATE
+		COLLATZSIM_VERSION_MAJOR=${CollatzConjectureSimulator_VERSION_MAJOR}
+		COLLATZSIM_VERSION_MINOR=${CollatzConjectureSimulator_VERSION_MINOR}
+		COLLATZSIM_VERSION_PATCH=${CollatzConjectureSimulator_VERSION_PATCH}
 		"$<$<NOT:$<CONFIG:DEBUG>>:NDEBUG=1>"
 )
 
@@ -93,6 +96,7 @@ target_precompile_headers(CollatzSim
 
 		<inttypes.h>
 		<stdalign.h>
+		<stdarg.h>
 		<stdatomic.h>
 		<stdbool.h>
 		<stddef.h>
@@ -105,13 +109,13 @@ target_precompile_headers(CollatzSim
 target_sources(CollatzSim
 	PRIVATE
 		main.c
-		config.c
+		defs.c
 		debug.c
 		dyarray.c
 		gpu.c
 		util.c
 	PRIVATE FILE_SET HEADERS FILES
-		config.h
+		defs.h
 		debug.h
 		dyarray.h
 		gpu.h

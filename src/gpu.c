@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024  Seth McDonald <seth.i.mcdonald@gmail.com>
+ * Copyright (C) 2024 Seth McDonald <seth.i.mcdonald@gmail.com>
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -19,6 +19,19 @@
 #include "debug.h"
 #include "util.h"
 
+
+static inline void print_program(void)
+{
+	printf(
+		"%s %u.%u.%u\n%s\n%s\n\n",
+		PROGRAM_NAME,
+		PROGRAM_VERSION_MAJOR,
+		PROGRAM_VERSION_MINOR,
+		PROGRAM_VERSION_PATCH,
+		PROGRAM_COPYRIGHT,
+		PROGRAM_LICENCE
+	);
+}
 
 static void DyArray_destroy_stub(void* restrict array)
 {
@@ -45,7 +58,7 @@ static void free_recursive(restrict DyArray array)
 }
 
 
-void parse_cmdline(Gpu* restrict gpu, int argc, char** restrict argv)
+bool parse_cmdline(Gpu* restrict gpu, int argc, char** restrict argv)
 {
 	gpu->iterSize  = 128; // The integer size for shaders to use when iterating (must be 128 or 256)
 	gpu->maxMemory = .4f; // Maximum proportion of available GPU heap memory to use
@@ -66,6 +79,8 @@ void parse_cmdline(Gpu* restrict gpu, int argc, char** restrict argv)
 	for (int i = 1; i < argc; i++) {
 		const char* arg = argv[i];
 
+		if (!strcmp(arg, "--version")) { print_program(); return false; }
+
 		if (!strcmp(arg, "--int16"))    { gpu->preferInt16 = true;  continue; }
 		if (!strcmp(arg, "--no-int16")) { gpu->preferInt16 = false; continue; }
 
@@ -78,8 +93,8 @@ void parse_cmdline(Gpu* restrict gpu, int argc, char** restrict argv)
 		if (!strcmp(arg, "--profile-layers"))    { gpu->profileLayers = true;  continue; }
 		if (!strcmp(arg, "--no-profile-layers")) { gpu->profileLayers = false; continue; }
 
-		if (!strcmp(arg, "--validate"))    { gpu->validationLayers = true;  continue; }
-		if (!strcmp(arg, "--no-validate")) { gpu->validationLayers = false; continue; }
+		if (!strcmp(arg, "--validation"))    { gpu->validationLayers = true;  continue; }
+		if (!strcmp(arg, "--no-validation")) { gpu->validationLayers = false; continue; }
 
 		if (!strcmp(arg, "--query-benchmarking"))    { gpu->queryBenchmarking = true;  continue; }
 		if (!strcmp(arg, "--no-query-benchmarking")) { gpu->queryBenchmarking = false; continue; }
@@ -121,6 +136,8 @@ void parse_cmdline(Gpu* restrict gpu, int argc, char** restrict argv)
 
 		printf("Warning: ignoring unknown argument %d '%s'\n", i, arg);
 	}
+
+	return true;
 }
 
 bool create_instance(Gpu* restrict gpu)
@@ -156,11 +173,11 @@ bool create_instance(Gpu* restrict gpu)
 #endif
 
 	uint32_t layerPropertyCount;
-	VK_CALL_RES(vkEnumerateInstanceLayerProperties, &layerPropertyCount, NULL)
+	VK_CALL_RES(vkEnumerateInstanceLayerProperties, &layerPropertyCount, NULL);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	uint32_t extensionPropertyCount;
-	VK_CALL_RES(vkEnumerateInstanceExtensionProperties, NULL, &extensionPropertyCount, NULL)
+	VK_CALL_RES(vkEnumerateInstanceExtensionProperties, NULL, &extensionPropertyCount, NULL);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	size_t size =
@@ -176,10 +193,10 @@ bool create_instance(Gpu* restrict gpu)
 	VkLayerProperties*     layersProperties     = (VkLayerProperties*) p;
 	VkExtensionProperties* extensionsProperties = (VkExtensionProperties*) (layersProperties + layerPropertyCount);
 
-	VK_CALL_RES(vkEnumerateInstanceLayerProperties, &layerPropertyCount, layersProperties)
+	VK_CALL_RES(vkEnumerateInstanceLayerProperties, &layerPropertyCount, layersProperties);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
-	VK_CALL_RES(vkEnumerateInstanceExtensionProperties, NULL, &extensionPropertyCount, extensionsProperties)
+	VK_CALL_RES(vkEnumerateInstanceExtensionProperties, NULL, &extensionPropertyCount, extensionsProperties);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	DyArray enabledLayers = DyArray_create(sizeof(const char*), 4);
@@ -220,7 +237,7 @@ bool create_instance(Gpu* restrict gpu)
 
 #ifndef NDEBUG
 		if (!strcmp(extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
-			PNEXT_ADD(next, debugUtilsMessengerCreateInfo)
+			PNEXT_ADD(next, debugUtilsMessengerCreateInfo);
 			DyArray_append(enabledExtensions, &extensionName);
 			usingDebugUtils = true;
 			continue;
@@ -229,8 +246,9 @@ bool create_instance(Gpu* restrict gpu)
 	}
 
 	VkApplicationInfo applicationInfo = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
-	applicationInfo.pApplicationName = PROGRAM_NAME;
-	applicationInfo.apiVersion       = VK_API_VERSION_1_3;
+	applicationInfo.pApplicationName   = PROGRAM_NAME;
+	applicationInfo.applicationVersion = PROGRAM_VERSION;
+	applicationInfo.apiVersion         = VK_API_VERSION_1_3;
 
 	uint32_t     enabledLayerCount = (uint32_t) DyArray_size(enabledLayers);
 	const char** enabledLayerNames = (const char**) DyArray_raw(enabledLayers);
@@ -260,7 +278,7 @@ bool create_instance(Gpu* restrict gpu)
 	NEWLINE();
 
 	VkInstance instance;
-	VK_CALL_RES(vkCreateInstance, &instanceCreateInfo, g_allocator, &instance)
+	VK_CALL_RES(vkCreateInstance, &instanceCreateInfo, g_allocator, &instance);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	free_recursive(dyMem);
@@ -268,7 +286,7 @@ bool create_instance(Gpu* restrict gpu)
 
 #ifndef NDEBUG
 	if (usingDebugUtils) {
-		VK_CALL_RES(vkCreateDebugUtilsMessengerEXT, instance, &debugUtilsMessengerCreateInfo, g_allocator, &gpu->debugUtilsMessenger)
+		VK_CALL_RES(vkCreateDebugUtilsMessengerEXT, instance, &debugUtilsMessengerCreateInfo, g_allocator, &gpu->debugUtilsMessenger);
 	}
 #endif
 
@@ -286,7 +304,7 @@ bool select_device(Gpu* restrict gpu)
 	if (EXPECT_FALSE(!dyMem)) { return false; }
 
 	uint32_t physicalDeviceCount;
-	VK_CALL_RES(vkEnumeratePhysicalDevices, instance, &physicalDeviceCount, NULL)
+	VK_CALL_RES(vkEnumeratePhysicalDevices, instance, &physicalDeviceCount, NULL);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	if (EXPECT_FALSE(!physicalDeviceCount)) {
@@ -327,16 +345,16 @@ bool select_device(Gpu* restrict gpu)
 	uint32_t* extensionPropertyCounts   = (uint32_t*) (physicalDevices8BitStorageFeatures + physicalDeviceCount);
 	uint32_t* queueFamilyPropertyCounts = (uint32_t*) (extensionPropertyCounts            + physicalDeviceCount);
 
-	VK_CALL_RES(vkEnumeratePhysicalDevices, instance, &physicalDeviceCount, physicalDevices)
+	VK_CALL_RES(vkEnumeratePhysicalDevices, instance, &physicalDeviceCount, physicalDevices);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	size_t queueFamilyTotal = 0;
 	size_t extensionTotal   = 0;
 
 	for (uint32_t i = 0; i < physicalDeviceCount; i++) {
-		VK_CALL(vkGetPhysicalDeviceQueueFamilyProperties2, physicalDevices[i], &queueFamilyPropertyCounts[i], NULL)
+		VK_CALL(vkGetPhysicalDeviceQueueFamilyProperties2, physicalDevices[i], &queueFamilyPropertyCounts[i], NULL);
 
-		VK_CALL_RES(vkEnumerateDeviceExtensionProperties, physicalDevices[i], NULL, &extensionPropertyCounts[i], NULL)
+		VK_CALL_RES(vkEnumerateDeviceExtensionProperties, physicalDevices[i], NULL, &extensionPropertyCounts[i], NULL);
 		if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 		queueFamilyTotal += queueFamilyPropertyCounts[i];
@@ -362,22 +380,22 @@ bool select_device(Gpu* restrict gpu)
 	}
 
 	for (uint32_t i = 0; i < physicalDeviceCount; i++) {
-		VK_CALL_RES(vkEnumerateDeviceExtensionProperties, physicalDevices[i], NULL, &extensionPropertyCounts[i], extensionsProperties[i])
+		VK_CALL_RES(vkEnumerateDeviceExtensionProperties, physicalDevices[i], NULL, &extensionPropertyCounts[i], extensionsProperties[i]);
 		if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 		for (uint32_t j = 0; j < queueFamilyPropertyCounts[i]; j++) {
 			queueFamiliesProperties2[i][j] = (VkQueueFamilyProperties2) {VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2};
 		}
 
-		VK_CALL(vkGetPhysicalDeviceQueueFamilyProperties2, physicalDevices[i], &queueFamilyPropertyCounts[i], queueFamiliesProperties2[i])
+		VK_CALL(vkGetPhysicalDeviceQueueFamilyProperties2, physicalDevices[i], &queueFamilyPropertyCounts[i], queueFamiliesProperties2[i]);
 
 		physicalDevicesMemoryProperties2[i] = (VkPhysicalDeviceMemoryProperties2) {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2};
 
-		VK_CALL(vkGetPhysicalDeviceMemoryProperties2, physicalDevices[i], &physicalDevicesMemoryProperties2[i])
+		VK_CALL(vkGetPhysicalDeviceMemoryProperties2, physicalDevices[i], &physicalDevicesMemoryProperties2[i]);
 
 		physicalDevicesProperties2[i] = (VkPhysicalDeviceProperties2) {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
 
-		VK_CALL(vkGetPhysicalDeviceProperties2, physicalDevices[i], &physicalDevicesProperties2[i])
+		VK_CALL(vkGetPhysicalDeviceProperties2, physicalDevices[i], &physicalDevicesProperties2[i]);
 
 		physicalDevices8BitStorageFeatures[i] = (VkPhysicalDevice8BitStorageFeaturesKHR) {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES_KHR};
 
@@ -387,7 +405,7 @@ bool select_device(Gpu* restrict gpu)
 		physicalDevicesFeatures2[i] = (VkPhysicalDeviceFeatures2) {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
 		physicalDevicesFeatures2[i].pNext = &physicalDevices16BitStorageFeatures[i];
 
-		VK_CALL(vkGetPhysicalDeviceFeatures2, physicalDevices[i], &physicalDevicesFeatures2[i])
+		VK_CALL(vkGetPhysicalDeviceFeatures2, physicalDevices[i], &physicalDevicesFeatures2[i]);
 	}
 
 	uint32_t devIndex     = ~0U; // Physical device index
@@ -521,8 +539,8 @@ bool select_device(Gpu* restrict gpu)
 
 		if (hasDiscreteGpu) { currentScore += 10000; }
 
-		if (gpu->preferInt16 && hasShaderInt16) { currentScore += 1000; }
-		if (gpu->preferInt64 && hasShaderInt64) { currentScore += 1000; }
+		if (hasShaderInt16 && gpu->preferInt16) { currentScore += 1000; }
+		if (hasShaderInt64 && gpu->preferInt64) { currentScore += 1000; }
 
 		if (hasDeviceNonHost) { currentScore += 50; }
 
@@ -794,17 +812,17 @@ bool create_device(Gpu* restrict gpu)
 
 	void** next = &physicalDeviceFeatures2.pNext;
 
-	PNEXT_ADD(next, physicalDeviceSynchronization2Features)
-	PNEXT_ADD(next, physicalDeviceTimelineSemaphoreFeatures)
+	PNEXT_ADD(next, physicalDeviceSynchronization2Features);
+	PNEXT_ADD(next, physicalDeviceTimelineSemaphoreFeatures);
 
-	if (gpu->using8BitStorage)                  { PNEXT_ADD(next, physicalDevice8BitStorageFeatures)                  }
-	if (gpu->using16BitStorage)                 { PNEXT_ADD(next, physicalDevice16BitStorageFeatures)                 }
-	if (gpu->usingBufferDeviceAddress)          { PNEXT_ADD(next, physicalDeviceBufferDeviceAddressFeatures)          }
-	if (gpu->usingMaintenance4)                 { PNEXT_ADD(next, physicalDeviceMaintenance4Features)                 }
-	if (gpu->usingMemoryPriority)               { PNEXT_ADD(next, physicalDeviceMemoryPriorityFeatures)               }
-	if (gpu->usingPipelineCreationCacheControl) { PNEXT_ADD(next, physicalDevicePipelineCreationCacheControlFeatures) }
-	if (gpu->usingPipelineExecutableProperties) { PNEXT_ADD(next, physicalDevicePipelineExecutablePropertiesFeatures) }
-	if (gpu->usingSubgroupSizeControl)          { PNEXT_ADD(next, physicalDeviceSubgroupSizeControlFeatures)          }
+	if (gpu->using8BitStorage)                  { PNEXT_ADD(next, physicalDevice8BitStorageFeatures);                  }
+	if (gpu->using16BitStorage)                 { PNEXT_ADD(next, physicalDevice16BitStorageFeatures);                 }
+	if (gpu->usingBufferDeviceAddress)          { PNEXT_ADD(next, physicalDeviceBufferDeviceAddressFeatures);          }
+	if (gpu->usingMaintenance4)                 { PNEXT_ADD(next, physicalDeviceMaintenance4Features);                 }
+	if (gpu->usingMemoryPriority)               { PNEXT_ADD(next, physicalDeviceMemoryPriorityFeatures);               }
+	if (gpu->usingPipelineCreationCacheControl) { PNEXT_ADD(next, physicalDevicePipelineCreationCacheControlFeatures); }
+	if (gpu->usingPipelineExecutableProperties) { PNEXT_ADD(next, physicalDevicePipelineExecutablePropertiesFeatures); }
+	if (gpu->usingSubgroupSizeControl)          { PNEXT_ADD(next, physicalDeviceSubgroupSizeControlFeatures);          }
 
 	// CPU spends more time waiting for compute operations than transfer operations
 	// So compute queue has higher priority to potentially reduce this wait time
@@ -838,7 +856,7 @@ bool create_device(Gpu* restrict gpu)
 	}
 	NEWLINE();
 
-	VK_CALL_RES(vkCreateDevice, physicalDevice, &deviceCreateInfo, g_allocator, &gpu->device)
+	VK_CALL_RES(vkCreateDevice, physicalDevice, &deviceCreateInfo, g_allocator, &gpu->device);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	VkDevice device = gpu->device;
@@ -855,8 +873,8 @@ bool create_device(Gpu* restrict gpu)
 	computeDeviceQueueInfo2.queueFamilyIndex = computeQueueFamilyIndex;
 	computeDeviceQueueInfo2.queueIndex       = 0;
 
-	VK_CALL(vkGetDeviceQueue2, device, &transferDeviceQueueInfo2, &gpu->transferQueue)
-	VK_CALL(vkGetDeviceQueue2, device, &computeDeviceQueueInfo2,  &gpu->computeQueue)
+	VK_CALL(vkGetDeviceQueue2, device, &transferDeviceQueueInfo2, &gpu->transferQueue);
+	VK_CALL(vkGetDeviceQueue2, device, &computeDeviceQueueInfo2,  &gpu->computeQueue);
 
 #ifndef NDEBUG
 	if(gpu->debugUtilsMessenger) {
@@ -888,14 +906,14 @@ bool manage_memory(Gpu* restrict gpu)
 	VkPhysicalDeviceProperties2 physicalDeviceProperties2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
 	physicalDeviceProperties2.pNext = &physicalDeviceMaintenance3Properties;
 
-	VK_CALL(vkGetPhysicalDeviceProperties2, physicalDevice, &physicalDeviceProperties2)
+	VK_CALL(vkGetPhysicalDeviceProperties2, physicalDevice, &physicalDeviceProperties2);
 
 	VkPhysicalDeviceMemoryBudgetPropertiesEXT physicalDeviceMemoryBudgetProperties = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT};
 
 	VkPhysicalDeviceMemoryProperties2 physicalDeviceMemoryProperties2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2};
 	physicalDeviceMemoryProperties2.pNext = gpu->usingMemoryBudget ? &physicalDeviceMemoryBudgetProperties : NULL;
 
-	VK_CALL(vkGetPhysicalDeviceMemoryProperties2, physicalDevice, &physicalDeviceMemoryProperties2)
+	VK_CALL(vkGetPhysicalDeviceMemoryProperties2, physicalDevice, &physicalDeviceMemoryProperties2);
 
 	VkDeviceSize maxMemoryAllocationSize = physicalDeviceMaintenance3Properties.maxMemoryAllocationSize;
 	VkDeviceSize maxBufferSize           = gpu->usingMaintenance4 ? physicalDeviceMaintenance4Properties.maxBufferSize : maxMemoryAllocationSize;
@@ -1004,15 +1022,14 @@ bool manage_memory(Gpu* restrict gpu)
 	VkDeviceSize bytesPerHostVisibleHeap = gpu->usingMemoryBudget ? hostVisibleHeapBudget : hostVisibleHeapSize;
 	VkDeviceSize bytesPerDeviceLocalHeap = gpu->usingMemoryBudget ? deviceLocalHeapBudget : deviceLocalHeapSize;
 
-	VkDeviceSize bytesPerHeap = bytesPerHostVisibleHeap < bytesPerDeviceLocalHeap ? bytesPerHostVisibleHeap : bytesPerDeviceLocalHeap;
+	VkDeviceSize bytesPerHeap = minu64(bytesPerHostVisibleHeap, bytesPerDeviceLocalHeap);
 	bytesPerHeap = (VkDeviceSize) ((float) bytesPerHeap * gpu->maxMemory);
 
 	if (deviceLocalHeapIndex == hostVisibleHeapIndex) {
 		bytesPerHeap /= 2;
 	}
 
-	VkDeviceSize bytesPerBuffer = maxMemoryAllocationSize < maxBufferSize ? maxMemoryAllocationSize : maxBufferSize;
-	bytesPerBuffer = bytesPerHeap < bytesPerBuffer ? bytesPerHeap : bytesPerBuffer;
+	VkDeviceSize bytesPerBuffer = minu64v(3, maxMemoryAllocationSize, maxBufferSize, bytesPerHeap);
 
 	uint32_t buffersPerHeap = (uint32_t) (bytesPerHeap / bytesPerBuffer);
 
@@ -1031,15 +1048,14 @@ bool manage_memory(Gpu* restrict gpu)
 	}
 
 	uint32_t workgroupSize  = floor_pow2(maxComputeWorkGroupSize);
-	uint32_t workgroupCount = (uint32_t) (maxStorageBufferRange / (workgroupSize * sizeof(Value)));
-	workgroupCount = maxComputeWorkGroupCount < workgroupCount ? maxComputeWorkGroupCount : workgroupCount;
+	uint32_t workgroupCount = minu32(maxComputeWorkGroupCount, (uint32_t) (maxStorageBufferRange / (workgroupSize * sizeof(Value))));
 
 	uint32_t     valuesPerInout  = workgroupSize * workgroupCount;
-	VkDeviceSize bytesPerInout   = valuesPerInout * (sizeof(Value) + sizeof(Steps));
+	VkDeviceSize bytesPerInout   = valuesPerInout * (sizeof(Value) + sizeof(Count));
 	uint32_t     inoutsPerBuffer = (uint32_t) (bytesPerBuffer / bytesPerInout);
 
-	if (bytesPerBuffer % bytesPerInout > inoutsPerBuffer * workgroupSize * (sizeof(Value) + sizeof(Steps))) {
-		uint32_t excessValues = valuesPerInout - (uint32_t) (bytesPerBuffer % bytesPerInout / (sizeof(Value) + sizeof(Steps)));
+	if (bytesPerBuffer % bytesPerInout > inoutsPerBuffer * workgroupSize * (sizeof(Value) + sizeof(Count))) {
+		uint32_t excessValues = valuesPerInout - (uint32_t) (bytesPerBuffer % bytesPerInout / (sizeof(Value) + sizeof(Count)));
 
 		inoutsPerBuffer++;
 		valuesPerInout -= excessValues / inoutsPerBuffer;
@@ -1059,7 +1075,7 @@ bool manage_memory(Gpu* restrict gpu)
 	}
 
 	VkDeviceSize bytesPerIn  = valuesPerInout * sizeof(Value);
-	VkDeviceSize bytesPerOut = valuesPerInout * sizeof(Steps);
+	VkDeviceSize bytesPerOut = valuesPerInout * sizeof(Count);
 
 	bytesPerInout  = bytesPerIn + bytesPerOut;
 	bytesPerBuffer = bytesPerInout * inoutsPerBuffer;
@@ -1145,7 +1161,7 @@ bool manage_memory(Gpu* restrict gpu)
 
 	size_t size =
 		inoutsPerHeap      * sizeof(Value*) +
-		inoutsPerHeap      * sizeof(Steps*) +
+		inoutsPerHeap      * sizeof(Count*) +
 		buffersPerHeap * 2 * sizeof(VkBuffer) +
 		buffersPerHeap * 2 * sizeof(VkDeviceMemory) +
 		inoutsPerHeap      * sizeof(VkDescriptorSet) +
@@ -1156,7 +1172,7 @@ bool manage_memory(Gpu* restrict gpu)
 	if (EXPECT_FALSE(!gpu->dynamicMemory)) { CALLOC_FAILURE(gpu->dynamicMemory, size, sizeof(char)); return false; }
 
 	gpu->mappedInBuffers  = (Value**) gpu->dynamicMemory;
-	gpu->mappedOutBuffers = (Steps**) (gpu->mappedInBuffers + inoutsPerHeap);
+	gpu->mappedOutBuffers = (Count**) (gpu->mappedInBuffers + inoutsPerHeap);
 
 	gpu->hostVisibleBuffers = (VkBuffer*) (gpu->mappedOutBuffers   + inoutsPerHeap);
 	gpu->deviceLocalBuffers = (VkBuffer*) (gpu->hostVisibleBuffers + buffersPerHeap);
@@ -1181,7 +1197,7 @@ bool create_buffers(Gpu* restrict gpu)
 	VkDeviceMemory* hostVisibleDeviceMemories = gpu->hostVisibleDeviceMemories;
 	VkDeviceMemory* deviceLocalDeviceMemories = gpu->deviceLocalDeviceMemories;
 	Value**         mappedInBuffers           = gpu->mappedInBuffers;
-	Steps**         mappedOutBuffers          = gpu->mappedOutBuffers;
+	Count**         mappedOutBuffers          = gpu->mappedOutBuffers;
 
 	VkDevice device = gpu->device;
 
@@ -1231,10 +1247,10 @@ bool create_buffers(Gpu* restrict gpu)
 	deviceLocalBufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
-		VK_CALL_RES(vkCreateBuffer, device, &hostVisibleBufferCreateInfo, g_allocator, &hostVisibleBuffers[i])
+		VK_CALL_RES(vkCreateBuffer, device, &hostVisibleBufferCreateInfo, g_allocator, &hostVisibleBuffers[i]);
 		if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
-		VK_CALL_RES(vkCreateBuffer, device, &deviceLocalBufferCreateInfo, g_allocator, &deviceLocalBuffers[i])
+		VK_CALL_RES(vkCreateBuffer, device, &deviceLocalBufferCreateInfo, g_allocator, &deviceLocalBuffers[i]);
 		if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 	}
 
@@ -1265,10 +1281,10 @@ bool create_buffers(Gpu* restrict gpu)
 	}
 
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
-		VK_CALL_RES(vkAllocateMemory, device, &hostVisibleMemoryAllocateInfos[i], g_allocator, &hostVisibleDeviceMemories[i])
+		VK_CALL_RES(vkAllocateMemory, device, &hostVisibleMemoryAllocateInfos[i], g_allocator, &hostVisibleDeviceMemories[i]);
 		if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
-		VK_CALL_RES(vkAllocateMemory, device, &deviceLocalMemoryAllocateInfos[i], g_allocator, &deviceLocalDeviceMemories[i])
+		VK_CALL_RES(vkAllocateMemory, device, &deviceLocalMemoryAllocateInfos[i], g_allocator, &deviceLocalDeviceMemories[i]);
 		if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 	}
 
@@ -1282,19 +1298,19 @@ bool create_buffers(Gpu* restrict gpu)
 		bindBufferMemoryInfos[i][1].memory = deviceLocalDeviceMemories[i];
 	}
 
-	VK_CALL_RES(vkBindBufferMemory2, device, buffersPerHeap * 2, (VkBindBufferMemoryInfo*) bindBufferMemoryInfos)
+	VK_CALL_RES(vkBindBufferMemory2, device, buffersPerHeap * 2, (VkBindBufferMemoryInfo*) bindBufferMemoryInfos);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
-		VK_CALL_RES(vkMapMemory, device, hostVisibleDeviceMemories[i], 0, bytesPerHostVisibleMemory, 0, (void**) &mappedInBuffers[j])
+		VK_CALL_RES(vkMapMemory, device, hostVisibleDeviceMemories[i], 0, bytesPerHostVisibleMemory, 0, (void**) &mappedInBuffers[j]);
 		if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
-		mappedOutBuffers[j] = (Steps*) (mappedInBuffers[j] + valuesPerInout);
+		mappedOutBuffers[j] = (Count*) (mappedInBuffers[j] + valuesPerInout);
 		j++;
 
 		for (uint32_t k = 1; k < inoutsPerBuffer; j++, k++) {
-			mappedInBuffers[j]  = mappedInBuffers[j - 1]  + valuesPerInout + valuesPerInout * sizeof(Steps) / sizeof(Value);
-			mappedOutBuffers[j] = mappedOutBuffers[j - 1] + valuesPerInout + valuesPerInout * sizeof(Value) / sizeof(Steps);
+			mappedInBuffers[j]  = mappedInBuffers[j - 1]  + valuesPerInout + valuesPerInout * sizeof(Count) / sizeof(Value);
+			mappedOutBuffers[j] = mappedOutBuffers[j - 1] + valuesPerInout + valuesPerInout * sizeof(Value) / sizeof(Count);
 		}
 	}
 
@@ -1386,10 +1402,10 @@ bool create_descriptors(Gpu* restrict gpu)
 	descriptorPoolCreateInfo.poolSizeCount = ARR_SIZE(descriptorPoolSizes);
 	descriptorPoolCreateInfo.pPoolSizes    = descriptorPoolSizes;
 
-	VK_CALL_RES(vkCreateDescriptorSetLayout, device, &descriptorSetLayoutCreateInfo, g_allocator, &gpu->descriptorSetLayout)
+	VK_CALL_RES(vkCreateDescriptorSetLayout, device, &descriptorSetLayoutCreateInfo, g_allocator, &gpu->descriptorSetLayout);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
-	VK_CALL_RES(vkCreateDescriptorPool, device, &descriptorPoolCreateInfo, g_allocator, &gpu->descriptorPool)
+	VK_CALL_RES(vkCreateDescriptorPool, device, &descriptorPoolCreateInfo, g_allocator, &gpu->descriptorPool);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	VkDescriptorSetLayout descriptorSetLayout = gpu->descriptorSetLayout;
@@ -1404,7 +1420,7 @@ bool create_descriptors(Gpu* restrict gpu)
 	descriptorSetAllocateInfo.descriptorSetCount = inoutsPerHeap;
 	descriptorSetAllocateInfo.pSetLayouts        = descriptorSetLayouts;
 
-	VK_CALL_RES(vkAllocateDescriptorSets, device, &descriptorSetAllocateInfo, descriptorSets)
+	VK_CALL_RES(vkAllocateDescriptorSets, device, &descriptorSetAllocateInfo, descriptorSets);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
@@ -1427,7 +1443,7 @@ bool create_descriptors(Gpu* restrict gpu)
 		}
 	}
 
-	VK_CALL(vkUpdateDescriptorSets, device, inoutsPerHeap, writeDescriptorSets, 0, NULL)
+	VK_CALL(vkUpdateDescriptorSets, device, inoutsPerHeap, writeDescriptorSets, 0, NULL);
 
 	free_recursive(dyMem);
 
@@ -1459,8 +1475,6 @@ bool create_pipeline(Gpu* restrict gpu)
 	uint32_t transferQueueTimestampValidBits = gpu->transferQueueTimestampValidBits;
 	uint32_t computeQueueTimestampValidBits  = gpu->computeQueueTimestampValidBits;
 
-	int iterSize = gpu->iterSize;
-
 	VkResult vkres;
 
 	DyData dyData;
@@ -1475,15 +1489,24 @@ bool create_pipeline(Gpu* restrict gpu)
 	else                         { strcat(shaderName, "v13/spirv"); }
 
 	if (gpu->using16BitStorage)                    { strcat(shaderName, "-sto16"); }
-	if (gpu->preferInt16 && gpu->usingShaderInt16) { strcat(shaderName, "-int16"); }
-	if (gpu->preferInt64 && gpu->usingShaderInt64) { strcat(shaderName, "-int64"); }
+	if (gpu->usingShaderInt16 && gpu->preferInt16) { strcat(shaderName, "-int16"); }
+	if (gpu->usingShaderInt64 && gpu->preferInt64) { strcat(shaderName, "-int64"); }
 
 	strcat(shaderName, ".spv");
 
-	char entryPointName[8] = "main";
+	char entryPointName[11] = "main";
 
-	if      (iterSize == 128) { strcat(entryPointName, "128"); }
-	else if (iterSize == 256) { strcat(entryPointName, "256"); }
+	switch (get_endianness()) {
+		case ENDIANNESS_BIG:    strcat(entryPointName, "_0"); break;
+		case ENDIANNESS_LITTLE: strcat(entryPointName, "_1"); break;
+		default: break;
+	}
+
+	switch (gpu->iterSize) {
+		case 128: strcat(entryPointName, "_128"); break;
+		case 256: strcat(entryPointName, "_256"); break;
+		default: break;
+	}
 
 	printf("Selected shader: %s\nSelected entry point: %s\n\n", shaderName, entryPointName);
 
@@ -1527,20 +1550,20 @@ bool create_pipeline(Gpu* restrict gpu)
 	pipelineLayoutCreateInfo.setLayoutCount = 1;
 	pipelineLayoutCreateInfo.pSetLayouts    = &descriptorSetLayout;
 
-	VK_CALL_RES(vkCreateShaderModule, device, &shaderModuleCreateInfo, g_allocator, &gpu->shaderModule)
+	VK_CALL_RES(vkCreateShaderModule, device, &shaderModuleCreateInfo, g_allocator, &gpu->shaderModule);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
-	VK_CALL_RES(vkCreatePipelineCache, device, &pipelineCacheCreateInfo, g_allocator, &gpu->pipelineCache)
+	VK_CALL_RES(vkCreatePipelineCache, device, &pipelineCacheCreateInfo, g_allocator, &gpu->pipelineCache);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
-	VK_CALL_RES(vkCreatePipelineLayout, device, &pipelineLayoutCreateInfo, g_allocator, &gpu->pipelineLayout)
+	VK_CALL_RES(vkCreatePipelineLayout, device, &pipelineLayoutCreateInfo, g_allocator, &gpu->pipelineLayout);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	VkShaderModule   shaderModule   = gpu->shaderModule;
 	VkPipelineCache  pipelineCache  = gpu->pipelineCache;
 	VkPipelineLayout pipelineLayout = gpu->pipelineLayout;
 
-	VK_CALL(vkDestroyDescriptorSetLayout, device, descriptorSetLayout, g_allocator)
+	VK_CALL(vkDestroyDescriptorSetLayout, device, descriptorSetLayout, g_allocator);
 	gpu->descriptorSetLayout = VK_NULL_HANDLE;
 
 	uint32_t specialisationData[1];
@@ -1569,13 +1592,13 @@ bool create_pipeline(Gpu* restrict gpu)
 	computePipelineCreateInfo.stage  = pipelineShaderStageCreateInfo;
 	computePipelineCreateInfo.layout = pipelineLayout;
 
-	VK_CALL_RES(vkCreateComputePipelines, device, pipelineCache, 1, &computePipelineCreateInfo, g_allocator, &gpu->pipeline)
+	VK_CALL_RES(vkCreateComputePipelines, device, pipelineCache, 1, &computePipelineCreateInfo, g_allocator, &gpu->pipeline);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
-	VK_CALL(vkDestroyShaderModule, device, shaderModule, g_allocator)
+	VK_CALL(vkDestroyShaderModule, device, shaderModule, g_allocator);
 	gpu->shaderModule = VK_NULL_HANDLE;
 
-	VK_CALL_RES(vkGetPipelineCacheData, device, pipelineCache, &cacheSize, NULL)
+	VK_CALL_RES(vkGetPipelineCacheData, device, pipelineCache, &cacheSize, NULL);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	p = malloc(cacheSize);
@@ -1586,13 +1609,13 @@ bool create_pipeline(Gpu* restrict gpu)
 
 	cacheData = p;
 
-	VK_CALL_RES(vkGetPipelineCacheData, device, pipelineCache, &cacheSize, cacheData)
+	VK_CALL_RES(vkGetPipelineCacheData, device, pipelineCache, &cacheSize, cacheData);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	bres = write_file(PIPELINE_CACHE_NAME, cacheData, cacheSize);
 	if (EXPECT_FALSE(!bres)) { free_recursive(dyMem); return false; }
 
-	VK_CALL(vkDestroyPipelineCache, device, pipelineCache, g_allocator)
+	VK_CALL(vkDestroyPipelineCache, device, pipelineCache, g_allocator);
 	gpu->pipelineCache = VK_NULL_HANDLE;
 
 	if (transferQueueTimestampValidBits || computeQueueTimestampValidBits) {
@@ -1600,11 +1623,14 @@ bool create_pipeline(Gpu* restrict gpu)
 		queryPoolCreateInfo.queryType  = VK_QUERY_TYPE_TIMESTAMP;
 		queryPoolCreateInfo.queryCount = inoutsPerHeap * 4;
 
-		VK_CALL_RES(vkCreateQueryPool, device, &queryPoolCreateInfo, g_allocator, &gpu->queryPool)
+		VK_CALL_RES(vkCreateQueryPool, device, &queryPoolCreateInfo, g_allocator, &gpu->queryPool);
 		if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 	}
 
-	if (!gpu->usingPipelineExecutableProperties) { free_recursive(dyMem); return true; }
+	if (!gpu->usingPipelineExecutableProperties) {
+		free_recursive(dyMem);
+		return true;
+	}
 
 	VkPipeline pipeline = gpu->pipeline;
 
@@ -1615,7 +1641,7 @@ bool create_pipeline(Gpu* restrict gpu)
 
 	VkPipelineExecutablePropertiesKHR pipelineExecutableProperties = {VK_STRUCTURE_TYPE_PIPELINE_EXECUTABLE_PROPERTIES_KHR};
 
-	VK_CALL_RES(vkGetPipelineExecutablePropertiesKHR, device, &pipelineInfo, &executableCount, &pipelineExecutableProperties)
+	VK_CALL_RES(vkGetPipelineExecutablePropertiesKHR, device, &pipelineInfo, &executableCount, &pipelineExecutableProperties);
 	if (EXPECT_FALSE(vkres || executableCount != 1)) { free_recursive(dyMem); return false; }
 
 	printf(
@@ -1636,7 +1662,7 @@ bool create_pipeline(Gpu* restrict gpu)
 
 	uint32_t statisticCount;
 
-	VK_CALL_RES(vkGetPipelineExecutableStatisticsKHR, device, &pipelineExecutableInfo, &statisticCount, NULL)
+	VK_CALL_RES(vkGetPipelineExecutableStatisticsKHR, device, &pipelineExecutableInfo, &statisticCount, NULL);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	size = statisticCount * sizeof(VkPipelineExecutableStatisticKHR);
@@ -1653,7 +1679,7 @@ bool create_pipeline(Gpu* restrict gpu)
 		pipelineExecutableStatistics[i] = (VkPipelineExecutableStatisticKHR) {VK_STRUCTURE_TYPE_PIPELINE_EXECUTABLE_STATISTIC_KHR};
 	}
 
-	VK_CALL_RES(vkGetPipelineExecutableStatisticsKHR, device, &pipelineExecutableInfo, &statisticCount, pipelineExecutableStatistics)
+	VK_CALL_RES(vkGetPipelineExecutableStatisticsKHR, device, &pipelineExecutableInfo, &statisticCount, pipelineExecutableStatistics);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	for (uint32_t i = 0; i < statisticCount; i++) {
@@ -1748,13 +1774,13 @@ bool create_commands(Gpu* restrict gpu)
 	VkCommandPoolCreateInfo computeCommandPoolCreateInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
 	computeCommandPoolCreateInfo.queueFamilyIndex = computeQueueFamilyIndex;
 
-	VK_CALL_RES(vkCreateCommandPool, device, &onetimeCommandPoolCreateInfo, g_allocator, &gpu->onetimeCommandPool)
+	VK_CALL_RES(vkCreateCommandPool, device, &onetimeCommandPoolCreateInfo, g_allocator, &gpu->onetimeCommandPool);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
-	VK_CALL_RES(vkCreateCommandPool, device, &transferCommandPoolCreateInfo, g_allocator, &gpu->transferCommandPool)
+	VK_CALL_RES(vkCreateCommandPool, device, &transferCommandPoolCreateInfo, g_allocator, &gpu->transferCommandPool);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
-	VK_CALL_RES(vkCreateCommandPool, device, &computeCommandPoolCreateInfo, g_allocator, &gpu->computeCommandPool)
+	VK_CALL_RES(vkCreateCommandPool, device, &computeCommandPoolCreateInfo, g_allocator, &gpu->computeCommandPool);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	VkCommandPool onetimeCommandPool  = gpu->onetimeCommandPool;
@@ -1776,13 +1802,13 @@ bool create_commands(Gpu* restrict gpu)
 	computeCommandBufferAllocateInfo.commandPool        = computeCommandPool;
 	computeCommandBufferAllocateInfo.commandBufferCount = inoutsPerHeap;
 
-	VK_CALL_RES(vkAllocateCommandBuffers, device, &onetimeCommandBufferAllocateInfo, &gpu->onetimeCommandBuffer)
+	VK_CALL_RES(vkAllocateCommandBuffers, device, &onetimeCommandBufferAllocateInfo, &gpu->onetimeCommandBuffer);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
-	VK_CALL_RES(vkAllocateCommandBuffers, device, &transferCommandBufferAllocateInfo, transferCommandBuffers)
+	VK_CALL_RES(vkAllocateCommandBuffers, device, &transferCommandBufferAllocateInfo, transferCommandBuffers);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
-	VK_CALL_RES(vkAllocateCommandBuffers, device, &computeCommandBufferAllocateInfo, computeCommandBuffers)
+	VK_CALL_RES(vkAllocateCommandBuffers, device, &computeCommandBufferAllocateInfo, computeCommandBuffers);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	VkCommandBuffer onetimeCommandBuffer = gpu->onetimeCommandBuffer;
@@ -1882,78 +1908,78 @@ bool create_commands(Gpu* restrict gpu)
 
 	VkCommandBufferBeginInfo computeCommandBufferBeginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
 
-	VK_CALL_RES(vkBeginCommandBuffer, onetimeCommandBuffer, &onetimeCommandBufferBeginInfo)
+	VK_CALL_RES(vkBeginCommandBuffer, onetimeCommandBuffer, &onetimeCommandBufferBeginInfo);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
-		VK_CALL(vkCmdCopyBuffer, onetimeCommandBuffer, hostVisibleBuffers[i], deviceLocalBuffers[i], inoutsPerBuffer, inBufferCopies)
+		VK_CALL(vkCmdCopyBuffer, onetimeCommandBuffer, hostVisibleBuffers[i], deviceLocalBuffers[i], inoutsPerBuffer, inBufferCopies);
 	}
 
 	if (transferQueueFamilyIndex != computeQueueFamilyIndex) {
-		VK_CALL(vkCmdPipelineBarrier2KHR, onetimeCommandBuffer, &onetimeDependencyInfo)
+		VK_CALL(vkCmdPipelineBarrier2KHR, onetimeCommandBuffer, &onetimeDependencyInfo);
 	}
 
-	VK_CALL_RES(vkEndCommandBuffer, onetimeCommandBuffer)
+	VK_CALL_RES(vkEndCommandBuffer, onetimeCommandBuffer);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
-			VK_CALL_RES(vkBeginCommandBuffer, transferCommandBuffers[j], &transferCommandBufferBeginInfo)
+			VK_CALL_RES(vkBeginCommandBuffer, transferCommandBuffers[j], &transferCommandBufferBeginInfo);
 			if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 			if (transferQueueTimestampValidBits) {
-				VK_CALL(vkCmdResetQueryPool, transferCommandBuffers[j], queryPool, j * 4, 2)
-				VK_CALL(vkCmdWriteTimestamp2KHR, transferCommandBuffers[j], VK_PIPELINE_STAGE_2_NONE_KHR, queryPool, j * 4)
+				VK_CALL(vkCmdResetQueryPool, transferCommandBuffers[j], queryPool, j * 4, 2);
+				VK_CALL(vkCmdWriteTimestamp2KHR, transferCommandBuffers[j], VK_PIPELINE_STAGE_2_NONE_KHR, queryPool, j * 4);
 			}
 
-			VK_CALL(vkCmdCopyBuffer, transferCommandBuffers[j], hostVisibleBuffers[i], deviceLocalBuffers[i], 1, &inBufferCopies[k])
+			VK_CALL(vkCmdCopyBuffer, transferCommandBuffers[j], hostVisibleBuffers[i], deviceLocalBuffers[i], 1, &inBufferCopies[k]);
 
 			if (transferQueueFamilyIndex != computeQueueFamilyIndex) {
-				VK_CALL(vkCmdPipelineBarrier2KHR, transferCommandBuffers[j], &transferDependencyInfos[j][0])
+				VK_CALL(vkCmdPipelineBarrier2KHR, transferCommandBuffers[j], &transferDependencyInfos[j][0]);
 			}
 
-			VK_CALL(vkCmdCopyBuffer, transferCommandBuffers[j], deviceLocalBuffers[i], hostVisibleBuffers[i], 1, &outBufferCopies[k])
+			VK_CALL(vkCmdCopyBuffer, transferCommandBuffers[j], deviceLocalBuffers[i], hostVisibleBuffers[i], 1, &outBufferCopies[k]);
 
-			VK_CALL(vkCmdPipelineBarrier2KHR, transferCommandBuffers[j], &transferDependencyInfos[j][1])
+			VK_CALL(vkCmdPipelineBarrier2KHR, transferCommandBuffers[j], &transferDependencyInfos[j][1]);
 
 			if (transferQueueTimestampValidBits) {
-				VK_CALL(vkCmdWriteTimestamp2KHR, transferCommandBuffers[j], VK_PIPELINE_STAGE_2_COPY_BIT_KHR, queryPool, j * 4 + 1)
+				VK_CALL(vkCmdWriteTimestamp2KHR, transferCommandBuffers[j], VK_PIPELINE_STAGE_2_COPY_BIT_KHR, queryPool, j * 4 + 1);
 			}
 
-			VK_CALL_RES(vkEndCommandBuffer, transferCommandBuffers[j])
+			VK_CALL_RES(vkEndCommandBuffer, transferCommandBuffers[j]);
 			if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
-			VK_CALL_RES(vkBeginCommandBuffer, computeCommandBuffers[j], &computeCommandBufferBeginInfo)
+			VK_CALL_RES(vkBeginCommandBuffer, computeCommandBuffers[j], &computeCommandBufferBeginInfo);
 			if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 			if (computeQueueTimestampValidBits) {
-				VK_CALL(vkCmdResetQueryPool, computeCommandBuffers[j], queryPool, j * 4 + 2, 2)
-				VK_CALL(vkCmdWriteTimestamp2KHR, computeCommandBuffers[j], VK_PIPELINE_STAGE_2_NONE_KHR, queryPool, j * 4 + 2)
+				VK_CALL(vkCmdResetQueryPool, computeCommandBuffers[j], queryPool, j * 4 + 2, 2);
+				VK_CALL(vkCmdWriteTimestamp2KHR, computeCommandBuffers[j], VK_PIPELINE_STAGE_2_NONE_KHR, queryPool, j * 4 + 2);
 			}
 
 			if (transferQueueFamilyIndex != computeQueueFamilyIndex) {
-				VK_CALL(vkCmdPipelineBarrier2KHR, computeCommandBuffers[j], &computeDependencyInfos[j][0])
+				VK_CALL(vkCmdPipelineBarrier2KHR, computeCommandBuffers[j], &computeDependencyInfos[j][0]);
 			}
 
-			VK_CALL(vkCmdBindDescriptorSets, computeCommandBuffers[j], VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout, 0, 1, &descriptorSets[j], 0, NULL)
-			VK_CALL(vkCmdBindPipeline, computeCommandBuffers[j], VK_PIPELINE_BIND_POINT_COMPUTE, pipeline)
-			VK_CALL(vkCmdDispatchBase, computeCommandBuffers[j], 0, 0, 0, workgroupCount, 1, 1)
+			VK_CALL(vkCmdBindDescriptorSets, computeCommandBuffers[j], VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout, 0, 1, &descriptorSets[j], 0, NULL);
+			VK_CALL(vkCmdBindPipeline, computeCommandBuffers[j], VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+			VK_CALL(vkCmdDispatchBase, computeCommandBuffers[j], 0, 0, 0, workgroupCount, 1, 1);
 
 			if (transferQueueFamilyIndex != computeQueueFamilyIndex) {
-				VK_CALL(vkCmdPipelineBarrier2KHR, computeCommandBuffers[j], &computeDependencyInfos[j][1])
+				VK_CALL(vkCmdPipelineBarrier2KHR, computeCommandBuffers[j], &computeDependencyInfos[j][1]);
 			}
 
 			if (computeQueueTimestampValidBits) {
-				VK_CALL(vkCmdWriteTimestamp2KHR, computeCommandBuffers[j], VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR, queryPool, j * 4 + 3)
+				VK_CALL(vkCmdWriteTimestamp2KHR, computeCommandBuffers[j], VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR, queryPool, j * 4 + 3);
 			}
 
-			VK_CALL_RES(vkEndCommandBuffer, computeCommandBuffers[j])
+			VK_CALL_RES(vkEndCommandBuffer, computeCommandBuffers[j]);
 			if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 		}
 	}
 
 	if (gpu->usingMaintenance4) {
-		VK_CALL(vkDestroyPipelineLayout, device, pipelineLayout, g_allocator)
+		VK_CALL(vkDestroyPipelineLayout, device, pipelineLayout, g_allocator);
 		gpu->pipelineLayout = VK_NULL_HANDLE;
 	}
 
@@ -1965,7 +1991,7 @@ bool create_commands(Gpu* restrict gpu)
 	semaphoreCreateInfo.pNext = &semaphoreTypeCreateInfo;
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
-		VK_CALL_RES(vkCreateSemaphore, device, &semaphoreCreateInfo, g_allocator, &semaphores[i])
+		VK_CALL_RES(vkCreateSemaphore, device, &semaphoreCreateInfo, g_allocator, &semaphores[i]);
 		if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 	}
 
@@ -2011,7 +2037,7 @@ bool submit_commands(Gpu* restrict gpu)
 	const VkSemaphore*     semaphores                = gpu->semaphores;
 
 	Value*       const* mappedInBuffers  = gpu->mappedInBuffers;
-	const Steps* const* mappedOutBuffers = (const Steps* const*) gpu->mappedOutBuffers;
+	const Count* const* mappedOutBuffers = (const Count* const*) gpu->mappedOutBuffers;
 
 	VkDevice device        = gpu->device;
 	VkQueue  transferQueue = gpu->transferQueue;
@@ -2082,7 +2108,7 @@ bool submit_commands(Gpu* restrict gpu)
 	dyData = (DyData) {highestStepValues, DyArray_destroy_stub};
 	DyArray_append(dyMem, &dyData);
 
-	DyArray highestStepCounts = DyArray_create(sizeof(Steps), 64);
+	DyArray highestStepCounts = DyArray_create(sizeof(Count), 64);
 	if (EXPECT_FALSE(!highestStepCounts)) { free_recursive(dyMem); return false; }
 
 	dyData = (DyData) {highestStepCounts, DyArray_destroy_stub};
@@ -2095,14 +2121,14 @@ bool submit_commands(Gpu* restrict gpu)
 	ValueInfo prevValues;
 
 	if (!gpu->restartCount && fileSize) {
-		char buf[sizeof(Value) * 2 * 7 + sizeof(Steps) * 2 * 1 + 1];
+		char buf[sizeof(Value) * 2 * 7 + sizeof(Count) * 2 * 1 + 1];
 		char* pos = buf + sizeof(buf) - 1;
 
 		read_file(PROGRESS_NAME, buf, sizeof(buf) - 1);
 		if (EXPECT_FALSE(!bres)) { free_recursive(dyMem); return false; }
 
 		*pos = '\0';
-		pos -= sizeof(Steps) * 2;
+		pos -= sizeof(Count) * 2;
 		unsigned long curCount = strtoul(pos, NULL, 16);
 
 		*pos = '\0';
@@ -2154,19 +2180,21 @@ bool submit_commands(Gpu* restrict gpu)
 		pos -= sizeof(uint64_t) * 2;
 		unsigned long long val0mod1off2Upper = strtoull(pos, NULL, 16);
 
-		prevValues.val0mod1off2 = INT128(val0mod1off2Upper, val0mod1off2Lower);
-		prevValues.val0mod1off1 = INT128(val0mod1off1Upper, val0mod1off1Lower);
-		prevValues.val0mod1off0 = INT128(val0mod1off0Upper, val0mod1off0Lower);
-		prevValues.val1mod3off2 = INT128(val1mod3off2Upper, val1mod3off2Lower);
-		prevValues.val1mod3off1 = INT128(val1mod3off1Upper, val1mod3off1Lower);
-		prevValues.val1mod3off0 = INT128(val1mod3off0Upper, val1mod3off0Lower);
-		prevValues.curValue     = INT128(curValueUpper,     curValueLower);
-		prevValues.curCount     = (Steps) curCount;
+		prevValues.val0mod1off[0] = INT128(val0mod1off0Upper, val0mod1off0Lower);
+		prevValues.val0mod1off[1] = INT128(val0mod1off1Upper, val0mod1off1Lower);
+		prevValues.val0mod1off[2] = INT128(val0mod1off2Upper, val0mod1off2Lower);
+
+		prevValues.val1mod3off[0] = INT128(val1mod3off0Upper, val1mod3off0Lower);
+		prevValues.val1mod3off[1] = INT128(val1mod3off1Upper, val1mod3off1Lower);
+		prevValues.val1mod3off[2] = INT128(val1mod3off2Upper, val1mod3off2Lower);
+
+		prevValues.curValue = INT128(curValueUpper, curValueLower);
+		prevValues.curCount = (Count) curCount;
 	}
 	else {
 		prevValues = (ValueInfo) {0};
-		prevValues.val0mod1off0 = 1;
-		prevValues.curValue     = 3;
+		prevValues.val0mod1off[0] = 1;
+		prevValues.curValue       = 3;
 	}
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
@@ -2252,18 +2280,18 @@ bool submit_commands(Gpu* restrict gpu)
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++, tested += valuesPerInout * 4) {
 		testedValues[i] = tested;
-		writeInBuffer(mappedInBuffers[i], &testedValues[i], valuesPerInout, valuesPerHeap);
+		write_inbuffer(mappedInBuffers[i], &testedValues[i], valuesPerInout, valuesPerHeap);
 	}
 
 	if (hostNonCoherent) {
-		VK_CALL_RES(vkFlushMappedMemoryRanges, device, inoutsPerHeap, hostVisibleInBuffersMappedMemoryRanges)
+		VK_CALL_RES(vkFlushMappedMemoryRanges, device, inoutsPerHeap, hostVisibleInBuffersMappedMemoryRanges);
 		if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 	}
 
-	VK_CALL_RES(vkQueueSubmit2KHR, transferQueue, 1, &onetimeSubmitInfo2, VK_NULL_HANDLE)
+	VK_CALL_RES(vkQueueSubmit2KHR, transferQueue, 1, &onetimeSubmitInfo2, VK_NULL_HANDLE);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
-	VK_CALL_RES(vkQueueSubmit2KHR, computeQueue, inoutsPerHeap, computeSubmitInfos2, VK_NULL_HANDLE)
+	VK_CALL_RES(vkQueueSubmit2KHR, computeQueue, inoutsPerHeap, computeSubmitInfos2, VK_NULL_HANDLE);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	atomic_bool input;
@@ -2273,18 +2301,18 @@ bool submit_commands(Gpu* restrict gpu)
 	int ires = pthread_create(&waitThread, NULL, wait_for_input, &input);
 	if (EXPECT_FALSE(ires)) { PCREATE_FAILURE(ires, &waitThread, NULL); free_recursive(dyMem); return false; }
 
-	VK_CALL_RES(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[0], ~0ULL)
+	VK_CALL_RES(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[0], ~0ULL);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
-	VK_CALL(vkDestroyCommandPool, device, onetimeCommandPool, g_allocator)
+	VK_CALL(vkDestroyCommandPool, device, onetimeCommandPool, g_allocator);
 	gpu->onetimeCommandPool = VK_NULL_HANDLE;
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
-		writeInBuffer(mappedInBuffers[i], &testedValues[i], valuesPerInout, valuesPerHeap);
+		write_inbuffer(mappedInBuffers[i], &testedValues[i], valuesPerInout, valuesPerHeap);
 	}
 
 	if (hostNonCoherent) {
-		VK_CALL_RES(vkFlushMappedMemoryRanges, device, inoutsPerHeap, hostVisibleInBuffersMappedMemoryRanges)
+		VK_CALL_RES(vkFlushMappedMemoryRanges, device, inoutsPerHeap, hostVisibleInBuffersMappedMemoryRanges);
 		if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 	}
 
@@ -2293,14 +2321,14 @@ bool submit_commands(Gpu* restrict gpu)
 		transferSignalSemaphoreSubmitInfos[i].value += 2;
 	}
 
-	VK_CALL_RES(vkQueueSubmit2KHR, transferQueue, inoutsPerHeap, transferSubmitInfos2, VK_NULL_HANDLE)
+	VK_CALL_RES(vkQueueSubmit2KHR, transferQueue, inoutsPerHeap, transferSubmitInfos2, VK_NULL_HANDLE);
 	if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 	Value total = 0;
 	Value startValue = prevValues.curValue;
 
 	// ===== Enter main loop =====
-	for (uint64_t i = 0; EXPECT_TRUE(!atomic_load(&input)); i++) {
+	for (uint64_t i = 0; !atomic_load(&input); i++) {
 		clock_t mainLoopBmarkStart = clock();
 		Value initialValue = prevValues.curValue;
 
@@ -2319,12 +2347,12 @@ bool submit_commands(Gpu* restrict gpu)
 			float transferBmark = 0;
 
 			clock_t waitComputeSemaphoreBmarkStart = clock();
-			VK_CALL_RES(vkWaitSemaphoresKHR, device, &computeSemaphoreWaitInfos[j], ~0ULL)
+			VK_CALL_RES(vkWaitSemaphoresKHR, device, &computeSemaphoreWaitInfos[j], ~0ULL);
 			if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 			clock_t waitComputeSemaphoreBmarkEnd = clock();
 
 			if (computeQueueTimestampValidBits) {
-				VK_CALL_RES(vkGetQueryPoolResults, device, queryPool, j * 4 + 2, 2, sizeof(timestamps), timestamps, sizeof(timestamps[0]), VK_QUERY_RESULT_64_BIT)
+				VK_CALL_RES(vkGetQueryPoolResults, device, queryPool, j * 4 + 2, 2, sizeof(timestamps), timestamps, sizeof(timestamps[0]), VK_QUERY_RESULT_64_BIT);
 				if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 				computeBmark = (float) (timestamps[1] - timestamps[0]) * timestampPeriod / 1000000;
@@ -2333,43 +2361,43 @@ bool submit_commands(Gpu* restrict gpu)
 			computeWaitSemaphoreSubmitInfos[j].value   += 2;
 			computeSignalSemaphoreSubmitInfos[j].value += 2;
 
-			VK_CALL_RES(vkQueueSubmit2KHR, computeQueue, 1, &computeSubmitInfos2[j], VK_NULL_HANDLE)
+			VK_CALL_RES(vkQueueSubmit2KHR, computeQueue, 1, &computeSubmitInfos2[j], VK_NULL_HANDLE);
 			if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 			clock_t waitTransferSemaphoreBmarkStart = clock();
-			VK_CALL_RES(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[j], ~0ULL)
+			VK_CALL_RES(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[j], ~0ULL);
 			if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 			clock_t waitTransferSemaphoreBmarkEnd = clock();
 
 			if (transferQueueTimestampValidBits) {
-				VK_CALL_RES(vkGetQueryPoolResults, device, queryPool, j * 4, 2, sizeof(timestamps), timestamps, sizeof(timestamps[0]), VK_QUERY_RESULT_64_BIT)
+				VK_CALL_RES(vkGetQueryPoolResults, device, queryPool, j * 4, 2, sizeof(timestamps), timestamps, sizeof(timestamps[0]), VK_QUERY_RESULT_64_BIT);
 				if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 
 				transferBmark = (float) (timestamps[1] - timestamps[0]) * timestampPeriod / 1000000;
 			}
 
 			if (hostNonCoherent) {
-				VK_CALL_RES(vkInvalidateMappedMemoryRanges, device, 1, &hostVisibleOutBuffersMappedMemoryRanges[j])
+				VK_CALL_RES(vkInvalidateMappedMemoryRanges, device, 1, &hostVisibleOutBuffersMappedMemoryRanges[j]);
 				if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 			}
 
 			clock_t readBmarkStart = clock();
-			readOutBuffer(mappedOutBuffers[j], &prevValues, highestStepValues, highestStepCounts, valuesPerInout);
+			read_outbuffer(mappedOutBuffers[j], &prevValues, highestStepValues, highestStepCounts, valuesPerInout);
 			clock_t readBmarkEnd = clock();
 
 			clock_t writeBmarkStart = clock();
-			writeInBuffer(mappedInBuffers[j], &testedValues[j], valuesPerInout, valuesPerHeap);
+			write_inbuffer(mappedInBuffers[j], &testedValues[j], valuesPerInout, valuesPerHeap);
 			clock_t writeBmarkEnd = clock();
 
 			if (hostNonCoherent) {
-				VK_CALL_RES(vkFlushMappedMemoryRanges, device, 1, &hostVisibleInBuffersMappedMemoryRanges[j])
+				VK_CALL_RES(vkFlushMappedMemoryRanges, device, 1, &hostVisibleInBuffersMappedMemoryRanges[j]);
 				if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return false; }
 			}
 
 			transferWaitSemaphoreSubmitInfos[j].value   += 2;
 			transferSignalSemaphoreSubmitInfos[j].value += 2;
 
-			VK_CALL_RES(vkQueueSubmit2KHR, transferQueue, 1, &transferSubmitInfos2[j], VK_NULL_HANDLE)
+			VK_CALL_RES(vkQueueSubmit2KHR, transferQueue, 1, &transferSubmitInfos2[j], VK_NULL_HANDLE);
 			if (EXPECT_FALSE(vkres)) { free_recursive(dyMem); return NULL; }
 
 			float readBmark                  = get_benchmark(readBmarkStart, readBmarkEnd);
@@ -2448,7 +2476,7 @@ bool submit_commands(Gpu* restrict gpu)
 
 	for (uint32_t i = 0; i < count; i++) {
 		Value value;
-		Steps steps;
+		Count steps;
 
 		DyArray_get(highestStepValues, &value, i);
 		DyArray_get(highestStepCounts, &steps, i);
@@ -2466,32 +2494,26 @@ bool submit_commands(Gpu* restrict gpu)
 	if (EXPECT_FALSE(ires)) { PJOIN_FAILURE(ires, waitThread, NULL); free_recursive(dyMem); return false; }
 
 	if (!gpu->restartCount) {
-		char buf[sizeof(Value) * 2 * 7 + sizeof(Steps) * 2 * 1 + 1];
-		char* pos = buf;
+		char buf[sizeof(Value) * 2 * 7 + sizeof(Count) * 2 * 1 + 1];
 
-		sprintf(pos, "%016llx%016llx", INT128_UPPER(prevValues.val0mod1off2), INT128_LOWER(prevValues.val0mod1off2));
-		pos += sizeof(Value) * 2;
-
-		sprintf(pos, "%016llx%016llx", INT128_UPPER(prevValues.val0mod1off1), INT128_LOWER(prevValues.val0mod1off1));
-		pos += sizeof(Value) * 2;
-
-		sprintf(pos, "%016llx%016llx", INT128_UPPER(prevValues.val0mod1off0), INT128_LOWER(prevValues.val0mod1off0));
-		pos += sizeof(Value) * 2;
-
-		sprintf(pos, "%016llx%016llx", INT128_UPPER(prevValues.val1mod3off2), INT128_LOWER(prevValues.val1mod3off2));
-		pos += sizeof(Value) * 2;
-
-		sprintf(pos, "%016llx%016llx", INT128_UPPER(prevValues.val1mod3off1), INT128_LOWER(prevValues.val1mod3off1));
-		pos += sizeof(Value) * 2;
-
-		sprintf(pos, "%016llx%016llx", INT128_UPPER(prevValues.val1mod3off0), INT128_LOWER(prevValues.val1mod3off0));
-		pos += sizeof(Value) * 2;
-
-		sprintf(pos, "%016llx%016llx", INT128_UPPER(prevValues.curValue), INT128_LOWER(prevValues.curValue));
-		pos += sizeof(Value) * 2;
-
-		sprintf(pos, "%04hx", prevValues.curCount);
-		pos += sizeof(Steps) * 2;
+		sprintf(buf,
+			"%016llx%016llx"
+			"%016llx%016llx"
+			"%016llx%016llx"
+			"%016llx%016llx"
+			"%016llx%016llx"
+			"%016llx%016llx"
+			"%016llx%016llx"
+			"%04hx",
+			INT128_UPPER(prevValues.val0mod1off[2]), INT128_LOWER(prevValues.val0mod1off[2]),
+			INT128_UPPER(prevValues.val0mod1off[1]), INT128_LOWER(prevValues.val0mod1off[1]),
+			INT128_UPPER(prevValues.val0mod1off[0]), INT128_LOWER(prevValues.val0mod1off[0]),
+			INT128_UPPER(prevValues.val1mod3off[2]), INT128_LOWER(prevValues.val1mod3off[2]),
+			INT128_UPPER(prevValues.val1mod3off[1]), INT128_LOWER(prevValues.val1mod3off[1]),
+			INT128_UPPER(prevValues.val1mod3off[0]), INT128_LOWER(prevValues.val1mod3off[0]),
+			INT128_UPPER(prevValues.curValue),       INT128_LOWER(prevValues.curValue),
+			prevValues.curCount
+		);
 
 		bres = write_file(PROGRESS_NAME, buf, sizeof(buf) - 1);
 		if (EXPECT_FALSE(!bres)) { free_recursive(dyMem); return false; }
@@ -2533,42 +2555,42 @@ bool destroy_gpu(Gpu* restrict gpu)
 	VkResult vkres;
 
 	if(device) {
-		VK_CALL(vkDestroyShaderModule,        device, shaderModule,        g_allocator)
-		VK_CALL(vkDestroyPipelineCache,       device, pipelineCache,       g_allocator)
-		VK_CALL(vkDestroyPipelineLayout,      device, pipelineLayout,      g_allocator)
-		VK_CALL(vkDestroyDescriptorSetLayout, device, descriptorSetLayout, g_allocator)
+		VK_CALL(vkDestroyShaderModule,        device, shaderModule,        g_allocator);
+		VK_CALL(vkDestroyPipelineCache,       device, pipelineCache,       g_allocator);
+		VK_CALL(vkDestroyPipelineLayout,      device, pipelineLayout,      g_allocator);
+		VK_CALL(vkDestroyDescriptorSetLayout, device, descriptorSetLayout, g_allocator);
 
 		// Make sure no command buffers are in the pending state
-		VK_CALL_RES(vkDeviceWaitIdle, device)
+		VK_CALL_RES(vkDeviceWaitIdle, device);
 
 		for (uint32_t i = 0; i < inoutsPerHeap; i++) {
-			VK_CALL(vkDestroySemaphore, device, semaphores[i], g_allocator)
+			VK_CALL(vkDestroySemaphore, device, semaphores[i], g_allocator);
 		}
 
-		VK_CALL(vkDestroyCommandPool, device, onetimeCommandPool,  g_allocator)
-		VK_CALL(vkDestroyCommandPool, device, computeCommandPool,  g_allocator)
-		VK_CALL(vkDestroyCommandPool, device, transferCommandPool, g_allocator)
+		VK_CALL(vkDestroyCommandPool, device, onetimeCommandPool,  g_allocator);
+		VK_CALL(vkDestroyCommandPool, device, computeCommandPool,  g_allocator);
+		VK_CALL(vkDestroyCommandPool, device, transferCommandPool, g_allocator);
 
-		VK_CALL(vkDestroyPipeline,       device, pipeline,       g_allocator)
-		VK_CALL(vkDestroyQueryPool,      device, queryPool,      g_allocator)
-		VK_CALL(vkDestroyDescriptorPool, device, descriptorPool, g_allocator)
+		VK_CALL(vkDestroyPipeline,       device, pipeline,       g_allocator);
+		VK_CALL(vkDestroyQueryPool,      device, queryPool,      g_allocator);
+		VK_CALL(vkDestroyDescriptorPool, device, descriptorPool, g_allocator);
 
 		for (uint32_t i = 0; i < buffersPerHeap; i++) {
-			VK_CALL(vkDestroyBuffer, device, hostVisibleBuffers[i], g_allocator)
-			VK_CALL(vkDestroyBuffer, device, deviceLocalBuffers[i], g_allocator)
+			VK_CALL(vkDestroyBuffer, device, hostVisibleBuffers[i], g_allocator);
+			VK_CALL(vkDestroyBuffer, device, deviceLocalBuffers[i], g_allocator);
 
-			VK_CALL(vkFreeMemory, device, hostVisibleDeviceMemories[i], g_allocator)
-			VK_CALL(vkFreeMemory, device, deviceLocalDeviceMemories[i], g_allocator)
+			VK_CALL(vkFreeMemory, device, hostVisibleDeviceMemories[i], g_allocator);
+			VK_CALL(vkFreeMemory, device, deviceLocalDeviceMemories[i], g_allocator);
 		}
 
-		VK_CALL(vkDestroyDevice, device, g_allocator)
+		VK_CALL(vkDestroyDevice, device, g_allocator);
 	}
 
 	if(instance) {
 #ifndef NDEBUG
-		VK_CALL(vkDestroyDebugUtilsMessengerEXT, instance, debugUtilsMessenger, g_allocator)
+		VK_CALL(vkDestroyDebugUtilsMessengerEXT, instance, debugUtilsMessenger, g_allocator);
 #endif
-		VK_CALL(vkDestroyInstance, instance, g_allocator)
+		VK_CALL(vkDestroyInstance, instance, g_allocator);
 	}
 
 	free(gpu->dynamicMemory);
@@ -2577,7 +2599,7 @@ bool destroy_gpu(Gpu* restrict gpu)
 	return true;
 }
 
-void* wait_for_input(void* restrict ptr)
+void* wait_for_input(void* ptr)
 {
 	puts("Calculating... press enter/return to stop\n");
 	getchar();
@@ -2589,9 +2611,11 @@ void* wait_for_input(void* restrict ptr)
 	return NULL;
 }
 
-void writeInBuffer(Value* restrict mappedInBuffer, Value* restrict firstValue, uint32_t valuesPerInout, uint32_t valuesPerHeap)
+void write_inbuffer(Value* restrict mappedInBuffer, Value* restrict firstValue, uint32_t valuesPerInout, uint32_t valuesPerHeap)
 {
 	ASSUME(*firstValue % 4 == 3);
+	ASSUME(valuesPerInout % 128 == 0);
+	ASSUME(valuesPerInout != 0);
 
 	Value value = *firstValue;
 
@@ -2602,198 +2626,96 @@ void writeInBuffer(Value* restrict mappedInBuffer, Value* restrict firstValue, u
 	*firstValue += valuesPerHeap * 4;
 }
 
-void readOutBuffer(const Steps* restrict mappedOutBuffer, ValueInfo* restrict prevValues, restrict DyArray highestStepValues, restrict DyArray highestStepCounts, uint32_t valuesPerInout)
+void read_outbuffer(const Count* restrict mappedOutBuffer, ValueInfo* restrict prevValues, restrict DyArray highestStepValues, restrict DyArray highestStepCounts, uint32_t valuesPerInout)
 {
 	ASSUME(prevValues->curValue % 4 == 3);
+	ASSUME(valuesPerInout % 128 == 0);
+	ASSUME(valuesPerInout != 0);
 
-	Value val0mod1off2 = prevValues->val0mod1off2;
-	Value val0mod1off1 = prevValues->val0mod1off1;
-	Value val0mod1off0 = prevValues->val0mod1off0;
+	Value val0mod1off[3];
+	Value val1mod3off[3];
 
-	Value val1mod3off2 = prevValues->val1mod3off2;
-	Value val1mod3off1 = prevValues->val1mod3off1;
-	Value val1mod3off0 = prevValues->val1mod3off0;
+	memcpy(val0mod1off, prevValues->val0mod1off, sizeof(val0mod1off));
+	memcpy(val1mod3off, prevValues->val1mod3off, sizeof(val1mod3off));
 
 	Value value = prevValues->curValue - 2;
-	Steps count = prevValues->curCount;
+	Count count = prevValues->curCount;
 
 	for (uint32_t i = 0; i < valuesPerInout; i++) {
-		bool is0mod1;
-		bool is1mod3;
+		value++; // value % 4 == 2
 
-		// value ≡ 2 (mod 4)
-		value++;
-		is0mod1 = value % 1 == 0;
-		is1mod3 = value % 3 == 1;
-
-		if (value == val0mod1off2 * 2) {
-			if (is0mod1 && !val0mod1off1) { val0mod1off1 = value; }
-			if (is1mod3 && !val1mod3off1) { val1mod3off1 = value; }
+		if (value == val0mod1off[0] * 2) {
+			new_high(&value, &count, (Count) (count + 1), val0mod1off, val1mod3off, highestStepValues, highestStepCounts);
 		}
-		else if (value == val0mod1off1 * 2) {
-			if (is0mod1 && !val0mod1off0) { val0mod1off0 = value; }
-			if (is1mod3 && !val1mod3off0) { val1mod3off0 = value; }
-		}
-		else if (value == val0mod1off0 * 2) {
-			count = (Steps) (count + 1);
-
-			val0mod1off2 = val0mod1off1;
-			val0mod1off1 = val0mod1off0;
-			val0mod1off0 = is0mod1 ? value : 0;
-
-			val1mod3off2 = val1mod3off1;
-			val1mod3off1 = val1mod3off0;
-			val1mod3off0 = is1mod3 ? value : 0;
-
-			DyArray_append(highestStepValues, &value);
-			DyArray_append(highestStepCounts, &count);
+		else for (uint32_t j = 1; j < 3; j++) {
+			if (value == val0mod1off[j] * 2) {
+				if (!val0mod1off[j - 1])                   { val0mod1off[j - 1] = value; }
+				if (!val1mod3off[j - 1] && value % 3 == 1) { val1mod3off[j - 1] = value; }
+				break;
+			}
 		}
 
-		// value ≡ 3 (mod 4)
-		value++;
-		is0mod1 = value % 1 == 0;
-		is1mod3 = value % 3 == 1;
+		value++; // value % 4 == 3
 
-		if (mappedOutBuffer[i] == count - 2) {
-			if (is0mod1 && !val0mod1off2) { val0mod1off2 = value; }
-			if (is1mod3 && !val1mod3off2) { val1mod3off2 = value; }
+		if (mappedOutBuffer[i] > count) {
+			new_high(&value, &count, mappedOutBuffer[i], val0mod1off, val1mod3off, highestStepValues, highestStepCounts);
 		}
-		else if (mappedOutBuffer[i] == count - 1) {
-			if (is0mod1 && !val0mod1off1) { val0mod1off1 = value; }
-			if (is1mod3 && !val1mod3off1) { val1mod3off1 = value; }
-		}
-		else if (mappedOutBuffer[i] == count) {
-			if (is0mod1 && !val0mod1off0) { val0mod1off0 = value; }
-			if (is1mod3 && !val1mod3off0) { val1mod3off0 = value; }
-		}
-		else if (mappedOutBuffer[i] == count + 1) {
-			count = mappedOutBuffer[i];
-
-			val0mod1off2 = val0mod1off1;
-			val0mod1off1 = val0mod1off0;
-			val0mod1off0 = is0mod1 ? value : 0;
-
-			val1mod3off2 = val1mod3off1;
-			val1mod3off1 = val1mod3off0;
-			val1mod3off0 = is1mod3 ? value : 0;
-
-			DyArray_append(highestStepValues, &value);
-			DyArray_append(highestStepCounts, &count);
-		}
-		else if (mappedOutBuffer[i] == count + 2) {
-			count = mappedOutBuffer[i];
-
-			val0mod1off2 = val0mod1off0;
-			val0mod1off1 = 0;
-			val0mod1off0 = is0mod1 ? value : 0;
-
-			val1mod3off2 = val1mod3off0;
-			val1mod3off1 = 0;
-			val1mod3off0 = is1mod3 ? value : 0;
-
-			DyArray_append(highestStepValues, &value);
-			DyArray_append(highestStepCounts, &count);
-		}
-		else if (mappedOutBuffer[i] > count) {
-			count = mappedOutBuffer[i];
-
-			val0mod1off2 = 0;
-			val0mod1off1 = 0;
-			val0mod1off0 = is0mod1 ? value : 0;
-
-			val1mod3off2 = 0;
-			val1mod3off1 = 0;
-			val1mod3off0 = is1mod3 ? value : 0;
-
-			DyArray_append(highestStepValues, &value);
-			DyArray_append(highestStepCounts, &count);
+		else for (uint32_t j = 0; j < 3; j++) {
+			if (mappedOutBuffer[i] == count - j) {
+				if (!val0mod1off[j])                   { val0mod1off[j] = value; }
+				if (!val1mod3off[j] && value % 3 == 1) { val1mod3off[j] = value; }
+				break;
+			}
 		}
 
-		// value ≡ 0 (mod 4)
-		value++;
-		is0mod1 = value % 1 == 0;
-		is1mod3 = value % 3 == 1;
+		value++; // value % 4 == 0
 
-		if (value == val0mod1off2 * 2) {
-			if (is0mod1 && !val0mod1off1) { val0mod1off1 = value; }
-			if (is1mod3 && !val1mod3off1) { val1mod3off1 = value; }
+		if (value == val0mod1off[0] * 2) {
+			new_high(&value, &count, (Count) (count + 1), val0mod1off, val1mod3off, highestStepValues, highestStepCounts);
 		}
-		else if (value == val0mod1off1 * 2) {
-			if (is0mod1 && !val0mod1off0) { val0mod1off0 = value; }
-			if (is1mod3 && !val1mod3off0) { val1mod3off0 = value; }
-		}
-		else if (value == val0mod1off0 * 2) {
-			count = (Steps) (count + 1);
-
-			val0mod1off2 = val0mod1off1;
-			val0mod1off1 = val0mod1off0;
-			val0mod1off0 = is0mod1 ? value : 0;
-
-			val1mod3off2 = val1mod3off1;
-			val1mod3off1 = val1mod3off0;
-			val1mod3off0 = is1mod3 ? value : 0;
-
-			DyArray_append(highestStepValues, &value);
-			DyArray_append(highestStepCounts, &count);
+		else for (uint32_t j = 1; j < 3; j++) {
+			if (value == val0mod1off[j] * 2) {
+				if (!val0mod1off[j - 1])                   { val0mod1off[j - 1] = value; }
+				if (!val1mod3off[j - 1] && value % 3 == 1) { val1mod3off[j - 1] = value; }
+				break;
+			}
 		}
 
-		// value ≡ 1 (mod 4)
-		value++;
-		is0mod1 = value % 1 == 0;
-		is1mod3 = value % 3 == 1;
+		value++; // value % 4 == 1
 
-		if (val1mod3off2 && (value - 1) / 4 == (val1mod3off2 - 1) / 3) {
-			count = (Steps) (count + 1);
-
-			val0mod1off2 = val0mod1off1;
-			val0mod1off1 = val0mod1off0;
-			val0mod1off0 = is0mod1 ? value : 0;
-
-			val1mod3off2 = val1mod3off1;
-			val1mod3off1 = val1mod3off0;
-			val1mod3off0 = is1mod3 ? value : 0;
-
-			DyArray_append(highestStepValues, &value);
-			DyArray_append(highestStepCounts, &count);
-		}
-		else if (val1mod3off1 && (value - 1) / 4 == (val1mod3off1 - 1) / 3) {
-			count = (Steps) (count + 2);
-
-			val0mod1off2 = val0mod1off0;
-			val0mod1off1 = 0;
-			val0mod1off0 = is0mod1 ? value : 0;
-
-			val1mod3off2 = val1mod3off0;
-			val1mod3off1 = 0;
-			val1mod3off0 = is1mod3 ? value : 0;
-
-			DyArray_append(highestStepValues, &value);
-			DyArray_append(highestStepCounts, &count);
-		}
-		else if (val1mod3off0 && (value - 1) / 4 == (val1mod3off0 - 1) / 3) {
-			count = (Steps) (count + 3);
-
-			val0mod1off2 = 0;
-			val0mod1off1 = 0;
-			val0mod1off0 = is0mod1 ? value : 0;
-
-			val1mod3off2 = 0;
-			val1mod3off1 = 0;
-			val1mod3off0 = is1mod3 ? value : 0;
-
-			DyArray_append(highestStepValues, &value);
-			DyArray_append(highestStepCounts, &count);
+		if (value % 8 == 1) {
+			for (uint32_t j = 0; j < 3; j++) {
+				if (val1mod3off[j] && (value - 1) / 4 == (val1mod3off[j] - 1) / 3) {
+					new_high(&value, &count, (Count) (count - j + 3), val0mod1off, val1mod3off, highestStepValues, highestStepCounts);
+					break;
+				}
+			}
 		}
 	}
 
-	prevValues->val0mod1off2 = val0mod1off2;
-	prevValues->val0mod1off1 = val0mod1off1;
-	prevValues->val0mod1off0 = val0mod1off0;
-
-	prevValues->val1mod3off2 = val1mod3off2;
-	prevValues->val1mod3off1 = val1mod3off1;
-	prevValues->val1mod3off0 = val1mod3off0;
+	memcpy(prevValues->val0mod1off, val0mod1off, sizeof(val0mod1off));
+	memcpy(prevValues->val1mod3off, val1mod3off, sizeof(val1mod3off));
 
 	prevValues->curValue = value + 2;
 	prevValues->curCount = count;
+}
+
+void new_high(const Value* restrict value, Count* restrict count, Count newCount, Value* restrict val0mod1off, Value* restrict val1mod3off, restrict DyArray highestStepValues, restrict DyArray highestStepCounts)
+{
+	uint32_t oldCount = *count;
+	uint32_t difCount = minu32(newCount - oldCount, 3);
+
+	*count = newCount;
+
+	memmove(val0mod1off + difCount, val0mod1off, sizeof(Value) * (3 - difCount));
+	memmove(val1mod3off + difCount, val1mod3off, sizeof(Value) * (3 - difCount));
+
+	memset(val0mod1off + 1, 0, sizeof(Value) * (difCount - 1));
+	memset(val1mod3off + 1, 0, sizeof(Value) * (difCount - 1));
+
+	val0mod1off[0] = *value;
+	val1mod3off[0] = *value % 3 == 1 ? *value : 0;
+
+	DyArray_append(highestStepValues, value);
+	DyArray_append(highestStepCounts, count);
 }

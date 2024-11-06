@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024  Seth McDonald <seth.i.mcdonald@gmail.com>
+ * Copyright (C) 2024 Seth McDonald <seth.i.mcdonald@gmail.com>
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -58,7 +58,7 @@ typedef struct Gpu
 	VkSemaphore* restrict semaphores; // Count = inoutsPerHeap
 
 	Value** restrict mappedInBuffers;  // Count = inoutsPerHeap, valuesPerInout
-	Steps** restrict mappedOutBuffers; // Count = inoutsPerHeap, valuesPerInout
+	Count** restrict mappedOutBuffers; // Count = inoutsPerHeap, valuesPerInout
 
 	VkDeviceSize bytesPerIn;
 	VkDeviceSize bytesPerOut;
@@ -129,35 +129,32 @@ typedef struct Gpu
 
 typedef struct ValueInfo
 {
-	Value val0mod1off2;
-	Value val0mod1off1;
-	Value val0mod1off0;
-
-	Value val1mod3off2;
-	Value val1mod3off1;
-	Value val1mod3off0;
+	Value val0mod1off[3];
+	Value val1mod3off[3];
 
 	Value curValue;
-	Steps curCount;
+	Count curCount;
 } ValueInfo;
 
 
 // If the return type is bool, then that function returns true on success, and false elsewise
 
-void parse_cmdline(Gpu* gpu, int argc, char** argv) NONNULL_ARGS(1, 3) WR_ACCESS(1) RE_ACCESS(3);
+bool parse_cmdline(Gpu* gpu, int argc, char** argv) NONNULL_ARGS_ALL WR_ACCESS(1) RE_ACCESS(3);
 
-bool create_instance(Gpu* gpu)    NONNULL_ARGS(1) RW_ACCESS(1);
-bool select_device(Gpu* gpu)      NONNULL_ARGS(1) RW_ACCESS(1);
-bool create_device(Gpu* gpu)      NONNULL_ARGS(1) RW_ACCESS(1);
-bool manage_memory(Gpu* gpu)      NONNULL_ARGS(1) RW_ACCESS(1);
-bool create_buffers(Gpu* gpu)     NONNULL_ARGS(1) RW_ACCESS(1);
-bool create_descriptors(Gpu* gpu) NONNULL_ARGS(1) RW_ACCESS(1);
-bool create_pipeline(Gpu* gpu)    NONNULL_ARGS(1) RW_ACCESS(1);
-bool create_commands(Gpu* gpu)    NONNULL_ARGS(1) RW_ACCESS(1);
-bool submit_commands(Gpu* gpu)    NONNULL_ARGS(1) RW_ACCESS(1);
-bool destroy_gpu(Gpu* gpu)        NONNULL_ARGS(1) RW_ACCESS(1);
+bool create_instance(Gpu* gpu)    NONNULL_ARGS_ALL;
+bool select_device(Gpu* gpu)      NONNULL_ARGS_ALL;
+bool create_device(Gpu* gpu)      NONNULL_ARGS_ALL;
+bool manage_memory(Gpu* gpu)      NONNULL_ARGS_ALL;
+bool create_buffers(Gpu* gpu)     NONNULL_ARGS_ALL;
+bool create_descriptors(Gpu* gpu) NONNULL_ARGS_ALL;
+bool create_pipeline(Gpu* gpu)    NONNULL_ARGS_ALL;
+bool create_commands(Gpu* gpu)    NONNULL_ARGS_ALL;
+bool submit_commands(Gpu* gpu)    NONNULL_ARGS_ALL;
+bool destroy_gpu(Gpu* gpu)        NONNULL_ARGS_ALL;
 
-void* wait_for_input(void* ptr) NONNULL_ARGS(1) WR_ACCESS(1);
+void* wait_for_input(void* ptr) NONNULL_ARGS_ALL WR_ACCESS(1);
 
-void writeInBuffer(Value* mappedInBuffer, Value* firstValue, uint32_t valuesPerInout, uint32_t valuesPerHeap) NONNULL_ARGS(1, 2) WR_ACCESS(1) RW_ACCESS(2);
-void readOutBuffer(const Steps* mappedOutBuffer, ValueInfo* prevValues, DyArray highestStepValues, DyArray highestStepCounts, uint32_t valuesPerInout) NONNULL_ARGS(1, 2, 3, 4) RE_ACCESS(1) RW_ACCESS(2) RW_ACCESS(3) RW_ACCESS(4);
+void write_inbuffer(Value* mappedInBuffer, Value* firstValue, uint32_t valuesPerInout, uint32_t valuesPerHeap) NONNULL_ARGS_ALL WR_ACCESS(1);
+void read_outbuffer(const Count* mappedOutBuffer, ValueInfo* prevValues, DyArray highestStepValues, DyArray highestStepCounts, uint32_t valuesPerInout) NONNULL_ARGS_ALL RE_ACCESS(1);
+
+void new_high(const Value* value, Count* count, Count newCount, Value* val0mod1off, Value* val1mod3off, DyArray highestStepValues, DyArray highestStepCounts) NONNULL_ARGS_ALL RE_ACCESS(1);

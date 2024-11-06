@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024  Seth McDonald <seth.i.mcdonald@gmail.com>
+ * Copyright (C) 2024 Seth McDonald <seth.i.mcdonald@gmail.com>
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -95,8 +95,10 @@
 #endif
 
 #if has_attribute(nonnull)
+	#define NONNULL_ARGS_ALL  __attribute__ (( nonnull ))
 	#define NONNULL_ARGS(...) __attribute__ (( nonnull (__VA_ARGS__) ))
 #else
+	#define NONNULL_ARGS_ALL
 	#define NONNULL_ARGS(...)
 #endif
 
@@ -154,7 +156,7 @@
 
 #define INT128(upper, lower) ( (Value) (upper) << 64 | (Value) (lower) )
 
-#define PNEXT_ADD(p, s) { *p = &s; p = &s.pNext; }
+#define PNEXT_ADD(p, s) do { *p = &s; p = &s.pNext; } while (0)
 
 // Undefine select Vulkan string macros (redefined as constants below)
 #undef VK_KHR_8BIT_STORAGE_EXTENSION_NAME
@@ -175,17 +177,17 @@
 #undef VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME
 #undef VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME
 
-#undef VK_INTEL_PERFORMANCE_QUERY_EXTENSION_NAME
-
 
 // Datatypes
 typedef unsigned __int128 Value;
 
-typedef uint16_t Steps;
+typedef uint16_t Count;
 
 
 // String constants
 extern const char* const PROGRAM_NAME;
+extern const char* const PROGRAM_COPYRIGHT;
+extern const char* const PROGRAM_LICENCE;
 
 extern const char* const DEBUG_LOG_NAME;
 extern const char* const ALLOC_LOG_NAME;
@@ -215,7 +217,11 @@ extern const char* const VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME;
 extern const char* const VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME;
 extern const char* const VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME;
 
-extern const char* const VK_INTEL_PERFORMANCE_QUERY_EXTENSION_NAME;
+// Version constants
+extern const uint32_t PROGRAM_VERSION;
+extern const uint32_t PROGRAM_VERSION_MAJOR;
+extern const uint32_t PROGRAM_VERSION_MINOR;
+extern const uint32_t PROGRAM_VERSION_PATCH;
 
 // Runtime constants
 extern const VkAllocationCallbacks  g_allocationCallbacks;

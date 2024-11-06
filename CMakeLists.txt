@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.23)
-project(CollatzConjectureSimulator VERSION 2.1.0 LANGUAGES C)
+cmake_minimum_required(VERSION 3.23 FATAL_ERROR)
+project(CollatzConjectureSimulator VERSION 2.1.1 LANGUAGES C)
 
 if(NOT CMAKE_BUILD_TYPE)
 	message(WARNING "Build variant not specified - defaulting to Debug")
