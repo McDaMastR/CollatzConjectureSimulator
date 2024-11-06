@@ -9,9 +9,9 @@ greatest of all integers in the interval $[1, n]$.
 For the purposes of this document, the following mathematical symbols will represent the
 corresponding concepts.
 
-- $\Z$ represents the set of all integers.
-- $\Z^+$ represents the set of all positive integers.
-- $\Z^{0+}$ represents the set of all non-negative integers.
+- $\mathbb{Z}$ represents the set of all integers.
+- $\mathbb{Z}^+$ represents the set of all positive integers.
+- $\mathbb{Z}^{0+}$ represents the set of all non-negative integers.
 - $f(n)$ represents the Collatz function applied to $n$.
 - $f^k(n)$ represents the Collatz function applied recursively $k$ times to $n$.
 - $s(n)$ represents the total stopping time of the starting value $n$.
@@ -47,7 +47,7 @@ application of the Collatz function will eventually result in the value $1$. Usi
 logic:
 
 ```math
-\forall n \in \Z^+, \exists k \in \Z^{0+} : f^k(n) = 1
+\forall n \in \mathbb{Z}^+, \exists k \in \mathbb{Z}^{0+} : f^k(n) = 1
 ```
 
 ## The Simulation
@@ -156,8 +156,8 @@ HV-out.
 
 It can be mathematically demonstrated that particular sets of starting values will always generate
 Collatz sequences that contain a smaller value. For example, the set of even starting values. Given
-a starting value $n \in \Z^+$ such that $n \equiv 0 \pmod 2$, $n$ can be represented as
-$n = 2x, x \in \Z^+$. Applying the Collatz function to $n$ thus results in the following.
+a starting value $n \in \mathbb{Z}^+$ such that $n \equiv 0 \pmod 2$, $n$ can be represented as
+$n = 2x, x \in \mathbb{Z}^+$. Applying the Collatz function to $n$ thus results in the following.
 
 ```math
 f(2x) = x
@@ -167,9 +167,10 @@ The Collatz sequences of all even $n$ must have exactly one step between $n$ and
 less than $n$, namely $n/2$. As such, the step count of $n$ is one more than the step count of
 $n/2$. By knowing $s(x)$, $s(2x)$ can be calculated as $s(2x) = s(x) + 1$.
 
-Another set of interest is the set of starting values $n \in \Z^+$ such that $n \equiv 1 \pmod 4$.
-Starting values $n$ in this set can be represented as $n = 4x + 1, x \in \Z^+$. Thus, recursively
-applying the Collatz function to $n$ results in the following.
+Another set of interest is the set of starting values $n \in \mathbb{Z}^+$ such that
+$n \equiv 1 \pmod 4$. Starting values $n$ in this set can be represented as
+$n = 4x + 1, x \in \mathbb{Z}^+$. Thus, recursively applying the Collatz function to $n$ results in
+the following.
 
 ```math
 f(4x  + 1) = 12x + 4 \\
@@ -182,9 +183,9 @@ requirement to iterate through the Collatz sequences of such starting values to 
 step counts.
 
 Hence, Collatz Conjecture Simulator only iterates through the Collatz sequences of starting values
-$n \in \Z^+$ such that $n \equiv 3 \pmod 4$. This improves performance by allowing larger intervals
-of starting values to be tested per dispatch command, and it more evenly distributes the workload
-between the CPU and GPU.
+$n \in \mathbb{Z}^+$ such that $n \equiv 3 \pmod 4$. This improves performance by allowing larger
+intervals of starting values to be tested per dispatch command, and it more evenly distributes the
+workload between the CPU and GPU.
 
 ## Artificial Intelligence
 
