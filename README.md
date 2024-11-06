@@ -173,9 +173,11 @@ $n = 4x + 1, x \in \mathbb{Z}^+$. Thus, recursively applying the Collatz functio
 the following.
 
 ```math
+\begin{align*}
 f(4x  + 1) = 12x + 4 \\
 f(12x + 4) = 6x  + 2 \\
 f(6x  + 2) = 3x  + 1
+\end{align*}
 ```
 
 Therefore, if $n \equiv 1 \pmod 4$, then $f^3(n) < n$ and $s(n) = s(f^3(n)) + 3$. This removes the
