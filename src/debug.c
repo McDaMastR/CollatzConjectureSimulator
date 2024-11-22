@@ -42,7 +42,7 @@ bool init_debug_logfile(void)
 	const char* sCurrentTime = stime();
 
 	FILE* file = fopen(DEBUG_LOG_NAME, "w");
-	if (EXPECT_FALSE(!file)) { FOPEN_FAILURE(file, DEBUG_LOG_NAME, "w"); return false; }
+	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, DEBUG_LOG_NAME, "w"); return false; }
 
 	fprintf(file,
 		"VULKAN DEBUG CALLBACK LOGFILE\n"
@@ -62,7 +62,7 @@ bool init_alloc_logfile(void)
 	const char* sCurrentTime = stime();
 
 	FILE* file = fopen(ALLOC_LOG_NAME, "w");
-	if (EXPECT_FALSE(!file)) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "w"); return false; }
+	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "w"); return false; }
 
 	fprintf(file,
 		"VULKAN ALLOCATION CALLBACK LOGFILE\n"
@@ -90,8 +90,8 @@ static void print_debug_callback(
 	const char* sMessageSeverity = string_VkDebugUtilsMessageSeverityFlagBitsEXT(messageSeverity);
 
 	fprintf(stream,
-		"Debug callback %llu (%ld ms)\n"
-		"%s (%llu)\n"
+		"Debug callback %" PRIu64 " (%ld ms)\n"
+		"%s (%" PRIu64 ")\n"
 		"Severity: %s\n"
 		"Types:   ",
 		callbackCount, time, func, line, sMessageSeverity
@@ -109,13 +109,13 @@ static void print_debug_callback(
 	const char* messageIdName = pCallbackData->pMessageIdName ?: "";
 	uint32_t messageIdNumber  = (uint32_t) pCallbackData->messageIdNumber;
 
-	fprintf(stream, "\nID:       %s (0x%08x)\n", messageIdName, messageIdNumber);
+	fprintf(stream, "\nID:       %s (0x%08" PRIx32 ")\n", messageIdName, messageIdNumber);
 
 	// VkDebugUtilsLabelEXT active in the current VkQueue
 	uint32_t queueLabelCount = pCallbackData->queueLabelCount;
 
 	if (queueLabelCount) {
-		fprintf(stream, "Queue labels (%u):\n", queueLabelCount);
+		fprintf(stream, "Queue labels (%" PRIu32 "):\n", queueLabelCount);
 
 		for (uint32_t i = 0; i < queueLabelCount; i++) {
 			const char* labelName = pCallbackData->pQueueLabels[i].pLabelName;
@@ -132,7 +132,7 @@ static void print_debug_callback(
 	uint32_t cmdBufLabelCount = pCallbackData->cmdBufLabelCount;
 
 	if (cmdBufLabelCount) {
-		fprintf(stream, "Command buffer labels (%u):\n", cmdBufLabelCount);
+		fprintf(stream, "Command buffer labels (%" PRIu32 "):\n", cmdBufLabelCount);
 
 		for (uint32_t i = 0; i < cmdBufLabelCount; i++) {
 			const char* labelName = pCallbackData->pCmdBufLabels[i].pLabelName;
@@ -149,7 +149,7 @@ static void print_debug_callback(
 	uint32_t objectCount = pCallbackData->objectCount;
 
 	if (objectCount) {
-		fprintf(stream, "Objects (%u):\n", objectCount);
+		fprintf(stream, "Objects (%" PRIu32 "):\n", objectCount);
 
 		for (uint32_t i = 0; i < objectCount; i++) {
 			const char*  objectName   = pCallbackData->pObjects[i].pObjectName ?: "";
@@ -158,7 +158,7 @@ static void print_debug_callback(
 
 			const char* sObjectType = string_VkObjectType(objectType);
 
-			fprintf(stream, "\t%s (%s, 0x%016llx)\n", objectName, sObjectType, objectHandle);
+			fprintf(stream, "\t%s (%s, 0x%016" PRIx64 ")\n", objectName, sObjectType, objectHandle);
 		}
 	}
 
@@ -181,7 +181,7 @@ VkBool32 debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, 
 	}
 
 	FILE* file = fopen(DEBUG_LOG_NAME, "a");
-	if (EXPECT_FALSE(!file)) { FOPEN_FAILURE(file, DEBUG_LOG_NAME, "a"); return VK_FALSE; }
+	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, DEBUG_LOG_NAME, "a"); return VK_FALSE; }
 
 	print_debug_callback(file, messageSeverity, messageTypes, pCallbackData, g_debugCallbackCount, data.funcName, data.lineNum);
 
@@ -205,8 +205,8 @@ static void print_allocation_callback(
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 
 	fprintf(stream,
-		"Allocation callback %llu (%ld ms)\n"
-		"%s (%llu)\n"
+		"Allocation callback %" PRIu64 " (%ld ms)\n"
+		"%s (%" PRIu64 ")\n"
 		"Memory usage: %zu B (%.2f KiB, %.2f MiB)\n"
 		"Size:      %zu\n"
 		"Alignment: %zu\n"
@@ -226,7 +226,7 @@ void* allocation_callback(void* pUserData, size_t size, size_t alignment, VkSyst
 	g_totalAllocSize += size;
 
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
-	if (EXPECT_FALSE(!file)) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return memory; }
+	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return memory; }
 
 	print_allocation_callback(file, g_allocCount, data.funcName, data.lineNum, g_totalAllocSize, size, alignment, allocationScope, memory);
 
@@ -251,8 +251,8 @@ static void print_reallocation_callback(
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 
 	fprintf(stream,
-		"Reallocation callback %llu (%ld ms)\n"
-		"%s (%llu)\n"
+		"Reallocation callback %" PRIu64 " (%ld ms)\n"
+		"%s (%" PRIu64 ")\n"
 		"Memory usage: %zu B (%.2f KiB, %.2f MiB)\n"
 		"Original size:     %zu\n"
 		"Allocated size:    %zu\n"
@@ -285,7 +285,7 @@ void* reallocation_callback(void* pUserData, void* pOriginal, size_t size, size_
 	g_totalAllocSize += size;
 
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
-	if (EXPECT_FALSE(!file)) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return memory; }
+	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return memory; }
 
 	print_reallocation_callback(file, g_reallocCount, data.funcName, data.lineNum, g_totalAllocSize, originalSize, size, alignment, allocationScope, pOriginal, memory);
 
@@ -305,8 +305,8 @@ static void print_free_callback(
 	clock_t time = program_time();
 
 	fprintf(stream,
-		"Free callback %llu (%ld ms)\n"
-		"%s (%llu)\n"
+		"Free callback %" PRIu64 " (%ld ms)\n"
+		"%s (%" PRIu64 ")\n"
 		"Memory usage: %zu B (%.2f KiB, %.2f MiB)\n"
 		"Size:    %zu\n"
 		"Address: %p\n\n",
@@ -332,7 +332,7 @@ void free_callback(void* pUserData, void* pMemory)
 	g_totalAllocSize -= size;
 
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
-	if (EXPECT_FALSE(!file)) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return; }
+	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return; }
 
 	print_free_callback(file, g_freeCount, data.funcName, data.lineNum, g_totalAllocSize, size, pMemory);
 
@@ -353,8 +353,8 @@ static void print_internal_allocation_callback(
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 
 	fprintf(stream,
-		"Internal allocation callback %llu (%ld ms)\n"
-		"%s (%llu)\n"
+		"Internal allocation callback %" PRIu64 " (%ld ms)\n"
+		"%s (%" PRIu64 ")\n"
 		"Size:  %zu\n"
 		"Type:  %s\n"
 		"Scope: %s\n\n",
@@ -369,7 +369,7 @@ void internal_allocation_callback(void* pUserData, size_t size, VkInternalAlloca
 	g_internalAllocCount++;
 
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
-	if (EXPECT_FALSE(!file)) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return; }
+	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return; }
 
 	print_internal_allocation_callback(file, g_internalAllocCount, data.funcName, data.lineNum, size, allocationType, allocationScope);
 
@@ -390,8 +390,8 @@ static void print_internal_free_callback(
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 
 	fprintf(stream,
-		"Internal free callback %llu (%ld ms)\n"
-		"%s (%llu)\n"
+		"Internal free callback %" PRIu64 " (%ld ms)\n"
+		"%s (%" PRIu64 ")\n"
 		"Size:  %zu\n"
 		"Type:  %s\n"
 		"Scope: %s\n\n",
@@ -406,7 +406,7 @@ void internal_free_callback(void* pUserData, size_t size, VkInternalAllocationTy
 	g_internalFreeCount++;
 
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
-	if (EXPECT_FALSE(!file)) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return; }
+	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return; }
 
 	print_internal_free_callback(file, g_internalFreeCount, data.funcName, data.lineNum, size, allocationType, allocationScope);
 
@@ -529,18 +529,44 @@ void print_fwrite_failure(int line, size_t result, const void* buffer, size_t si
 	);
 }
 
+void print_fprintf_failure(int line, int result, FILE* file, const char* format)
+{
+	clock_t time = program_time();
+
+	fprintf(stderr,
+		"IO error at line %d (%ld ms)\n"
+		"Failed function call 'fprintf' with int = %d\n"
+		"Arguments:\n"
+		"\tFILE* file = %p\n"
+		"\tconst char* format = %s\n\n",
+		line, time, result, (void*) file, format
+	);
+}
+
+void print_fscanf_failure(int line, int result, FILE* file, const char* format)
+{
+	clock_t time = program_time();
+
+	fprintf(stderr,
+		"IO error at line %d (%ld ms)\n"
+		"Failed function call 'fscanf' with int = %d\n"
+		"Arguments:\n"
+		"\tFILE* file = %p\n"
+		"\tconst char* format = %s\n\n",
+		line, time, result, (void*) file, format
+	);
+}
+
 void print_pcreate_failure(int line, int result, pthread_t* thread, pthread_attr_t* attr)
 {
 	clock_t time = program_time();
 
 	fprintf(stderr,
 		"Thread failure at line %d (%ld ms)\n"
-		"Function 'pthread_create' returned int = %d\n"
+		"Failed function call 'pthread_create' with int = %d\n"
 		"Arguments:\n"
 		"\tpthread_t* thread = %p\n"
-		"\tconst pthread_attr_t* attr = %p\n"
-		"\tvoid* (*start_routine)(void*) = N/A\n"
-		"\tvoid* arg = N/A\n\n",
+		"\tconst pthread_attr_t* attr = %p\n\n",
 		line, time, result, (void*) thread, (void*) attr
 	);
 }
@@ -551,9 +577,9 @@ void print_pjoin_failure(int line, int result, pthread_t thread, void** retval)
 
 	fprintf(stderr,
 		"Thread failure at line %d (%ld ms)\n"
-		"Function 'pthread_join' returned int = %d\n"
+		"Failed function call 'pthread_join' with int = %d\n"
 		"Arguments:\n"
-		"\tpthread_t thread = 0x%llx\n"
+		"\tpthread_t thread = 0x%" PRIxPTR "\n"
 		"\tvoid** retval = %p\n\n",
 		line, time, result, thread, retval
 	);
@@ -565,9 +591,9 @@ void print_pcancel_failure(int line, int result, pthread_t thread)
 
 	fprintf(stderr,
 		"Thread failure at line %d (%ld ms)\n"
-		"Function 'pthread_cancel' returned int = %d\n"
+		"Failed function call 'pthread_cancel' with int = %d\n"
 		"Arguments:\n"
-		"\tpthread_t thread = 0x%llx\n\n",
+		"\tpthread_t thread = 0x%" PRIxPTR "\n\n",
 		line, time, result, thread
 	);
 }
@@ -594,7 +620,7 @@ void print_vkvers_failure(int line, uint32_t result)
 
 	fprintf(stderr,
 		"Vulkan failure at line %d (%ld ms)\n"
-		"Failed function call 'volkGetInstanceVersion' with uint32_t = %u.%u.%u.%u\n\n",
+		"Failed function call 'volkGetInstanceVersion' with uint32_t = %" PRIu32 ".%" PRIu32 ".%" PRIu32 ".%" PRIu32 "\n\n",
 		line, time, variant, major, minor, patch
 	);
 }

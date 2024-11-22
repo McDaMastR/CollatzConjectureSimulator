@@ -95,15 +95,20 @@ cmake -S . -B build
 ```
 
 Several options can be optionally specified to customise the build system by appending
-`-D OPTION=CONFIG` to the above command. `CMAKE_BUILD_TYPE` specifies the build variant and can be
-set to _Debug_, _Release_, _MinSizeRel_, or _RelWithDebInfo_. If not set, it defaults to _Debug_.
-`EXCESS_WARNINGS` specifies whether to compile the program with a potentially excessive amount of
-warnings, and defaults to _OFF_. `STATIC_ANALYSIS` specifies whether to statically analyse the
-program during compilation if compiling with GCC, and defaults to _OFF_. `DEBUG_SHADERS` specifies
-whether to include debug information in generated SPIR-V, and defaults to _OFF_. `OPTIMISE_SHADERS`
-specifies whether to optimise generated SPIR-V using `spirv-opt`, and defaults to _ON_.
-`USING_DISASSEMBLER` specifies whether to disassemble generated SPIR-V using `spirv-dis`, and
-defaults to _OFF_.
+`-D OPTION=CONFIG` to the above command.
+
+- `CMAKE_BUILD_TYPE` specifies the build variant and can be set to _Debug_, _Release_,
+  _MinSizeRel_, or _RelWithDebInfo_. If not set, it defaults to _Debug_.
+- `EXCESS_WARNINGS` specifies whether to compile the program with a potentially excessive amount of
+  warnings, and defaults to _OFF_.
+- `STATIC_ANALYSIS` specifies whether to statically analyse the program during compilation if
+  compiling with GCC, and defaults to _OFF_.
+- `DEBUG_SHADERS` specifies whether to include debug information in generated SPIR-V, and defaults
+  to _OFF_.
+- `OPTIMISE_SHADERS` specifies whether to optimise generated SPIR-V using `spirv-opt`, and defaults
+  to _ON_.
+- `USING_DISASSEMBLER` specifies whether to disassemble generated SPIR-V using `spirv-dis`, and
+  defaults to _OFF_.
 
 Once the above command has finished, a `build` directory will have been created containing the
 build system. To now build Collatz Conjecture Simulator, execute the following command.

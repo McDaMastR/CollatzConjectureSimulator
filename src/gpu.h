@@ -130,7 +130,7 @@ typedef struct Gpu
 typedef struct ValueInfo
 {
 	Value val0mod1off[3];
-	Value val1mod3off[3];
+	Value val1mod6off[3];
 
 	Value curValue;
 	Count curCount;
@@ -157,4 +157,4 @@ void* wait_for_input(void* ptr) NONNULL_ARGS_ALL WR_ACCESS(1);
 void write_inbuffer(Value* mappedInBuffer, Value* firstValue, uint32_t valuesPerInout, uint32_t valuesPerHeap) NONNULL_ARGS_ALL WR_ACCESS(1);
 void read_outbuffer(const Count* mappedOutBuffer, ValueInfo* prevValues, DyArray highestStepValues, DyArray highestStepCounts, uint32_t valuesPerInout) NONNULL_ARGS_ALL RE_ACCESS(1);
 
-void new_high(const Value* value, Count* count, Count newCount, Value* val0mod1off, Value* val1mod3off, DyArray highestStepValues, DyArray highestStepCounts) NONNULL_ARGS_ALL RE_ACCESS(1);
+void new_high(const Value* value, Count* count, Count newCount, Value* val0mod1off, Value* val1mod6off, DyArray highestStepValues, DyArray highestStepCounts) NONNULL_ARGS_ALL RE_ACCESS(1);

@@ -50,7 +50,6 @@ uint32_t minu32v(size_t count, ...) CONST_FUNC USE_RET;
 uint64_t maxu64v(size_t count, ...) CONST_FUNC USE_RET;
 uint64_t minu64v(size_t count, ...) CONST_FUNC USE_RET;
 
-uint32_t clz(uint32_t x)        CONST_FUNC USE_RET;
 uint32_t floor_pow2(uint32_t x) CONST_FUNC USE_RET;
 
 float get_benchmark(clock_t start, clock_t end) CONST_FUNC USE_RET;
@@ -63,6 +62,9 @@ bool get_buffer_requirements_main4(VkDevice device, VkDeviceSize size, VkBufferU
 bool file_size (const char* filename, size_t*     size)              NONNULL_ARGS_ALL NULTSTR_ARG(1) RE_ACCESS(1) WR_ACCESS(2);
 bool read_file (const char* filename, void*       data, size_t size) NONNULL_ARGS_ALL NULTSTR_ARG(1) RE_ACCESS(1) WR_ACCESS(2);
 bool write_file(const char* filename, const void* data, size_t size) NONNULL_ARGS_ALL NULTSTR_ARG(1) RE_ACCESS(1) RE_ACCESS(2);
+
+bool read_text (const char* filename, const char* format, ...) SCANF_FUNC (2, 3) NONNULL_ARGS_ALL   NULTSTR_ARG(1) NULTSTR_ARG(2) RE_ACCESS(1) RE_ACCESS(2);
+bool write_text(const char* filename, const char* format, ...) PRINTF_FUNC(2, 3) NONNULL_ARGS(1, 2) NULTSTR_ARG(1) NULTSTR_ARG(2) RE_ACCESS(1) RE_ACCESS(2);
 
 void* aligned_malloc (size_t size, size_t alignment)               MALLOC_FUNC      ALLOC_ARG(1) ALIGN_ARG(2) USE_RET;
 void* aligned_realloc(void* memory, size_t size, size_t alignment) NONNULL_ARGS_ALL ALLOC_ARG(2) ALIGN_ARG(3) USE_RET;

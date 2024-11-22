@@ -51,8 +51,8 @@
 #endif
 
 #if has_builtin(expect)
-	#define EXPECT_TRUE(x)  __builtin_expect ((bool) (x), true)
-	#define EXPECT_FALSE(x) __builtin_expect ((bool) (x), false)
+	#define EXPECT_TRUE(x)  ( __builtin_expect ((bool) (x), true)  )
+	#define EXPECT_FALSE(x) ( __builtin_expect ((bool) (x), false) )
 #else
 	#define EXPECT_TRUE(x)  (x)
 	#define EXPECT_FALSE(x) (x)
@@ -94,12 +94,25 @@
 	#define FREE_FUNC(func, arg)
 #endif
 
-#if has_attribute(nonnull)
-	#define NONNULL_ARGS_ALL  __attribute__ (( nonnull ))
-	#define NONNULL_ARGS(...) __attribute__ (( nonnull (__VA_ARGS__) ))
+#if has_attribute(format)
+	#ifdef __clang__
+		#define PRINTF_FUNC(fmt, args) __attribute__ (( format (printf, fmt, args) ))
+		#define SCANF_FUNC(fmt, args)  __attribute__ (( format (scanf,  fmt, args) ))
+	#else
+		#define PRINTF_FUNC(fmt, args) __attribute__ (( format (gnu_printf, fmt, args) ))
+		#define SCANF_FUNC(fmt, args)  __attribute__ (( format (gnu_scanf,  fmt, args) ))
+	#endif
 #else
-	#define NONNULL_ARGS_ALL
+	#define PRINTF_FUNC(fmt, varg)
+	#define SCANF_FUNC(fmt, varg)
+#endif
+
+#if has_attribute(nonnull)
+	#define NONNULL_ARGS(...) __attribute__ (( nonnull (__VA_ARGS__) ))
+	#define NONNULL_ARGS_ALL  __attribute__ (( nonnull ))
+#else
 	#define NONNULL_ARGS(...)
+	#define NONNULL_ARGS_ALL
 #endif
 
 #if has_attribute(alloc_size)

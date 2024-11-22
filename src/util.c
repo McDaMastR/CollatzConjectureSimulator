@@ -188,23 +188,19 @@ uint64_t minu64v(size_t count, ...)
 	return (uint64_t) min;
 }
 
-uint32_t clz(uint32_t x)
-{
-	ASSUME(x != 0);
-
-#if has_builtin(clz)
-	return (uint32_t) __builtin_clz(x);
-#else
-	uint32_t c;
-	for (c = 0; x & (1U << (31U - c)) == 0; c++);
-	return c;
-#endif
-}
-
 uint32_t floor_pow2(uint32_t x)
 {
 	ASSUME(x != 0);
-	return 1U << (31U - clz(x));
+
+#if has_builtin(stdc_bit_floor)
+	return __builtin_stdc_bit_floor(x);
+#elif has_builtin(clz)
+	return 1U << (31U - __builtin_clz(x));
+#else
+	uint32_t y = 1U << 31U;
+	while (!(x & y)) { y >>= 1U; }
+	return y;
+#endif
 }
 
 float get_benchmark(clock_t start, clock_t end)
@@ -222,7 +218,7 @@ bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const c
 	debugUtilsObjectNameInfo.pObjectName  = name;
 
 	VK_CALL_RES(vkSetDebugUtilsObjectNameEXT, device, &debugUtilsObjectNameInfo);
-	if (EXPECT_FALSE(vkres)) { return false; }
+	if EXPECT_FALSE (vkres) return false;
 
 	return true;
 }
@@ -237,7 +233,7 @@ bool get_buffer_requirements_noext(VkDevice device, VkDeviceSize size, VkBufferU
 
 	VkBuffer buffer;
 	VK_CALL_RES(vkCreateBuffer, device, &bufferCreateInfo, g_allocator, &buffer);
-	if (EXPECT_FALSE(vkres)) { return false; }
+	if EXPECT_FALSE (vkres) return false;
 
 	VkBufferMemoryRequirementsInfo2 bufferMemoryRequirementsInfo2 = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2};
 	bufferMemoryRequirementsInfo2.buffer = buffer;
@@ -278,10 +274,10 @@ bool file_size(const char* restrict filename, size_t* restrict size)
 	}
 
 	int ires = fseek(file, 0, SEEK_END);
-	if (EXPECT_FALSE(ires)) { FSEEK_FAILURE(ires, file, 0, SEEK_END); fclose(file); return false; }
+	if EXPECT_FALSE (ires) { FSEEK_FAILURE(ires, file, 0, SEEK_END); fclose(file); return false; }
 
 	long lres = ftell(file);
-	if (EXPECT_FALSE(lres == -1)) { FTELL_FAILURE(lres, file); fclose(file); return false; }
+	if EXPECT_FALSE (lres == -1) { FTELL_FAILURE(lres, file); fclose(file); return false; }
 
 	*size = (size_t) lres;
 
@@ -292,10 +288,10 @@ bool file_size(const char* restrict filename, size_t* restrict size)
 bool read_file(const char* restrict filename, void* restrict data, size_t size)
 {
 	FILE* file = fopen(filename, "rb");
-	if (EXPECT_FALSE(!file)) { FOPEN_FAILURE(file, filename, "rb"); return false; }
+	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, "rb"); return false; }
 
 	size_t sres = fread(data, sizeof(char), size, file);
-	if (EXPECT_FALSE(sres != size)) { FREAD_FAILURE(sres, data, sizeof(char), size, file); fclose(file); return false; }
+	if EXPECT_FALSE (sres != size) { FREAD_FAILURE(sres, data, sizeof(char), size, file); fclose(file); return false; }
 
 	fclose(file);
 	return true;
@@ -304,12 +300,44 @@ bool read_file(const char* restrict filename, void* restrict data, size_t size)
 bool write_file(const char* restrict filename, const void* restrict data, size_t size)
 {
 	FILE* file = fopen(filename, "wb");
-	if (EXPECT_FALSE(!file)) { FOPEN_FAILURE(file, filename, "wb"); return false; }
+	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, "wb"); return false; }
 
 	size_t sres = fwrite(data, sizeof(char), size, file);
-	if (EXPECT_FALSE(sres != size)) { FWRITE_FAILURE(sres, data, sizeof(char), size, file); fclose(file); return false; }
+	if EXPECT_FALSE (sres != size) { FWRITE_FAILURE(sres, data, sizeof(char), size, file); fclose(file); return false; }
 
 	fclose(file);
+	return true;
+}
+
+bool read_text(const char* restrict filename, const char* restrict format, ...)
+{
+	va_list args;
+	va_start(args, format);
+
+	FILE* file = fopen(filename, "r");
+	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, "r"); va_end(args); return false; }
+
+	int ires = vfscanf(file, format, args);
+	if EXPECT_FALSE (ires == EOF) { FSCANF_FAILURE(ires, file, format); fclose(file); va_end(args); return false; }
+
+	fclose(file);
+	va_end(args);
+	return true;
+}
+
+bool write_text(const char* restrict filename, const char* restrict format, ...)
+{
+	va_list args;
+	va_start(args, format);
+
+	FILE* file = fopen(filename, "w");
+	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, "w"); va_end(args); return false; }
+
+	int ires = vfprintf(file, format, args);
+	if EXPECT_FALSE (ires < 0) { FPRINTF_FAILURE(ires, file, format); fclose(file); va_end(args); return false; }
+
+	fclose(file);
+	va_end(args);
 	return true;
 }
 
@@ -333,7 +361,7 @@ void* aligned_malloc(size_t size, size_t alignment)
 	if (alignment < alignof(size_t)) { alignment = alignof(size_t); }
 
 	memory = _aligned_offset_malloc(size + sizeof(size_t), alignment, sizeof(size_t));
-	if (EXPECT_FALSE(!memory)) { return NULL; }
+	if EXPECT_FALSE (!memory) return NULL;
 
 	address = (uintptr_t) memory;
 
@@ -346,7 +374,7 @@ void* aligned_malloc(size_t size, size_t alignment)
 	if (alignment < alignof(AlignedInfo)) { alignment = alignof(AlignedInfo); }
 
 	int ires = posix_memalign(&memory, alignment, size + alignment + sizeof(AlignedInfo));
-	if (EXPECT_FALSE(ires)) { return NULL; }
+	if EXPECT_FALSE (ires) return NULL;
 
 	address = (uintptr_t) memory;
 	address += ((sizeof(AlignedInfo) - 1) / alignment + 1) * alignment;
@@ -379,7 +407,7 @@ void* aligned_realloc(void* restrict memory, size_t size, size_t alignment)
 	if (alignment < alignof(size_t)) { alignment = alignof(size_t); }
 
 	newMemory = _aligned_offset_realloc(memory, size + sizeof(size_t), alignment, sizeof(size_t));
-	if (EXPECT_FALSE(!newMemory)) { return NULL; }
+	if EXPECT_FALSE (!newMemory) return NULL;
 
 	address = (uintptr_t) newMemory;
 
@@ -400,7 +428,7 @@ void* aligned_realloc(void* restrict memory, size_t size, size_t alignment)
 	if (alignment < alignof(AlignedInfo)) { alignment = alignof(AlignedInfo); }
 
 	int ires = posix_memalign(&newMemory, alignment, size + alignment + sizeof(AlignedInfo));
-	if (EXPECT_FALSE(ires)) { return NULL; }
+	if EXPECT_FALSE (ires) return NULL;
 
 	address = (uintptr_t) newMemory;
 	address += ((sizeof(AlignedInfo) - 1) / alignment + 1) * alignment;

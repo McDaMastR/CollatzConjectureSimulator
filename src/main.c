@@ -22,7 +22,7 @@
 #define CHECK_RESULT(func)                  \
 	do {                                    \
 		bres = (func)(&gpu);                \
-		if ( EXPECT_FALSE(!bres) ) {        \
+		if EXPECT_FALSE (!bres) {           \
 			destroy_gpu(&gpu);              \
 			puts("EXIT FAILURE AT " #func); \
 			return EXIT_FAILURE;            \
@@ -35,7 +35,7 @@ int main(int argc, char** argv)
 	Gpu gpu = {0};
 
 	bool bres = parse_cmdline(&gpu, argc, argv);
-	if (!bres) { return EXIT_SUCCESS; }
+	if (!bres) return EXIT_SUCCESS;
 
 	CHECK_RESULT(create_instance);
 	CHECK_RESULT(select_device);

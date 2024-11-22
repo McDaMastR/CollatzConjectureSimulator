@@ -39,7 +39,7 @@ static void* DyArray_stretch(restrict DyArray array)
 	capacity += (capacity + 1) / 2 + 1;
 
 	void* raw2 = realloc(raw, capacity * size);
-	if (EXPECT_FALSE(!raw2)) { REALLOC_FAILURE(raw2, raw, capacity * size); return NULL; }
+	if EXPECT_FALSE (!raw2) { REALLOC_FAILURE(raw2, raw, capacity * size); return NULL; }
 
 	array->capacity = capacity;
 	array->array    = raw2;
@@ -59,16 +59,16 @@ DyArray DyArray_create(size_t size, size_t count)
 	ASSUME(size != 0);
 
 	DyArray array = (DyArray) malloc(sizeof(struct DyArray_T));
-	if (EXPECT_FALSE(!array)) { MALLOC_FAILURE(array, sizeof(struct DyArray_T)); return NULL; }
+	if EXPECT_FALSE (!array) { MALLOC_FAILURE(array, sizeof(struct DyArray_T)); return NULL; }
 
 	array->size     = size;
 	array->count    = 0;
 	array->capacity = count;
 	array->array    = NULL;
 
-	if (EXPECT_TRUE(count)) {
+	if EXPECT_TRUE (count) {
 		void* raw = malloc(count * size);
-		if (EXPECT_FALSE(!raw)) { MALLOC_FAILURE(raw, count * size); free(array); return NULL; }
+		if EXPECT_FALSE (!raw) { MALLOC_FAILURE(raw, count * size); free(array); return NULL; }
 
 		array->array = raw;
 	}
@@ -149,9 +149,9 @@ void* DyArray_append(restrict DyArray array, const void* restrict value)
 	size_t capacity = array->capacity;
 	void*  raw      = array->array;
 
-	if (EXPECT_FALSE(count == capacity)) {
+	if EXPECT_FALSE (count == capacity) {
 		void* raw2 = DyArray_stretch(array);
-		if (EXPECT_FALSE(!raw2)) { return NULL; }
+		if EXPECT_FALSE (!raw2) return NULL;
 
 		raw = raw2;
 	}
@@ -174,9 +174,9 @@ void* DyArray_prepend(restrict DyArray array, const void* restrict value)
 	size_t capacity = array->capacity;
 	void*  raw      = array->array;
 
-	if (EXPECT_FALSE(count == capacity)) {
+	if EXPECT_FALSE (count == capacity) {
 		void* raw2 = DyArray_stretch(array);
-		if (EXPECT_FALSE(!raw2)) { return NULL; }
+		if EXPECT_FALSE (!raw2) return NULL;
 
 		raw = raw2;
 	}
