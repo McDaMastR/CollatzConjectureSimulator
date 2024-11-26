@@ -20,16 +20,43 @@
 #include "util.h"
 
 
-static void print_program(void)
+static void print_version(void)
 {
 	printf(
 		"%s %" PRIu32 ".%" PRIu32 ".%" PRIu32 "\n%s\n%s\n\n",
-		PROGRAM_NAME,
-		PROGRAM_VERSION_MAJOR,
-		PROGRAM_VERSION_MINOR,
-		PROGRAM_VERSION_PATCH,
-		PROGRAM_COPYRIGHT,
-		PROGRAM_LICENCE);
+		PROGRAM_NAME, PROGRAM_VER_MAJOR, PROGRAM_VER_MINOR, PROGRAM_VER_PATCH, PROGRAM_COPYRIGHT, PROGRAM_LICENCE);
+}
+
+static void print_help(void)
+{
+	printf(
+		"Usage: %s [options]\n"
+		"\n"
+		"Options:\n"
+		"  --version                   Output version and licence information, then terminate.\n"
+		"  --help                      Output this hopefully helpful CLI overview, then terminate.\n"
+		"\n"
+		"  --silent                    Output no diagnostic information.\n"
+		"  --quiet                     Output minimal diagnostic information.\n"
+		"  --verbose                   Output maximal diagnostic information.\n"
+		"\n"
+		"  --int16                     Prefer shaders using 16-bit integers where appropriate.\n"
+		"  --int64                     Prefer shaders using 64-bit integers where appropriate.\n"
+		"\n"
+		"  --ext-layers                Enable the Khronos extension layers, if present.\n"
+		"  --profile-layers            Enable the Khronos profiles layer, if present.\n"
+		"  --validation                Enable the Khronos validation layer, if present.\n"
+		"\n"
+		"  --restart                   Restart the simulation. Do not overwrite previous progress.\n"
+		"  --no-query-benchmarks       Do not benchmark Vulkan commands via queries.\n"
+		"  --log-allocations           Log all memory allocations performed by Vulkan to %s.\n"
+		"  --capture-pipelines         Output pipeline data captured via %s, if present.\n"
+		"\n"
+		"  --iter-size <value>         Bit precision of the iterating value in shaders. Must be 128 or 256.\n"
+		"  --max-loops <value>         Maximum number of iterations of the main loop. Must be a non-negative integer.\n"
+		"  --max-memory <value>        Maximum proportion of available GPU heap memory to be allocated. Must be within "
+			"(0, 1].\n",
+		PROGRAM_EXE, ALLOC_LOG_NAME, VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME);
 }
 
 static void DyArray_destroy_stub(void* restrict array)
@@ -59,26 +86,36 @@ static void free_recursive(restrict DyArray array)
 
 bool parse_cmdline(Gpu* restrict gpu, int argc, char** restrict argv)
 {
-	gpu->iterSize  = 128; // The integer size for shaders to use when iterating (must be 128 or 256)
-	gpu->maxMemory = .4f; // Maximum proportion of available GPU heap memory to use
+	*gpu = (Gpu) {0};
 
-	gpu->preferInt16 = false; // Whether to prefer shaders that use 16-bit integers over 32-bit where appropriate
-	gpu->preferInt64 = false; // Whether to prefer shaders that use 64-bit integers over 32-bit where appropriate
+	gpu->outputLevel = CLI_OUTPUT_DEFAULT;
 
-	gpu->extensionLayers  = false; // Whether to use the Khronos extension layers, if present
-	gpu->profileLayers    = false; // Whether to use the Khronos profiles layer, if present
-	gpu->validationLayers = false; // Whether to use the Khronos validation layer, if present
+	gpu->iterSize  = 128;
+	gpu->maxLoops  = UINT64_MAX;
+	gpu->maxMemory = .4f;
 
-	gpu->queryBenchmarking = true;  // Whether to benchmark Vulkan commands via queries
-	gpu->logAllocations    = false; // Whether to log all memory allocations from Vulkan
-	gpu->capturePipelines  = false; // Whether to capture pipeline data via VK_KHR_pipeline_executable_properties
+	gpu->preferInt16 = false;
+	gpu->preferInt64 = false;
 
-	gpu->restartCount = false; // Whether to restart the simulation by setting the first starting value to three
+	gpu->extensionLayers  = false;
+	gpu->profileLayers    = false;
+	gpu->validationLayers = false;
+
+	gpu->restartCount      = false;
+	gpu->queryBenchmarking = true;
+	gpu->logAllocations    = false;
+	gpu->capturePipelines  = false;
 
 	for (int i = 1; i < argc; i++) {
 		const char* arg = argv[i];
+		char* endChar;
 
-		if (!strcmp(arg, "--version")) { print_program(); return false; }
+		if (!strcmp(arg, "--version")) { print_version(); return false; }
+		if (!strcmp(arg, "--help"))    { print_help();    return false; }
+
+		if (!strcmp(arg, "--silent"))  { gpu->outputLevel = CLI_OUTPUT_SILENT;  continue; }
+		if (!strcmp(arg, "--quiet"))   { gpu->outputLevel = CLI_OUTPUT_QUIET;   continue; }
+		if (!strcmp(arg, "--verbose")) { gpu->outputLevel = CLI_OUTPUT_VERBOSE; continue; }
 
 		if (!strcmp(arg, "--int16")) { gpu->preferInt16 = true; continue; }
 		if (!strcmp(arg, "--int64")) { gpu->preferInt64 = true; continue; }
@@ -87,11 +124,10 @@ bool parse_cmdline(Gpu* restrict gpu, int argc, char** restrict argv)
 		if (!strcmp(arg, "--profile-layers")) { gpu->profileLayers    = true; continue; }
 		if (!strcmp(arg, "--validation"))     { gpu->validationLayers = true; continue; }
 
-		if (!strcmp(arg, "--no-query-benchmarking")) { gpu->queryBenchmarking = false; continue; }
-		if (!strcmp(arg, "--log-allocations"))       { gpu->logAllocations    = true;  continue; }
-		if (!strcmp(arg, "--capture-pipelines"))     { gpu->capturePipelines  = true;  continue; }
-
-		if (!strcmp(arg, "--restart")) { gpu->restartCount = true; continue; }
+		if (!strcmp(arg, "--restart"))             { gpu->restartCount      = true;  continue; }
+		if (!strcmp(arg, "--no-query-benchmarks")) { gpu->queryBenchmarking = false; continue; }
+		if (!strcmp(arg, "--log-allocations"))     { gpu->logAllocations    = true;  continue; }
+		if (!strcmp(arg, "--capture-pipelines"))   { gpu->capturePipelines  = true;  continue; }
 
 		if (!strcmp(arg, "--iter-size")) {
 			if (i + 1 == argc) { printf("Warning: ignoring incomplete argument %d '%s'\n", i, arg); continue; }
@@ -99,10 +135,29 @@ bool parse_cmdline(Gpu* restrict gpu, int argc, char** restrict argv)
 			i++;
 			arg = argv[i];
 
-			int iterSize = atoi(arg);
-			if (iterSize != 128 && iterSize != 256) { printf("Warning: ignoring invalid argument %d '%s'\n", i, arg); continue; }
+			unsigned long iterSize = strtoul(arg, &endChar, 0);
 
-			gpu->iterSize = iterSize;
+			if (*endChar != '\0') {
+				printf("Warning: partially interpreting argument %d '%s' as %lu\n", i, arg, iterSize); }
+			if (iterSize != 128 && iterSize != 256) {
+				printf("Warning: ignoring invalid argument %d '%s'\n", i, arg); continue; }
+
+			gpu->iterSize = (uint32_t) iterSize;
+			continue;
+		}
+
+		if (!strcmp(arg, "--max-loops")) {
+			if (i + 1 == argc) { printf("Warning: ignoring incomplete argument %d '%s'\n", i, arg); continue; }
+
+			i++;
+			arg = argv[i];
+
+			unsigned long long maxLoops = strtoull(arg, &endChar, 0);
+
+			if (*endChar != '\0') {
+				printf("Warning: partially interpreting argument %d '%s' as %llu\n", i, arg, maxLoops); }
+
+			gpu->maxLoops = (uint64_t) maxLoops;
 			continue;
 		}
 
@@ -112,15 +167,21 @@ bool parse_cmdline(Gpu* restrict gpu, int argc, char** restrict argv)
 			i++;
 			arg = argv[i];
 
-			double maxMemory = atof(arg);
-			if (maxMemory < 0 || 1 < maxMemory) { printf("Warning: ignoring invalid argument %d '%s'\n", i, arg); continue; }
+			float maxMemory = strtof(arg, &endChar);
 
-			gpu->maxMemory = (float) maxMemory;
+			if (*endChar != '\0') {
+				printf("Warning: partially interpreting argument %d '%s' as %f\n", i, arg, (double) maxMemory); }
+			if (maxMemory <= 0 || 1 < maxMemory) {
+				printf("Warning: ignoring invalid argument %d '%s'\n", i, arg); continue; }
+
+			gpu->maxMemory = maxMemory;
 			continue;
 		}
 
 		printf("Warning: ignoring unknown argument %d '%s'\n", i, arg);
 	}
+
+	NEWLINE();
 
 	return true;
 }
@@ -137,7 +198,8 @@ bool create_instance(Gpu* restrict gpu)
 	if EXPECT_FALSE (vkres) { VKINIT_FAILURE(vkres); free_recursive(dyMem); return false; }
 
 	uint32_t instApiVersion = volkGetInstanceVersion();
-	if EXPECT_FALSE (instApiVersion == VK_API_VERSION_1_0) { VKVERS_FAILURE(instApiVersion); free_recursive(dyMem); return false; }
+	if EXPECT_FALSE (instApiVersion == VK_API_VERSION_1_0) {
+		VKVERS_FAILURE(instApiVersion); free_recursive(dyMem); return false; }
 
 	if (gpu->logAllocations) {
 		g_allocator = &g_allocationCallbacks;
@@ -150,24 +212,29 @@ bool create_instance(Gpu* restrict gpu)
 	bool bres = init_debug_logfile();
 	if EXPECT_FALSE (!bres) { free_recursive(dyMem); return false; }
 
-	VkDebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfo = {VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
-	debugUtilsMessengerCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-	debugUtilsMessengerCreateInfo.messageType     = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+	VkDebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfo = {
+		VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
+	debugUtilsMessengerCreateInfo.messageSeverity =
+		VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+		VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+	debugUtilsMessengerCreateInfo.messageType =
+		VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+		VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	debugUtilsMessengerCreateInfo.pfnUserCallback = debug_callback;
 	debugUtilsMessengerCreateInfo.pUserData       = &g_callbackData;
 #endif
 
 	uint32_t layerPropertyCount;
+	uint32_t extensionPropertyCount;
+
 	VK_CALL_RES(vkEnumerateInstanceLayerProperties, &layerPropertyCount, NULL);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
-	uint32_t extensionPropertyCount;
 	VK_CALL_RES(vkEnumerateInstanceExtensionProperties, NULL, &extensionPropertyCount, NULL);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 	size_t size =
-		layerPropertyCount     * sizeof(VkLayerProperties) +
-		extensionPropertyCount * sizeof(VkExtensionProperties);
+		layerPropertyCount * sizeof(VkLayerProperties) + extensionPropertyCount * sizeof(VkExtensionProperties);
 
 	void* p = malloc(size);
 	if EXPECT_FALSE (!p && size) { MALLOC_FAILURE(p, size); free_recursive(dyMem); return false; }
@@ -193,10 +260,16 @@ bool create_instance(Gpu* restrict gpu)
 	for (uint32_t i = 0; i < layerPropertyCount; i++) {
 		const char* layerName = layersProperties[i].layerName;
 
-		if (gpu->extensionLayers  && !strcmp(layerName, VK_KHR_SYNCHRONIZATION_2_LAYER_NAME))  { DyArray_append(enabledLayers, &layerName); continue; }
-		if (gpu->extensionLayers  && !strcmp(layerName, VK_KHR_TIMELINE_SEMAPHORE_LAYER_NAME)) { DyArray_append(enabledLayers, &layerName); continue; }
-		if (gpu->profileLayers    && !strcmp(layerName, VK_KHR_PROFILES_LAYER_NAME))           { DyArray_append(enabledLayers, &layerName); continue; }
-		if (gpu->validationLayers && !strcmp(layerName, VK_KHR_VALIDATION_LAYER_NAME))         { DyArray_append(enabledLayers, &layerName); continue; }
+		if (
+			(gpu->extensionLayers && (
+				!strcmp(layerName, VK_KHR_SYNCHRONIZATION_2_LAYER_NAME) ||
+				!strcmp(layerName, VK_KHR_TIMELINE_SEMAPHORE_LAYER_NAME))) ||
+			(gpu->profileLayers && !strcmp(layerName, VK_KHR_PROFILES_LAYER_NAME)) ||
+			(gpu->validationLayers && !strcmp(layerName, VK_KHR_VALIDATION_LAYER_NAME)))
+		{
+			DyArray_append(enabledLayers, &layerName);
+			continue;
+		}
 	}
 
 	const void*  nextChain = NULL;
@@ -230,7 +303,7 @@ bool create_instance(Gpu* restrict gpu)
 #endif
 	}
 
-	VkApplicationInfo applicationInfo = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
+	VkApplicationInfo applicationInfo  = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
 	applicationInfo.pApplicationName   = PROGRAM_NAME;
 	applicationInfo.applicationVersion = PROGRAM_VERSION;
 	applicationInfo.apiVersion         = VK_API_VERSION_1_3;
@@ -242,25 +315,27 @@ bool create_instance(Gpu* restrict gpu)
 	const char** enabledExtensionNames = (const char**) DyArray_raw(enabledExtensions);
 
 	VkInstanceCreateInfo instanceCreateInfo = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
-	instanceCreateInfo.pNext                   = nextChain;
-	instanceCreateInfo.flags                   = usingPortabilityEnumeration ? VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR : 0;
+	instanceCreateInfo.pNext                = nextChain;
+	instanceCreateInfo.flags = usingPortabilityEnumeration ? VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR : 0;
 	instanceCreateInfo.pApplicationInfo        = &applicationInfo;
 	instanceCreateInfo.enabledLayerCount       = enabledLayerCount;
 	instanceCreateInfo.ppEnabledLayerNames     = enabledLayerNames;
 	instanceCreateInfo.enabledExtensionCount   = enabledExtensionCount;
 	instanceCreateInfo.ppEnabledExtensionNames = enabledExtensionNames;
 
-	printf("Enabled instance layers (%" PRIu32 "):\n", enabledLayerCount);
-	for (uint32_t i = 0; i < enabledLayerCount; i++) {
-		printf("\t%" PRIu32 ") %s\n", i + 1, enabledLayerNames[i]);
-	}
-	NEWLINE();
+	if (gpu->outputLevel > CLI_OUTPUT_DEFAULT) {
+		printf("Enabled instance layers (%" PRIu32 "):\n", enabledLayerCount);
+		for (uint32_t i = 0; i < enabledLayerCount; i++) {
+			printf("\t%" PRIu32 ") %s\n", i + 1, enabledLayerNames[i]);
+		}
+		NEWLINE();
 
-	printf("Enabled instance extensions (%" PRIu32 "):\n", enabledExtensionCount);
-	for (uint32_t i = 0; i < enabledExtensionCount; i++) {
-		printf("\t%" PRIu32 ") %s\n", i + 1, enabledExtensionNames[i]);
+		printf("Enabled instance extensions (%" PRIu32 "):\n", enabledExtensionCount);
+		for (uint32_t i = 0; i < enabledExtensionCount; i++) {
+			printf("\t%" PRIu32 ") %s\n", i + 1, enabledExtensionNames[i]);
+		}
+		NEWLINE();
 	}
-	NEWLINE();
 
 	VkInstance instance;
 	VK_CALL_RES(vkCreateInstance, &instanceCreateInfo, g_allocator, &instance);
@@ -271,7 +346,9 @@ bool create_instance(Gpu* restrict gpu)
 
 #ifndef NDEBUG
 	if (usingDebugUtils) {
-		VK_CALL_RES(vkCreateDebugUtilsMessengerEXT, instance, &debugUtilsMessengerCreateInfo, g_allocator, &gpu->debugUtilsMessenger);
+		VK_CALL_RES(
+			vkCreateDebugUtilsMessengerEXT, instance, &debugUtilsMessengerCreateInfo, g_allocator,
+			&gpu->debugUtilsMessenger);
 	}
 #endif
 
@@ -290,8 +367,8 @@ bool select_device(Gpu* restrict gpu)
 
 	uint32_t physicalDeviceCount;
 	VK_CALL_RES(vkEnumeratePhysicalDevices, instance, &physicalDeviceCount, NULL);
-	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
+	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 	if EXPECT_FALSE (!physicalDeviceCount) {
 		fputs("Runtime failure\nNo physical devices are accessible to the Vulkan instance\n\n", stderr);
 		free_recursive(dyMem);
@@ -299,15 +376,15 @@ bool select_device(Gpu* restrict gpu)
 	}
 
 	size_t size =
-		physicalDeviceCount *     sizeof(VkPhysicalDevice) +
-		physicalDeviceCount *     sizeof(VkQueueFamilyProperties2*) +
-		physicalDeviceCount *     sizeof(VkExtensionProperties*) +
-		physicalDeviceCount *     sizeof(VkPhysicalDeviceMemoryProperties2) +
-		physicalDeviceCount *     sizeof(VkPhysicalDeviceProperties2) +
-		physicalDeviceCount *     sizeof(VkPhysicalDeviceFeatures2) +
-		physicalDeviceCount *     sizeof(VkPhysicalDevice16BitStorageFeatures) +
-		physicalDeviceCount *     sizeof(VkPhysicalDevice8BitStorageFeaturesKHR) +
-		physicalDeviceCount * 2 * sizeof(uint32_t);
+		physicalDeviceCount * sizeof(VkPhysicalDevice) +
+		physicalDeviceCount * sizeof(VkQueueFamilyProperties2*) +
+		physicalDeviceCount * sizeof(VkExtensionProperties*) +
+		physicalDeviceCount * sizeof(VkPhysicalDeviceMemoryProperties2) +
+		physicalDeviceCount * sizeof(VkPhysicalDeviceProperties2) +
+		physicalDeviceCount * sizeof(VkPhysicalDeviceFeatures2) +
+		physicalDeviceCount * sizeof(VkPhysicalDevice16BitStorageFeatures) +
+		physicalDeviceCount * sizeof(VkPhysicalDevice8BitStorageFeaturesKHR) +
+		physicalDeviceCount * sizeof(uint32_t) * 2;
 
 	void* p = malloc(size);
 	if EXPECT_FALSE (!p) { MALLOC_FAILURE(p, size); free_recursive(dyMem); return false; }
@@ -317,18 +394,25 @@ bool select_device(Gpu* restrict gpu)
 
 	VkPhysicalDevice* physicalDevices = (VkPhysicalDevice*) p;
 
-	VkQueueFamilyProperties2** queueFamiliesProperties2 = (VkQueueFamilyProperties2**) (physicalDevices          + physicalDeviceCount);
-	VkExtensionProperties**    extensionsProperties     = (VkExtensionProperties**)    (queueFamiliesProperties2 + physicalDeviceCount);
+	VkQueueFamilyProperties2** queueFamiliesProperties2 = (VkQueueFamilyProperties2**) (
+		physicalDevices + physicalDeviceCount);
+	VkExtensionProperties** extensionsProperties = (VkExtensionProperties**) (
+		queueFamiliesProperties2 + physicalDeviceCount);
 
-	VkPhysicalDeviceMemoryProperties2* physicalDevicesMemoryProperties2 = (VkPhysicalDeviceMemoryProperties2*) (extensionsProperties             + physicalDeviceCount);
-	VkPhysicalDeviceProperties2*       physicalDevicesProperties2       = (VkPhysicalDeviceProperties2*)       (physicalDevicesMemoryProperties2 + physicalDeviceCount);
+	VkPhysicalDeviceMemoryProperties2* physicalDevicesMemoryProperties2 = (VkPhysicalDeviceMemoryProperties2*) (
+		extensionsProperties + physicalDeviceCount);
+	VkPhysicalDeviceProperties2* physicalDevicesProperties2 = (VkPhysicalDeviceProperties2*) (
+		physicalDevicesMemoryProperties2 + physicalDeviceCount);
 
-	VkPhysicalDeviceFeatures2*              physicalDevicesFeatures2            = (VkPhysicalDeviceFeatures2*)              (physicalDevicesProperties2          + physicalDeviceCount);
-	VkPhysicalDevice16BitStorageFeatures*   physicalDevices16BitStorageFeatures = (VkPhysicalDevice16BitStorageFeatures*)   (physicalDevicesFeatures2            + physicalDeviceCount);
-	VkPhysicalDevice8BitStorageFeaturesKHR* physicalDevices8BitStorageFeatures  = (VkPhysicalDevice8BitStorageFeaturesKHR*) (physicalDevices16BitStorageFeatures + physicalDeviceCount);
+	VkPhysicalDeviceFeatures2* physicalDevicesFeatures2 = (VkPhysicalDeviceFeatures2*) (
+		physicalDevicesProperties2 + physicalDeviceCount);
+	VkPhysicalDevice16BitStorageFeatures* physicalDevices16BitStorageFeatures =
+		(VkPhysicalDevice16BitStorageFeatures*) (physicalDevicesFeatures2 + physicalDeviceCount);
+	VkPhysicalDevice8BitStorageFeaturesKHR* physicalDevices8BitStorageFeatures =
+		(VkPhysicalDevice8BitStorageFeaturesKHR*) (physicalDevices16BitStorageFeatures + physicalDeviceCount);
 
 	uint32_t* extensionPropertyCounts   = (uint32_t*) (physicalDevices8BitStorageFeatures + physicalDeviceCount);
-	uint32_t* queueFamilyPropertyCounts = (uint32_t*) (extensionPropertyCounts            + physicalDeviceCount);
+	uint32_t* queueFamilyPropertyCounts = (uint32_t*) (extensionPropertyCounts + physicalDeviceCount);
 
 	VK_CALL_RES(vkEnumeratePhysicalDevices, instance, &physicalDeviceCount, physicalDevices);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
@@ -346,9 +430,7 @@ bool select_device(Gpu* restrict gpu)
 		extensionTotal   += extensionPropertyCounts[i];
 	}
 
-	size =
-		queueFamilyTotal * sizeof(VkQueueFamilyProperties2) +
-		extensionTotal   * sizeof(VkExtensionProperties);
+	size = queueFamilyTotal * sizeof(VkQueueFamilyProperties2) + extensionTotal * sizeof(VkExtensionProperties);
 
 	p = malloc(size);
 	if EXPECT_FALSE (!p) { MALLOC_FAILURE(p, size); free_recursive(dyMem); return false; }
@@ -361,20 +443,26 @@ bool select_device(Gpu* restrict gpu)
 
 	for (uint32_t i = 1; i < physicalDeviceCount; i++) {
 		queueFamiliesProperties2[i] = queueFamiliesProperties2[i - 1] + queueFamilyPropertyCounts[i - 1];
-		extensionsProperties[i]     = extensionsProperties[i - 1]     + extensionPropertyCounts[i - 1];
+		extensionsProperties[i]     = extensionsProperties[i - 1] + extensionPropertyCounts[i - 1];
 	}
 
 	for (uint32_t i = 0; i < physicalDeviceCount; i++) {
-		VK_CALL_RES(vkEnumerateDeviceExtensionProperties, physicalDevices[i], NULL, &extensionPropertyCounts[i], extensionsProperties[i]);
+		VK_CALL_RES(
+			vkEnumerateDeviceExtensionProperties, physicalDevices[i], NULL, &extensionPropertyCounts[i],
+			extensionsProperties[i]);
+
 		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 		for (uint32_t j = 0; j < queueFamilyPropertyCounts[i]; j++) {
 			queueFamiliesProperties2[i][j] = (VkQueueFamilyProperties2) {VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2};
 		}
 
-		VK_CALL(vkGetPhysicalDeviceQueueFamilyProperties2, physicalDevices[i], &queueFamilyPropertyCounts[i], queueFamiliesProperties2[i]);
+		VK_CALL(
+			vkGetPhysicalDeviceQueueFamilyProperties2, physicalDevices[i], &queueFamilyPropertyCounts[i],
+			queueFamiliesProperties2[i]);
 
-		physicalDevicesMemoryProperties2[i] = (VkPhysicalDeviceMemoryProperties2) {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2};
+		physicalDevicesMemoryProperties2[i] = (VkPhysicalDeviceMemoryProperties2) {
+			VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2};
 
 		VK_CALL(vkGetPhysicalDeviceMemoryProperties2, physicalDevices[i], &physicalDevicesMemoryProperties2[i]);
 
@@ -382,18 +470,20 @@ bool select_device(Gpu* restrict gpu)
 
 		VK_CALL(vkGetPhysicalDeviceProperties2, physicalDevices[i], &physicalDevicesProperties2[i]);
 
-		physicalDevices8BitStorageFeatures[i] = (VkPhysicalDevice8BitStorageFeaturesKHR) {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES_KHR};
+		physicalDevices8BitStorageFeatures[i] = (VkPhysicalDevice8BitStorageFeaturesKHR) {
+			VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES_KHR};
 
-		physicalDevices16BitStorageFeatures[i] = (VkPhysicalDevice16BitStorageFeatures) {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES};
+		physicalDevices16BitStorageFeatures[i] = (VkPhysicalDevice16BitStorageFeatures) {
+			VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES};
 		physicalDevices16BitStorageFeatures[i].pNext = &physicalDevices8BitStorageFeatures[i];
 
-		physicalDevicesFeatures2[i] = (VkPhysicalDeviceFeatures2) {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+		physicalDevicesFeatures2[i]       = (VkPhysicalDeviceFeatures2) {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
 		physicalDevicesFeatures2[i].pNext = &physicalDevices16BitStorageFeatures[i];
 
 		VK_CALL(vkGetPhysicalDeviceFeatures2, physicalDevices[i], &physicalDevicesFeatures2[i]);
 	}
 
-	uint32_t devIndex     = ~0U; // Physical device index
+	uint32_t devIndex     = UINT32_MAX; // Physical device index
 	uint32_t highestScore = 0;
 
 	bool using8BitStorage                  = false;
@@ -413,23 +503,29 @@ bool select_device(Gpu* restrict gpu)
 	bool usingVulkan13                     = false;
 
 	for (uint32_t i = 0; i < physicalDeviceCount; i++) {
+		uint32_t extensionCount   = extensionPropertyCounts[i];
+		uint32_t queueFamilyCount = queueFamilyPropertyCounts[i];
+		uint32_t memoryTypeCount  = physicalDevicesMemoryProperties2[i].memoryProperties.memoryTypeCount;
+
 		bool hasVulkan11 = physicalDevicesProperties2[i].properties.apiVersion >= VK_API_VERSION_1_1;
 		bool hasVulkan12 = physicalDevicesProperties2[i].properties.apiVersion >= VK_API_VERSION_1_2;
 		bool hasVulkan13 = physicalDevicesProperties2[i].properties.apiVersion >= VK_API_VERSION_1_3;
 
-		bool hasDiscreteGpu = physicalDevicesProperties2[i].properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+		bool hasDiscreteGpu =
+			physicalDevicesProperties2[i].properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
 
 		bool hasShaderInt16 = physicalDevicesFeatures2[i].features.shaderInt16;
 		bool hasShaderInt64 = physicalDevicesFeatures2[i].features.shaderInt64;
 
-		bool hasUniformAndStorageBuffer8BitAccess = physicalDevices8BitStorageFeatures[i].uniformAndStorageBuffer8BitAccess;
-		bool hasStorageBuffer16BitAccess          = physicalDevices16BitStorageFeatures[i].storageBuffer16BitAccess;
+		bool hasUniformAndStorageBuffer8BitAccess =
+			physicalDevices8BitStorageFeatures[i].uniformAndStorageBuffer8BitAccess;
+		bool hasStorageBuffer16BitAccess = physicalDevices16BitStorageFeatures[i].storageBuffer16BitAccess;
 
 		bool hasDedicatedTransfer = false;
 		bool hasDedicatedCompute  = false;
 		bool hasCompute           = false;
 
-		for (uint32_t j = 0; j < queueFamilyPropertyCounts[i]; j++) {
+		for (uint32_t j = 0; j < queueFamilyCount; j++) {
 			VkQueueFlags queueFlags = queueFamiliesProperties2[i][j].queueFamilyProperties.queueFlags;
 
 			bool isDedicatedTransfer = queueFlags == VK_QUEUE_TRANSFER_BIT;
@@ -449,8 +545,9 @@ bool select_device(Gpu* restrict gpu)
 		bool hasHostNonCoherent       = false;
 		bool hasHostVisible           = false;
 
-		for (uint32_t j = 0; j < physicalDevicesMemoryProperties2[i].memoryProperties.memoryTypeCount; j++) {
-			VkMemoryPropertyFlags propertyFlags = physicalDevicesMemoryProperties2[i].memoryProperties.memoryTypes[j].propertyFlags;
+		for (uint32_t j = 0; j < memoryTypeCount; j++) {
+			VkMemoryPropertyFlags propertyFlags =
+				physicalDevicesMemoryProperties2[i].memoryProperties.memoryTypes[j].propertyFlags;
 
 			bool isDeviceLocal     = propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 			bool isHostVisible     = propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
@@ -490,21 +587,25 @@ bool select_device(Gpu* restrict gpu)
 		bool hasPipelineCreationCacheControl = false;
 		bool hasSubgroupSizeControl          = false;
 
-		for (uint32_t j = 0; j < extensionPropertyCounts[i]; j++) {
+		for (uint32_t j = 0; j < extensionCount; j++) {
 			const char* extensionName = extensionsProperties[i][j].extensionName;
 
-			if (!strcmp(extensionName, VK_KHR_8BIT_STORAGE_EXTENSION_NAME))                    { has8BitStorage                  = true; continue; }
-			if (!strcmp(extensionName, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME))           { hasBufferDeviceAddress          = true; continue; }
-			if (!strcmp(extensionName, VK_KHR_MAINTENANCE_4_EXTENSION_NAME))                   { hasMaintenance4                 = true; continue; }
-			if (!strcmp(extensionName, VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME))  { hasPipelineExecutableProperties = true; continue; }
-			if (!strcmp(extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))              { hasPortabilitySubset            = true; continue; }
-			if (!strcmp(extensionName, VK_KHR_SPIRV_1_4_EXTENSION_NAME))                       { hasSpirv14                      = true; continue; }
-			if (!strcmp(extensionName, VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME))               { hasSynchronization2             = true; continue; }
-			if (!strcmp(extensionName, VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME))              { hasTimelineSemaphore            = true; continue; }
-			if (!strcmp(extensionName, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME))                   { hasMemoryBudget                 = true; continue; }
-			if (!strcmp(extensionName, VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME))                 { hasMemoryPriority               = true; continue; }
-			if (!strcmp(extensionName, VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME)) { hasPipelineCreationCacheControl = true; continue; }
-			if (!strcmp(extensionName, VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME))           { hasSubgroupSizeControl          = true; continue; }
+			if      (!strcmp(extensionName, VK_KHR_8BIT_STORAGE_EXTENSION_NAME)) { has8BitStorage = true; }
+			else if (!strcmp(extensionName, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME)) {
+				hasBufferDeviceAddress = true; }
+			else if (!strcmp(extensionName, VK_KHR_MAINTENANCE_4_EXTENSION_NAME)) { hasMaintenance4 = true; }
+			else if (!strcmp(extensionName, VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME)) {
+				hasPipelineExecutableProperties = true; }
+			else if (!strcmp(extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) { hasPortabilitySubset = true; }
+			else if (!strcmp(extensionName, VK_KHR_SPIRV_1_4_EXTENSION_NAME))          { hasSpirv14           = true; }
+			else if (!strcmp(extensionName, VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME))  { hasSynchronization2  = true; }
+			else if (!strcmp(extensionName, VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME)) { hasTimelineSemaphore = true; }
+			else if (!strcmp(extensionName, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME))      { hasMemoryBudget      = true; }
+			else if (!strcmp(extensionName, VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME))    { hasMemoryPriority    = true; }
+			else if (!strcmp(extensionName, VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME)) {
+				hasPipelineCreationCacheControl = true; }
+			else if (!strcmp(extensionName, VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME)) {
+				hasSubgroupSizeControl = true; }
 		}
 
 		uint32_t currentScore = 1;
@@ -524,8 +625,8 @@ bool select_device(Gpu* restrict gpu)
 
 		if (hasDiscreteGpu) { currentScore += 10000; }
 
-		if (hasShaderInt16 && gpu->preferInt16) { currentScore += 1000; }
-		if (hasShaderInt64 && gpu->preferInt64) { currentScore += 1000; }
+		if (gpu->preferInt16 && hasShaderInt16) { currentScore += 1000; }
+		if (gpu->preferInt64 && hasShaderInt64) { currentScore += 1000; }
 
 		if (hasDeviceNonHost) { currentScore += 50; }
 
@@ -552,7 +653,7 @@ bool select_device(Gpu* restrict gpu)
 			highestScore = currentScore;
 			devIndex     = i;
 
-			using8BitStorage                  = gpu->validationLayers && has8BitStorage && hasUniformAndStorageBuffer8BitAccess;
+			using8BitStorage = gpu->validationLayers && has8BitStorage && hasUniformAndStorageBuffer8BitAccess;
 			using16BitStorage                 = hasStorageBuffer16BitAccess;
 			usingBufferDeviceAddress          = gpu->validationLayers && hasBufferDeviceAddress;
 			usingMaintenance4                 = hasMaintenance4;
@@ -561,8 +662,8 @@ bool select_device(Gpu* restrict gpu)
 			usingPipelineCreationCacheControl = hasPipelineCreationCacheControl;
 			usingPipelineExecutableProperties = gpu->capturePipelines && hasPipelineExecutableProperties;
 			usingPortabilitySubset            = hasPortabilitySubset;
-			usingShaderInt16                  = hasShaderInt16;
-			usingShaderInt64                  = hasShaderInt64;
+			usingShaderInt16                  = gpu->preferInt16 && hasShaderInt16;
+			usingShaderInt64                  = gpu->preferInt64 && hasShaderInt64;
 			usingSpirv14                      = hasSpirv14;
 			usingSubgroupSizeControl          = hasSubgroupSizeControl;
 			usingVulkan12                     = hasVulkan12;
@@ -570,7 +671,7 @@ bool select_device(Gpu* restrict gpu)
 		}
 	}
 
-	if (devIndex == ~0U) {
+	if (devIndex == UINT32_MAX) {
 		fputs(
 			"Runtime failure\n"
 			"No physical device meets program requirements\n"
@@ -579,6 +680,20 @@ bool select_device(Gpu* restrict gpu)
 		free_recursive(dyMem);
 		return false;
 	}
+
+	const char* deviceName = physicalDevicesProperties2[devIndex].properties.deviceName;
+
+	uint32_t queueFamilyCount = queueFamilyPropertyCounts[devIndex];
+
+	uint32_t vkVerMajor = 1;
+	uint32_t vkVerMinor;
+	uint32_t spvVerMajor = 1;
+	uint32_t spvVerMinor;
+
+	if      (usingVulkan13) { vkVerMinor = 3; spvVerMinor = 6; }
+	else if (usingVulkan12) { vkVerMinor = 2; spvVerMinor = 5; }
+	else if (usingSpirv14)  { vkVerMinor = 1; spvVerMinor = 4; }
+	else                    { vkVerMinor = 1; spvVerMinor = 3; }
 
 	uint32_t transferQueueFamilyIndex = 0;
 	uint32_t computeQueueFamilyIndex  = 0;
@@ -589,7 +704,7 @@ bool select_device(Gpu* restrict gpu)
 	bool hasDedicatedCompute = false;
 	bool hasCompute          = false;
 
-	for (uint32_t i = 0; i < queueFamilyPropertyCounts[devIndex]; i++) {
+	for (uint32_t i = 0; i < queueFamilyCount; i++) {
 		VkQueueFlags queueFlags = queueFamiliesProperties2[devIndex][i].queueFamilyProperties.queueFlags;
 
 		bool isDedicatedTransfer = queueFlags == VK_QUEUE_TRANSFER_BIT;
@@ -625,14 +740,17 @@ bool select_device(Gpu* restrict gpu)
 		}
 	}
 
-	if (!hasTransfer) {
-		transferQueueFamilyIndex = computeQueueFamilyIndex;
-	}
+	if (!hasTransfer) { transferQueueFamilyIndex = computeQueueFamilyIndex; }
 
 	gpu->physicalDevice = physicalDevices[devIndex];
 
 	gpu->transferQueueFamilyIndex = transferQueueFamilyIndex;
 	gpu->computeQueueFamilyIndex  = computeQueueFamilyIndex;
+
+	gpu->vkVerMajor  = vkVerMajor;
+	gpu->vkVerMinor  = vkVerMinor;
+	gpu->spvVerMajor = spvVerMajor;
+	gpu->spvVerMinor = spvVerMinor;
 
 	gpu->using8BitStorage                  = using8BitStorage;
 	gpu->using16BitStorage                 = using16BitStorage;
@@ -645,52 +763,72 @@ bool select_device(Gpu* restrict gpu)
 	gpu->usingPortabilitySubset            = usingPortabilitySubset;
 	gpu->usingShaderInt16                  = usingShaderInt16;
 	gpu->usingShaderInt64                  = usingShaderInt64;
-	gpu->usingSpirv14                      = usingSpirv14;
 	gpu->usingSubgroupSizeControl          = usingSubgroupSizeControl;
-	gpu->usingVulkan12                     = usingVulkan12;
-	gpu->usingVulkan13                     = usingVulkan13;
 
 	if (gpu->queryBenchmarking) {
-		gpu->transferQueueTimestampValidBits = queueFamiliesProperties2[devIndex][transferQueueFamilyIndex].queueFamilyProperties.timestampValidBits;
-		gpu->computeQueueTimestampValidBits  = queueFamiliesProperties2[devIndex][computeQueueFamilyIndex ].queueFamilyProperties.timestampValidBits;
-		gpu->timestampPeriod                 = physicalDevicesProperties2[devIndex].properties.limits.timestampPeriod;
+		gpu->transferQueueTimestampValidBits =
+			queueFamiliesProperties2[devIndex][transferQueueFamilyIndex].queueFamilyProperties.timestampValidBits;
+		gpu->computeQueueTimestampValidBits =
+			queueFamiliesProperties2[devIndex][computeQueueFamilyIndex].queueFamilyProperties.timestampValidBits;
+		gpu->timestampPeriod = physicalDevicesProperties2[devIndex].properties.limits.timestampPeriod;
 	}
 
-	printf(
-		"Device: %s\n"
-		"\tScore:                             %" PRIu32 "\n"
-		"\tTransfer QF index:                 %" PRIu32 "\n"
-		"\tCompute QF index:                  %" PRIu32 "\n"
-		"\tSPIR-V 1.4:                        %d\n"
-		"\tVulkan 1.2:                        %d\n"
-		"\tVulkan 1.3:                        %d\n"
-		"\tbufferDeviceAddress                %d\n"
-		"\tmaintenance4                       %d\n"
-		"\tmemoryPriority:                    %d\n"
-		"\tpipelineCreationCacheControl:      %d\n"
-		"\tpipelineExecutableProperties:      %d\n"
-		"\tshaderInt16:                       %d\n"
-		"\tshaderInt64:                       %d\n"
-		"\tstorageBuffer16BitAccess:          %d\n"
-		"\tsubgroupSizeControl:               %d\n"
-		"\tuniformAndStorageBuffer8BitAccess: %d\n\n",
-		physicalDevicesProperties2[devIndex].properties.deviceName,
-		highestScore,
-		transferQueueFamilyIndex,
-		computeQueueFamilyIndex,
-		usingSpirv14,
-		usingVulkan12,
-		usingVulkan13,
-		usingBufferDeviceAddress,
-		usingMaintenance4,
-		usingMemoryPriority,
-		usingPipelineCreationCacheControl,
-		usingPipelineExecutableProperties,
-		usingShaderInt16,
-		usingShaderInt64,
-		using16BitStorage,
-		usingSubgroupSizeControl,
-		using8BitStorage);
+	switch (gpu->outputLevel) {
+		case CLI_OUTPUT_SILENT: break;
+		case CLI_OUTPUT_QUIET:  break;
+		case CLI_OUTPUT_DEFAULT:
+			printf(
+				"Device: %s\n"
+				"\tVulkan version:    %" PRIu32 ".%" PRIu32 "\n"
+				"\tSPIR-V version:    %" PRIu32 ".%" PRIu32 "\n"
+				"\tTransfer QF index: %" PRIu32 "\n"
+				"\tCompute QF index:  %" PRIu32 "\n",
+				deviceName,
+				vkVerMajor,  vkVerMinor,
+				spvVerMajor, spvVerMinor,
+				transferQueueFamilyIndex,
+				computeQueueFamilyIndex);
+			if (gpu->preferInt16) { printf("\tshaderInt16:       %d\n", usingShaderInt16); }
+			if (gpu->preferInt64) { printf("\tshaderInt64:       %d\n", usingShaderInt64); }
+			NEWLINE();
+			break;
+		case CLI_OUTPUT_VERBOSE:
+			printf(
+				"Device: %s\n"
+				"\tScore:                             %" PRIu32 "\n"
+				"\tVulkan version:                    %" PRIu32 ".%" PRIu32 "\n"
+				"\tSPIR-V version:                    %" PRIu32 ".%" PRIu32 "\n"
+				"\tTransfer QF index:                 %" PRIu32 "\n"
+				"\tCompute QF index:                  %" PRIu32 "\n"
+				"\tbufferDeviceAddress                %d\n"
+				"\tmaintenance4                       %d\n"
+				"\tmemoryPriority:                    %d\n"
+				"\tpipelineCreationCacheControl:      %d\n"
+				"\tpipelineExecutableProperties:      %d\n"
+				"\tshaderInt16:                       %d\n"
+				"\tshaderInt64:                       %d\n"
+				"\tstorageBuffer16BitAccess:          %d\n"
+				"\tsubgroupSizeControl:               %d\n"
+				"\tuniformAndStorageBuffer8BitAccess: %d\n\n",
+				deviceName,
+				highestScore,
+				vkVerMajor,  vkVerMinor,
+				spvVerMajor, spvVerMinor,
+				transferQueueFamilyIndex,
+				computeQueueFamilyIndex,
+				usingBufferDeviceAddress,
+				usingMaintenance4,
+				usingMemoryPriority,
+				usingPipelineCreationCacheControl,
+				usingPipelineExecutableProperties,
+				usingShaderInt16,
+				usingShaderInt64,
+				using16BitStorage,
+				usingSubgroupSizeControl,
+				using8BitStorage);
+			break;
+		default: break;
+	}
 
 	free_recursive(dyMem);
 
@@ -703,6 +841,8 @@ bool create_device(Gpu* restrict gpu)
 
 	uint32_t computeQueueFamilyIndex  = gpu->computeQueueFamilyIndex;
 	uint32_t transferQueueFamilyIndex = gpu->transferQueueFamilyIndex;
+
+	uint32_t spvVerMinor = gpu->spvVerMinor;
 
 	VkResult vkres;
 
@@ -719,83 +859,72 @@ bool create_device(Gpu* restrict gpu)
 	DyArray_append(enabledExtensions, &VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 	DyArray_append(enabledExtensions, &VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
 
-	if (gpu->using8BitStorage) {
-		DyArray_append(enabledExtensions, &VK_KHR_8BIT_STORAGE_EXTENSION_NAME);
-	}
+	if (gpu->using8BitStorage)       { DyArray_append(enabledExtensions, &VK_KHR_8BIT_STORAGE_EXTENSION_NAME);       }
+	if (gpu->usingMaintenance4)      { DyArray_append(enabledExtensions, &VK_KHR_MAINTENANCE_4_EXTENSION_NAME);      }
+	if (gpu->usingPortabilitySubset) { DyArray_append(enabledExtensions, &VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME); }
+	if (gpu->usingMemoryBudget)      { DyArray_append(enabledExtensions, &VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);      }
+	if (gpu->usingMemoryPriority)    { DyArray_append(enabledExtensions, &VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME);    }
 
 	if (gpu->usingBufferDeviceAddress) {
-		DyArray_append(enabledExtensions, &VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
-	}
-
-	if (gpu->usingMaintenance4) {
-		DyArray_append(enabledExtensions, &VK_KHR_MAINTENANCE_4_EXTENSION_NAME);
-	}
-
+		DyArray_append(enabledExtensions, &VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME); }
 	if (gpu->usingPipelineExecutableProperties) {
-		DyArray_append(enabledExtensions, &VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME);
-	}
+		DyArray_append(enabledExtensions, &VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME); }
+	if (gpu->usingPipelineCreationCacheControl) {
+		DyArray_append(enabledExtensions, &VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME); }
+	if (gpu->usingSubgroupSizeControl) {
+		DyArray_append(enabledExtensions, &VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME); }
 
-	if (gpu->usingPortabilitySubset) {
-		DyArray_append(enabledExtensions, &VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
-	}
-
-	if (gpu->usingSpirv14) {
+	if (spvVerMinor >= 4) {
 		DyArray_append(enabledExtensions, &VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
 		DyArray_append(enabledExtensions, &VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 	}
 
-	if (gpu->usingMemoryBudget) {
-		DyArray_append(enabledExtensions, &VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
-	}
-
-	if (gpu->usingMemoryPriority) {
-		DyArray_append(enabledExtensions, &VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME);
-	}
-
-	if (gpu->usingPipelineCreationCacheControl) {
-		DyArray_append(enabledExtensions, &VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME);
-	}
-
-	if (gpu->usingSubgroupSizeControl) {
-		DyArray_append(enabledExtensions, &VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME);
-	}
-
 	VkPhysicalDeviceFeatures physicalDeviceFeatures = {VK_FALSE};
-	physicalDeviceFeatures.shaderInt64 = gpu->usingShaderInt64;
-	physicalDeviceFeatures.shaderInt16 = gpu->usingShaderInt16;
+	physicalDeviceFeatures.shaderInt64              = gpu->usingShaderInt64;
+	physicalDeviceFeatures.shaderInt16              = gpu->usingShaderInt16;
 
 	VkPhysicalDeviceFeatures2 physicalDeviceFeatures2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
-	physicalDeviceFeatures2.features = physicalDeviceFeatures;
+	physicalDeviceFeatures2.features                  = physicalDeviceFeatures;
 
-	VkPhysicalDevice16BitStorageFeatures physicalDevice16BitStorageFeatures = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES};
+	VkPhysicalDevice16BitStorageFeatures physicalDevice16BitStorageFeatures = {
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES};
 	physicalDevice16BitStorageFeatures.storageBuffer16BitAccess = VK_TRUE;
 
-	VkPhysicalDevice8BitStorageFeaturesKHR physicalDevice8BitStorageFeatures = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES_KHR};
+	VkPhysicalDevice8BitStorageFeaturesKHR physicalDevice8BitStorageFeatures = {
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES_KHR};
 	physicalDevice8BitStorageFeatures.storageBuffer8BitAccess           = VK_TRUE;
 	physicalDevice8BitStorageFeatures.uniformAndStorageBuffer8BitAccess = VK_TRUE;
 
-	VkPhysicalDeviceBufferDeviceAddressFeaturesKHR physicalDeviceBufferDeviceAddressFeatures = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR};
+	VkPhysicalDeviceBufferDeviceAddressFeaturesKHR physicalDeviceBufferDeviceAddressFeatures = {
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR};
 	physicalDeviceBufferDeviceAddressFeatures.bufferDeviceAddress = VK_TRUE;
 
-	VkPhysicalDeviceMaintenance4FeaturesKHR physicalDeviceMaintenance4Features = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_FEATURES_KHR};
+	VkPhysicalDeviceMaintenance4FeaturesKHR physicalDeviceMaintenance4Features = {
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_FEATURES_KHR};
 	physicalDeviceMaintenance4Features.maintenance4 = VK_TRUE;
 
-	VkPhysicalDevicePipelineExecutablePropertiesFeaturesKHR physicalDevicePipelineExecutablePropertiesFeatures = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_EXECUTABLE_PROPERTIES_FEATURES_KHR};
+	VkPhysicalDevicePipelineExecutablePropertiesFeaturesKHR physicalDevicePipelineExecutablePropertiesFeatures = {
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_EXECUTABLE_PROPERTIES_FEATURES_KHR};
 	physicalDevicePipelineExecutablePropertiesFeatures.pipelineExecutableInfo = VK_TRUE;
 
-	VkPhysicalDeviceSynchronization2FeaturesKHR physicalDeviceSynchronization2Features = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR};
+	VkPhysicalDeviceSynchronization2FeaturesKHR physicalDeviceSynchronization2Features = {
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR};
 	physicalDeviceSynchronization2Features.synchronization2 = VK_TRUE;
 
-	VkPhysicalDeviceTimelineSemaphoreFeaturesKHR physicalDeviceTimelineSemaphoreFeatures = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES_KHR};
+	VkPhysicalDeviceTimelineSemaphoreFeaturesKHR physicalDeviceTimelineSemaphoreFeatures = {
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES_KHR};
 	physicalDeviceTimelineSemaphoreFeatures.timelineSemaphore = VK_TRUE;
 
-	VkPhysicalDeviceMemoryPriorityFeaturesEXT physicalDeviceMemoryPriorityFeatures = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT};
+	VkPhysicalDeviceMemoryPriorityFeaturesEXT physicalDeviceMemoryPriorityFeatures = {
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT};
 	physicalDeviceMemoryPriorityFeatures.memoryPriority = VK_TRUE;
 
-	VkPhysicalDevicePipelineCreationCacheControlFeaturesEXT physicalDevicePipelineCreationCacheControlFeatures = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_CREATION_CACHE_CONTROL_FEATURES_EXT};
+	VkPhysicalDevicePipelineCreationCacheControlFeaturesEXT physicalDevicePipelineCreationCacheControlFeatures = {
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_CREATION_CACHE_CONTROL_FEATURES_EXT};
 	physicalDevicePipelineCreationCacheControlFeatures.pipelineCreationCacheControl = VK_TRUE;
 
-	VkPhysicalDeviceSubgroupSizeControlFeaturesEXT physicalDeviceSubgroupSizeControlFeatures = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES_EXT};
+	VkPhysicalDeviceSubgroupSizeControlFeaturesEXT physicalDeviceSubgroupSizeControlFeatures = {
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES_EXT};
 	physicalDeviceSubgroupSizeControlFeatures.subgroupSizeControl = VK_TRUE;
 
 	void** next = &physicalDeviceFeatures2.pNext;
@@ -818,12 +947,12 @@ bool create_device(Gpu* restrict gpu)
 	float transferQueuePriority = 0;
 
 	VkDeviceQueueCreateInfo queueCreateInfos[2];
-	queueCreateInfos[0] = (VkDeviceQueueCreateInfo) {VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO};
+	queueCreateInfos[0]                  = (VkDeviceQueueCreateInfo) {VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO};
 	queueCreateInfos[0].queueFamilyIndex = computeQueueFamilyIndex;
 	queueCreateInfos[0].queueCount       = 1;
 	queueCreateInfos[0].pQueuePriorities = &computeQueuePriority;
 
-	queueCreateInfos[1] = (VkDeviceQueueCreateInfo) {VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO};
+	queueCreateInfos[1]                  = (VkDeviceQueueCreateInfo) {VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO};
 	queueCreateInfos[1].queueFamilyIndex = transferQueueFamilyIndex;
 	queueCreateInfos[1].queueCount       = 1;
 	queueCreateInfos[1].pQueuePriorities = &transferQueuePriority;
@@ -831,18 +960,20 @@ bool create_device(Gpu* restrict gpu)
 	uint32_t     enabledExtensionCount = (uint32_t) DyArray_size(enabledExtensions);
 	const char** enabledExtensionNames = (const char**) DyArray_raw(enabledExtensions);
 
-	VkDeviceCreateInfo deviceCreateInfo = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
+	VkDeviceCreateInfo deviceCreateInfo      = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
 	deviceCreateInfo.pNext                   = &physicalDeviceFeatures2;
 	deviceCreateInfo.queueCreateInfoCount    = computeQueueFamilyIndex == transferQueueFamilyIndex ? 1 : 2;
 	deviceCreateInfo.pQueueCreateInfos       = queueCreateInfos;
 	deviceCreateInfo.enabledExtensionCount   = enabledExtensionCount;
 	deviceCreateInfo.ppEnabledExtensionNames = enabledExtensionNames;
 
-	printf("Enabled device extensions (%" PRIu32 "):\n", enabledExtensionCount);
-	for (uint32_t i = 0; i < enabledExtensionCount; i++) {
-		printf("\t%" PRIu32 ") %s\n", i + 1, enabledExtensionNames[i]);
+	if (gpu->outputLevel > CLI_OUTPUT_DEFAULT) {
+		printf("Enabled device extensions (%" PRIu32 "):\n", enabledExtensionCount);
+		for (uint32_t i = 0; i < enabledExtensionCount; i++) {
+			printf("\t%" PRIu32 ") %s\n", i + 1, enabledExtensionNames[i]);
+		}
+		NEWLINE();
 	}
-	NEWLINE();
 
 	VK_CALL_RES(vkCreateDevice, physicalDevice, &deviceCreateInfo, g_allocator, &gpu->device);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
@@ -854,12 +985,12 @@ bool create_device(Gpu* restrict gpu)
 	volkLoadDevice(device);
 
 	VkDeviceQueueInfo2 transferDeviceQueueInfo2 = {VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2};
-	transferDeviceQueueInfo2.queueFamilyIndex = transferQueueFamilyIndex;
-	transferDeviceQueueInfo2.queueIndex       = 0;
+	transferDeviceQueueInfo2.queueFamilyIndex   = transferQueueFamilyIndex;
+	transferDeviceQueueInfo2.queueIndex         = 0;
 
 	VkDeviceQueueInfo2 computeDeviceQueueInfo2 = {VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2};
-	computeDeviceQueueInfo2.queueFamilyIndex = computeQueueFamilyIndex;
-	computeDeviceQueueInfo2.queueIndex       = 0;
+	computeDeviceQueueInfo2.queueFamilyIndex   = computeQueueFamilyIndex;
+	computeDeviceQueueInfo2.queueIndex         = 0;
 
 	VK_CALL(vkGetDeviceQueue2, device, &transferDeviceQueueInfo2, &gpu->transferQueue);
 	VK_CALL(vkGetDeviceQueue2, device, &computeDeviceQueueInfo2,  &gpu->computeQueue);
@@ -870,9 +1001,7 @@ bool create_device(Gpu* restrict gpu)
 			set_debug_name(device, VK_OBJECT_TYPE_QUEUE, (uint64_t) gpu->transferQueue, "Transfer");
 			set_debug_name(device, VK_OBJECT_TYPE_QUEUE, (uint64_t) gpu->computeQueue,  "Compute");
 		}
-		else {
-			set_debug_name(device, VK_OBJECT_TYPE_QUEUE, (uint64_t) gpu->transferQueue, "Transfer & Compute");
-		}
+		else { set_debug_name(device, VK_OBJECT_TYPE_QUEUE, (uint64_t) gpu->transferQueue, "Transfer & Compute"); }
 	}
 #endif
 
@@ -882,29 +1011,35 @@ bool create_device(Gpu* restrict gpu)
 bool manage_memory(Gpu* restrict gpu)
 {
 	VkPhysicalDevice physicalDevice = gpu->physicalDevice;
-	VkDevice device = gpu->device;
+	VkDevice         device         = gpu->device;
 
-	bool (*get_buffer_requirements)(VkDevice, VkDeviceSize, VkBufferUsageFlags, VkMemoryRequirements*) = gpu->usingMaintenance4 ? get_buffer_requirements_main4 : get_buffer_requirements_noext;
+	bool (*get_buffer_requirements)(VkDevice, VkDeviceSize, VkBufferUsageFlags, VkMemoryRequirements*) =
+		gpu->usingMaintenance4 ? get_buffer_requirements_main4 : get_buffer_requirements_noext;
 
-	VkPhysicalDeviceMaintenance4PropertiesKHR physicalDeviceMaintenance4Properties = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_PROPERTIES_KHR};
+	VkPhysicalDeviceMaintenance4PropertiesKHR physicalDeviceMaintenance4Properties = {
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_PROPERTIES_KHR};
 
-	VkPhysicalDeviceMaintenance3Properties physicalDeviceMaintenance3Properties = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES};
+	VkPhysicalDeviceMaintenance3Properties physicalDeviceMaintenance3Properties = {
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES};
 	physicalDeviceMaintenance3Properties.pNext = gpu->usingMaintenance4 ? &physicalDeviceMaintenance4Properties : NULL;
 
 	VkPhysicalDeviceProperties2 physicalDeviceProperties2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
-	physicalDeviceProperties2.pNext = &physicalDeviceMaintenance3Properties;
+	physicalDeviceProperties2.pNext                       = &physicalDeviceMaintenance3Properties;
 
 	VK_CALL(vkGetPhysicalDeviceProperties2, physicalDevice, &physicalDeviceProperties2);
 
-	VkPhysicalDeviceMemoryBudgetPropertiesEXT physicalDeviceMemoryBudgetProperties = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT};
+	VkPhysicalDeviceMemoryBudgetPropertiesEXT physicalDeviceMemoryBudgetProperties = {
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT};
 
-	VkPhysicalDeviceMemoryProperties2 physicalDeviceMemoryProperties2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2};
+	VkPhysicalDeviceMemoryProperties2 physicalDeviceMemoryProperties2 = {
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2};
 	physicalDeviceMemoryProperties2.pNext = gpu->usingMemoryBudget ? &physicalDeviceMemoryBudgetProperties : NULL;
 
 	VK_CALL(vkGetPhysicalDeviceMemoryProperties2, physicalDevice, &physicalDeviceMemoryProperties2);
 
 	VkDeviceSize maxMemoryAllocationSize = physicalDeviceMaintenance3Properties.maxMemoryAllocationSize;
-	VkDeviceSize maxBufferSize           = gpu->usingMaintenance4 ? physicalDeviceMaintenance4Properties.maxBufferSize : maxMemoryAllocationSize;
+	VkDeviceSize maxBufferSize =
+		gpu->usingMaintenance4 ? physicalDeviceMaintenance4Properties.maxBufferSize : maxMemoryAllocationSize;
 
 	uint32_t maxStorageBufferRange    = physicalDeviceProperties2.properties.limits.maxStorageBufferRange;
 	uint32_t maxMemoryAllocationCount = physicalDeviceProperties2.properties.limits.maxMemoryAllocationCount;
@@ -915,10 +1050,17 @@ bool manage_memory(Gpu* restrict gpu)
 	VkMemoryRequirements deviceLocalMemoryRequirements;
 	VkMemoryRequirements hostVisibleMemoryRequirements;
 
-	bool bres = get_buffer_requirements(device, sizeof(char), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, &hostVisibleMemoryRequirements);
+	bool bres = get_buffer_requirements(
+		device, sizeof(char), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		&hostVisibleMemoryRequirements);
+
 	if EXPECT_FALSE (!bres) return false;
 
-	bres = get_buffer_requirements(device, sizeof(char), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, &deviceLocalMemoryRequirements);
+	bres = get_buffer_requirements(
+		device, sizeof(char),
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+		&deviceLocalMemoryRequirements);
+
 	if EXPECT_FALSE (!bres) return false;
 
 	uint32_t deviceLocalMemoryTypeBits = deviceLocalMemoryRequirements.memoryTypeBits;
@@ -940,8 +1082,9 @@ bool manage_memory(Gpu* restrict gpu)
 	for (uint32_t i = 0; i < memoryTypeCount; i++) {
 		uint32_t memoryTypeBit = 1U << i;
 
-		VkMemoryPropertyFlags propertyFlags = physicalDeviceMemoryProperties2.memoryProperties.memoryTypes[i].propertyFlags;
-		uint32_t              heapIndex     = physicalDeviceMemoryProperties2.memoryProperties.memoryTypes[i].heapIndex;
+		VkMemoryPropertyFlags propertyFlags =
+			physicalDeviceMemoryProperties2.memoryProperties.memoryTypes[i].propertyFlags;
+		uint32_t heapIndex = physicalDeviceMemoryProperties2.memoryProperties.memoryTypes[i].heapIndex;
 
 		bool isDeviceLocal    = propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 		bool isHostVisible    = propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
@@ -960,7 +1103,6 @@ bool manage_memory(Gpu* restrict gpu)
 				deviceLocalHeapIndex = heapIndex;
 				deviceLocalTypeIndex = i;
 			}
-
 			else if (!hasDeviceLocal) {
 				hasDeviceLocal       = true;
 				deviceLocalHeapIndex = heapIndex;
@@ -977,7 +1119,6 @@ bool manage_memory(Gpu* restrict gpu)
 				hostVisibleHeapIndex     = heapIndex;
 				hostVisibleTypeIndex     = i;
 			}
-
 			else if (isHostCached && !hasHostCached) {
 				hasHostCached        = true;
 				hasHostNonCoherent   = false;
@@ -985,14 +1126,12 @@ bool manage_memory(Gpu* restrict gpu)
 				hostVisibleHeapIndex = heapIndex;
 				hostVisibleTypeIndex = i;
 			}
-
 			else if (!isHostCoherent && !hasHostCached && !hasHostNonCoherent) {
 				hasHostNonCoherent   = true;
 				hasHostVisible       = true;
 				hostVisibleHeapIndex = heapIndex;
 				hostVisibleTypeIndex = i;
 			}
-
 			else if (!hasHostVisible) {
 				hasHostVisible       = true;
 				hostVisibleHeapIndex = heapIndex;
@@ -1004,22 +1143,21 @@ bool manage_memory(Gpu* restrict gpu)
 	VkDeviceSize hostVisibleHeapBudget = physicalDeviceMemoryBudgetProperties.heapBudget[hostVisibleHeapIndex];
 	VkDeviceSize deviceLocalHeapBudget = physicalDeviceMemoryBudgetProperties.heapBudget[deviceLocalHeapIndex];
 
-	VkDeviceSize hostVisibleHeapSize = physicalDeviceMemoryProperties2.memoryProperties.memoryHeaps[hostVisibleHeapIndex].size;
-	VkDeviceSize deviceLocalHeapSize = physicalDeviceMemoryProperties2.memoryProperties.memoryHeaps[deviceLocalHeapIndex].size;
+	VkDeviceSize hostVisibleHeapSize =
+		physicalDeviceMemoryProperties2.memoryProperties.memoryHeaps[hostVisibleHeapIndex].size;
+	VkDeviceSize deviceLocalHeapSize =
+		physicalDeviceMemoryProperties2.memoryProperties.memoryHeaps[deviceLocalHeapIndex].size;
 
 	VkDeviceSize bytesPerHostVisibleHeap = gpu->usingMemoryBudget ? hostVisibleHeapBudget : hostVisibleHeapSize;
 	VkDeviceSize bytesPerDeviceLocalHeap = gpu->usingMemoryBudget ? deviceLocalHeapBudget : deviceLocalHeapSize;
 
 	VkDeviceSize bytesPerHeap = minu64(bytesPerHostVisibleHeap, bytesPerDeviceLocalHeap);
-	bytesPerHeap = (VkDeviceSize) ((float) bytesPerHeap * gpu->maxMemory);
+	bytesPerHeap              = (VkDeviceSize) ((float) bytesPerHeap * gpu->maxMemory);
 
-	if (deviceLocalHeapIndex == hostVisibleHeapIndex) {
-		bytesPerHeap /= 2;
-	}
+	if (deviceLocalHeapIndex == hostVisibleHeapIndex) { bytesPerHeap /= 2; }
 
 	VkDeviceSize bytesPerBuffer = minu64v(3, maxMemoryAllocationSize, maxBufferSize, bytesPerHeap);
-
-	uint32_t buffersPerHeap = (uint32_t) (bytesPerHeap / bytesPerBuffer);
+	uint32_t     buffersPerHeap = (uint32_t) (bytesPerHeap / bytesPerBuffer);
 
 	if (buffersPerHeap < maxMemoryAllocationCount && bytesPerHeap % bytesPerBuffer) {
 		VkDeviceSize excessBytes = bytesPerBuffer - bytesPerHeap % bytesPerBuffer;
@@ -1027,30 +1165,26 @@ bool manage_memory(Gpu* restrict gpu)
 		buffersPerHeap++;
 		bytesPerBuffer -= excessBytes / buffersPerHeap;
 
-		if (excessBytes % buffersPerHeap) {
-			bytesPerBuffer--;
-		}
+		if (excessBytes % buffersPerHeap) { bytesPerBuffer--; }
 	}
-	else if (buffersPerHeap > maxMemoryAllocationCount) {
-		buffersPerHeap = maxMemoryAllocationCount;
-	}
+	else if (buffersPerHeap > maxMemoryAllocationCount) { buffersPerHeap = maxMemoryAllocationCount; }
 
 	uint32_t workgroupSize  = floor_pow2(maxComputeWorkGroupSize);
-	uint32_t workgroupCount = minu32(maxComputeWorkGroupCount, (uint32_t) (maxStorageBufferRange / (workgroupSize * sizeof(Value))));
+	uint32_t workgroupCount = minu32(
+		maxComputeWorkGroupCount, (uint32_t) (maxStorageBufferRange / (workgroupSize * sizeof(Value))));
 
 	uint32_t     valuesPerInout  = workgroupSize * workgroupCount;
 	VkDeviceSize bytesPerInout   = valuesPerInout * (sizeof(Value) + sizeof(Count));
 	uint32_t     inoutsPerBuffer = (uint32_t) (bytesPerBuffer / bytesPerInout);
 
 	if (bytesPerBuffer % bytesPerInout > inoutsPerBuffer * workgroupSize * (sizeof(Value) + sizeof(Count))) {
-		uint32_t excessValues = valuesPerInout - (uint32_t) (bytesPerBuffer % bytesPerInout / (sizeof(Value) + sizeof(Count)));
+		uint32_t excessValues =
+			valuesPerInout - (uint32_t) (bytesPerBuffer % bytesPerInout / (sizeof(Value) + sizeof(Count)));
 
 		inoutsPerBuffer++;
 		valuesPerInout -= excessValues / inoutsPerBuffer;
 
-		if (excessValues % inoutsPerBuffer) {
-			valuesPerInout--;
-		}
+		if (excessValues % inoutsPerBuffer) { valuesPerInout--; }
 
 		valuesPerInout &= ~(workgroupSize - 1U);
 
@@ -1072,10 +1206,17 @@ bool manage_memory(Gpu* restrict gpu)
 	uint32_t valuesPerHeap   = valuesPerBuffer * buffersPerHeap;
 	uint32_t inoutsPerHeap   = inoutsPerBuffer * buffersPerHeap;
 
-	bres = get_buffer_requirements(device, bytesPerBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, &hostVisibleMemoryRequirements);
+	bres = get_buffer_requirements(
+		device, bytesPerBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		&hostVisibleMemoryRequirements);
+
 	if EXPECT_FALSE (!bres) return false;
 
-	bres = get_buffer_requirements(device, bytesPerBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, &deviceLocalMemoryRequirements);
+	bres = get_buffer_requirements(
+		device, bytesPerBuffer,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+		&deviceLocalMemoryRequirements);
+
 	if EXPECT_FALSE (!bres) return false;
 
 	VkDeviceSize bytesPerHostVisibleMemory = hostVisibleMemoryRequirements.size;
@@ -1110,8 +1251,8 @@ bool manage_memory(Gpu* restrict gpu)
 	gpu->inoutsPerHeap   = inoutsPerHeap;
 	gpu->buffersPerHeap  = buffersPerHeap;
 
-	gpu->workgroupCount = workgroupCount;
 	gpu->workgroupSize  = workgroupSize;
+	gpu->workgroupCount = workgroupCount;
 
 	gpu->hostVisibleHeapIndex = hostVisibleHeapIndex;
 	gpu->deviceLocalHeapIndex = deviceLocalHeapIndex;
@@ -1121,39 +1262,54 @@ bool manage_memory(Gpu* restrict gpu)
 
 	gpu->hostNonCoherent = hasHostNonCoherent;
 
-	printf(
-		"Memory information:\n"
-		"\tHV non-coherent memory:   %d\n"
-		"\tHV memory heap index:     %" PRIu32 "\n"
-		"\tDL memory heap index:     %" PRIu32 "\n"
-		"\tHV memory type index:     %" PRIu32 "\n"
-		"\tDL memory type index:     %" PRIu32 "\n"
-		"\tWorkgroup size:           %" PRIu32 "\n"
-		"\tWorkgroup count:          %" PRIu32 "\n"
-		"\tValues per inout-buffer:  %" PRIu32 "\n"
-		"\tInout-buffers per buffer: %" PRIu32 "\n"
-		"\tBuffers per heap:         %" PRIu32 "\n"
-		"\tValues per heap:          %" PRIu32 "\n\n",
-		hasHostNonCoherent,
-		hostVisibleHeapIndex,
-		deviceLocalHeapIndex,
-		hostVisibleTypeIndex,
-		deviceLocalTypeIndex,
-		workgroupSize,
-		workgroupCount,
-		valuesPerInout,
-		inoutsPerBuffer,
-		buffersPerHeap,
-		valuesPerHeap);
+	switch (gpu->outputLevel) {
+		case CLI_OUTPUT_SILENT: break;
+		case CLI_OUTPUT_QUIET:  break;
+		case CLI_OUTPUT_DEFAULT:
+			printf(
+				"Memory information:\n"
+				"\tHV memory type index:    %" PRIu32 "\n"
+				"\tDL memory type index:    %" PRIu32 "\n"
+				"\tWorkgroup size:          %" PRIu32 "\n"
+				"\tWorkgroup count:         %" PRIu32 "\n"
+				"\tValues per inout-buffer: %" PRIu32 "\n"
+				"\tInout-buffers per heap:  %" PRIu32 "\n\n",
+				hostVisibleTypeIndex, deviceLocalTypeIndex,
+				workgroupSize, workgroupCount,
+				valuesPerInout, inoutsPerHeap);
+			break;
+		case CLI_OUTPUT_VERBOSE:
+			printf(
+				"Memory information:\n"
+				"\tHV non-coherent memory:   %d\n"
+				"\tHV memory heap index:     %" PRIu32 "\n"
+				"\tDL memory heap index:     %" PRIu32 "\n"
+				"\tHV memory type index:     %" PRIu32 "\n"
+				"\tDL memory type index:     %" PRIu32 "\n"
+				"\tWorkgroup size:           %" PRIu32 "\n"
+				"\tWorkgroup count:          %" PRIu32 "\n"
+				"\tValues per inout-buffer:  %" PRIu32 "\n"
+				"\tInout-buffers per buffer: %" PRIu32 "\n"
+				"\tBuffers per heap:         %" PRIu32 "\n"
+				"\tValues per heap:          %" PRIu32 "\n\n",
+				hasHostNonCoherent,
+				hostVisibleHeapIndex, deviceLocalHeapIndex,
+				hostVisibleTypeIndex, deviceLocalTypeIndex,
+				workgroupSize, workgroupCount,
+				valuesPerInout, inoutsPerBuffer,
+				buffersPerHeap, valuesPerHeap);
+			break;
+		default: break;
+	}
 
 	size_t size =
-		inoutsPerHeap      * sizeof(Value*) +
-		inoutsPerHeap      * sizeof(Count*) +
-		buffersPerHeap * 2 * sizeof(VkBuffer) +
-		buffersPerHeap * 2 * sizeof(VkDeviceMemory) +
-		inoutsPerHeap      * sizeof(VkDescriptorSet) +
-		inoutsPerHeap  * 2 * sizeof(VkCommandBuffer) +
-		inoutsPerHeap      * sizeof(VkSemaphore);
+		inoutsPerHeap  * sizeof(Value*) +
+		inoutsPerHeap  * sizeof(Count*) +
+		buffersPerHeap * sizeof(VkBuffer) * 2 +
+		buffersPerHeap * sizeof(VkDeviceMemory) * 2 +
+		inoutsPerHeap  * sizeof(VkDescriptorSet) +
+		inoutsPerHeap  * sizeof(VkCommandBuffer) * 2 +
+		inoutsPerHeap  * sizeof(VkSemaphore);
 
 	gpu->dynamicMemory = calloc(size, sizeof(char));
 	if EXPECT_FALSE (!gpu->dynamicMemory) { CALLOC_FAILURE(gpu->dynamicMemory, size, sizeof(char)); return false; }
@@ -1161,15 +1317,15 @@ bool manage_memory(Gpu* restrict gpu)
 	gpu->mappedInBuffers  = (Value**) gpu->dynamicMemory;
 	gpu->mappedOutBuffers = (Count**) (gpu->mappedInBuffers + inoutsPerHeap);
 
-	gpu->hostVisibleBuffers = (VkBuffer*) (gpu->mappedOutBuffers   + inoutsPerHeap);
+	gpu->hostVisibleBuffers = (VkBuffer*) (gpu->mappedOutBuffers + inoutsPerHeap);
 	gpu->deviceLocalBuffers = (VkBuffer*) (gpu->hostVisibleBuffers + buffersPerHeap);
 
-	gpu->hostVisibleDeviceMemories = (VkDeviceMemory*) (gpu->deviceLocalBuffers        + buffersPerHeap);
+	gpu->hostVisibleDeviceMemories = (VkDeviceMemory*) (gpu->deviceLocalBuffers + buffersPerHeap);
 	gpu->deviceLocalDeviceMemories = (VkDeviceMemory*) (gpu->hostVisibleDeviceMemories + buffersPerHeap);
 
 	gpu->descriptorSets = (VkDescriptorSet*) (gpu->deviceLocalDeviceMemories + buffersPerHeap);
 
-	gpu->transferCommandBuffers = (VkCommandBuffer*) (gpu->descriptorSets         + inoutsPerHeap);
+	gpu->transferCommandBuffers = (VkCommandBuffer*) (gpu->descriptorSets + inoutsPerHeap);
 	gpu->computeCommandBuffers  = (VkCommandBuffer*) (gpu->transferCommandBuffers + inoutsPerHeap);
 
 	gpu->semaphores = (VkSemaphore*) (gpu->computeCommandBuffers + inoutsPerHeap);
@@ -1205,9 +1361,9 @@ bool create_buffers(Gpu* restrict gpu)
 	if EXPECT_FALSE (!dyMem) return false;
 
 	size_t size =
-		buffersPerHeap * 2 * sizeof(VkMemoryAllocateInfo) +
-		buffersPerHeap * 2 * sizeof(VkMemoryDedicatedAllocateInfo) +
-		buffersPerHeap * 2 * sizeof(VkBindBufferMemoryInfo);
+		buffersPerHeap * sizeof(VkMemoryAllocateInfo) * 2 +
+		buffersPerHeap * sizeof(VkMemoryDedicatedAllocateInfo) * 2 +
+		buffersPerHeap * sizeof(VkBindBufferMemoryInfo) * 2;
 
 	void* p = malloc(size);
 	if EXPECT_FALSE (!p) { MALLOC_FAILURE(p, size); free_recursive(dyMem); return false; }
@@ -1216,21 +1372,26 @@ bool create_buffers(Gpu* restrict gpu)
 	DyArray_append(dyMem, &dyData);
 
 	VkMemoryAllocateInfo* hostVisibleMemoryAllocateInfos = (VkMemoryAllocateInfo*) p;
-	VkMemoryAllocateInfo* deviceLocalMemoryAllocateInfos = (VkMemoryAllocateInfo*) (hostVisibleMemoryAllocateInfos + buffersPerHeap);
+	VkMemoryAllocateInfo* deviceLocalMemoryAllocateInfos = (VkMemoryAllocateInfo*) (
+		hostVisibleMemoryAllocateInfos + buffersPerHeap);
 
-	VkMemoryDedicatedAllocateInfo* hostVisibleMemoryDedicatedAllocateInfos = (VkMemoryDedicatedAllocateInfo*) (deviceLocalMemoryAllocateInfos          + buffersPerHeap);
-	VkMemoryDedicatedAllocateInfo* deviceLocalMemoryDedicatedAllocateInfos = (VkMemoryDedicatedAllocateInfo*) (hostVisibleMemoryDedicatedAllocateInfos + buffersPerHeap);
+	VkMemoryDedicatedAllocateInfo* hostVisibleMemoryDedicatedAllocateInfos = (VkMemoryDedicatedAllocateInfo*) (
+		deviceLocalMemoryAllocateInfos + buffersPerHeap);
+	VkMemoryDedicatedAllocateInfo* deviceLocalMemoryDedicatedAllocateInfos = (VkMemoryDedicatedAllocateInfo*) (
+		hostVisibleMemoryDedicatedAllocateInfos + buffersPerHeap);
 
-	VkBindBufferMemoryInfo (*bindBufferMemoryInfos)[2] = (VkBindBufferMemoryInfo(*)[]) (deviceLocalMemoryDedicatedAllocateInfos + buffersPerHeap);
+	VkBindBufferMemoryInfo (*bindBufferMemoryInfos)[2] = (VkBindBufferMemoryInfo(*)[]) (
+		deviceLocalMemoryDedicatedAllocateInfos + buffersPerHeap);
 
 	VkBufferCreateInfo hostVisibleBufferCreateInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-	hostVisibleBufferCreateInfo.size        = bytesPerBuffer;
+	hostVisibleBufferCreateInfo.size               = bytesPerBuffer;
 	hostVisibleBufferCreateInfo.usage       = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 	hostVisibleBufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 	VkBufferCreateInfo deviceLocalBufferCreateInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-	deviceLocalBufferCreateInfo.size        = bytesPerBuffer;
-	deviceLocalBufferCreateInfo.usage       = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+	deviceLocalBufferCreateInfo.size               = bytesPerBuffer;
+	deviceLocalBufferCreateInfo.usage =
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	deviceLocalBufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
@@ -1241,19 +1402,25 @@ bool create_buffers(Gpu* restrict gpu)
 		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 	}
 
-	VkMemoryPriorityAllocateInfoEXT hostVisibleMemoryPriorityAllocateInfo = {VK_STRUCTURE_TYPE_MEMORY_PRIORITY_ALLOCATE_INFO_EXT};
+	VkMemoryPriorityAllocateInfoEXT hostVisibleMemoryPriorityAllocateInfo = {
+		VK_STRUCTURE_TYPE_MEMORY_PRIORITY_ALLOCATE_INFO_EXT};
 	hostVisibleMemoryPriorityAllocateInfo.priority = 0;
 
-	VkMemoryPriorityAllocateInfoEXT deviceLocalMemoryPriorityAllocateInfo = {VK_STRUCTURE_TYPE_MEMORY_PRIORITY_ALLOCATE_INFO_EXT};
+	VkMemoryPriorityAllocateInfoEXT deviceLocalMemoryPriorityAllocateInfo = {
+		VK_STRUCTURE_TYPE_MEMORY_PRIORITY_ALLOCATE_INFO_EXT};
 	deviceLocalMemoryPriorityAllocateInfo.priority = 1;
 
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
-		hostVisibleMemoryDedicatedAllocateInfos[i] = (VkMemoryDedicatedAllocateInfo) {VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO};
-		hostVisibleMemoryDedicatedAllocateInfos[i].pNext  = gpu->usingMemoryPriority ? &hostVisibleMemoryPriorityAllocateInfo : NULL;
+		hostVisibleMemoryDedicatedAllocateInfos[i] = (VkMemoryDedicatedAllocateInfo) {
+			VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO};
+		hostVisibleMemoryDedicatedAllocateInfos[i].pNext =
+			gpu->usingMemoryPriority ? &hostVisibleMemoryPriorityAllocateInfo : NULL;
 		hostVisibleMemoryDedicatedAllocateInfos[i].buffer = hostVisibleBuffers[i];
 
-		deviceLocalMemoryDedicatedAllocateInfos[i] = (VkMemoryDedicatedAllocateInfo) {VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO};
-		deviceLocalMemoryDedicatedAllocateInfos[i].pNext  = gpu->usingMemoryPriority ? &deviceLocalMemoryPriorityAllocateInfo : NULL;
+		deviceLocalMemoryDedicatedAllocateInfos[i] = (VkMemoryDedicatedAllocateInfo) {
+			VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO};
+		deviceLocalMemoryDedicatedAllocateInfos[i].pNext =
+			gpu->usingMemoryPriority ? &deviceLocalMemoryPriorityAllocateInfo : NULL;
 		deviceLocalMemoryDedicatedAllocateInfos[i].buffer = deviceLocalBuffers[i];
 
 		hostVisibleMemoryAllocateInfos[i] = (VkMemoryAllocateInfo) {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
@@ -1268,19 +1435,23 @@ bool create_buffers(Gpu* restrict gpu)
 	}
 
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
-		VK_CALL_RES(vkAllocateMemory, device, &hostVisibleMemoryAllocateInfos[i], g_allocator, &hostVisibleDeviceMemories[i]);
+		VK_CALL_RES(
+			vkAllocateMemory, device, &hostVisibleMemoryAllocateInfos[i], g_allocator, &hostVisibleDeviceMemories[i]);
+
 		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
-		VK_CALL_RES(vkAllocateMemory, device, &deviceLocalMemoryAllocateInfos[i], g_allocator, &deviceLocalDeviceMemories[i]);
+		VK_CALL_RES(
+			vkAllocateMemory, device, &deviceLocalMemoryAllocateInfos[i], g_allocator, &deviceLocalDeviceMemories[i]);
+
 		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 	}
 
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
-		bindBufferMemoryInfos[i][0] = (VkBindBufferMemoryInfo) {VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO};
+		bindBufferMemoryInfos[i][0]        = (VkBindBufferMemoryInfo) {VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO};
 		bindBufferMemoryInfos[i][0].buffer = hostVisibleBuffers[i];
 		bindBufferMemoryInfos[i][0].memory = hostVisibleDeviceMemories[i];
 
-		bindBufferMemoryInfos[i][1] = (VkBindBufferMemoryInfo) {VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO};
+		bindBufferMemoryInfos[i][1]        = (VkBindBufferMemoryInfo) {VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO};
 		bindBufferMemoryInfos[i][1].buffer = deviceLocalBuffers[i];
 		bindBufferMemoryInfos[i][1].memory = deviceLocalDeviceMemories[i];
 	}
@@ -1289,15 +1460,20 @@ bool create_buffers(Gpu* restrict gpu)
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
-		VK_CALL_RES(vkMapMemory, device, hostVisibleDeviceMemories[i], 0, bytesPerHostVisibleMemory, 0, (void**) &mappedInBuffers[j]);
+		VK_CALL_RES(
+			vkMapMemory, device, hostVisibleDeviceMemories[i], 0, bytesPerHostVisibleMemory, 0,
+			(void**) &mappedInBuffers[j]);
+
 		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 		mappedOutBuffers[j] = (Count*) (mappedInBuffers[j] + valuesPerInout);
 		j++;
 
 		for (uint32_t k = 1; k < inoutsPerBuffer; j++, k++) {
-			mappedInBuffers[j]  = mappedInBuffers[j - 1]  + valuesPerInout + valuesPerInout * sizeof(Count) / sizeof(Value);
-			mappedOutBuffers[j] = mappedOutBuffers[j - 1] + valuesPerInout + valuesPerInout * sizeof(Value) / sizeof(Count);
+			mappedInBuffers[j] =
+				mappedInBuffers[j - 1] + valuesPerInout + valuesPerInout * sizeof(Count) / sizeof(Value);
+			mappedOutBuffers[j] =
+				mappedOutBuffers[j - 1] + valuesPerInout + valuesPerInout * sizeof(Value) / sizeof(Count);
 		}
 	}
 
@@ -1348,9 +1524,9 @@ bool create_descriptors(Gpu* restrict gpu)
 	if EXPECT_FALSE (!dyMem) return false;
 
 	size_t size =
-		inoutsPerHeap     * sizeof(VkDescriptorSetLayout) +
-		inoutsPerHeap     * sizeof(VkWriteDescriptorSet) +
-		inoutsPerHeap * 2 * sizeof(VkDescriptorBufferInfo);
+		inoutsPerHeap * sizeof(VkDescriptorSetLayout) +
+		inoutsPerHeap * sizeof(VkWriteDescriptorSet) +
+		inoutsPerHeap * sizeof(VkDescriptorBufferInfo) * 2;
 
 	void* p = malloc(size);
 	if EXPECT_FALSE (!p) { MALLOC_FAILURE(p, size); free_recursive(dyMem); return false; }
@@ -1361,7 +1537,8 @@ bool create_descriptors(Gpu* restrict gpu)
 	VkDescriptorSetLayout* descriptorSetLayouts = (VkDescriptorSetLayout*) p;
 	VkWriteDescriptorSet*  writeDescriptorSets  = (VkWriteDescriptorSet*) (descriptorSetLayouts + inoutsPerHeap);
 
-	VkDescriptorBufferInfo (*descriptorBufferInfos)[2] = (VkDescriptorBufferInfo(*)[]) (writeDescriptorSets + inoutsPerHeap);
+	VkDescriptorBufferInfo (*descriptorBufferInfos)[2] = (VkDescriptorBufferInfo(*)[]) (
+		writeDescriptorSets + inoutsPerHeap);
 
 	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[2];
 	descriptorSetLayoutBindings[0].binding            = 0;
@@ -1376,7 +1553,8 @@ bool create_descriptors(Gpu* restrict gpu)
 	descriptorSetLayoutBindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
 	descriptorSetLayoutBindings[1].pImmutableSamplers = NULL;
 
-	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
+	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
 	descriptorSetLayoutCreateInfo.bindingCount = ARR_SIZE(descriptorSetLayoutBindings);
 	descriptorSetLayoutCreateInfo.pBindings    = descriptorSetLayoutBindings;
 
@@ -1385,11 +1563,13 @@ bool create_descriptors(Gpu* restrict gpu)
 	descriptorPoolSizes[0].descriptorCount = inoutsPerHeap * 2;
 
 	VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
-	descriptorPoolCreateInfo.maxSets       = inoutsPerHeap;
-	descriptorPoolCreateInfo.poolSizeCount = ARR_SIZE(descriptorPoolSizes);
-	descriptorPoolCreateInfo.pPoolSizes    = descriptorPoolSizes;
+	descriptorPoolCreateInfo.maxSets                    = inoutsPerHeap;
+	descriptorPoolCreateInfo.poolSizeCount              = ARR_SIZE(descriptorPoolSizes);
+	descriptorPoolCreateInfo.pPoolSizes                 = descriptorPoolSizes;
 
-	VK_CALL_RES(vkCreateDescriptorSetLayout, device, &descriptorSetLayoutCreateInfo, g_allocator, &gpu->descriptorSetLayout);
+	VK_CALL_RES(
+		vkCreateDescriptorSetLayout, device, &descriptorSetLayoutCreateInfo, g_allocator, &gpu->descriptorSetLayout);
+
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 	VK_CALL_RES(vkCreateDescriptorPool, device, &descriptorPoolCreateInfo, g_allocator, &gpu->descriptorPool);
@@ -1403,9 +1583,9 @@ bool create_descriptors(Gpu* restrict gpu)
 	}
 
 	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
-	descriptorSetAllocateInfo.descriptorPool     = descriptorPool;
-	descriptorSetAllocateInfo.descriptorSetCount = inoutsPerHeap;
-	descriptorSetAllocateInfo.pSetLayouts        = descriptorSetLayouts;
+	descriptorSetAllocateInfo.descriptorPool              = descriptorPool;
+	descriptorSetAllocateInfo.descriptorSetCount          = inoutsPerHeap;
+	descriptorSetAllocateInfo.pSetLayouts                 = descriptorSetLayouts;
 
 	VK_CALL_RES(vkAllocateDescriptorSets, device, &descriptorSetAllocateInfo, descriptorSets);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
@@ -1420,7 +1600,7 @@ bool create_descriptors(Gpu* restrict gpu)
 			descriptorBufferInfos[j][1].offset = bytesPerInout * k + bytesPerIn;
 			descriptorBufferInfos[j][1].range  = bytesPerOut;
 
-			writeDescriptorSets[j] = (VkWriteDescriptorSet) {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+			writeDescriptorSets[j]                 = (VkWriteDescriptorSet) {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
 			writeDescriptorSets[j].dstSet          = descriptorSets[j];
 			writeDescriptorSets[j].dstBinding      = 0;
 			writeDescriptorSets[j].dstArrayElement = 0;
@@ -1440,7 +1620,10 @@ bool create_descriptors(Gpu* restrict gpu)
 			for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
 				char objectName[58];
 
-				sprintf(objectName, "Inout %" PRIu32 "/%" PRIu32 ", Buffer %" PRIu32 "/%" PRIu32, k + 1, inoutsPerBuffer, i + 1, buffersPerHeap);
+				sprintf(
+					objectName,
+					"Inout %" PRIu32 "/%" PRIu32 ", Buffer %" PRIu32 "/%" PRIu32,
+					k + 1, inoutsPerBuffer, i + 1, buffersPerHeap);
 
 				set_debug_name(device, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) descriptorSets[j], objectName);
 			}
@@ -1457,10 +1640,13 @@ bool create_pipeline(Gpu* restrict gpu)
 
 	VkDescriptorSetLayout descriptorSetLayout = gpu->descriptorSetLayout;
 
-	uint32_t inoutsPerHeap                   = gpu->inoutsPerHeap;
-	uint32_t workgroupSize                   = gpu->workgroupSize;
+	uint32_t inoutsPerHeap = gpu->inoutsPerHeap;
+	uint32_t workgroupSize = gpu->workgroupSize;
+
 	uint32_t transferQueueTimestampValidBits = gpu->transferQueueTimestampValidBits;
 	uint32_t computeQueueTimestampValidBits  = gpu->computeQueueTimestampValidBits;
+
+	uint32_t spvVerMinor = gpu->spvVerMinor;
 
 	VkResult vkres;
 
@@ -1470,16 +1656,16 @@ bool create_pipeline(Gpu* restrict gpu)
 
 	char shaderName[34] = "./";
 
-	if      (gpu->usingVulkan13) { strcat(shaderName, "v16/"); }
-	else if (gpu->usingVulkan12) { strcat(shaderName, "v15/"); }
-	else if (gpu->usingSpirv14)  { strcat(shaderName, "v14/"); }
-	else                         { strcat(shaderName, "v13/"); }
+	if      (spvVerMinor == 6) { strcat(shaderName, "v16/"); }
+	else if (spvVerMinor == 5) { strcat(shaderName, "v15/"); }
+	else if (spvVerMinor == 4) { strcat(shaderName, "v14/"); }
+	else if (spvVerMinor == 3) { strcat(shaderName, "v13/"); }
 
 	strcat(shaderName, "spirv");
 
-	if (gpu->using16BitStorage)                    { strcat(shaderName, "-sto16"); }
-	if (gpu->usingShaderInt16 && gpu->preferInt16) { strcat(shaderName, "-int16"); }
-	if (gpu->usingShaderInt64 && gpu->preferInt64) { strcat(shaderName, "-int64"); }
+	if (gpu->using16BitStorage) { strcat(shaderName, "-sto16"); }
+	if (gpu->usingShaderInt16)  { strcat(shaderName, "-int16"); }
+	if (gpu->usingShaderInt64)  { strcat(shaderName, "-int64"); }
 
 	strcat(shaderName, ".spv");
 
@@ -1497,13 +1683,15 @@ bool create_pipeline(Gpu* restrict gpu)
 		default: break;
 	}
 
-	printf("Selected shader: %s\nSelected entry point: %s\n\n", shaderName, entryPointName);
+	if (gpu->outputLevel > CLI_OUTPUT_QUIET) {
+		printf("Selected shader: %s\nSelected entry point: %s\n\n", shaderName, entryPointName); }
 
 	size_t shaderSize;
+	size_t cacheSize;
+
 	bool bres = file_size(shaderName, &shaderSize);
 	if EXPECT_FALSE (!bres) { free_recursive(dyMem); return false; }
 
-	size_t cacheSize;
 	bres = file_size(PIPELINE_CACHE_NAME, &cacheSize);
 	if EXPECT_FALSE (!bres) { free_recursive(dyMem); return false; }
 
@@ -1527,17 +1715,18 @@ bool create_pipeline(Gpu* restrict gpu)
 	}
 
 	VkShaderModuleCreateInfo shaderModuleCreateInfo = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-	shaderModuleCreateInfo.codeSize = shaderSize;
-	shaderModuleCreateInfo.pCode    = shaderCode;
+	shaderModuleCreateInfo.codeSize                 = shaderSize;
+	shaderModuleCreateInfo.pCode                    = shaderCode;
 
 	VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO};
-	pipelineCacheCreateInfo.flags           = gpu->usingPipelineCreationCacheControl ? VK_PIPELINE_CACHE_CREATE_EXTERNALLY_SYNCHRONIZED_BIT : 0;
+	pipelineCacheCreateInfo.flags =
+		gpu->usingPipelineCreationCacheControl ? VK_PIPELINE_CACHE_CREATE_EXTERNALLY_SYNCHRONIZED_BIT : 0;
 	pipelineCacheCreateInfo.initialDataSize = cacheSize;
 	pipelineCacheCreateInfo.pInitialData    = cacheData;
 
 	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-	pipelineLayoutCreateInfo.setLayoutCount = 1;
-	pipelineLayoutCreateInfo.pSetLayouts    = &descriptorSetLayout;
+	pipelineLayoutCreateInfo.setLayoutCount             = 1;
+	pipelineLayoutCreateInfo.pSetLayouts                = &descriptorSetLayout;
 
 	VK_CALL_RES(vkCreateShaderModule, device, &shaderModuleCreateInfo, g_allocator, &gpu->shaderModule);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
@@ -1569,19 +1758,26 @@ bool create_pipeline(Gpu* restrict gpu)
 	specialisationInfo.dataSize      = sizeof(specialisationData);
 	specialisationInfo.pData         = specialisationData;
 
-	VkPipelineShaderStageCreateInfo pipelineShaderStageCreateInfo = {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
-	pipelineShaderStageCreateInfo.flags               = gpu->usingSubgroupSizeControl ? VK_PIPELINE_SHADER_STAGE_CREATE_ALLOW_VARYING_SUBGROUP_SIZE_BIT_EXT : 0;
+	VkPipelineShaderStageCreateInfo pipelineShaderStageCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
+	pipelineShaderStageCreateInfo.flags =
+		gpu->usingSubgroupSizeControl ? VK_PIPELINE_SHADER_STAGE_CREATE_ALLOW_VARYING_SUBGROUP_SIZE_BIT_EXT : 0;
 	pipelineShaderStageCreateInfo.stage               = VK_SHADER_STAGE_COMPUTE_BIT;
 	pipelineShaderStageCreateInfo.module              = shaderModule;
 	pipelineShaderStageCreateInfo.pName               = entryPointName;
 	pipelineShaderStageCreateInfo.pSpecializationInfo = &specialisationInfo;
 
 	VkComputePipelineCreateInfo computePipelineCreateInfo = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
-	computePipelineCreateInfo.flags  = gpu->usingPipelineExecutableProperties ? VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR | VK_PIPELINE_CREATE_CAPTURE_INTERNAL_REPRESENTATIONS_BIT_KHR : 0;
+	computePipelineCreateInfo.flags =
+		gpu->usingPipelineExecutableProperties ?
+		VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR | VK_PIPELINE_CREATE_CAPTURE_INTERNAL_REPRESENTATIONS_BIT_KHR :
+		0;
 	computePipelineCreateInfo.stage  = pipelineShaderStageCreateInfo;
 	computePipelineCreateInfo.layout = pipelineLayout;
 
-	VK_CALL_RES(vkCreateComputePipelines, device, pipelineCache, 1, &computePipelineCreateInfo, g_allocator, &gpu->pipeline);
+	VK_CALL_RES(
+		vkCreateComputePipelines, device, pipelineCache, 1, &computePipelineCreateInfo, g_allocator, &gpu->pipeline);
+
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 	VK_CALL(vkDestroyShaderModule, device, shaderModule, g_allocator);
@@ -1609,13 +1805,14 @@ bool create_pipeline(Gpu* restrict gpu)
 
 	if (transferQueueTimestampValidBits || computeQueueTimestampValidBits) {
 		VkQueryPoolCreateInfo queryPoolCreateInfo = {VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO};
-		queryPoolCreateInfo.queryType  = VK_QUERY_TYPE_TIMESTAMP;
-		queryPoolCreateInfo.queryCount = inoutsPerHeap * 4;
+		queryPoolCreateInfo.queryType             = VK_QUERY_TYPE_TIMESTAMP;
+		queryPoolCreateInfo.queryCount            = inoutsPerHeap * 4;
 
 		VK_CALL_RES(vkCreateQueryPool, device, &queryPoolCreateInfo, g_allocator, &gpu->queryPool);
 		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 	}
 
+	// TEMP probably will move to own function
 	if (!gpu->usingPipelineExecutableProperties) {
 		free_recursive(dyMem);
 		return true;
@@ -1624,13 +1821,16 @@ bool create_pipeline(Gpu* restrict gpu)
 	VkPipeline pipeline = gpu->pipeline;
 
 	VkPipelineInfoKHR pipelineInfo = {VK_STRUCTURE_TYPE_PIPELINE_INFO_KHR};
-	pipelineInfo.pipeline = pipeline;
+	pipelineInfo.pipeline          = pipeline;
 
 	uint32_t executableCount = 1;
 
-	VkPipelineExecutablePropertiesKHR pipelineExecutableProperties = {VK_STRUCTURE_TYPE_PIPELINE_EXECUTABLE_PROPERTIES_KHR};
+	VkPipelineExecutablePropertiesKHR pipelineExecutableProperties = {
+		VK_STRUCTURE_TYPE_PIPELINE_EXECUTABLE_PROPERTIES_KHR};
 
-	VK_CALL_RES(vkGetPipelineExecutablePropertiesKHR, device, &pipelineInfo, &executableCount, &pipelineExecutableProperties);
+	VK_CALL_RES(
+		vkGetPipelineExecutablePropertiesKHR, device, &pipelineInfo, &executableCount, &pipelineExecutableProperties);
+
 	if EXPECT_FALSE (vkres || executableCount != 1) { free_recursive(dyMem); return false; }
 
 	printf(
@@ -1645,8 +1845,8 @@ bool create_pipeline(Gpu* restrict gpu)
 		pipelineExecutableProperties.subgroupSize);
 
 	VkPipelineExecutableInfoKHR pipelineExecutableInfo = {VK_STRUCTURE_TYPE_PIPELINE_EXECUTABLE_INFO_KHR};
-	pipelineExecutableInfo.pipeline        = pipeline;
-	pipelineExecutableInfo.executableIndex = 0;
+	pipelineExecutableInfo.pipeline                    = pipeline;
+	pipelineExecutableInfo.executableIndex             = 0;
 
 	uint32_t statisticCount;
 
@@ -1664,15 +1864,20 @@ bool create_pipeline(Gpu* restrict gpu)
 	VkPipelineExecutableStatisticKHR* pipelineExecutableStatistics = (VkPipelineExecutableStatisticKHR*) p;
 
 	for (uint32_t i = 0; i < statisticCount; i++) {
-		pipelineExecutableStatistics[i] = (VkPipelineExecutableStatisticKHR) {VK_STRUCTURE_TYPE_PIPELINE_EXECUTABLE_STATISTIC_KHR};
+		pipelineExecutableStatistics[i] = (VkPipelineExecutableStatisticKHR) {
+			VK_STRUCTURE_TYPE_PIPELINE_EXECUTABLE_STATISTIC_KHR};
 	}
 
-	VK_CALL_RES(vkGetPipelineExecutableStatisticsKHR, device, &pipelineExecutableInfo, &statisticCount, pipelineExecutableStatistics);
+	VK_CALL_RES(
+		vkGetPipelineExecutableStatisticsKHR, device, &pipelineExecutableInfo, &statisticCount,
+		pipelineExecutableStatistics);
+
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 	for (uint32_t i = 0; i < statisticCount; i++) {
 		const char* name        = pipelineExecutableStatistics[i].name;
 		const char* description = pipelineExecutableStatistics[i].description;
+
 		VkPipelineExecutableStatisticFormatKHR format = pipelineExecutableStatistics[i].format;
 		VkPipelineExecutableStatisticValueKHR  value  = pipelineExecutableStatistics[i].value;
 
@@ -1694,6 +1899,7 @@ bool create_pipeline(Gpu* restrict gpu)
 	NEWLINE();
 
 	free_recursive(dyMem);
+
 	return true;
 }
 
@@ -1734,9 +1940,9 @@ bool create_commands(Gpu* restrict gpu)
 	if EXPECT_FALSE (!dyMem) return false;
 
 	size_t size =
-		inoutsPerBuffer * 2 * sizeof(VkBufferCopy) +
-		inoutsPerHeap   * 6 * sizeof(VkBufferMemoryBarrier2KHR) +
-		inoutsPerHeap   * 4 * sizeof(VkDependencyInfoKHR);
+		inoutsPerBuffer * sizeof(VkBufferCopy) * 2 +
+		inoutsPerHeap   * sizeof(VkBufferMemoryBarrier2KHR) * 6 +
+		inoutsPerHeap   * sizeof(VkDependencyInfoKHR) * 4;
 
 	void* p = malloc(size);
 	if EXPECT_FALSE (!p) { MALLOC_FAILURE(p, size); free_recursive(dyMem); return false; }
@@ -1747,22 +1953,27 @@ bool create_commands(Gpu* restrict gpu)
 	VkBufferCopy* inBufferCopies  = (VkBufferCopy*) p;
 	VkBufferCopy* outBufferCopies = (VkBufferCopy*) (inBufferCopies + inoutsPerBuffer);
 
-	VkBufferMemoryBarrier2KHR*  onetimeBufferMemoryBarriers2      = (VkBufferMemoryBarrier2KHR*)     (outBufferCopies               + inoutsPerBuffer);
-	VkBufferMemoryBarrier2KHR (*transferBufferMemoryBarriers2)[3] = (VkBufferMemoryBarrier2KHR(*)[]) (onetimeBufferMemoryBarriers2  + inoutsPerHeap);
-	VkBufferMemoryBarrier2KHR (*computeBufferMemoryBarriers2)[2]  = (VkBufferMemoryBarrier2KHR(*)[]) (transferBufferMemoryBarriers2 + inoutsPerHeap);
+	VkBufferMemoryBarrier2KHR* onetimeBufferMemoryBarriers2 = (VkBufferMemoryBarrier2KHR*) (
+		outBufferCopies + inoutsPerBuffer);
+	VkBufferMemoryBarrier2KHR (*transferBufferMemoryBarriers2)[3] = (VkBufferMemoryBarrier2KHR(*)[]) (
+		onetimeBufferMemoryBarriers2 + inoutsPerHeap);
+	VkBufferMemoryBarrier2KHR (*computeBufferMemoryBarriers2)[2] = (VkBufferMemoryBarrier2KHR(*)[]) (
+		transferBufferMemoryBarriers2 + inoutsPerHeap);
 
-	VkDependencyInfoKHR (*transferDependencyInfos)[2] = (VkDependencyInfoKHR(*)[]) (computeBufferMemoryBarriers2 + inoutsPerHeap);
-	VkDependencyInfoKHR (*computeDependencyInfos)[2]  = (VkDependencyInfoKHR(*)[]) (transferDependencyInfos      + inoutsPerHeap);
+	VkDependencyInfoKHR (*transferDependencyInfos)[2] = (VkDependencyInfoKHR(*)[]) (
+		computeBufferMemoryBarriers2 + inoutsPerHeap);
+	VkDependencyInfoKHR (*computeDependencyInfos)[2] = (VkDependencyInfoKHR(*)[]) (
+		transferDependencyInfos + inoutsPerHeap);
 
 	VkCommandPoolCreateInfo onetimeCommandPoolCreateInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-	onetimeCommandPoolCreateInfo.flags            = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-	onetimeCommandPoolCreateInfo.queueFamilyIndex = transferQueueFamilyIndex;
+	onetimeCommandPoolCreateInfo.flags                   = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+	onetimeCommandPoolCreateInfo.queueFamilyIndex        = transferQueueFamilyIndex;
 
 	VkCommandPoolCreateInfo transferCommandPoolCreateInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-	transferCommandPoolCreateInfo.queueFamilyIndex = transferQueueFamilyIndex;
+	transferCommandPoolCreateInfo.queueFamilyIndex        = transferQueueFamilyIndex;
 
 	VkCommandPoolCreateInfo computeCommandPoolCreateInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-	computeCommandPoolCreateInfo.queueFamilyIndex = computeQueueFamilyIndex;
+	computeCommandPoolCreateInfo.queueFamilyIndex        = computeQueueFamilyIndex;
 
 	VK_CALL_RES(vkCreateCommandPool, device, &onetimeCommandPoolCreateInfo, g_allocator, &gpu->onetimeCommandPool);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
@@ -1778,19 +1989,19 @@ bool create_commands(Gpu* restrict gpu)
 	VkCommandPool computeCommandPool  = gpu->computeCommandPool;
 
 	VkCommandBufferAllocateInfo onetimeCommandBufferAllocateInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-	onetimeCommandBufferAllocateInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	onetimeCommandBufferAllocateInfo.commandPool        = onetimeCommandPool;
-	onetimeCommandBufferAllocateInfo.commandBufferCount = 1;
+	onetimeCommandBufferAllocateInfo.level                       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	onetimeCommandBufferAllocateInfo.commandPool                 = onetimeCommandPool;
+	onetimeCommandBufferAllocateInfo.commandBufferCount          = 1;
 
 	VkCommandBufferAllocateInfo transferCommandBufferAllocateInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-	transferCommandBufferAllocateInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	transferCommandBufferAllocateInfo.commandPool        = transferCommandPool;
-	transferCommandBufferAllocateInfo.commandBufferCount = inoutsPerHeap;
+	transferCommandBufferAllocateInfo.level                       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	transferCommandBufferAllocateInfo.commandPool                 = transferCommandPool;
+	transferCommandBufferAllocateInfo.commandBufferCount          = inoutsPerHeap;
 
 	VkCommandBufferAllocateInfo computeCommandBufferAllocateInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-	computeCommandBufferAllocateInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	computeCommandBufferAllocateInfo.commandPool        = computeCommandPool;
-	computeCommandBufferAllocateInfo.commandBufferCount = inoutsPerHeap;
+	computeCommandBufferAllocateInfo.level                       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	computeCommandBufferAllocateInfo.commandPool                 = computeCommandPool;
+	computeCommandBufferAllocateInfo.commandBufferCount          = inoutsPerHeap;
 
 	VK_CALL_RES(vkAllocateCommandBuffers, device, &onetimeCommandBufferAllocateInfo, &gpu->onetimeCommandBuffer);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
@@ -1815,7 +2026,8 @@ bool create_commands(Gpu* restrict gpu)
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
-			onetimeBufferMemoryBarriers2[j] = (VkBufferMemoryBarrier2KHR) {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR};
+			onetimeBufferMemoryBarriers2[j] = (VkBufferMemoryBarrier2KHR) {
+				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR};
 			onetimeBufferMemoryBarriers2[j].srcStageMask        = VK_PIPELINE_STAGE_2_COPY_BIT_KHR;
 			onetimeBufferMemoryBarriers2[j].srcAccessMask       = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR;
 			onetimeBufferMemoryBarriers2[j].srcQueueFamilyIndex = transferQueueFamilyIndex;
@@ -1824,7 +2036,8 @@ bool create_commands(Gpu* restrict gpu)
 			onetimeBufferMemoryBarriers2[j].offset              = bytesPerInout * k;
 			onetimeBufferMemoryBarriers2[j].size                = bytesPerIn;
 
-			transferBufferMemoryBarriers2[j][0] = (VkBufferMemoryBarrier2KHR) {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR};
+			transferBufferMemoryBarriers2[j][0] = (VkBufferMemoryBarrier2KHR) {
+				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR};
 			transferBufferMemoryBarriers2[j][0].srcStageMask        = VK_PIPELINE_STAGE_2_COPY_BIT_KHR;
 			transferBufferMemoryBarriers2[j][0].srcAccessMask       = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR;
 			transferBufferMemoryBarriers2[j][0].srcQueueFamilyIndex = transferQueueFamilyIndex;
@@ -1833,7 +2046,8 @@ bool create_commands(Gpu* restrict gpu)
 			transferBufferMemoryBarriers2[j][0].offset              = bytesPerInout * k;
 			transferBufferMemoryBarriers2[j][0].size                = bytesPerIn;
 
-			transferBufferMemoryBarriers2[j][1] = (VkBufferMemoryBarrier2KHR) {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR};
+			transferBufferMemoryBarriers2[j][1] = (VkBufferMemoryBarrier2KHR) {
+				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR};
 			transferBufferMemoryBarriers2[j][1].dstStageMask        = VK_PIPELINE_STAGE_2_COPY_BIT_KHR;
 			transferBufferMemoryBarriers2[j][1].dstAccessMask       = VK_ACCESS_2_TRANSFER_READ_BIT_KHR;
 			transferBufferMemoryBarriers2[j][1].srcQueueFamilyIndex = computeQueueFamilyIndex;
@@ -1842,7 +2056,8 @@ bool create_commands(Gpu* restrict gpu)
 			transferBufferMemoryBarriers2[j][1].offset              = bytesPerInout * k + bytesPerIn;
 			transferBufferMemoryBarriers2[j][1].size                = bytesPerOut;
 
-			transferBufferMemoryBarriers2[j][2] = (VkBufferMemoryBarrier2KHR) {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR};
+			transferBufferMemoryBarriers2[j][2] = (VkBufferMemoryBarrier2KHR) {
+				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR};
 			transferBufferMemoryBarriers2[j][2].srcStageMask  = VK_PIPELINE_STAGE_2_COPY_BIT_KHR;
 			transferBufferMemoryBarriers2[j][2].srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR;
 			transferBufferMemoryBarriers2[j][2].dstStageMask  = VK_PIPELINE_STAGE_2_HOST_BIT_KHR;
@@ -1851,7 +2066,8 @@ bool create_commands(Gpu* restrict gpu)
 			transferBufferMemoryBarriers2[j][2].offset        = bytesPerInout * k + bytesPerIn;
 			transferBufferMemoryBarriers2[j][2].size          = bytesPerOut;
 
-			computeBufferMemoryBarriers2[j][0] = (VkBufferMemoryBarrier2KHR) {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR};
+			computeBufferMemoryBarriers2[j][0] = (VkBufferMemoryBarrier2KHR) {
+				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR};
 			computeBufferMemoryBarriers2[j][0].dstStageMask        = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR;
 			computeBufferMemoryBarriers2[j][0].dstAccessMask       = VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR;
 			computeBufferMemoryBarriers2[j][0].srcQueueFamilyIndex = transferQueueFamilyIndex;
@@ -1860,7 +2076,8 @@ bool create_commands(Gpu* restrict gpu)
 			computeBufferMemoryBarriers2[j][0].offset              = bytesPerInout * k;
 			computeBufferMemoryBarriers2[j][0].size                = bytesPerIn;
 
-			computeBufferMemoryBarriers2[j][1] = (VkBufferMemoryBarrier2KHR) {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR};
+			computeBufferMemoryBarriers2[j][1] = (VkBufferMemoryBarrier2KHR) {
+				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR};
 			computeBufferMemoryBarriers2[j][1].srcStageMask        = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR;
 			computeBufferMemoryBarriers2[j][1].srcAccessMask       = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT_KHR;
 			computeBufferMemoryBarriers2[j][1].srcQueueFamilyIndex = computeQueueFamilyIndex;
@@ -1887,12 +2104,12 @@ bool create_commands(Gpu* restrict gpu)
 		}
 	}
 
-	VkDependencyInfoKHR onetimeDependencyInfo = {VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR};
+	VkDependencyInfoKHR onetimeDependencyInfo      = {VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR};
 	onetimeDependencyInfo.bufferMemoryBarrierCount = inoutsPerHeap;
 	onetimeDependencyInfo.pBufferMemoryBarriers    = onetimeBufferMemoryBarriers2;
 
 	VkCommandBufferBeginInfo onetimeCommandBufferBeginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-	onetimeCommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	onetimeCommandBufferBeginInfo.flags                    = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
 	VkCommandBufferBeginInfo transferCommandBufferBeginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
 
@@ -1902,12 +2119,13 @@ bool create_commands(Gpu* restrict gpu)
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
-		VK_CALL(vkCmdCopyBuffer, onetimeCommandBuffer, hostVisibleBuffers[i], deviceLocalBuffers[i], inoutsPerBuffer, inBufferCopies);
+		VK_CALL(
+			vkCmdCopyBuffer, onetimeCommandBuffer, hostVisibleBuffers[i], deviceLocalBuffers[i], inoutsPerBuffer,
+			inBufferCopies);
 	}
 
 	if (transferQueueFamilyIndex != computeQueueFamilyIndex) {
-		VK_CALL(vkCmdPipelineBarrier2KHR, onetimeCommandBuffer, &onetimeDependencyInfo);
-	}
+		VK_CALL(vkCmdPipelineBarrier2KHR, onetimeCommandBuffer, &onetimeDependencyInfo); }
 
 	VK_CALL_RES(vkEndCommandBuffer, onetimeCommandBuffer);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
@@ -1919,21 +2137,27 @@ bool create_commands(Gpu* restrict gpu)
 
 			if (transferQueueTimestampValidBits) {
 				VK_CALL(vkCmdResetQueryPool, transferCommandBuffers[j], queryPool, j * 4, 2);
-				VK_CALL(vkCmdWriteTimestamp2KHR, transferCommandBuffers[j], VK_PIPELINE_STAGE_2_NONE_KHR, queryPool, j * 4);
+				VK_CALL(
+					vkCmdWriteTimestamp2KHR, transferCommandBuffers[j], VK_PIPELINE_STAGE_2_NONE_KHR, queryPool, j * 4);
 			}
 
-			VK_CALL(vkCmdCopyBuffer, transferCommandBuffers[j], hostVisibleBuffers[i], deviceLocalBuffers[i], 1, &inBufferCopies[k]);
+			VK_CALL(
+				vkCmdCopyBuffer, transferCommandBuffers[j], hostVisibleBuffers[i], deviceLocalBuffers[i], 1,
+				&inBufferCopies[k]);
 
 			if (transferQueueFamilyIndex != computeQueueFamilyIndex) {
-				VK_CALL(vkCmdPipelineBarrier2KHR, transferCommandBuffers[j], &transferDependencyInfos[j][0]);
-			}
+				VK_CALL(vkCmdPipelineBarrier2KHR, transferCommandBuffers[j], &transferDependencyInfos[j][0]); }
 
-			VK_CALL(vkCmdCopyBuffer, transferCommandBuffers[j], deviceLocalBuffers[i], hostVisibleBuffers[i], 1, &outBufferCopies[k]);
+			VK_CALL(
+				vkCmdCopyBuffer, transferCommandBuffers[j], deviceLocalBuffers[i], hostVisibleBuffers[i], 1,
+				&outBufferCopies[k]);
 
 			VK_CALL(vkCmdPipelineBarrier2KHR, transferCommandBuffers[j], &transferDependencyInfos[j][1]);
 
 			if (transferQueueTimestampValidBits) {
-				VK_CALL(vkCmdWriteTimestamp2KHR, transferCommandBuffers[j], VK_PIPELINE_STAGE_2_COPY_BIT_KHR, queryPool, j * 4 + 1);
+				VK_CALL(
+					vkCmdWriteTimestamp2KHR, transferCommandBuffers[j], VK_PIPELINE_STAGE_2_COPY_BIT_KHR, queryPool,
+					j * 4 + 1);
 			}
 
 			VK_CALL_RES(vkEndCommandBuffer, transferCommandBuffers[j]);
@@ -1944,23 +2168,27 @@ bool create_commands(Gpu* restrict gpu)
 
 			if (computeQueueTimestampValidBits) {
 				VK_CALL(vkCmdResetQueryPool, computeCommandBuffers[j], queryPool, j * 4 + 2, 2);
-				VK_CALL(vkCmdWriteTimestamp2KHR, computeCommandBuffers[j], VK_PIPELINE_STAGE_2_NONE_KHR, queryPool, j * 4 + 2);
+				VK_CALL(
+					vkCmdWriteTimestamp2KHR, computeCommandBuffers[j], VK_PIPELINE_STAGE_2_NONE_KHR, queryPool,
+					j * 4 + 2);
 			}
 
 			if (transferQueueFamilyIndex != computeQueueFamilyIndex) {
-				VK_CALL(vkCmdPipelineBarrier2KHR, computeCommandBuffers[j], &computeDependencyInfos[j][0]);
-			}
+				VK_CALL(vkCmdPipelineBarrier2KHR, computeCommandBuffers[j], &computeDependencyInfos[j][0]); }
 
-			VK_CALL(vkCmdBindDescriptorSets, computeCommandBuffers[j], VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout, 0, 1, &descriptorSets[j], 0, NULL);
+			VK_CALL(
+				vkCmdBindDescriptorSets, computeCommandBuffers[j], VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout, 0, 1,
+				&descriptorSets[j], 0, NULL);
 			VK_CALL(vkCmdBindPipeline, computeCommandBuffers[j], VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
 			VK_CALL(vkCmdDispatchBase, computeCommandBuffers[j], 0, 0, 0, workgroupCount, 1, 1);
 
 			if (transferQueueFamilyIndex != computeQueueFamilyIndex) {
-				VK_CALL(vkCmdPipelineBarrier2KHR, computeCommandBuffers[j], &computeDependencyInfos[j][1]);
-			}
+				VK_CALL(vkCmdPipelineBarrier2KHR, computeCommandBuffers[j], &computeDependencyInfos[j][1]); }
 
 			if (computeQueueTimestampValidBits) {
-				VK_CALL(vkCmdWriteTimestamp2KHR, computeCommandBuffers[j], VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR, queryPool, j * 4 + 3);
+				VK_CALL(
+					vkCmdWriteTimestamp2KHR, computeCommandBuffers[j], VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+					queryPool, j * 4 + 3);
 			}
 
 			VK_CALL_RES(vkEndCommandBuffer, computeCommandBuffers[j]);
@@ -1974,11 +2202,11 @@ bool create_commands(Gpu* restrict gpu)
 	}
 
 	VkSemaphoreTypeCreateInfoKHR semaphoreTypeCreateInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO_KHR};
-	semaphoreTypeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE_KHR;
-	semaphoreTypeCreateInfo.initialValue  = 0;
+	semaphoreTypeCreateInfo.semaphoreType                = VK_SEMAPHORE_TYPE_TIMELINE_KHR;
+	semaphoreTypeCreateInfo.initialValue                 = 0;
 
 	VkSemaphoreCreateInfo semaphoreCreateInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-	semaphoreCreateInfo.pNext = &semaphoreTypeCreateInfo;
+	semaphoreCreateInfo.pNext                 = &semaphoreTypeCreateInfo;
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		VK_CALL_RES(vkCreateSemaphore, device, &semaphoreCreateInfo, g_allocator, &semaphores[i]);
@@ -2000,7 +2228,10 @@ bool create_commands(Gpu* restrict gpu)
 				char objectName[68];
 				char specs[60];
 
-				sprintf(specs, ", Inout %" PRIu32 "/%" PRIu32 ", Buffer %" PRIu32 "/%" PRIu32, k + 1, inoutsPerBuffer, i + 1, buffersPerHeap);
+				sprintf(
+					specs,
+					", Inout %" PRIu32 "/%" PRIu32 ", Buffer %" PRIu32 "/%" PRIu32,
+					k + 1, inoutsPerBuffer, i + 1, buffersPerHeap);
 
 				strcpy(objectName, "Transfer");
 				strcat(objectName, specs);
@@ -2029,13 +2260,15 @@ bool submit_commands(Gpu* restrict gpu)
 	Value*       const* mappedInBuffers  = gpu->mappedInBuffers;
 	const Count* const* mappedOutBuffers = (const Count* const*) gpu->mappedOutBuffers;
 
-	VkDevice device        = gpu->device;
-	VkQueue  transferQueue = gpu->transferQueue;
-	VkQueue  computeQueue  = gpu->computeQueue;
+	VkDevice device = gpu->device;
+
+	VkQueue transferQueue = gpu->transferQueue;
+	VkQueue computeQueue  = gpu->computeQueue;
+
+	VkQueryPool queryPool = gpu->queryPool;
 
 	VkCommandPool   onetimeCommandPool   = gpu->onetimeCommandPool;
 	VkCommandBuffer onetimeCommandBuffer = gpu->onetimeCommandBuffer;
-	VkQueryPool     queryPool            = gpu->queryPool;
 
 	VkDeviceSize bytesPerIn    = gpu->bytesPerIn;
 	VkDeviceSize bytesPerOut   = gpu->bytesPerOut;
@@ -2053,6 +2286,9 @@ bool submit_commands(Gpu* restrict gpu)
 	float timestampPeriod = gpu->timestampPeriod;
 	bool  hostNonCoherent = gpu->hostNonCoherent;
 
+	CliOutput outputLevel = gpu->outputLevel;
+	uint64_t  maxLoops    = gpu->maxLoops;
+
 	VkResult vkres;
 
 	DyData dyData;
@@ -2060,12 +2296,12 @@ bool submit_commands(Gpu* restrict gpu)
 	if EXPECT_FALSE (!dyMem) return false;
 
 	size_t size =
-		inoutsPerHeap     * sizeof(Value) +
-		inoutsPerHeap * 2 * sizeof(VkMappedMemoryRange) +
-		inoutsPerHeap * 2 * sizeof(VkSubmitInfo2KHR) +
-		inoutsPerHeap * 2 * sizeof(VkCommandBufferSubmitInfoKHR) +
-		inoutsPerHeap * 4 * sizeof(VkSemaphoreSubmitInfoKHR) +
-		inoutsPerHeap * 2 * sizeof(VkSemaphoreWaitInfoKHR);
+		inoutsPerHeap * sizeof(Value) +
+		inoutsPerHeap * sizeof(VkMappedMemoryRange) * 2 +
+		inoutsPerHeap * sizeof(VkSubmitInfo2KHR) * 2 +
+		inoutsPerHeap * sizeof(VkCommandBufferSubmitInfoKHR) * 2 +
+		inoutsPerHeap * sizeof(VkSemaphoreSubmitInfoKHR) * 4 +
+		inoutsPerHeap * sizeof(VkSemaphoreWaitInfoKHR) * 2;
 
 	void* p = malloc(size);
 	if EXPECT_FALSE (!p) { MALLOC_FAILURE(p, size); free_recursive(dyMem); return false; }
@@ -2075,22 +2311,32 @@ bool submit_commands(Gpu* restrict gpu)
 
 	Value* testedValues = (Value*) p;
 
-	VkMappedMemoryRange* hostVisibleInBuffersMappedMemoryRanges  = (VkMappedMemoryRange*) (testedValues                           + inoutsPerHeap);
-	VkMappedMemoryRange* hostVisibleOutBuffersMappedMemoryRanges = (VkMappedMemoryRange*) (hostVisibleInBuffersMappedMemoryRanges + inoutsPerHeap);
+	VkMappedMemoryRange* hostVisibleInBuffersMappedMemoryRanges = (VkMappedMemoryRange*) (testedValues + inoutsPerHeap);
+	VkMappedMemoryRange* hostVisibleOutBuffersMappedMemoryRanges = (VkMappedMemoryRange*) (
+		hostVisibleInBuffersMappedMemoryRanges + inoutsPerHeap);
 
-	VkSubmitInfo2KHR* transferSubmitInfos2 = (VkSubmitInfo2KHR*) (hostVisibleOutBuffersMappedMemoryRanges + inoutsPerHeap);
-	VkSubmitInfo2KHR* computeSubmitInfos2  = (VkSubmitInfo2KHR*) (transferSubmitInfos2                    + inoutsPerHeap);
+	VkSubmitInfo2KHR* transferSubmitInfos2 = (VkSubmitInfo2KHR*) (
+		hostVisibleOutBuffersMappedMemoryRanges + inoutsPerHeap);
+	VkSubmitInfo2KHR* computeSubmitInfos2 = (VkSubmitInfo2KHR*) (transferSubmitInfos2 + inoutsPerHeap);
 
-	VkCommandBufferSubmitInfoKHR* transferCommandBufferSubmitInfos = (VkCommandBufferSubmitInfoKHR*) (computeSubmitInfos2              + inoutsPerHeap);
-	VkCommandBufferSubmitInfoKHR* computeCommandBufferSubmitInfos  = (VkCommandBufferSubmitInfoKHR*) (transferCommandBufferSubmitInfos + inoutsPerHeap);
+	VkCommandBufferSubmitInfoKHR* transferCommandBufferSubmitInfos = (VkCommandBufferSubmitInfoKHR*) (
+		computeSubmitInfos2 + inoutsPerHeap);
+	VkCommandBufferSubmitInfoKHR* computeCommandBufferSubmitInfos = (VkCommandBufferSubmitInfoKHR*) (
+		transferCommandBufferSubmitInfos + inoutsPerHeap);
 
-	VkSemaphoreSubmitInfoKHR* transferWaitSemaphoreSubmitInfos   = (VkSemaphoreSubmitInfoKHR*) (computeCommandBufferSubmitInfos    + inoutsPerHeap);
-	VkSemaphoreSubmitInfoKHR* transferSignalSemaphoreSubmitInfos = (VkSemaphoreSubmitInfoKHR*) (transferWaitSemaphoreSubmitInfos   + inoutsPerHeap);
-	VkSemaphoreSubmitInfoKHR* computeWaitSemaphoreSubmitInfos    = (VkSemaphoreSubmitInfoKHR*) (transferSignalSemaphoreSubmitInfos + inoutsPerHeap);
-	VkSemaphoreSubmitInfoKHR* computeSignalSemaphoreSubmitInfos  = (VkSemaphoreSubmitInfoKHR*) (computeWaitSemaphoreSubmitInfos    + inoutsPerHeap);
+	VkSemaphoreSubmitInfoKHR* transferWaitSemaphoreSubmitInfos = (VkSemaphoreSubmitInfoKHR*) (
+		computeCommandBufferSubmitInfos + inoutsPerHeap);
+	VkSemaphoreSubmitInfoKHR* transferSignalSemaphoreSubmitInfos = (VkSemaphoreSubmitInfoKHR*) (
+		transferWaitSemaphoreSubmitInfos + inoutsPerHeap);
+	VkSemaphoreSubmitInfoKHR* computeWaitSemaphoreSubmitInfos = (VkSemaphoreSubmitInfoKHR*) (
+		transferSignalSemaphoreSubmitInfos + inoutsPerHeap);
+	VkSemaphoreSubmitInfoKHR* computeSignalSemaphoreSubmitInfos = (VkSemaphoreSubmitInfoKHR*) (
+		computeWaitSemaphoreSubmitInfos + inoutsPerHeap);
 
-	VkSemaphoreWaitInfoKHR* transferSemaphoreWaitInfos = (VkSemaphoreWaitInfoKHR*) (computeSignalSemaphoreSubmitInfos + inoutsPerHeap);
-	VkSemaphoreWaitInfoKHR* computeSemaphoreWaitInfos  = (VkSemaphoreWaitInfoKHR*) (transferSemaphoreWaitInfos        + inoutsPerHeap);
+	VkSemaphoreWaitInfoKHR* transferSemaphoreWaitInfos = (VkSemaphoreWaitInfoKHR*) (
+		computeSignalSemaphoreSubmitInfos + inoutsPerHeap);
+	VkSemaphoreWaitInfoKHR* computeSemaphoreWaitInfos = (VkSemaphoreWaitInfoKHR*) (
+		transferSemaphoreWaitInfos + inoutsPerHeap);
 
 	DyArray highestStepValues = DyArray_create(sizeof(Value), 64);
 	if EXPECT_FALSE (!highestStepValues) { free_recursive(dyMem); return false; }
@@ -2108,7 +2354,7 @@ bool submit_commands(Gpu* restrict gpu)
 	bool bres = file_size(PROGRESS_NAME, &fileSize);
 	if EXPECT_FALSE (!bres) { free_recursive(dyMem); return false; }
 
-	ValueInfo prevValues;
+	ValueInfo prevValues = {0};
 
 	if (!gpu->restartCount && fileSize) {
 		uint64_t val0mod1off0Upper, val0mod1off0Lower;
@@ -2147,7 +2393,6 @@ bool submit_commands(Gpu* restrict gpu)
 		prevValues.curCount = curCount;
 	}
 	else {
-		prevValues = (ValueInfo) {0};
 		prevValues.val0mod1off[0] = 1;
 		prevValues.curValue       = 3;
 	}
@@ -2167,33 +2412,40 @@ bool submit_commands(Gpu* restrict gpu)
 	}
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
-		transferCommandBufferSubmitInfos[i] = (VkCommandBufferSubmitInfoKHR) {VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR};
+		transferCommandBufferSubmitInfos[i] = (VkCommandBufferSubmitInfoKHR) {
+			VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR};
 		transferCommandBufferSubmitInfos[i].commandBuffer = transferCommandBuffers[i];
 
-		computeCommandBufferSubmitInfos[i] = (VkCommandBufferSubmitInfoKHR) {VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR};
+		computeCommandBufferSubmitInfos[i] = (VkCommandBufferSubmitInfoKHR) {
+			VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR};
 		computeCommandBufferSubmitInfos[i].commandBuffer = computeCommandBuffers[i];
 
 		transferWaitSemaphoreSubmitInfos[i] = (VkSemaphoreSubmitInfoKHR) {VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR};
 		transferWaitSemaphoreSubmitInfos[i].semaphore = semaphores[i];
 		transferWaitSemaphoreSubmitInfos[i].value     = 0;
-		transferWaitSemaphoreSubmitInfos[i].stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR; // Need to include acquire operation
+		transferWaitSemaphoreSubmitInfos[i].stageMask =
+			VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR; // Need to include acquire operation
 
-		transferSignalSemaphoreSubmitInfos[i] = (VkSemaphoreSubmitInfoKHR) {VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR};
+		transferSignalSemaphoreSubmitInfos[i] = (VkSemaphoreSubmitInfoKHR) {
+			VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR};
 		transferSignalSemaphoreSubmitInfos[i].semaphore = semaphores[i];
 		transferSignalSemaphoreSubmitInfos[i].value     = 1;
-		transferSignalSemaphoreSubmitInfos[i].stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR; // Need to include release operation
+		transferSignalSemaphoreSubmitInfos[i].stageMask =
+			VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR; // Need to include release operation
 
 		computeWaitSemaphoreSubmitInfos[i] = (VkSemaphoreSubmitInfoKHR) {VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR};
 		computeWaitSemaphoreSubmitInfos[i].semaphore = semaphores[i];
 		computeWaitSemaphoreSubmitInfos[i].value     = 1;
-		computeWaitSemaphoreSubmitInfos[i].stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR; // Need to include acquire operation
+		computeWaitSemaphoreSubmitInfos[i].stageMask =
+			VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR; // Need to include acquire operation
 
 		computeSignalSemaphoreSubmitInfos[i] = (VkSemaphoreSubmitInfoKHR) {VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR};
 		computeSignalSemaphoreSubmitInfos[i].semaphore = semaphores[i];
 		computeSignalSemaphoreSubmitInfos[i].value     = 2;
-		computeSignalSemaphoreSubmitInfos[i].stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR; // Need to include release operation
+		computeSignalSemaphoreSubmitInfos[i].stageMask =
+			VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR; // Need to include release operation
 
-		transferSubmitInfos2[i] = (VkSubmitInfo2KHR) {VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR};
+		transferSubmitInfos2[i]                          = (VkSubmitInfo2KHR) {VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR};
 		transferSubmitInfos2[i].waitSemaphoreInfoCount   = 1;
 		transferSubmitInfos2[i].pWaitSemaphoreInfos      = &transferWaitSemaphoreSubmitInfos[i];
 		transferSubmitInfos2[i].commandBufferInfoCount   = 1;
@@ -2201,7 +2453,7 @@ bool submit_commands(Gpu* restrict gpu)
 		transferSubmitInfos2[i].signalSemaphoreInfoCount = 1;
 		transferSubmitInfos2[i].pSignalSemaphoreInfos    = &transferSignalSemaphoreSubmitInfos[i];
 
-		computeSubmitInfos2[i] = (VkSubmitInfo2KHR) {VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR};
+		computeSubmitInfos2[i]                          = (VkSubmitInfo2KHR) {VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR};
 		computeSubmitInfos2[i].waitSemaphoreInfoCount   = 1;
 		computeSubmitInfos2[i].pWaitSemaphoreInfos      = &computeWaitSemaphoreSubmitInfos[i];
 		computeSubmitInfos2[i].commandBufferInfoCount   = 1;
@@ -2221,9 +2473,9 @@ bool submit_commands(Gpu* restrict gpu)
 	}
 
 	VkCommandBufferSubmitInfoKHR onetimeCommandBufferSubmitInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR};
-	onetimeCommandBufferSubmitInfo.commandBuffer = onetimeCommandBuffer;
+	onetimeCommandBufferSubmitInfo.commandBuffer                = onetimeCommandBuffer;
 
-	VkSubmitInfo2KHR onetimeSubmitInfo2 = {VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR};
+	VkSubmitInfo2KHR onetimeSubmitInfo2         = {VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR};
 	onetimeSubmitInfo2.commandBufferInfoCount   = 1;
 	onetimeSubmitInfo2.pCommandBufferInfos      = &onetimeCommandBufferSubmitInfo;
 	onetimeSubmitInfo2.signalSemaphoreInfoCount = inoutsPerHeap;
@@ -2233,9 +2485,10 @@ bool submit_commands(Gpu* restrict gpu)
 
 	Value tested = prevValues.curValue;
 
-	for (uint32_t i = 0; i < inoutsPerHeap; i++, tested += valuesPerInout * 4) {
+	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		testedValues[i] = tested;
 		write_inbuffer(mappedInBuffers[i], &testedValues[i], valuesPerInout, valuesPerHeap);
+		tested += valuesPerInout * 4;
 	}
 
 	if (hostNonCoherent) {
@@ -2256,7 +2509,7 @@ bool submit_commands(Gpu* restrict gpu)
 	int ires = pthread_create(&waitThread, NULL, wait_for_input, &input);
 	if EXPECT_FALSE (ires) { PCREATE_FAILURE(ires, &waitThread, NULL); free_recursive(dyMem); return false; }
 
-	VK_CALL_RES(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[0], ~0ULL);
+	VK_CALL_RES(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[0], UINT64_MAX);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 	VK_CALL(vkDestroyCommandPool, device, onetimeCommandPool, g_allocator);
@@ -2283,8 +2536,9 @@ bool submit_commands(Gpu* restrict gpu)
 	Value startValue = prevValues.curValue;
 
 	// ===== Enter main loop =====
-	for (uint64_t i = 0; !atomic_load(&input); i++) {
+	for (uint64_t i = 0; i < maxLoops && !atomic_load(&input); i++) {
 		clock_t mainLoopBmarkStart = clock();
+
 		Value initialValue = prevValues.curValue;
 
 		float readBmarkTotal         = 0;
@@ -2294,20 +2548,24 @@ bool submit_commands(Gpu* restrict gpu)
 		float computeBmarkTotal      = 0;
 		float transferBmarkTotal     = 0;
 
-		printf("Loop #%" PRIu64 "\n", i + 1);
+		if (outputLevel > CLI_OUTPUT_SILENT) { printf("Loop #%" PRIu64 "\n", i + 1); }
 
 		for (uint32_t j = 0; j < inoutsPerHeap; j++) {
 			uint64_t timestamps[2];
+
 			float computeBmark  = 0;
 			float transferBmark = 0;
 
 			clock_t waitComputeBmarkStart = clock();
-			VK_CALL_RES(vkWaitSemaphoresKHR, device, &computeSemaphoreWaitInfos[j], ~0ULL);
+			VK_CALL_RES(vkWaitSemaphoresKHR, device, &computeSemaphoreWaitInfos[j], UINT64_MAX);
 			if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 			clock_t waitComputeBmarkEnd = clock();
 
 			if (computeQueueTimestampValidBits) {
-				VK_CALL_RES(vkGetQueryPoolResults, device, queryPool, j * 4 + 2, 2, sizeof(timestamps), timestamps, sizeof(timestamps[0]), VK_QUERY_RESULT_64_BIT);
+				VK_CALL_RES(
+					vkGetQueryPoolResults, device, queryPool, j * 4 + 2, 2, sizeof(timestamps), timestamps,
+					sizeof(timestamps[0]), VK_QUERY_RESULT_64_BIT);
+
 				if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 				computeBmark = (float) (timestamps[1] - timestamps[0]) * timestampPeriod / 1000000;
@@ -2320,12 +2578,15 @@ bool submit_commands(Gpu* restrict gpu)
 			if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 			clock_t waitTransferBmarkStart = clock();
-			VK_CALL_RES(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[j], ~0ULL);
+			VK_CALL_RES(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[j], UINT64_MAX);
 			if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 			clock_t waitTransferBmarkEnd = clock();
 
 			if (transferQueueTimestampValidBits) {
-				VK_CALL_RES(vkGetQueryPoolResults, device, queryPool, j * 4, 2, sizeof(timestamps), timestamps, sizeof(timestamps[0]), VK_QUERY_RESULT_64_BIT);
+				VK_CALL_RES(
+					vkGetQueryPoolResults, device, queryPool, j * 4, 2, sizeof(timestamps), timestamps,
+					sizeof(timestamps[0]), VK_QUERY_RESULT_64_BIT);
+
 				if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 				transferBmark = (float) (timestamps[1] - timestamps[0]) * timestampPeriod / 1000000;
@@ -2367,18 +2628,20 @@ bool submit_commands(Gpu* restrict gpu)
 			waitComputeBmarkTotal  += waitComputeBmark;
 			waitTransferBmarkTotal += waitTransferBmark;
 
-			printf(
-				"\tInout-buffer %" PRIu32 "/%" PRIu32 "\n"
-				"\t\tReading buffers:      %5.0fms\n"
-				"\t\tWriting buffers:      %5.0fms\n"
-				"\t\tCompute execution:    %5.0fms\n"
-				"\t\tTransfer execution:   %5.0fms\n"
-				"\t\tWaiting for compute:  %5.0fms\n"
-				"\t\tWaiting for transfer: %5.0fms\n",
-				j + 1, inoutsPerHeap,
-				(double) readBmark, (double) writeBmark,
-				(double) computeBmark, (double) transferBmark,
-				(double) waitComputeBmark, (double) waitTransferBmark);
+			if (outputLevel > CLI_OUTPUT_QUIET) {
+				printf(
+					"Inout-buffer %" PRIu32 "/%" PRIu32 "\n"
+					"\tReading buffers:    %8.0fms\n"
+					"\tWriting buffers:    %8.0fms\n"
+					"\tCompute execution:  %8.0fms\n"
+					"\tTransfer execution: %8.0fms\n"
+					"\tIdle (compute):     %8.0fms\n"
+					"\tIdle (transfer):    %8.0fms\n",
+					j + 1, inoutsPerHeap,
+					(double) readBmark,        (double) writeBmark,
+					(double) computeBmark,     (double) transferBmark,
+					(double) waitComputeBmark, (double) waitTransferBmark);
+			}
 		}
 
 		total += valuesPerHeap * 4;
@@ -2388,25 +2651,60 @@ bool submit_commands(Gpu* restrict gpu)
 
 		Value currentValue = prevValues.curValue;
 
-		printf(
-			"\tMain loop: %.0fms\n"
-			"\tReading buffers:      (total) %5.0fms, (avg) %5.0fms\n"
-			"\tWriting buffers:      (total) %5.0fms, (avg) %5.0fms\n"
-			"\tCompute execution:    (total) %5.0fms, (avg) %5.0fms\n"
-			"\tTransfer execution:   (total) %5.0fms, (avg) %5.0fms\n"
-			"\tWaiting for compute:  (total) %5.0fms, (avg) %5.0fms\n"
-			"\tWaiting for transfer: (total) %5.0fms, (avg) %5.0fms\n"
-			"\tInitial value: 0x %016" PRIx64 " %016" PRIx64 "\n"
-			"\tFinal value:   0x %016" PRIx64 " %016" PRIx64 "\n\n",
-			(double) mainLoopBmark,
-			(double) readBmarkTotal,  (double) (readBmarkTotal  / (float) inoutsPerHeap),
-			(double) writeBmarkTotal, (double) (writeBmarkTotal / (float) inoutsPerHeap),
-			(double) computeBmarkTotal,  (double) (computeBmarkTotal  / (float) inoutsPerHeap),
-			(double) transferBmarkTotal, (double) (transferBmarkTotal / (float) inoutsPerHeap),
-			(double) waitComputeBmarkTotal,  (double) (waitComputeBmarkTotal  / (float) inoutsPerHeap),
-			(double) waitTransferBmarkTotal, (double) (waitTransferBmarkTotal / (float) inoutsPerHeap),
-			INT128_UPPER(initialValue - 2), INT128_LOWER(initialValue - 2),
-			INT128_UPPER(currentValue - 3), INT128_LOWER(currentValue - 3));
+		switch (outputLevel) {
+			case CLI_OUTPUT_SILENT: break;
+			case CLI_OUTPUT_QUIET:
+				printf(
+					"Main loop: %.0fms\n"
+					"Current value: 0x %016" PRIx64 " %016" PRIx64 "\n\n",
+					(double) mainLoopBmark,
+					INT128_UPPER(currentValue - 3), INT128_LOWER(currentValue - 3));
+				break;
+			case CLI_OUTPUT_DEFAULT:
+				printf(
+					"Main loop: %.0fms\n"
+					"Reading buffers:    %8.1fms\n"
+					"Writing buffers:    %8.1fms\n"
+					"Compute execution:  %8.1fms\n"
+					"Transfer execution: %8.1fms\n"
+					"Idle (compute):     %8.1fms\n"
+					"Idle (transfer):    %8.1fms\n"
+					"Initial value: 0x %016" PRIx64 " %016" PRIx64 "\n"
+					"Current value: 0x %016" PRIx64 " %016" PRIx64 "\n\n",
+					(double) mainLoopBmark,
+					(double) (readBmarkTotal  / (float) inoutsPerHeap),
+					(double) (writeBmarkTotal / (float) inoutsPerHeap),
+					(double) (computeBmarkTotal  / (float) inoutsPerHeap),
+					(double) (transferBmarkTotal / (float) inoutsPerHeap),
+					(double) (waitComputeBmarkTotal  / (float) inoutsPerHeap),
+					(double) (waitTransferBmarkTotal / (float) inoutsPerHeap),
+					INT128_UPPER(initialValue - 2), INT128_LOWER(initialValue - 2),
+					INT128_UPPER(currentValue - 3), INT128_LOWER(currentValue - 3));
+				break;
+			case CLI_OUTPUT_VERBOSE:
+				printf(
+					"Main loop: %.0fms\n"
+					"|      Benchmark     | Total (ms) | Average (ms) |\n"
+					"|    Reading buffers | %10.0f | %12.1f |\n"
+					"|    Writing buffers | %10.0f | %12.1f |\n"
+					"|  Compute execution | %10.0f | %12.1f |\n"
+					"| Transfer execution | %10.0f | %12.1f |\n"
+					"|     Idle (compute) | %10.0f | %12.1f |\n"
+					"|    Idle (transfer) | %10.0f | %12.1f |\n"
+					"Initial value: 0x %016" PRIx64 " %016" PRIx64 "\n"
+					"Current value: 0x %016" PRIx64 " %016" PRIx64 "\n\n",
+					(double) mainLoopBmark,
+					(double) readBmarkTotal,  (double) (readBmarkTotal  / (float) inoutsPerHeap),
+					(double) writeBmarkTotal, (double) (writeBmarkTotal / (float) inoutsPerHeap),
+					(double) computeBmarkTotal,  (double) (computeBmarkTotal  / (float) inoutsPerHeap),
+					(double) transferBmarkTotal, (double) (transferBmarkTotal / (float) inoutsPerHeap),
+					(double) waitComputeBmarkTotal,  (double) (waitComputeBmarkTotal  / (float) inoutsPerHeap),
+					(double) waitTransferBmarkTotal, (double) (waitTransferBmarkTotal / (float) inoutsPerHeap),
+					INT128_UPPER(initialValue - 2), INT128_LOWER(initialValue - 2),
+					INT128_UPPER(currentValue - 3), INT128_LOWER(currentValue - 3));
+				break;
+			default: break;
+		}
 	}
 	NEWLINE();
 
@@ -2417,13 +2715,18 @@ bool submit_commands(Gpu* restrict gpu)
 
 	Value endValue = prevValues.curValue;
 
-	printf(
-		"Set of starting values tested: [0x %016" PRIx64 " %016" PRIx64 ", 0x %016" PRIx64 " %016" PRIx64 "]\n",
-		INT128_UPPER(startValue - 2), INT128_LOWER(startValue - 2),
-		INT128_UPPER(endValue - 3),   INT128_LOWER(endValue - 3));
+	if (outputLevel > CLI_OUTPUT_SILENT) {
+		printf(
+			"Set of starting values tested: [0x %016" PRIx64 " %016" PRIx64 ", 0x %016" PRIx64 " %016" PRIx64 "]\n",
+			INT128_UPPER(startValue - 2), INT128_LOWER(startValue - 2),
+			INT128_UPPER(endValue - 3),   INT128_LOWER(endValue - 3));
+	}
 
 	if (count) {
-		printf("New highest step counts (%" PRIu32 "):\n", count);
+		printf(
+			"New highest step counts (%" PRIu32 "):\n"
+			"|   #   |   Starting value (hexadecimal)    | Step count |\n",
+			count);
 	}
 
 	for (uint32_t i = 0; i < count; i++) {
@@ -2434,12 +2737,12 @@ bool submit_commands(Gpu* restrict gpu)
 		DyArray_get(highestStepCounts, &steps, i);
 
 		printf(
-			"\t%" PRIu32 ")\tsteps(0x %016" PRIx64 " %016" PRIx64 ") = %" PRIu16 "\n",
+			"| %5" PRIu32 " | %016" PRIx64 " %016" PRIx64 " | %10" PRIu16 " |\n",
 			i + 1, INT128_UPPER(value), INT128_LOWER(value), steps);
 	}
-	NEWLINE();
 
-	printf("Time: %.0fms\nSpeed: %.0f/s\n", (double) bmark, (double) (1000 * total) / (double) bmark);
+	if (outputLevel > CLI_OUTPUT_QUIET) {
+		printf("\nTime: %.0fms\nSpeed: %.0f/s\n", (double) bmark, (double) (1000 * total) / (double) bmark); }
 
 	ires = pthread_join(waitThread, NULL);
 	if EXPECT_FALSE (ires) { PJOIN_FAILURE(ires, waitThread, NULL); free_recursive(dyMem); return false; }
@@ -2553,7 +2856,8 @@ void* wait_for_input(void* ptr)
 	return NULL;
 }
 
-void write_inbuffer(Value* restrict mappedInBuffer, Value* restrict firstValue, uint32_t valuesPerInout, uint32_t valuesPerHeap)
+void write_inbuffer(
+	Value* restrict mappedInBuffer, Value* restrict firstValue, uint32_t valuesPerInout, uint32_t valuesPerHeap)
 {
 	ASSUME(*firstValue % 8 == 3);
 	ASSUME(valuesPerInout % 128 == 0);
@@ -2561,14 +2865,20 @@ void write_inbuffer(Value* restrict mappedInBuffer, Value* restrict firstValue, 
 
 	Value value = *firstValue;
 
-	for (uint32_t i = 0; i < valuesPerInout; i++, value += 4) {
+	for (uint32_t i = 0; i < valuesPerInout; i++) {
 		mappedInBuffer[i] = value;
+		value += 4;
 	}
 
 	*firstValue += valuesPerHeap * 4;
 }
 
-void read_outbuffer(const Count* restrict mappedOutBuffer, ValueInfo* restrict prevValues, restrict DyArray highestStepValues, restrict DyArray highestStepCounts, uint32_t valuesPerInout)
+void read_outbuffer(
+	const Count* restrict mappedOutBuffer,
+	ValueInfo* restrict prevValues,
+	restrict DyArray highestStepValues,
+	restrict DyArray highestStepCounts,
+	uint32_t valuesPerInout)
 {
 	ASSUME(prevValues->curValue % 8 == 3);
 	ASSUME(valuesPerInout % 128 == 0);
@@ -2587,13 +2897,15 @@ void read_outbuffer(const Count* restrict mappedOutBuffer, ValueInfo* restrict p
 		value++; // value % 8 == 2
 
 		if (value == val0mod1off[0] * 2) {
-			new_high(&value, &count, (Count) (count + 1), val0mod1off, val1mod6off, highestStepValues, highestStepCounts);
+			new_high(
+				&value, &count, (Count) (count + 1), val0mod1off, val1mod6off, highestStepValues, highestStepCounts);
 		}
 		else {
 			for (uint32_t j = 2; j < ARR_SIZE(val0mod1off); j++) {
 				if (val0mod1off[j - 1] || value != val0mod1off[j] * 2) continue;
 
 				val0mod1off[j - 1] = value;
+
 				break;
 			}
 		}
@@ -2601,17 +2913,17 @@ void read_outbuffer(const Count* restrict mappedOutBuffer, ValueInfo* restrict p
 		value++; // value % 8 == 3
 
 		if (mappedOutBuffer[i] > count) {
-			new_high(&value, &count, mappedOutBuffer[i], val0mod1off, val1mod6off, highestStepValues, highestStepCounts);
+			new_high(
+				&value, &count, mappedOutBuffer[i], val0mod1off, val1mod6off, highestStepValues, highestStepCounts);
 		}
-		else if (mappedOutBuffer[i] == count) {
-			if (!val1mod6off[0] && value % 6 == 1) { val1mod6off[0] = value; }
-		}
+		else if (mappedOutBuffer[i] == count && !val1mod6off[0] && value % 6 == 1) { val1mod6off[0] = value; }
 		else {
 			for (uint32_t j = 1; j < ARR_SIZE(val0mod1off); j++) {
 				if (mappedOutBuffer[i] != count - j) continue;
 
 				if (!val0mod1off[j])                   { val0mod1off[j] = value; }
 				if (!val1mod6off[j] && value % 6 == 1) { val1mod6off[j] = value; }
+
 				break;
 			}
 		}
@@ -2619,13 +2931,15 @@ void read_outbuffer(const Count* restrict mappedOutBuffer, ValueInfo* restrict p
 		value++; // value % 8 == 4
 
 		if (value == val0mod1off[1] * 4) {
-			new_high(&value, &count, (Count) (count + 1), val0mod1off, val1mod6off, highestStepValues, highestStepCounts);
+			new_high(
+				&value, &count, (Count) (count + 1), val0mod1off, val1mod6off, highestStepValues, highestStepCounts);
 		}
 		else {
 			for (uint32_t j = 3; j < ARR_SIZE(val0mod1off); j++) {
 				if (val0mod1off[j - 2] || value != val0mod1off[j] * 4) continue;
 
 				val0mod1off[j - 2] = value;
+
 				break;
 			}
 		}
@@ -2637,6 +2951,7 @@ void read_outbuffer(const Count* restrict mappedOutBuffer, ValueInfo* restrict p
 				if (val1mod6off[j] || value - 1 != val0mod1off[j]) continue;
 
 				val1mod6off[j] = value;
+
 				break;
 			}
 		}
@@ -2646,13 +2961,15 @@ void read_outbuffer(const Count* restrict mappedOutBuffer, ValueInfo* restrict p
 		value++; // value % 8 == 6
 
 		if (value == val0mod1off[0] * 2) {
-			new_high(&value, &count, (Count) (count + 1), val0mod1off, val1mod6off, highestStepValues, highestStepCounts);
+			new_high(
+				&value, &count, (Count) (count + 1), val0mod1off, val1mod6off, highestStepValues, highestStepCounts);
 		}
 		else {
 			for (uint32_t j = 2; j < ARR_SIZE(val0mod1off); j++) {
 				if (val0mod1off[j - 1] || value != val0mod1off[j] * 2) continue;
 
 				val0mod1off[j - 1] = value;
+
 				break;
 			}
 		}
@@ -2660,17 +2977,17 @@ void read_outbuffer(const Count* restrict mappedOutBuffer, ValueInfo* restrict p
 		value++; // value % 8 == 7
 
 		if (mappedOutBuffer[i] > count) {
-			new_high(&value, &count, mappedOutBuffer[i], val0mod1off, val1mod6off, highestStepValues, highestStepCounts);
+			new_high(
+				&value, &count, mappedOutBuffer[i], val0mod1off, val1mod6off, highestStepValues, highestStepCounts);
 		}
-		else if (mappedOutBuffer[i] == count) {
-			if (!val1mod6off[0] && value % 6 == 1) { val1mod6off[0] = value; }
-		}
+		else if (mappedOutBuffer[i] == count && !val1mod6off[0] && value % 6 == 1) { val1mod6off[0] = value; }
 		else {
 			for (uint32_t j = 1; j < ARR_SIZE(val0mod1off); j++) {
 				if (mappedOutBuffer[i] != count - j) continue;
 
 				if (!val0mod1off[j])                   { val0mod1off[j] = value; }
 				if (!val1mod6off[j] && value % 6 == 1) { val1mod6off[j] = value; }
+			
 				break;
 			}
 		}
@@ -2678,13 +2995,15 @@ void read_outbuffer(const Count* restrict mappedOutBuffer, ValueInfo* restrict p
 		value++; // value % 8 == 0
 
 		if (value == val0mod1off[2] * 8) {
-			new_high(&value, &count, (Count) (count + 1), val0mod1off, val1mod6off, highestStepValues, highestStepCounts);
+			new_high(
+				&value, &count, (Count) (count + 1), val0mod1off, val1mod6off, highestStepValues, highestStepCounts);
 		}
 		else {
 			for (uint32_t j = 4; j < ARR_SIZE(val0mod1off); j++) {
 				if (val0mod1off[j - 3] || value != val0mod1off[j] * 8) continue;
 
 				val0mod1off[j - 3] = value;
+
 				break;
 			}
 		}
@@ -2694,7 +3013,10 @@ void read_outbuffer(const Count* restrict mappedOutBuffer, ValueInfo* restrict p
 		for (uint32_t j = 0; j < ARR_SIZE(val0mod1off); j++) {
 			if (!val1mod6off[j] || (value - 1) / 4 != (val1mod6off[j] - 1) / 3) continue;
 
-			new_high(&value, &count, (Count) (count - j + 3), val0mod1off, val1mod6off, highestStepValues, highestStepCounts);
+			new_high(
+				&value, &count, (Count) (count - j + 3), val0mod1off, val1mod6off, highestStepValues,
+				highestStepCounts);
+
 			break;
 		}
 
@@ -2708,7 +3030,14 @@ void read_outbuffer(const Count* restrict mappedOutBuffer, ValueInfo* restrict p
 	prevValues->curCount = count;
 }
 
-void new_high(const Value* restrict value, Count* restrict count, Count newCount, Value* restrict val0mod1off, Value* restrict val1mod6off, restrict DyArray highestStepValues, restrict DyArray highestStepCounts)
+void new_high(
+	const Value* restrict value,
+	Count* restrict count,
+	Count newCount,
+	Value* restrict val0mod1off,
+	Value* restrict val1mod6off,
+	restrict DyArray highestStepValues,
+	restrict DyArray highestStepCounts)
 {
 	uint32_t oldCount = *count;
 	uint32_t difCount = minu32(newCount - oldCount, 3);

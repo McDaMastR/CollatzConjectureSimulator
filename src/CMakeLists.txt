@@ -64,9 +64,13 @@ set_target_properties(
 
 target_compile_definitions(CollatzSim
 	PRIVATE
+		COLLATZSIM_NAME="Collatz Conjecture Simulator"
+		COLLATZSIM_EXECUTABLE="$<TARGET_FILE_NAME:CollatzSim>"
+
 		COLLATZSIM_VERSION_MAJOR=${CollatzConjectureSimulator_VERSION_MAJOR}
 		COLLATZSIM_VERSION_MINOR=${CollatzConjectureSimulator_VERSION_MINOR}
 		COLLATZSIM_VERSION_PATCH=${CollatzConjectureSimulator_VERSION_PATCH}
+
 		"$<$<NOT:$<CONFIG:DEBUG>>:NDEBUG=1>"
 )
 
@@ -76,6 +80,7 @@ target_compile_options(CollatzSim
 		"$<$<AND:$<C_COMPILER_ID:GNU,CLANG>,$<CONFIG:RELEASE>>:-O3>"
 		"$<$<AND:$<C_COMPILER_ID:GNU,CLANG>,$<CONFIG:MINSIZEREL>>:-Os>"
 		"$<$<AND:$<C_COMPILER_ID:GNU,CLANG>,$<CONFIG:RELWITHDEBINFO>>:-O2;-g>"
+
 		"$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:GNU>>:${COMPILE_WARNINGS_GNU}>"
 		"$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:CLANG>>:${COMPILE_WARNINGS_CLANG}>"
 		"$<$<AND:${USING_STATIC_ANALYSIS},$<C_COMPILER_ID:GNU>>:-fanalyzer>"
@@ -104,6 +109,8 @@ target_precompile_headers(CollatzSim
 		<stdio.h>
 		<stdlib.h>
 		<string.h>
+
+		"$<$<OR:$<C_COMPILER_ID:MSVC>,${MINGW}>:<intrin.h$<ANGLE-R>>"
 )
 
 target_sources(CollatzSim

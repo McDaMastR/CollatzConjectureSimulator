@@ -25,7 +25,7 @@ typedef struct Gpu
 	VkDebugUtilsMessengerEXT debugUtilsMessenger;
 
 	VkPhysicalDevice physicalDevice;
-	VkDevice device;
+	VkDevice         device;
 
 	VkQueue transferQueue;
 	VkQueue computeQueue;
@@ -74,20 +74,23 @@ typedef struct Gpu
 	uint32_t inoutsPerHeap;
 	uint32_t buffersPerHeap;
 
-	uint32_t workgroupCount;
 	uint32_t workgroupSize;
+	uint32_t workgroupCount;
 
 	uint32_t hostVisibleHeapIndex;
 	uint32_t deviceLocalHeapIndex;
-
 	uint32_t hostVisibleTypeIndex;
 	uint32_t deviceLocalTypeIndex;
 
 	uint32_t transferQueueFamilyIndex;
 	uint32_t computeQueueFamilyIndex;
-
 	uint32_t transferQueueTimestampValidBits;
 	uint32_t computeQueueTimestampValidBits;
+
+	uint32_t vkVerMajor;
+	uint32_t vkVerMinor;
+	uint32_t spvVerMajor;
+	uint32_t spvVerMinor;
 
 	float timestampPeriod;
 
@@ -103,13 +106,13 @@ typedef struct Gpu
 	bool usingPortabilitySubset;
 	bool usingShaderInt16;
 	bool usingShaderInt64;
-	bool usingSpirv14;
 	bool usingSubgroupSizeControl;
-	bool usingVulkan12;
-	bool usingVulkan13;
 
-	int   iterSize;
-	float maxMemory;
+	CliOutput outputLevel;
+
+	uint32_t iterSize;
+	uint64_t maxLoops;
+	float    maxMemory;
 
 	bool preferInt16;
 	bool preferInt64;
@@ -118,11 +121,10 @@ typedef struct Gpu
 	bool profileLayers;
 	bool validationLayers;
 
+	bool restartCount;
 	bool queryBenchmarking;
 	bool logAllocations;
 	bool capturePipelines;
-
-	bool restartCount;
 
 	void* dynamicMemory;
 } Gpu;
@@ -141,20 +143,33 @@ typedef struct ValueInfo
 
 bool parse_cmdline(Gpu* gpu, int argc, char** argv) NONNULL_ARGS_ALL WR_ACCESS(1) RE_ACCESS(3);
 
-bool create_instance(Gpu* gpu)    NONNULL_ARGS_ALL;
-bool select_device(Gpu* gpu)      NONNULL_ARGS_ALL;
-bool create_device(Gpu* gpu)      NONNULL_ARGS_ALL;
-bool manage_memory(Gpu* gpu)      NONNULL_ARGS_ALL;
-bool create_buffers(Gpu* gpu)     NONNULL_ARGS_ALL;
+bool create_instance(Gpu* gpu) NONNULL_ARGS_ALL;
+bool select_device(Gpu* gpu) NONNULL_ARGS_ALL;
+bool create_device(Gpu* gpu) NONNULL_ARGS_ALL;
+bool manage_memory(Gpu* gpu) NONNULL_ARGS_ALL;
+bool create_buffers(Gpu* gpu) NONNULL_ARGS_ALL;
 bool create_descriptors(Gpu* gpu) NONNULL_ARGS_ALL;
-bool create_pipeline(Gpu* gpu)    NONNULL_ARGS_ALL;
-bool create_commands(Gpu* gpu)    NONNULL_ARGS_ALL;
-bool submit_commands(Gpu* gpu)    NONNULL_ARGS_ALL;
-bool destroy_gpu(Gpu* gpu)        NONNULL_ARGS_ALL;
+bool create_pipeline(Gpu* gpu) NONNULL_ARGS_ALL;
+bool create_commands(Gpu* gpu) NONNULL_ARGS_ALL;
+bool submit_commands(Gpu* gpu) NONNULL_ARGS_ALL;
+bool destroy_gpu(Gpu* gpu) NONNULL_ARGS_ALL;
 
 void* wait_for_input(void* ptr) NONNULL_ARGS_ALL WR_ACCESS(1);
 
-void write_inbuffer(Value* mappedInBuffer, Value* firstValue, uint32_t valuesPerInout, uint32_t valuesPerHeap) NONNULL_ARGS_ALL WR_ACCESS(1);
-void read_outbuffer(const Count* mappedOutBuffer, ValueInfo* prevValues, DyArray highestStepValues, DyArray highestStepCounts, uint32_t valuesPerInout) NONNULL_ARGS_ALL RE_ACCESS(1);
+void write_inbuffer(Value* mappedInBuffer, Value* firstValue, uint32_t valuesPerInout, uint32_t valuesPerHeap)
+	NONNULL_ARGS_ALL WR_ACCESS(1);
+void read_outbuffer(
+	const Count* mappedOutBuffer,
+	ValueInfo* prevValues,
+	DyArray highestStepValues,
+	DyArray highestStepCounts,
+	uint32_t valuesPerInout) NONNULL_ARGS_ALL RE_ACCESS(1);
 
-void new_high(const Value* value, Count* count, Count newCount, Value* val0mod1off, Value* val1mod6off, DyArray highestStepValues, DyArray highestStepCounts) NONNULL_ARGS_ALL RE_ACCESS(1);
+void new_high(
+	const Value* value,
+	Count* count,
+	Count newCount,
+	Value* val0mod1off,
+	Value* val1mod6off,
+	DyArray highestStepValues,
+	DyArray highestStepCounts) NONNULL_ARGS_ALL RE_ACCESS(1);

@@ -18,7 +18,8 @@
 #pragma once
 
 
-// Check compiler & target support necessary features
+// Check support for necessary features
+
 #ifdef __STDC_NO_ATOMICS__
 	#error "Compiler must support C11 atomic types and operations"
 #endif
@@ -29,7 +30,9 @@
 	#error "Target must support 128-bit integers"
 #endif
 
-// Check compiler supports optional builtins and attributes
+
+// Check support for optional builtins and attributes
+
 #ifdef __has_builtin
 	#define has_builtin(x) __has_builtin(__builtin_##x)
 #else
@@ -46,6 +49,8 @@
 	#define ASSUME(x) __builtin_assume (x)
 #elif has_attribute(assume)
 	#define ASSUME(x) __attribute__ (( assume (x) ))
+#elif defined(_MSC_VER)
+	#define ASSUME(x) __assume (x)
 #else
 	#define ASSUME(x)
 #endif
@@ -159,7 +164,9 @@
 	#define USE_RET
 #endif
 
+
 // Helper macros
+
 #define NEWLINE() putchar('\n')
 
 #define ARR_SIZE(a) ( sizeof(a) / sizeof(*(a)) )
@@ -171,7 +178,9 @@
 
 #define PNEXT_ADD(p, s) do { *p = &s; p = &s.pNext; } while (0)
 
+
 // Undefine select Vulkan string macros (redefined as constants below)
+
 #undef VK_KHR_8BIT_STORAGE_EXTENSION_NAME
 #undef VK_KHR_16BIT_STORAGE_EXTENSION_NAME
 #undef VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME
@@ -192,13 +201,30 @@
 
 
 // Datatypes
+
+typedef enum Endianness
+{
+	ENDIANNESS_BIG    = 0,
+	ENDIANNESS_LITTLE = 1
+} Endianness;
+
+typedef enum CliOutput
+{
+	CLI_OUTPUT_SILENT  = 0,
+	CLI_OUTPUT_QUIET   = 1,
+	CLI_OUTPUT_DEFAULT = 2,
+	CLI_OUTPUT_VERBOSE = 3
+} CliOutput;
+
 typedef unsigned __int128 Value;
 
 typedef uint16_t Count;
 
 
-// String constants
+// Global constants
+
 extern const char* const PROGRAM_NAME;
+extern const char* const PROGRAM_EXE;
 extern const char* const PROGRAM_COPYRIGHT;
 extern const char* const PROGRAM_LICENCE;
 
@@ -230,15 +256,12 @@ extern const char* const VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME;
 extern const char* const VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME;
 extern const char* const VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME;
 
-// Version constants
 extern const uint32_t PROGRAM_VERSION;
-extern const uint32_t PROGRAM_VERSION_MAJOR;
-extern const uint32_t PROGRAM_VERSION_MINOR;
-extern const uint32_t PROGRAM_VERSION_PATCH;
+extern const uint32_t PROGRAM_VER_MAJOR;
+extern const uint32_t PROGRAM_VER_MINOR;
+extern const uint32_t PROGRAM_VER_PATCH;
 
-// Runtime constants
 extern const VkAllocationCallbacks  g_allocationCallbacks;
 extern const VkAllocationCallbacks* g_allocator;
 
-// Miscellaneous constants
 extern const float MS_PER_CLOCK;

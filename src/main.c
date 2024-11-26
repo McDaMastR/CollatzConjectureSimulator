@@ -23,16 +23,17 @@
 	do {                                    \
 		bres = (func)(&gpu);                \
 		if EXPECT_FALSE (!bres) {           \
-			destroy_gpu(&gpu);              \
 			puts("EXIT FAILURE AT " #func); \
+			destroy_gpu(&gpu);              \
 			return EXIT_FAILURE;            \
 		}                                   \
-	} while (0)
+	}                                       \
+	while (0)
 
 
 int main(int argc, char** argv)
 {
-	Gpu gpu = {0};
+	Gpu gpu;
 
 	bool bres = parse_cmdline(&gpu, argc, argv);
 	if (!bres) return EXIT_SUCCESS;

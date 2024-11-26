@@ -19,7 +19,8 @@
 #include "debug.h"
 
 
-const char* const PROGRAM_NAME      = "Collatz Conjecture Simulator";
+const char* const PROGRAM_NAME      = COLLATZSIM_NAME;
+const char* const PROGRAM_EXE       = COLLATZSIM_EXECUTABLE;
 const char* const PROGRAM_COPYRIGHT = "Copyright (C) 2024 Seth McDonald";
 const char* const PROGRAM_LICENCE   = "Licence GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>";
 
@@ -52,10 +53,11 @@ const char* const VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME = "VK_EX
 const char* const VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME           = "VK_EXT_subgroup_size_control";
 
 
-const uint32_t PROGRAM_VERSION       = VK_MAKE_API_VERSION(0, COLLATZSIM_VERSION_MAJOR, COLLATZSIM_VERSION_MINOR, COLLATZSIM_VERSION_PATCH);
-const uint32_t PROGRAM_VERSION_MAJOR = COLLATZSIM_VERSION_MAJOR;
-const uint32_t PROGRAM_VERSION_MINOR = COLLATZSIM_VERSION_MINOR;
-const uint32_t PROGRAM_VERSION_PATCH = COLLATZSIM_VERSION_PATCH;
+const uint32_t PROGRAM_VERSION   = VK_MAKE_API_VERSION(
+	0, COLLATZSIM_VERSION_MAJOR, COLLATZSIM_VERSION_MINOR, COLLATZSIM_VERSION_PATCH);
+const uint32_t PROGRAM_VER_MAJOR = COLLATZSIM_VERSION_MAJOR;
+const uint32_t PROGRAM_VER_MINOR = COLLATZSIM_VERSION_MINOR;
+const uint32_t PROGRAM_VER_PATCH = COLLATZSIM_VERSION_PATCH;
 
 
 const VkAllocationCallbacks* g_allocator = NULL;

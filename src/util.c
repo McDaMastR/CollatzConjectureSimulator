@@ -18,13 +18,17 @@
 #include "util.h"
 #include "debug.h"
 
+#ifdef _MSC_VER
+	#pragma intrinsic(_BitScanReverse)
+#endif
 
-Endianness get_endianness(void)
+
+typedef struct AlignedInfo
 {
-	int x = 1;
-	char c = *(char*) &x;
-	return c ? ENDIANNESS_LITTLE : ENDIANNESS_BIG;
-}
+	void* start;
+	size_t size;
+} AlignedInfo;
+
 
 char* stime(void)
 {
@@ -38,154 +42,32 @@ clock_t program_time(void)
 	return (clock_t) ((float) t * MS_PER_CLOCK);
 }
 
-uint16_t maxu16(uint16_t x, uint16_t y)
+Endianness get_endianness(void)
 {
-	return x > y ? x : y;
+	int x = 1;
+	char c = *(char*) &x;
+	return c ? ENDIANNESS_LITTLE : ENDIANNESS_BIG;
 }
 
-uint16_t minu16(uint16_t x, uint16_t y)
+uint32_t ceil_pow2(uint32_t x)
 {
-	return x < y ? x : y;
-}
+	ASSUME(x != 0);
 
-uint32_t maxu32(uint32_t x, uint32_t y)
-{
-	return x > y ? x : y;
-}
-
-uint32_t minu32(uint32_t x, uint32_t y)
-{
-	return x < y ? x : y;
-}
-
-uint64_t maxu64(uint64_t x, uint64_t y)
-{
-	return x > y ? x : y;
-}
-
-uint64_t minu64(uint64_t x, uint64_t y)
-{
-	return x < y ? x : y;
-}
-
-uint16_t maxu16v(size_t count, ...)
-{
-	ASSUME(count != 0);
-
-	va_list args;
-	va_start(args, count);
-
-	uint_fast16_t max = 0;
-
-	for (size_t i = 0; i < count; i++) {
-		uint_fast16_t arg = (uint_fast16_t) va_arg(args, unsigned int);
-		if (max < arg) {
-			max = arg;
-		}
-	}
-
-	va_end(args);
-	return (uint16_t) max;
-}
-
-uint16_t minu16v(size_t count, ...)
-{
-	ASSUME(count != 0);
-
-	va_list args;
-	va_start(args, count);
-
-	uint_fast16_t min = UINT16_MAX;
-
-	for (size_t i = 0; i < count; i++) {
-		uint_fast16_t arg = (uint_fast16_t) va_arg(args, unsigned int);
-		if (min > arg) {
-			min = arg;
-		}
-	}
-
-	va_end(args);
-	return (uint16_t) min;
-}
-
-uint32_t maxu32v(size_t count, ...)
-{
-	ASSUME(count != 0);
-
-	va_list args;
-	va_start(args, count);
-
-	uint_fast32_t max = 0;
-
-	for (size_t i = 0; i < count; i++) {
-		uint_fast32_t arg = (uint_fast32_t) va_arg(args, uint32_t);
-		if (max < arg) {
-			max = arg;
-		}
-	}
-
-	va_end(args);
-	return (uint32_t) max;
-}
-
-uint32_t minu32v(size_t count, ...)
-{
-	ASSUME(count != 0);
-
-	va_list args;
-	va_start(args, count);
-
-	uint_fast32_t min = UINT32_MAX;
-
-	for (size_t i = 0; i < count; i++) {
-		uint_fast32_t arg = (uint_fast32_t) va_arg(args, uint32_t);
-		if (min > arg) {
-			min = arg;
-		}
-	}
-
-	va_end(args);
-	return (uint32_t) min;
-}
-
-uint64_t maxu64v(size_t count, ...)
-{
-	ASSUME(count != 0);
-
-	va_list args;
-	va_start(args, count);
-
-	uint_fast64_t max = 0;
-
-	for (size_t i = 0; i < count; i++) {
-		uint_fast64_t arg = (uint_fast64_t) va_arg(args, uint64_t);
-		if (max < arg) {
-			max = arg;
-		}
-	}
-
-	va_end(args);
-	return (uint64_t) max;
-}
-
-uint64_t minu64v(size_t count, ...)
-{
-	ASSUME(count != 0);
-
-	va_list args;
-	va_start(args, count);
-
-	uint_fast64_t min = UINT64_MAX;
-
-	for (size_t i = 0; i < count; i++) {
-		uint_fast64_t arg = (uint_fast64_t) va_arg(args, uint64_t);
-		if (min > arg) {
-			min = arg;
-		}
-	}
-
-	va_end(args);
-	return (uint64_t) min;
+#if has_builtin(stdc_bit_ceil)
+	return __builtin_stdc_bit_ceil(x);
+#elif UINT32_MAX == UINT_MAX && has_builtin(clz)
+	return x == 1U ? 1U : 2U << (31 - __builtin_clz(x - 1U));
+#elif UINT32_MAX == ULONG_MAX && has_builtin(clzl)
+	return x == 1UL ? 1UL : 2UL << (31 - __builtin_clzl(x - 1UL));
+#elif defined(_MSC_VER) || defined(__MINGW32__)
+	unsigned long i;
+	_BitScanReverse(&i, x - 1UL);
+	return 1UL << (i + 1UL);
+#else
+	uint32_t y = (uint32_t) 1 << 31;
+	while (!(x & y)) { y >>= 1; }
+	return y << 1;
+#endif
 }
 
 uint32_t floor_pow2(uint32_t x)
@@ -194,11 +76,17 @@ uint32_t floor_pow2(uint32_t x)
 
 #if has_builtin(stdc_bit_floor)
 	return __builtin_stdc_bit_floor(x);
-#elif has_builtin(clz)
-	return 1U << (31U - __builtin_clz(x));
+#elif UINT32_MAX == UINT_MAX && has_builtin(clz)
+	return 1U << (31 - __builtin_clz(x));
+#elif UINT32_MAX == ULONG_MAX && has_builtin(clzl)
+	return 1UL << (31 - __builtin_clzl(x));
+#elif defined(_MSC_VER) || defined(__MINGW32__)
+	unsigned long i;
+	_BitScanReverse(&i, x);
+	return 1UL << i;
 #else
-	uint32_t y = 1U << 31U;
-	while (!(x & y)) { y >>= 1U; }
+	uint32_t y = (uint32_t) 1 << 31;
+	while (!(x & y)) { y >>= 1; }
 	return y;
 #endif
 }
@@ -223,7 +111,8 @@ bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const c
 	return true;
 }
 
-bool get_buffer_requirements_noext(VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict memoryRequirements)
+bool get_buffer_requirements_noext(
+	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict memoryRequirements)
 {
 	VkResult vkres;
 
@@ -235,7 +124,8 @@ bool get_buffer_requirements_noext(VkDevice device, VkDeviceSize size, VkBufferU
 	VK_CALL_RES(vkCreateBuffer, device, &bufferCreateInfo, g_allocator, &buffer);
 	if EXPECT_FALSE (vkres) return false;
 
-	VkBufferMemoryRequirementsInfo2 bufferMemoryRequirementsInfo2 = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2};
+	VkBufferMemoryRequirementsInfo2 bufferMemoryRequirementsInfo2 =
+		{VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2};
 	bufferMemoryRequirementsInfo2.buffer = buffer;
 
 	VkMemoryRequirements2 memoryRequirements2 = {VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2};
@@ -248,13 +138,15 @@ bool get_buffer_requirements_noext(VkDevice device, VkDeviceSize size, VkBufferU
 	return true;
 }
 
-bool get_buffer_requirements_main4(VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict memoryRequirements)
+bool get_buffer_requirements_main4(
+	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict memoryRequirements)
 {
 	VkBufferCreateInfo bufferCreateInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
 	bufferCreateInfo.size  = size;
 	bufferCreateInfo.usage = usage;
 
-	VkDeviceBufferMemoryRequirementsKHR deviceBufferMemoryRequirements = {VK_STRUCTURE_TYPE_DEVICE_BUFFER_MEMORY_REQUIREMENTS_KHR};
+	VkDeviceBufferMemoryRequirementsKHR deviceBufferMemoryRequirements =
+		{VK_STRUCTURE_TYPE_DEVICE_BUFFER_MEMORY_REQUIREMENTS_KHR};
 	deviceBufferMemoryRequirements.pCreateInfo = &bufferCreateInfo;
 
 	VkMemoryRequirements2 memoryRequirements2 = {VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2};
@@ -265,9 +157,11 @@ bool get_buffer_requirements_main4(VkDevice device, VkDeviceSize size, VkBufferU
 	return true;
 }
 
+
 bool file_size(const char* restrict filename, size_t* restrict size)
 {
 	FILE* file = fopen(filename, "rb");
+
 	if (!file) {
 		*size = 0;
 		return true;
@@ -279,9 +173,9 @@ bool file_size(const char* restrict filename, size_t* restrict size)
 	long lres = ftell(file);
 	if EXPECT_FALSE (lres == -1) { FTELL_FAILURE(lres, file); fclose(file); return false; }
 
-	*size = (size_t) lres;
-
 	fclose(file);
+
+	*size = (size_t) lres;
 	return true;
 }
 
@@ -294,6 +188,7 @@ bool read_file(const char* restrict filename, void* restrict data, size_t size)
 	if EXPECT_FALSE (sres != size) { FREAD_FAILURE(sres, data, sizeof(char), size, file); fclose(file); return false; }
 
 	fclose(file);
+
 	return true;
 }
 
@@ -306,6 +201,7 @@ bool write_file(const char* restrict filename, const void* restrict data, size_t
 	if EXPECT_FALSE (sres != size) { FWRITE_FAILURE(sres, data, sizeof(char), size, file); fclose(file); return false; }
 
 	fclose(file);
+
 	return true;
 }
 
@@ -322,6 +218,7 @@ bool read_text(const char* restrict filename, const char* restrict format, ...)
 
 	fclose(file);
 	va_end(args);
+
 	return true;
 }
 
@@ -338,15 +235,9 @@ bool write_text(const char* restrict filename, const char* restrict format, ...)
 
 	fclose(file);
 	va_end(args);
+
 	return true;
 }
-
-
-typedef struct AlignedInfo
-{
-	void* start;
-	size_t size;
-} AlignedInfo;
 
 
 void* aligned_malloc(size_t size, size_t alignment)
@@ -396,9 +287,9 @@ void* aligned_realloc(void* restrict memory, size_t size, size_t alignment)
 	ASSUME(size != 0);
 	ASSUME((alignment & (alignment - 1)) == 0);
 
-	void* newMemory;
-
 	uintptr_t address = (uintptr_t) memory;
+
+	void* newMemory;
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	address -= sizeof(size_t);
@@ -468,9 +359,9 @@ void* aligned_free(void* restrict memory)
 
 size_t aligned_size(const void* restrict memory)
 {
-	size_t size;
-
 	uintptr_t address = (uintptr_t) memory;
+
+	size_t size;
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	address -= sizeof(size_t);
@@ -483,4 +374,197 @@ size_t aligned_size(const void* restrict memory)
 #endif
 
 	return size;
+}
+
+
+uint8_t maxu8(uint8_t x, uint8_t y)
+{
+	return x > y ? x : y;
+}
+
+uint8_t minu8(uint8_t x, uint8_t y)
+{
+	return x < y ? x : y;
+}
+
+uint16_t maxu16(uint16_t x, uint16_t y)
+{
+	return x > y ? x : y;
+}
+
+uint16_t minu16(uint16_t x, uint16_t y)
+{
+	return x < y ? x : y;
+}
+
+uint32_t maxu32(uint32_t x, uint32_t y)
+{
+	return x > y ? x : y;
+}
+
+uint32_t minu32(uint32_t x, uint32_t y)
+{
+	return x < y ? x : y;
+}
+
+uint64_t maxu64(uint64_t x, uint64_t y)
+{
+	return x > y ? x : y;
+}
+
+uint64_t minu64(uint64_t x, uint64_t y)
+{
+	return x < y ? x : y;
+}
+
+uint8_t maxu8v(size_t count, ...)
+{
+	ASSUME(count != 0);
+
+	va_list args;
+	va_start(args, count);
+
+	uint_fast8_t max = 0;
+
+	for (size_t i = 0; i < count; i++) {
+		uint_fast8_t arg = (uint_fast8_t) va_arg(args, unsigned int);
+		if (max < arg) { max = arg; }
+	}
+
+	va_end(args);
+
+	return (uint8_t) max;
+}
+
+uint8_t minu8v(size_t count, ...)
+{
+	ASSUME(count != 0);
+
+	va_list args;
+	va_start(args, count);
+
+	uint_fast8_t min = UINT8_MAX;
+
+	for (size_t i = 0; i < count; i++) {
+		uint_fast8_t arg = (uint_fast8_t) va_arg(args, unsigned int);
+		if (min > arg) { min = arg; }
+	}
+
+	va_end(args);
+
+	return (uint8_t) min;
+}
+
+uint16_t maxu16v(size_t count, ...)
+{
+	ASSUME(count != 0);
+
+	va_list args;
+	va_start(args, count);
+
+	uint_fast16_t max = 0;
+
+	for (size_t i = 0; i < count; i++) {
+		uint_fast16_t arg = (uint_fast16_t) va_arg(args, unsigned int);
+		if (max < arg) { max = arg; }
+	}
+
+	va_end(args);
+
+	return (uint16_t) max;
+}
+
+uint16_t minu16v(size_t count, ...)
+{
+	ASSUME(count != 0);
+
+	va_list args;
+	va_start(args, count);
+
+	uint_fast16_t min = UINT16_MAX;
+
+	for (size_t i = 0; i < count; i++) {
+		uint_fast16_t arg = (uint_fast16_t) va_arg(args, unsigned int);
+		if (min > arg) { min = arg; }
+	}
+
+	va_end(args);
+
+	return (uint16_t) min;
+}
+
+uint32_t maxu32v(size_t count, ...)
+{
+	ASSUME(count != 0);
+
+	va_list args;
+	va_start(args, count);
+
+	uint_fast32_t max = 0;
+
+	for (size_t i = 0; i < count; i++) {
+		uint_fast32_t arg = (uint_fast32_t) va_arg(args, uint32_t);
+		if (max < arg) { max = arg; }
+	}
+
+	va_end(args);
+
+	return (uint32_t) max;
+}
+
+uint32_t minu32v(size_t count, ...)
+{
+	ASSUME(count != 0);
+
+	va_list args;
+	va_start(args, count);
+
+	uint_fast32_t min = UINT32_MAX;
+
+	for (size_t i = 0; i < count; i++) {
+		uint_fast32_t arg = (uint_fast32_t) va_arg(args, uint32_t);
+		if (min > arg) { min = arg; }
+	}
+
+	va_end(args);
+
+	return (uint32_t) min;
+}
+
+uint64_t maxu64v(size_t count, ...)
+{
+	ASSUME(count != 0);
+
+	va_list args;
+	va_start(args, count);
+
+	uint_fast64_t max = 0;
+
+	for (size_t i = 0; i < count; i++) {
+		uint_fast64_t arg = (uint_fast64_t) va_arg(args, uint64_t);
+		if (max < arg) { max = arg; }
+	}
+
+	va_end(args);
+
+	return (uint64_t) max;
+}
+
+uint64_t minu64v(size_t count, ...)
+{
+	ASSUME(count != 0);
+
+	va_list args;
+	va_start(args, count);
+
+	uint_fast64_t min = UINT64_MAX;
+
+	for (size_t i = 0; i < count; i++) {
+		uint_fast64_t arg = (uint_fast64_t) va_arg(args, uint64_t);
+		if (min > arg) { min = arg; }
+	}
+
+	va_end(args);
+
+	return (uint64_t) min;
 }
