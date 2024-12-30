@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024 Seth McDonald <seth.i.mcdonald@gmail.com>
+ * Copyright (C) 2024 Seth McDonald
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 

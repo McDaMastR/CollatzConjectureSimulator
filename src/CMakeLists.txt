@@ -9,6 +9,8 @@ option(STATIC_ANALYSIS "Whether to perform static analysis on the program during
 set(USING_EXCESS_WARNINGS "$<BOOL:${EXCESS_WARNINGS}>")
 set(USING_STATIC_ANALYSIS "$<BOOL:${STATIC_ANALYSIS}>")
 
+set(USING_MINGW "$<BOOL:${MINGW}>")
+
 set(COMPILE_WARNINGS_GNU
 	-Wall                     -Wextra
 	-Walloc-zero              -Walloca
@@ -100,6 +102,7 @@ target_precompile_headers(CollatzSim
 		<pthread.h>
 
 		<inttypes.h>
+		<limits.h>
 		<stdalign.h>
 		<stdarg.h>
 		<stdatomic.h>
@@ -110,7 +113,7 @@ target_precompile_headers(CollatzSim
 		<stdlib.h>
 		<string.h>
 
-		"$<$<OR:$<C_COMPILER_ID:MSVC>,${MINGW}>:<intrin.h$<ANGLE-R>>"
+		"$<$<OR:$<C_COMPILER_ID:MSVC>,${USING_MINGW}>:<intrin.h$<ANGLE-R>>"
 )
 
 target_sources(CollatzSim

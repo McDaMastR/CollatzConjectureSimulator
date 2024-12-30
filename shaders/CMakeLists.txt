@@ -22,7 +22,11 @@ endif()
 macro(compile_intermediate INPUT INTERMEDIATE SPV_MAJOR SPV_MINOR LITTLE_ENDIAN ITER_SIZE STO16 INT16 INT64)
 	add_custom_command(
 		OUTPUT ${INTERMEDIATE}
-		COMMAND ${GLSLANG_EXE} --target-env vulkan1.3 --target-env spirv${SPV_MAJOR}.${SPV_MINOR} --quiet "$<IF:${USING_DEBUG_INFO},-gV,-g0>" -DSPV_VER=${SPV_MAJOR}${SPV_MINOR} -DLITTLE_ENDIAN=${LITTLE_ENDIAN} -DITER_SIZE=${ITER_SIZE} -DSTO16=${STO16} -DINT16=${INT16} -DINT64=${INT64} --sep main -e main_${LITTLE_ENDIAN}_${ITER_SIZE} -o ${INTERMEDIATE} ${INPUT}
+		COMMAND
+			${GLSLANG_EXE} --target-env vulkan1.3 --target-env spirv${SPV_MAJOR}.${SPV_MINOR} --quiet
+			"$<IF:${USING_DEBUG_INFO},-gV,-g0>" -DSPV_VER=${SPV_MAJOR}${SPV_MINOR} -DLITTLE_ENDIAN=${LITTLE_ENDIAN}
+			-DITER_SIZE=${ITER_SIZE} -DSTO16=${STO16} -DINT16=${INT16} -DINT64=${INT64} --sep main -e
+			main-${LITTLE_ENDIAN}-${ITER_SIZE} -o ${INTERMEDIATE} ${INPUT}
 		DEPENDS ${INPUT}
 		COMMAND_EXPAND_LISTS
 		VERBATIM
@@ -34,7 +38,10 @@ if(USING_OPTIMISER)
 		add_custom_command(
 			OUTPUT ${OUTPUT}
 			COMMAND ${SPV_LNK_EXE} --target-env spv${SPV_MAJOR}.${SPV_MINOR} -o ${OUTPUT} ${INTERMEDIATES}
-			COMMAND ${SPV_OPT_EXE} --target-env=spv${SPV_MAJOR}.${SPV_MINOR} "$<$<NOT:${USING_DEBUG_INFO}>:--strip-debug;--strip-nonsemantic>" --remove-unused-interface-variables -O --unify-const --trim-capabilities --compact-ids -o ${OUTPUT} ${OUTPUT}
+			COMMAND
+				${SPV_OPT_EXE} --target-env=spv${SPV_MAJOR}.${SPV_MINOR}
+				"$<$<NOT:${USING_DEBUG_INFO}>:--strip-debug;--strip-nonsemantic>" --remove-unused-interface-variables -O
+				--unify-const --trim-capabilities --compact-ids -o ${OUTPUT} ${OUTPUT}
 			DEPENDS ${INTERMEDIATES}
 			COMMAND_EXPAND_LISTS
 			VERBATIM

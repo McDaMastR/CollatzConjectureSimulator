@@ -107,7 +107,7 @@ Several options can be optionally specified to customise the build system by app
   to _OFF_.
 - `OPTIMISE_SHADERS` specifies whether to optimise generated SPIR-V using `spirv-opt`, and defaults
   to _ON_.
-- `USING_DISASSEMBLER` specifies whether to disassemble generated SPIR-V using `spirv-dis`, and
+- `DISASSEMBLE_SHADERS` specifies whether to disassemble generated SPIR-V using `spirv-dis`, and
   defaults to _OFF_.
 
 Once the above command has finished, a `build` directory will have been created containing the

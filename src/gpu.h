@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024 Seth McDonald <seth.i.mcdonald@gmail.com>
+ * Copyright (C) 2024 Seth McDonald
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -84,8 +84,8 @@ typedef struct Gpu
 
 	uint32_t transferQueueFamilyIndex;
 	uint32_t computeQueueFamilyIndex;
-	uint32_t transferQueueTimestampValidBits;
-	uint32_t computeQueueTimestampValidBits;
+	uint32_t transferQueueFamilyTimestampValidBits;
+	uint32_t computeQueueFamilyTimestampValidBits;
 
 	uint32_t vkVerMajor;
 	uint32_t vkVerMinor;
@@ -161,8 +161,8 @@ void write_inbuffer(Value* mappedInBuffer, Value* firstValue, uint32_t valuesPer
 void read_outbuffer(
 	const Count* mappedOutBuffer,
 	ValueInfo* prevValues,
-	DyArray highestStepValues,
-	DyArray highestStepCounts,
+	DyArray bestValues,
+	DyArray bestCounts,
 	uint32_t valuesPerInout) NONNULL_ARGS_ALL RE_ACCESS(1);
 
 void new_high(
@@ -171,5 +171,5 @@ void new_high(
 	Count newCount,
 	Value* val0mod1off,
 	Value* val1mod6off,
-	DyArray highestStepValues,
-	DyArray highestStepCounts) NONNULL_ARGS_ALL RE_ACCESS(1);
+	DyArray bestValues,
+	DyArray bestCounts) NONNULL_ARGS_ALL RE_ACCESS(1);

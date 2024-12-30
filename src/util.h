@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024 Seth McDonald <seth.i.mcdonald@gmail.com>
+ * Copyright (C) 2024 Seth McDonald
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -20,24 +20,24 @@
 #include "defs.h"
 
 
-char*   stime(void) USE_RET;
-clock_t program_time(void) USE_RET;
+char*  stime(void) USE_RET;
+double program_time(void) USE_RET;
 
 Endianness get_endianness(void) CONST_FUNC USE_RET;
 
 uint32_t ceil_pow2(uint32_t x) CONST_FUNC USE_RET;
 uint32_t floor_pow2(uint32_t x) CONST_FUNC USE_RET;
 
-float get_benchmark(clock_t start, clock_t end) CONST_FUNC USE_RET;
+double get_benchmark(clock_t start, clock_t end) CONST_FUNC USE_RET;
 
 bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const char* name)
 	NONNULL_ARGS(1) NULTSTR_ARG(4) RE_ACCESS(4);
 
 bool get_buffer_requirements_noext(
-	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* memoryRequirements)
+	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* requirements)
 	NONNULL_ARGS_ALL WR_ACCESS(4);
 bool get_buffer_requirements_main4(
-	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* memoryRequirements)
+	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* requirements)
 	NONNULL_ARGS_ALL WR_ACCESS(4);
 
 bool file_size(const char* filename, size_t* size) NONNULL_ARGS_ALL NULTSTR_ARG(1) RE_ACCESS(1) WR_ACCESS(2);

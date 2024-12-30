@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024 Seth McDonald <seth.i.mcdonald@gmail.com>
+ * Copyright (C) 2024 Seth McDonald
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -53,7 +53,7 @@ const char* const VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME = "VK_EX
 const char* const VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME           = "VK_EXT_subgroup_size_control";
 
 
-const uint32_t PROGRAM_VERSION   = VK_MAKE_API_VERSION(
+const uint32_t PROGRAM_VERSION = VK_MAKE_API_VERSION(
 	0, COLLATZSIM_VERSION_MAJOR, COLLATZSIM_VERSION_MINOR, COLLATZSIM_VERSION_PATCH);
 const uint32_t PROGRAM_VER_MAJOR = COLLATZSIM_VERSION_MAJOR;
 const uint32_t PROGRAM_VER_MINOR = COLLATZSIM_VERSION_MINOR;
@@ -72,4 +72,4 @@ const VkAllocationCallbacks g_allocationCallbacks = {
 };
 
 
-const float MS_PER_CLOCK = 1000.f / CLOCKS_PER_SEC;
+const double MS_PER_CLOCK = 1000. / CLOCKS_PER_SEC;

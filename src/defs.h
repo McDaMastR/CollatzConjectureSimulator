@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024 Seth McDonald <seth.i.mcdonald@gmail.com>
+ * Copyright (C) 2024 Seth McDonald
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -264,4 +264,4 @@ extern const uint32_t PROGRAM_VER_PATCH;
 extern const VkAllocationCallbacks  g_allocationCallbacks;
 extern const VkAllocationCallbacks* g_allocator;
 
-extern const float MS_PER_CLOCK;
+extern const double MS_PER_CLOCK;

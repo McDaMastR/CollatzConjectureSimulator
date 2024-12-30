@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024 Seth McDonald <seth.i.mcdonald@gmail.com>
+ * Copyright (C) 2024 Seth McDonald
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -36,15 +36,15 @@ char* stime(void)
 	return ctime(&t);
 }
 
-clock_t program_time(void)
+double program_time(void)
 {
 	clock_t t = clock();
-	return (clock_t) ((float) t * MS_PER_CLOCK);
+	return (double) t * MS_PER_CLOCK;
 }
 
 Endianness get_endianness(void)
 {
-	int x = 1;
+	int  x = 1;
 	char c = *(char*) &x;
 	return c ? ENDIANNESS_LITTLE : ENDIANNESS_BIG;
 }
@@ -91,69 +91,68 @@ uint32_t floor_pow2(uint32_t x)
 #endif
 }
 
-float get_benchmark(clock_t start, clock_t end)
+double get_benchmark(clock_t start, clock_t end)
 {
-	return (float) (end - start) * MS_PER_CLOCK;
+	return (double) (end - start) * MS_PER_CLOCK;
 }
 
 bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const char* restrict name)
 {
 	VkResult vkres;
 
-	VkDebugUtilsObjectNameInfoEXT debugUtilsObjectNameInfo = {VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
-	debugUtilsObjectNameInfo.objectType   = type;
-	debugUtilsObjectNameInfo.objectHandle = handle;
-	debugUtilsObjectNameInfo.pObjectName  = name;
+	VkDebugUtilsObjectNameInfoEXT info = {VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+	info.objectType                    = type;
+	info.objectHandle                  = handle;
+	info.pObjectName                   = name;
 
-	VK_CALL_RES(vkSetDebugUtilsObjectNameEXT, device, &debugUtilsObjectNameInfo);
+	VK_CALL_RES(vkSetDebugUtilsObjectNameEXT, device, &info);
 	if EXPECT_FALSE (vkres) return false;
 
 	return true;
 }
 
 bool get_buffer_requirements_noext(
-	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict memoryRequirements)
+	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict requirements)
 {
 	VkResult vkres;
 
-	VkBufferCreateInfo bufferCreateInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-	bufferCreateInfo.size  = size;
-	bufferCreateInfo.usage = usage;
+	VkBufferCreateInfo createInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+	createInfo.size               = size;
+	createInfo.usage              = usage;
 
 	VkBuffer buffer;
-	VK_CALL_RES(vkCreateBuffer, device, &bufferCreateInfo, g_allocator, &buffer);
+
+	VK_CALL_RES(vkCreateBuffer, device, &createInfo, g_allocator, &buffer);
 	if EXPECT_FALSE (vkres) return false;
 
-	VkBufferMemoryRequirementsInfo2 bufferMemoryRequirementsInfo2 =
-		{VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2};
-	bufferMemoryRequirementsInfo2.buffer = buffer;
+	VkBufferMemoryRequirementsInfo2 requirementsInfo = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2};
+	requirementsInfo.buffer                          = buffer;
 
-	VkMemoryRequirements2 memoryRequirements2 = {VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2};
+	VkMemoryRequirements2 memoryRequirements = {VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2};
 
-	VK_CALL(vkGetBufferMemoryRequirements2, device, &bufferMemoryRequirementsInfo2, &memoryRequirements2);
+	VK_CALL(vkGetBufferMemoryRequirements2, device, &requirementsInfo, &memoryRequirements);
 
 	VK_CALL(vkDestroyBuffer, device, buffer, g_allocator);
 
-	*memoryRequirements = memoryRequirements2.memoryRequirements;
+	*requirements = memoryRequirements.memoryRequirements;
 	return true;
 }
 
 bool get_buffer_requirements_main4(
-	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict memoryRequirements)
+	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict requirements)
 {
-	VkBufferCreateInfo bufferCreateInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-	bufferCreateInfo.size  = size;
-	bufferCreateInfo.usage = usage;
+	VkBufferCreateInfo createInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+	createInfo.size               = size;
+	createInfo.usage              = usage;
 
-	VkDeviceBufferMemoryRequirementsKHR deviceBufferMemoryRequirements =
-		{VK_STRUCTURE_TYPE_DEVICE_BUFFER_MEMORY_REQUIREMENTS_KHR};
-	deviceBufferMemoryRequirements.pCreateInfo = &bufferCreateInfo;
+	VkDeviceBufferMemoryRequirements requirementsInfo = {VK_STRUCTURE_TYPE_DEVICE_BUFFER_MEMORY_REQUIREMENTS};
+	requirementsInfo.pCreateInfo                      = &createInfo;
 
-	VkMemoryRequirements2 memoryRequirements2 = {VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2};
+	VkMemoryRequirements2 memoryRequirements = {VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2};
 
-	VK_CALL(vkGetDeviceBufferMemoryRequirementsKHR, device, &deviceBufferMemoryRequirements, &memoryRequirements2);
+	VK_CALL(vkGetDeviceBufferMemoryRequirementsKHR, device, &requirementsInfo, &memoryRequirements);
 
-	*memoryRequirements = memoryRequirements2.memoryRequirements;
+	*requirements = memoryRequirements.memoryRequirements;
 	return true;
 }
 
@@ -257,10 +256,10 @@ void* aligned_malloc(size_t size, size_t alignment)
 	address = (uintptr_t) memory;
 
 	size_t* info = (size_t*) address;
-	*info = size;
+	*info        = size;
 
 	address += sizeof(size_t);
-	memory = (void*) address;
+	memory  = (void*) address;
 #else
 	if (alignment < alignof(AlignedInfo)) { alignment = alignof(AlignedInfo); }
 
@@ -272,11 +271,11 @@ void* aligned_malloc(size_t size, size_t alignment)
 	address -= sizeof(AlignedInfo);
 
 	AlignedInfo* info = (AlignedInfo*) address;
-	info->start = memory;
-	info->size  = size;
+	info->start       = memory;
+	info->size        = size;
 
 	address += sizeof(AlignedInfo);
-	memory = (void*) address;
+	memory  = (void*) address;
 #endif
 
 	return memory;
@@ -293,7 +292,7 @@ void* aligned_realloc(void* restrict memory, size_t size, size_t alignment)
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	address -= sizeof(size_t);
-	memory = (void*) address;
+	memory  = (void*) address;
 
 	if (alignment < alignof(size_t)) { alignment = alignof(size_t); }
 
@@ -303,9 +302,9 @@ void* aligned_realloc(void* restrict memory, size_t size, size_t alignment)
 	address = (uintptr_t) newMemory;
 
 	size_t* info = (size_t*) address;
-	*info = size;
+	*info        = size;
 
-	address += sizeof(size_t);
+	address   += sizeof(size_t);
 	newMemory = (void*) address;
 #else
 	address -= sizeof(AlignedInfo);
@@ -325,11 +324,11 @@ void* aligned_realloc(void* restrict memory, size_t size, size_t alignment)
 	address += ((sizeof(AlignedInfo) - 1) / alignment + 1) * alignment;
 	address -= sizeof(AlignedInfo);
 
-	info = (AlignedInfo*) address;
+	info        = (AlignedInfo*) address;
 	info->start = newMemory;
 	info->size  = size;
 
-	address += sizeof(AlignedInfo);
+	address   += sizeof(AlignedInfo);
 	newMemory = (void*) address;
 
 	memcpy(newMemory, memory, minSize);
@@ -345,12 +344,11 @@ void* aligned_free(void* restrict memory)
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	address -= sizeof(size_t);
-	memory = (void*) address;
+	memory  = (void*) address;
 	_aligned_free(memory);
 #else
 	address -= sizeof(AlignedInfo);
-	AlignedInfo* info = (AlignedInfo*) address;
-	memory = info->start;
+	memory  = ((AlignedInfo*) address)->start;
 	free(memory);
 #endif
 
@@ -365,12 +363,10 @@ size_t aligned_size(const void* restrict memory)
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	address -= sizeof(size_t);
-	size_t* info = (size_t*) address;
-	size = *info;
+	size    = *(size_t*) address;
 #else
 	address -= sizeof(AlignedInfo);
-	AlignedInfo* info = (AlignedInfo*) address;
-	size = info->size;
+	size    = ((AlignedInfo*) address)->size;
 #endif
 
 	return size;
