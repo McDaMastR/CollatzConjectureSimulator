@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024 Seth McDonald
+ * Copyright (C) 2024-2025 Seth McDonald
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -19,10 +19,7 @@
 #include "util.h"
 
 
-CallbackData g_callbackData = {
-	.funcName = "",
-	.lineNum  = 0
-};
+CallbackData g_callbackData = {.func = "", .file = "", .line = 0};
 
 
 static uint64_t g_debugCallbackCount = 0;
@@ -87,11 +84,12 @@ static void print_debug_callback(
 	const VkDebugUtilsMessengerCallbackDataEXT* restrict pCallbackData,
 	uint64_t callbackCount,
 	const char* restrict func,
+	const char* restrict file,
 	uint64_t line)
 {
+	const char* message         = pCallbackData->pMessage;
 	const char* messageIdName   = pCallbackData->pMessageIdName ?: "";
 	int32_t     messageIdNumber = pCallbackData->messageIdNumber;
-	const char* message         = pCallbackData->pMessage;
 
 	uint32_t queueLabelCount  = pCallbackData->queueLabelCount;
 	uint32_t cmdBufLabelCount = pCallbackData->cmdBufLabelCount;
@@ -101,7 +99,7 @@ static void print_debug_callback(
 
 	fprintf(stream, "Debug callback %" PRIu64 " (%.3fms)\n", callbackCount, time);
 
-	if (line) { fprintf(stream, "%s (%" PRIu64 ")\n", func, line); }
+	if (line) { fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
 
 	fprintf(stream, "Severity: %s\nTypes:   ", sMessageSeverity);
 
@@ -180,20 +178,21 @@ VkBool32 debug_callback(
 
 	if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
 		print_debug_callback(
-			stderr, time, messageSeverity, messageTypes, pCallbackData, g_debugCallbackCount, data.funcName,
-			data.lineNum);
+			stderr, time, messageSeverity, messageTypes, pCallbackData, g_debugCallbackCount, data.func, data.file,
+			data.line);
 	}
 	else if (messageTypes & ~(VkDebugUtilsMessageTypeFlagsEXT) VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) {
 		print_debug_callback(
-			stdout, time, messageSeverity, messageTypes, pCallbackData, g_debugCallbackCount, data.funcName,
-			data.lineNum);
+			stdout, time, messageSeverity, messageTypes, pCallbackData, g_debugCallbackCount, data.func, data.file,
+			data.line);
 	}
 
 	FILE* file = fopen(DEBUG_LOG_NAME, "a");
 	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, DEBUG_LOG_NAME, "a"); return VK_FALSE; }
 
 	print_debug_callback(
-		file, time, messageSeverity, messageTypes, pCallbackData, g_debugCallbackCount, data.funcName, data.lineNum);
+		file, time, messageSeverity, messageTypes, pCallbackData, g_debugCallbackCount, data.func, data.file,
+		data.line);
 
 	fclose(file);
 
@@ -206,6 +205,7 @@ static void print_allocation_callback(
 	double time,
 	uint64_t allocationCount,
 	const char* restrict func,
+	const char* restrict file,
 	uint64_t line,
 	size_t totalSize,
 	size_t size,
@@ -217,7 +217,7 @@ static void print_allocation_callback(
 
 	fprintf(stream, "Allocation callback %" PRIu64 " (%.3fms)\n", allocationCount, time);
 
-	if (line) { fprintf(stream, "%s (%" PRIu64 ")\n", func, line); }
+	if (line) { fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
 
 	fprintf(
 		stream,
@@ -246,7 +246,7 @@ void* allocation_callback(
 	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return memory; }
 
 	print_allocation_callback(
-		file, time, g_allocCount, data.funcName, data.lineNum, g_totalAllocSize, size, alignment, allocationScope,
+		file, time, g_allocCount, data.func, data.file, data.line, g_totalAllocSize, size, alignment, allocationScope,
 		memory);
 
 	fclose(file);
@@ -259,6 +259,7 @@ static void print_reallocation_callback(
 	double time,
 	uint64_t reallocationCount,
 	const char* restrict func,
+	const char* restrict file,
 	uint64_t line,
 	size_t totalSize,
 	size_t originalSize,
@@ -272,7 +273,7 @@ static void print_reallocation_callback(
 
 	fprintf(stream, "Reallocation callback %" PRIu64 " (%.3fms)\n", reallocationCount, time);
 
-	if (line) { fprintf(stream, "%s (%" PRIu64 ")\n", func, line); }
+	if (line) { fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
 
 	fprintf(
 		stream,
@@ -318,7 +319,7 @@ void* reallocation_callback(
 	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return memory; }
 
 	print_reallocation_callback(
-		file, time, g_reallocCount, data.funcName, data.lineNum, g_totalAllocSize, originalSize, size, alignment,
+		file, time, g_reallocCount, data.func, data.file, data.line, g_totalAllocSize, originalSize, size, alignment,
 		allocationScope, pOriginal, memory);
 
 	fclose(file);
@@ -331,6 +332,7 @@ static void print_free_callback(
 	double time,
 	uint64_t freeCount,
 	const char* restrict func,
+	const char* restrict file,
 	uint64_t line,
 	size_t totalSize,
 	size_t size,
@@ -338,7 +340,7 @@ static void print_free_callback(
 {
 	fprintf(stream, "Free callback %" PRIu64 " (%.3fms)\n", freeCount, time);
 
-	if (line) { fprintf(stream, "%s (%" PRIu64 ")\n", func, line); }
+	if (line) { fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
 
 	fprintf(
 		stream,
@@ -368,7 +370,7 @@ void free_callback(void* restrict pUserData, void* restrict pMemory)
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
 	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return; }
 
-	print_free_callback(file, time, g_freeCount, data.funcName, data.lineNum, g_totalAllocSize, size, pMemory);
+	print_free_callback(file, time, g_freeCount, data.func, data.file, data.line, g_totalAllocSize, size, pMemory);
 
 	fclose(file);
 }
@@ -378,6 +380,7 @@ static void print_internal_allocation_callback(
 	double time,
 	uint64_t internalAllocationCount,
 	const char* restrict func,
+	const char* restrict file,
 	uint64_t line,
 	size_t size,
 	VkInternalAllocationType allocationType,
@@ -388,7 +391,7 @@ static void print_internal_allocation_callback(
 
 	fprintf(stream, "Internal allocation callback %" PRIu64 " (%.3fms)\n", internalAllocationCount, time);
 
-	if (line) { fprintf(stream, "%s (%" PRIu64 ")\n", func, line); }
+	if (line) { fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
 
 	fprintf(
 		stream,
@@ -414,7 +417,7 @@ void internal_allocation_callback(
 	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return; }
 
 	print_internal_allocation_callback(
-		file, time, g_internalAllocCount, data.funcName, data.lineNum, size, allocationType, allocationScope);
+		file, time, g_internalAllocCount, data.func, data.file, data.line, size, allocationType, allocationScope);
 
 	fclose(file);
 }
@@ -424,6 +427,7 @@ static void print_internal_free_callback(
 	double time,
 	uint64_t internalFreeCount,
 	const char* restrict func,
+	const char* restrict file,
 	uint64_t line,
 	size_t size,
 	VkInternalAllocationType allocationType,
@@ -434,7 +438,7 @@ static void print_internal_free_callback(
 
 	fprintf(stream, "Internal free callback %" PRIu64 " (%.3fms)\n", internalFreeCount, time);
 
-	if (line) { fprintf(stream, "%s (%" PRIu64 ")\n", func, line); }
+	if (line) { fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
 
 	fprintf(
 		stream,
@@ -460,13 +464,13 @@ void internal_free_callback(
 	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return; }
 
 	print_internal_free_callback(
-		file, time, g_internalFreeCount, data.funcName, data.lineNum, size, allocationType, allocationScope);
+		file, time, g_internalFreeCount, data.func, data.file, data.line, size, allocationType, allocationScope);
 
 	fclose(file);
 }
 
 
-void print_malloc_failure(int line, void* result, size_t size)
+void print_malloc_failure(int line, void* res, size_t size)
 {
 	double time = program_time();
 
@@ -476,10 +480,10 @@ void print_malloc_failure(int line, void* result, size_t size)
 		"Failed function call 'malloc' with 0x%016" PRIxPTR "\n"
 		"Arguments:\n"
 		"\tsize = %zu\n\n",
-		line, time, (uintptr_t) result, size);
+		line, time, (uintptr_t) res, size);
 }
 
-void print_calloc_failure(int line, void* result, size_t num, size_t size)
+void print_calloc_failure(int line, void* res, size_t num, size_t size)
 {
 	double time = program_time();
 
@@ -490,10 +494,10 @@ void print_calloc_failure(int line, void* result, size_t num, size_t size)
 		"Arguments:\n"
 		"\tnum  = %zu\n"
 		"\tsize = %zu\n\n",
-		line, time, (uintptr_t) result, num, size);
+		line, time, (uintptr_t) res, num, size);
 }
 
-void print_realloc_failure(int line, void* result, void* ptr, size_t size)
+void print_realloc_failure(int line, void* res, void* ptr, size_t size)
 {
 	double time = program_time();
 
@@ -504,10 +508,10 @@ void print_realloc_failure(int line, void* result, void* ptr, size_t size)
 		"Arguments:\n"
 		"\tptr  = 0x%016" PRIxPTR "\n"
 		"\tsize = %zu\n\n",
-		line, time, (uintptr_t) result, (uintptr_t) ptr, size);
+		line, time, (uintptr_t) res, (uintptr_t) ptr, size);
 }
 
-void print_fopen_failure(int line, FILE* result, const char* filename, const char* mode)
+void print_fopen_failure(int line, FILE* res, const char* name, const char* mode)
 {
 	double time = program_time();
 
@@ -516,12 +520,12 @@ void print_fopen_failure(int line, FILE* result, const char* filename, const cha
 		"IO error at line %d (%.3fms)\n"
 		"Failed function call 'fopen' with 0x%016" PRIxPTR "\n"
 		"Arguments:\n"
-		"\tfilename = %s\n"
-		"\tmode     = %s\n\n",
-		line, time, (uintptr_t) result, filename, mode);
+		"\tname = %s\n"
+		"\tmode = %s\n\n",
+		line, time, (uintptr_t) res, name, mode);
 }
 
-void print_fseek_failure(int line, int result, FILE* file, long offset, int origin)
+void print_fseek_failure(int line, int res, FILE* file, long offset, int origin)
 {
 	double time = program_time();
 
@@ -533,10 +537,10 @@ void print_fseek_failure(int line, int result, FILE* file, long offset, int orig
 		"\tfile   = 0x%016" PRIxPTR "\n"
 		"\toffset = %ld\n"
 		"\torigin = %d\n\n",
-		line, time, result, (uintptr_t) file, offset, origin);
+		line, time, res, (uintptr_t) file, offset, origin);
 }
 
-void print_ftell_failure(int line, long result, FILE* file)
+void print_ftell_failure(int line, long res, FILE* file)
 {
 	double time = program_time();
 
@@ -546,10 +550,10 @@ void print_ftell_failure(int line, long result, FILE* file)
 		"Failed function call 'ftell' with %ld\n"
 		"Arguments:\n"
 		"\tfile = 0x%016" PRIxPTR "\n\n",
-		line, time, result, (uintptr_t) file);
+		line, time, res, (uintptr_t) file);
 }
 
-void print_fread_failure(int line, size_t result, const void* buffer, size_t size, size_t count, FILE* file)
+void print_fread_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file)
 {
 	double time = program_time();
 
@@ -562,10 +566,10 @@ void print_fread_failure(int line, size_t result, const void* buffer, size_t siz
 		"\tsize   = %zu\n"
 		"\tcount  = %zu\n"
 		"\tfile   = 0x%016" PRIxPTR "\n\n",
-		line, time, result, (uintptr_t) buffer, size, count, (uintptr_t) file);
+		line, time, res, (uintptr_t) buf, size, count, (uintptr_t) file);
 }
 
-void print_fwrite_failure(int line, size_t result, const void* buffer, size_t size, size_t count, FILE* file)
+void print_fwrite_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file)
 {
 	double time = program_time();
 
@@ -578,10 +582,10 @@ void print_fwrite_failure(int line, size_t result, const void* buffer, size_t si
 		"\tsize   = %zu\n"
 		"\tcount  = %zu\n"
 		"\tfile   = 0x%016" PRIxPTR "\n\n",
-		line, time, result, (uintptr_t) buffer, size, count, (uintptr_t) file);
+		line, time, res, (uintptr_t) buf, size, count, (uintptr_t) file);
 }
 
-void print_fscanf_failure(int line, int result, FILE* file, const char* format)
+void print_fscanf_failure(int line, int res, FILE* file, const char* fmt)
 {
 	double time = program_time();
 
@@ -592,10 +596,10 @@ void print_fscanf_failure(int line, int result, FILE* file, const char* format)
 		"Arguments:\n"
 		"\tfile   = 0x%016" PRIxPTR "\n"
 		"\tformat = %s\n\n",
-		line, time, result, (uintptr_t) file, format);
+		line, time, res, (uintptr_t) file, fmt);
 }
 
-void print_fprintf_failure(int line, int result, FILE* file, const char* format)
+void print_fprintf_failure(int line, int res, FILE* file, const char* fmt)
 {
 	double time = program_time();
 
@@ -606,71 +610,76 @@ void print_fprintf_failure(int line, int result, FILE* file, const char* format)
 		"Arguments:\n"
 		"\tfile   = 0x%016" PRIxPTR "\n"
 		"\tformat = %s\n\n",
-		line, time, result, (uintptr_t) file, format);
+		line, time, res, (uintptr_t) file, fmt);
 }
 
-void print_pcreate_failure(int line, int result, pthread_t* thread, pthread_attr_t* attr)
+void print_pcreate_failure(int line, int res)
 {
 	double time = program_time();
 
 	fprintf(
 		stderr,
 		"Thread failure at line %d (%.3fms)\n"
-		"Failed function call 'pthread_create' with %d\n"
-		"Arguments:\n"
-		"\tthread = 0x%016" PRIxPTR "\n"
-		"\tattr   = 0x%016" PRIxPTR "\n\n",
-		line, time, result, (uintptr_t) thread, (uintptr_t) attr);
+		"Failed function call 'pthread_create' with %d\n\n",
+		line, time, res);
 }
 
-void print_pjoin_failure(int line, int result, pthread_t thread, void** retval)
+void print_pcancel_failure(int line, int res)
 {
 	double time = program_time();
 
 	fprintf(
 		stderr,
 		"Thread failure at line %d (%.3fms)\n"
-		"Failed function call 'pthread_join' with %d\n"
-		"Arguments:\n"
-		"\tthread = 0x%016" PRIxPTR "\n"
-		"\tretval = 0x%016" PRIxPTR "\n\n",
-		line, time, result, (uintptr_t) thread, (uintptr_t) retval);
+		"Failed function call 'pthread_cancel' with %d\n\n",
+		line, time, res);
 }
 
-void print_pcancel_failure(int line, int result, pthread_t thread)
+void print_pjoin_failure(int line, int res)
 {
 	double time = program_time();
 
 	fprintf(
 		stderr,
 		"Thread failure at line %d (%.3fms)\n"
-		"Failed function call 'pthread_cancel' with %d\n"
-		"Arguments:\n"
-		"\tthread = 0x%016" PRIxPTR "\n\n",
-		line, time, result, (uintptr_t) thread);
+		"Failed function call 'pthread_join' with %d\n\n",
+		line, time, res);
 }
 
-void print_vkinit_failure(int line, VkResult result)
+void print_pkill_failure(int line, int res, int sig)
 {
 	double time = program_time();
 
-	const char* sResult = string_VkResult(result);
+	fprintf(
+		stderr,
+		"Thread failure at line %d (%.3fms)\n"
+		"Failed function call 'pthread_kill' with %d\n"
+		"Arguments:\n"
+		"\tsignal = %d\n\n",
+		line, time, res, sig);
+}
+
+void print_vkinit_failure(int line, VkResult res)
+{
+	double time = program_time();
+
+	const char* sRes = string_VkResult(res);
 
 	fprintf(
 		stderr,
 		"Vulkan failure at line %d (%.3fms)\n"
 		"Failed function call 'volkInitialize' with %s\n\n",
-		line, time, sResult);
+		line, time, sRes);
 }
 
-void print_vkvers_failure(int line, uint32_t result)
+void print_vkvers_failure(int line, uint32_t res)
 {
 	double time = program_time();
 
-	uint32_t variant = VK_API_VERSION_VARIANT(result);
-	uint32_t major   = VK_API_VERSION_MAJOR(result);
-	uint32_t minor   = VK_API_VERSION_MINOR(result);
-	uint32_t patch   = VK_API_VERSION_PATCH(result);
+	uint32_t variant = VK_API_VERSION_VARIANT(res);
+	uint32_t major   = VK_API_VERSION_MAJOR(res);
+	uint32_t minor   = VK_API_VERSION_MINOR(res);
+	uint32_t patch   = VK_API_VERSION_PATCH(res);
 
 	fprintf(
 		stderr,
@@ -679,15 +688,15 @@ void print_vkvers_failure(int line, uint32_t result)
 		line, time, variant, major, minor, patch);
 }
 
-void print_vulkan_failure(int line, VkResult result, const char* func)
+void print_vulkan_failure(int line, VkResult res, const char* func)
 {
 	double time = program_time();
 
-	const char* sResult = string_VkResult(result);
+	const char* sRes = string_VkResult(res);
 
 	fprintf(
 		stderr,
 		"Vulkan failure at line %d (%.3fms)\n"
 		"Failed function call '%s' with %s\n\n",
-		line, time, func, sResult);
+		line, time, func, sRes);
 }

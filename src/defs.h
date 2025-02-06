@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024 Seth McDonald
+ * Copyright (C) 2024-2025 Seth McDonald
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -162,6 +162,15 @@
 	#define USE_RET __attribute__ (( warn_unused_result ))
 #else
 	#define USE_RET
+#endif
+
+
+// Check support for nonstandard predefined macros
+
+#ifdef __FILE_NAME__
+	#define FILE_NAME __FILE_NAME__
+#else
+	#define FILE_NAME __FILE__
 #endif
 
 

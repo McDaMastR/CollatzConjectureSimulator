@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024 Seth McDonald
+ * Copyright (C) 2024-2025 Seth McDonald
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -366,8 +366,8 @@ bool select_device(Gpu* restrict gpu)
 
 	uint32_t deviceCount;
 	VK_CALL_RES(vkEnumeratePhysicalDevices, instance, &deviceCount, NULL);
-
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
+
 	if EXPECT_FALSE (!deviceCount) {
 		fputs("Runtime failure\nNo physical devices are accessible to the Vulkan instance\n\n", stderr);
 		free_recursive(dyMem);
@@ -492,6 +492,7 @@ bool select_device(Gpu* restrict gpu)
 	bool usingSubgroupSizeControl          = false;
 	bool usingVulkan12                     = false;
 	bool usingVulkan13                     = false;
+	bool usingVulkan14                     = false;
 
 	for (uint32_t i = 0; i < deviceCount; i++) {
 		uint32_t extCount        = extCounts[i];
@@ -501,8 +502,7 @@ bool select_device(Gpu* restrict gpu)
 		bool hasVulkan11 = devsProps[i].properties.apiVersion >= VK_API_VERSION_1_1;
 		bool hasVulkan12 = devsProps[i].properties.apiVersion >= VK_API_VERSION_1_2;
 		bool hasVulkan13 = devsProps[i].properties.apiVersion >= VK_API_VERSION_1_3;
-
-		bool hasDiscreteGpu = devsProps[i].properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+		bool hasVulkan14 = devsProps[i].properties.apiVersion >= VK_API_VERSION_1_4;
 
 		bool hasShaderInt16 = devsFeats[i].features.shaderInt16;
 		bool hasShaderInt64 = devsFeats[i].features.shaderInt64;
@@ -608,8 +608,7 @@ bool select_device(Gpu* restrict gpu)
 
 		if (hasVulkan12) { currScore += 50; }
 		if (hasVulkan13) { currScore += 50; }
-
-		if (hasDiscreteGpu) { currScore += 10000; }
+		if (hasVulkan14) { currScore += 50; }
 
 		if (gpu->preferInt16 && hasShaderInt16) { currScore += 1000; }
 		if (gpu->preferInt64 && hasShaderInt64) { currScore += 1000; }
@@ -654,6 +653,7 @@ bool select_device(Gpu* restrict gpu)
 			usingSubgroupSizeControl          = hasSubgroupSizeControl;
 			usingVulkan12                     = hasVulkan12;
 			usingVulkan13                     = hasVulkan13;
+			usingVulkan14                     = hasVulkan14;
 		}
 	}
 
@@ -676,7 +676,8 @@ bool select_device(Gpu* restrict gpu)
 	uint32_t spvVerMajor = 1;
 	uint32_t spvVerMinor;
 
-	if      (usingVulkan13) { vkVerMinor = 3; spvVerMinor = 6; }
+	if      (usingVulkan14) { vkVerMinor = 4; spvVerMinor = 6; }
+	else if (usingVulkan13) { vkVerMinor = 3; spvVerMinor = 6; }
 	else if (usingVulkan12) { vkVerMinor = 2; spvVerMinor = 5; }
 	else if (usingSpirv14)  { vkVerMinor = 1; spvVerMinor = 4; }
 	else                    { vkVerMinor = 1; spvVerMinor = 3; }
@@ -1818,6 +1819,89 @@ bool create_pipeline(Gpu* restrict gpu)
 	return true;
 }
 
+static bool record_transfer_cmdbuffer(
+	VkCommandBuffer cmdBuffer,
+	VkBuffer hvBuffer,
+	VkBuffer dlBuffer,
+	const VkBufferCopy* restrict inBufferRegion,
+	const VkBufferCopy* restrict outBufferRegion,
+	const VkDependencyInfo* restrict depInfos,
+	VkQueryPool queryPool,
+	uint32_t firstQuery,
+	uint32_t timestampValidBits)
+{
+	VkResult vkres;
+
+	VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+
+	VK_CALL_RES(vkBeginCommandBuffer, cmdBuffer, &beginInfo);
+	if EXPECT_FALSE (vkres) return false;
+
+	if (timestampValidBits) {
+		VK_CALL(vkCmdResetQueryPool, cmdBuffer, queryPool, firstQuery, 2);
+		VK_CALL(vkCmdWriteTimestamp2KHR, cmdBuffer, VK_PIPELINE_STAGE_2_NONE, queryPool, firstQuery);
+	}
+
+	VK_CALL(vkCmdCopyBuffer, cmdBuffer, hvBuffer, dlBuffer, 1, inBufferRegion);
+
+	VK_CALL(vkCmdPipelineBarrier2KHR, cmdBuffer, &depInfos[0]);
+	
+	VK_CALL(vkCmdCopyBuffer, cmdBuffer, dlBuffer, hvBuffer, 1, outBufferRegion);
+
+	VK_CALL(vkCmdPipelineBarrier2KHR, cmdBuffer, &depInfos[1]);
+
+	if (timestampValidBits) {
+		VK_CALL(vkCmdWriteTimestamp2KHR, cmdBuffer, VK_PIPELINE_STAGE_2_COPY_BIT, queryPool, firstQuery + 1); }
+
+	VK_CALL_RES(vkEndCommandBuffer, cmdBuffer);
+	if EXPECT_FALSE (vkres) return false;
+
+	return true;
+}
+
+static bool record_compute_cmdbuffer(
+	VkCommandBuffer cmdBuffer,
+	VkPipeline pipeline,
+	VkPipelineLayout layout,
+	const VkDescriptorSet* restrict descSet,
+	const VkDependencyInfo* restrict depInfos,
+	VkQueryPool queryPool,
+	uint32_t firstQuery,
+	uint32_t timestampValidBits,
+	uint32_t workgroupCount)
+{
+	VkResult vkres;
+
+	VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+
+	VK_CALL_RES(vkBeginCommandBuffer, cmdBuffer, &beginInfo);
+	if EXPECT_FALSE (vkres) return false;
+
+	if (timestampValidBits) {
+		VK_CALL(vkCmdResetQueryPool, cmdBuffer, queryPool, firstQuery, 2);
+		VK_CALL(vkCmdWriteTimestamp2KHR, cmdBuffer, VK_PIPELINE_STAGE_2_NONE, queryPool, firstQuery);
+	}
+
+	VK_CALL(vkCmdPipelineBarrier2KHR, cmdBuffer, &depInfos[0]);
+
+	VK_CALL(vkCmdBindDescriptorSets, cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, layout, 0, 1, descSet, 0, NULL);
+
+	VK_CALL(vkCmdBindPipeline, cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+
+	VK_CALL(vkCmdDispatchBase, cmdBuffer, 0, 0, 0, workgroupCount, 1, 1);
+
+	VK_CALL(vkCmdPipelineBarrier2KHR, cmdBuffer, &depInfos[1]);
+
+	if (timestampValidBits) {
+		VK_CALL(vkCmdWriteTimestamp2KHR, cmdBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, queryPool, firstQuery + 1);
+	}
+
+	VK_CALL_RES(vkEndCommandBuffer, cmdBuffer);
+	if EXPECT_FALSE (vkres) return false;
+
+	return true;
+}
+
 bool create_commands(Gpu* restrict gpu)
 {
 	const VkBuffer*        hvBuffers = gpu->hostVisibleBuffers;
@@ -1856,7 +1940,7 @@ bool create_commands(Gpu* restrict gpu)
 
 	size_t size =
 		inoutsPerBuffer * sizeof(VkBufferCopy) * 2 +
-		inoutsPerHeap   * sizeof(VkBufferMemoryBarrier2) * 6 +
+		inoutsPerHeap   * sizeof(VkBufferMemoryBarrier2) * 5 +
 		inoutsPerHeap   * sizeof(VkDependencyInfo) * 4;
 
 	void* p = malloc(size);
@@ -1868,9 +1952,8 @@ bool create_commands(Gpu* restrict gpu)
 	VkBufferCopy* inBufferCopies  = (VkBufferCopy*) p;
 	VkBufferCopy* outBufferCopies = (VkBufferCopy*) (inBufferCopies + inoutsPerBuffer);
 
-	VkBufferMemoryBarrier2* onetimeBufferMemoryBarriers = (VkBufferMemoryBarrier2*) (outBufferCopies + inoutsPerBuffer);
 	VkBufferMemoryBarrier2 (*transferBufferMemoryBarriers)[3] = (VkBufferMemoryBarrier2(*)[]) (
-		onetimeBufferMemoryBarriers + inoutsPerHeap);
+		outBufferCopies + inoutsPerBuffer);
 	VkBufferMemoryBarrier2 (*computeBufferMemoryBarriers)[2] = (VkBufferMemoryBarrier2(*)[]) (
 		transferBufferMemoryBarriers + inoutsPerHeap);
 
@@ -1878,18 +1961,11 @@ bool create_commands(Gpu* restrict gpu)
 		computeBufferMemoryBarriers + inoutsPerHeap);
 	VkDependencyInfo (*computeDependencyInfos)[2] = (VkDependencyInfo(*)[]) (transferDependencyInfos + inoutsPerHeap);
 
-	VkCommandPoolCreateInfo onetimeCmdPoolCreateInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-	onetimeCmdPoolCreateInfo.flags                   = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-	onetimeCmdPoolCreateInfo.queueFamilyIndex        = transferQfIndex;
-
 	VkCommandPoolCreateInfo transferCmdPoolCreateInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
 	transferCmdPoolCreateInfo.queueFamilyIndex        = transferQfIndex;
 
 	VkCommandPoolCreateInfo computeCmdPoolCreateInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
 	computeCmdPoolCreateInfo.queueFamilyIndex        = computeQfIndex;
-
-	VK_CALL_RES(vkCreateCommandPool, device, &onetimeCmdPoolCreateInfo, g_allocator, &gpu->onetimeCommandPool);
-	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 	VK_CALL_RES(vkCreateCommandPool, device, &transferCmdPoolCreateInfo, g_allocator, &gpu->transferCommandPool);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
@@ -1897,14 +1973,8 @@ bool create_commands(Gpu* restrict gpu)
 	VK_CALL_RES(vkCreateCommandPool, device, &computeCmdPoolCreateInfo, g_allocator, &gpu->computeCommandPool);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
-	VkCommandPool onetimeCmdPool  = gpu->onetimeCommandPool;
 	VkCommandPool transferCmdPool = gpu->transferCommandPool;
 	VkCommandPool computeCmdPool  = gpu->computeCommandPool;
-
-	VkCommandBufferAllocateInfo onetimeCmdBufferAllocateInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-	onetimeCmdBufferAllocateInfo.level                       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	onetimeCmdBufferAllocateInfo.commandPool                 = onetimeCmdPool;
-	onetimeCmdBufferAllocateInfo.commandBufferCount          = 1;
 
 	VkCommandBufferAllocateInfo transferCmdBufferAllocateInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
 	transferCmdBufferAllocateInfo.level                       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -1916,16 +1986,11 @@ bool create_commands(Gpu* restrict gpu)
 	computeCmdBufferAllocateInfo.commandPool                 = computeCmdPool;
 	computeCmdBufferAllocateInfo.commandBufferCount          = inoutsPerHeap;
 
-	VK_CALL_RES(vkAllocateCommandBuffers, device, &onetimeCmdBufferAllocateInfo, &gpu->onetimeCommandBuffer);
-	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
 	VK_CALL_RES(vkAllocateCommandBuffers, device, &transferCmdBufferAllocateInfo, transferCmdBuffers);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 	VK_CALL_RES(vkAllocateCommandBuffers, device, &computeCmdBufferAllocateInfo, computeCmdBuffers);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
-	VkCommandBuffer onetimeCmdBuffer = gpu->onetimeCommandBuffer;
 
 	for (uint32_t i = 0; i < inoutsPerBuffer; i++) {
 		inBufferCopies[i].srcOffset = bytesPerInout * i;
@@ -1939,15 +2004,6 @@ bool create_commands(Gpu* restrict gpu)
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
-			onetimeBufferMemoryBarriers[j] = (VkBufferMemoryBarrier2) {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2};
-			onetimeBufferMemoryBarriers[j].srcStageMask        = VK_PIPELINE_STAGE_2_COPY_BIT;
-			onetimeBufferMemoryBarriers[j].srcAccessMask       = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-			onetimeBufferMemoryBarriers[j].srcQueueFamilyIndex = transferQfIndex;
-			onetimeBufferMemoryBarriers[j].dstQueueFamilyIndex = computeQfIndex;
-			onetimeBufferMemoryBarriers[j].buffer              = dlBuffers[i];
-			onetimeBufferMemoryBarriers[j].offset              = bytesPerInout * k;
-			onetimeBufferMemoryBarriers[j].size                = bytesPerIn;
-
 			transferBufferMemoryBarriers[j][0] = (VkBufferMemoryBarrier2) {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2};
 			transferBufferMemoryBarriers[j][0].srcStageMask        = VK_PIPELINE_STAGE_2_COPY_BIT;
 			transferBufferMemoryBarriers[j][0].srcAccessMask       = VK_ACCESS_2_TRANSFER_WRITE_BIT;
@@ -2011,85 +2067,19 @@ bool create_commands(Gpu* restrict gpu)
 		}
 	}
 
-	VkDependencyInfo onetimeDependencyInfo         = {VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
-	onetimeDependencyInfo.bufferMemoryBarrierCount = inoutsPerHeap;
-	onetimeDependencyInfo.pBufferMemoryBarriers    = onetimeBufferMemoryBarriers;
-
-	VkCommandBufferBeginInfo onetimeCmdBufferBeginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-	onetimeCmdBufferBeginInfo.flags                    = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-	VkCommandBufferBeginInfo transferCmdBufferBeginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-
-	VkCommandBufferBeginInfo computeCmdBufferBeginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-
-	VK_CALL_RES(vkBeginCommandBuffer, onetimeCmdBuffer, &onetimeCmdBufferBeginInfo);
-	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
-	for (uint32_t i = 0; i < buffersPerHeap; i++) {
-		VK_CALL(vkCmdCopyBuffer, onetimeCmdBuffer, hvBuffers[i], dlBuffers[i], inoutsPerBuffer, inBufferCopies);
-	}
-
-	if (transferQfIndex != computeQfIndex) {
-		VK_CALL(vkCmdPipelineBarrier2KHR, onetimeCmdBuffer, &onetimeDependencyInfo); }
-
-	VK_CALL_RES(vkEndCommandBuffer, onetimeCmdBuffer);
-	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
-			VK_CALL_RES(vkBeginCommandBuffer, transferCmdBuffers[j], &transferCmdBufferBeginInfo);
-			if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
+			bool bres = record_transfer_cmdbuffer(
+				transferCmdBuffers[j], hvBuffers[i], dlBuffers[i], &inBufferCopies[k], &outBufferCopies[k],
+				transferDependencyInfos[j], queryPool, j * 4, transferQfTimestampValidBits);
 
-			if (transferQfTimestampValidBits) {
-				VK_CALL(vkCmdResetQueryPool, transferCmdBuffers[j], queryPool, j * 4, 2);
-				VK_CALL(vkCmdWriteTimestamp2KHR, transferCmdBuffers[j], VK_PIPELINE_STAGE_2_NONE, queryPool, j * 4);
-			}
+			if EXPECT_FALSE (!bres) { free_recursive(dyMem); return false; }
 
-			VK_CALL(vkCmdCopyBuffer, transferCmdBuffers[j], hvBuffers[i], dlBuffers[i], 1, &inBufferCopies[k]);
+			bres = record_compute_cmdbuffer(
+				computeCmdBuffers[j], pipeline, pipelineLayout, &descSets[j], computeDependencyInfos[j], queryPool,
+				j * 4 + 2, computeQfTimestampValidBits, workgroupCount);
 
-			if (transferQfIndex != computeQfIndex) {
-				VK_CALL(vkCmdPipelineBarrier2KHR, transferCmdBuffers[j], &transferDependencyInfos[j][0]); }
-
-			VK_CALL(vkCmdCopyBuffer, transferCmdBuffers[j], dlBuffers[i], hvBuffers[i], 1, &outBufferCopies[k]);
-
-			VK_CALL(vkCmdPipelineBarrier2KHR, transferCmdBuffers[j], &transferDependencyInfos[j][1]);
-
-			if (transferQfTimestampValidBits) {
-				VK_CALL(
-					vkCmdWriteTimestamp2KHR, transferCmdBuffers[j], VK_PIPELINE_STAGE_2_COPY_BIT, queryPool, j * 4 + 1);
-			}
-
-			VK_CALL_RES(vkEndCommandBuffer, transferCmdBuffers[j]);
-			if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
-			VK_CALL_RES(vkBeginCommandBuffer, computeCmdBuffers[j], &computeCmdBufferBeginInfo);
-			if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
-			if (computeQfTimestampValidBits) {
-				VK_CALL(vkCmdResetQueryPool, computeCmdBuffers[j], queryPool, j * 4 + 2, 2);
-				VK_CALL(vkCmdWriteTimestamp2KHR, computeCmdBuffers[j], VK_PIPELINE_STAGE_2_NONE, queryPool, j * 4 + 2);
-			}
-
-			if (transferQfIndex != computeQfIndex) {
-				VK_CALL(vkCmdPipelineBarrier2KHR, computeCmdBuffers[j], &computeDependencyInfos[j][0]); }
-
-			VK_CALL(
-				vkCmdBindDescriptorSets, computeCmdBuffers[j], VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout, 0, 1,
-				&descSets[j], 0, NULL);
-			VK_CALL(vkCmdBindPipeline, computeCmdBuffers[j], VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
-			VK_CALL(vkCmdDispatchBase, computeCmdBuffers[j], 0, 0, 0, workgroupCount, 1, 1);
-
-			if (transferQfIndex != computeQfIndex) {
-				VK_CALL(vkCmdPipelineBarrier2KHR, computeCmdBuffers[j], &computeDependencyInfos[j][1]); }
-
-			if (computeQfTimestampValidBits) {
-				VK_CALL(
-					vkCmdWriteTimestamp2KHR, computeCmdBuffers[j], VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, queryPool,
-					j * 4 + 3);
-			}
-
-			VK_CALL_RES(vkEndCommandBuffer, computeCmdBuffers[j]);
-			if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
+			if EXPECT_FALSE (!bres) { free_recursive(dyMem); return false; }
 		}
 	}
 
@@ -2114,9 +2104,6 @@ bool create_commands(Gpu* restrict gpu)
 
 #ifndef NDEBUG
 	if (gpu->debugUtilsMessenger) {
-		set_debug_name(device, VK_OBJECT_TYPE_COMMAND_POOL,   (uint64_t) onetimeCmdPool,   "Onetime");
-		set_debug_name(device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t) onetimeCmdBuffer, "Onetime");
-
 		set_debug_name(device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t) transferCmdPool, "Transfer");
 		set_debug_name(device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t) computeCmdPool,  "Compute");
 
@@ -2163,9 +2150,6 @@ bool submit_commands(Gpu* restrict gpu)
 	VkQueue computeQueue  = gpu->computeQueue;
 
 	VkQueryPool queryPool = gpu->queryPool;
-
-	VkCommandPool   onetimeCmdPool   = gpu->onetimeCommandPool;
-	VkCommandBuffer onetimeCmdBuffer = gpu->onetimeCommandBuffer;
 
 	VkDeviceSize bytesPerIn    = gpu->bytesPerIn;
 	VkDeviceSize bytesPerOut   = gpu->bytesPerOut;
@@ -2361,15 +2345,6 @@ bool submit_commands(Gpu* restrict gpu)
 		computeSemaphoreWaitInfos[i].pValues        = &computeSignalSemaphoreSubmitInfos[i].value;
 	}
 
-	VkCommandBufferSubmitInfo onetimeCmdBufferSubmitInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO};
-	onetimeCmdBufferSubmitInfo.commandBuffer             = onetimeCmdBuffer;
-
-	VkSubmitInfo2 onetimeSubmitInfo            = {VK_STRUCTURE_TYPE_SUBMIT_INFO_2};
-	onetimeSubmitInfo.commandBufferInfoCount   = 1;
-	onetimeSubmitInfo.pCommandBufferInfos      = &onetimeCmdBufferSubmitInfo;
-	onetimeSubmitInfo.signalSemaphoreInfoCount = inoutsPerHeap;
-	onetimeSubmitInfo.pSignalSemaphoreInfos    = transferSignalSemaphoreSubmitInfos;
-
 	clock_t totalBmStart = clock();
 
 	Value tested = prevValues.curValue;
@@ -2385,7 +2360,7 @@ bool submit_commands(Gpu* restrict gpu)
 		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 	}
 
-	VK_CALL_RES(vkQueueSubmit2KHR, transferQueue, 1, &onetimeSubmitInfo, VK_NULL_HANDLE);
+	VK_CALL_RES(vkQueueSubmit2KHR, transferQueue, inoutsPerHeap, transferSubmitInfos, VK_NULL_HANDLE);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 	VK_CALL_RES(vkQueueSubmit2KHR, computeQueue, inoutsPerHeap, computeSubmitInfos, VK_NULL_HANDLE);
@@ -2396,26 +2371,21 @@ bool submit_commands(Gpu* restrict gpu)
 
 	pthread_t waitThread;
 	int ires = pthread_create(&waitThread, NULL, wait_for_input, &input);
-	if EXPECT_FALSE (ires) { PCREATE_FAILURE(ires, &waitThread, NULL); free_recursive(dyMem); return false; }
-
-	VK_CALL_RES(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[0], UINT64_MAX);
-	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
-	VK_CALL(vkDestroyCommandPool, device, onetimeCmdPool, g_allocator);
-	gpu->onetimeCommandPool = VK_NULL_HANDLE;
+	if EXPECT_FALSE (ires) { PCREATE_FAILURE(ires); free_recursive(dyMem); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+		VK_CALL_RES(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[i], UINT64_MAX);
+		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
+
 		write_inbuffer(mappedInBuffers[i], &testedValues[i], valuesPerInout, valuesPerHeap);
+
+		transferWaitSemaphoreSubmitInfos[i].value   += 2;
+		transferSignalSemaphoreSubmitInfos[i].value += 2;
 	}
 
 	if (hostNonCoherent) {
 		VK_CALL_RES(vkFlushMappedMemoryRanges, device, inoutsPerHeap, hvInBuffersMappedMemoryRanges);
 		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-	}
-
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
-		transferWaitSemaphoreSubmitInfos[i].value   += 2;
-		transferSignalSemaphoreSubmitInfos[i].value += 2;
 	}
 
 	VK_CALL_RES(vkQueueSubmit2KHR, transferQueue, inoutsPerHeap, transferSubmitInfos, VK_NULL_HANDLE);
@@ -2594,6 +2564,12 @@ bool submit_commands(Gpu* restrict gpu)
 	clock_t totalBmEnd = clock();
 	double  totalBmark = get_benchmark(totalBmStart, totalBmEnd);
 
+	if (atomic_load(&input)) {
+		ires = pthread_join(waitThread, NULL);
+		if EXPECT_FALSE (ires) { PJOIN_FAILURE(ires); free_recursive(dyMem); return false; }
+	}
+	else { atomic_store(&input, true); }
+
 	uint32_t count = (uint32_t) DyArray_size(bestValues);
 
 	Value endValue = prevValues.curValue;
@@ -2625,10 +2601,12 @@ bool submit_commands(Gpu* restrict gpu)
 	}
 
 	if (outputLevel > CLI_OUTPUT_QUIET) {
-		printf("\nTime: %.0fms\nSpeed: %.0f/s\n", totalBmark, (double) (1000 * total) / totalBmark); }
-
-	ires = pthread_join(waitThread, NULL);
-	if EXPECT_FALSE (ires) { PJOIN_FAILURE(ires, waitThread, NULL); free_recursive(dyMem); return false; }
+		printf(
+			"\n"
+			"Time: %.3fms\n"
+			"Speed: %.3f/s\n",
+			totalBmark, (double) (1000 * total) / totalBmark);
+	}
 
 	if (!gpu->restartCount) {
 		bres = write_text(
@@ -2672,7 +2650,6 @@ bool destroy_gpu(Gpu* restrict gpu)
 	VkPipelineCache       pipelineCache   = gpu->pipelineCache;
 	VkPipelineLayout      pipelineLayout  = gpu->pipelineLayout;
 	VkPipeline            pipeline        = gpu->pipeline;
-	VkCommandPool         onetimeCmdPool  = gpu->onetimeCommandPool;
 	VkCommandPool         computeCmdPool  = gpu->computeCommandPool;
 	VkCommandPool         transferCmdPool = gpu->transferCommandPool;
 	VkQueryPool           queryPool       = gpu->queryPool;
@@ -2695,7 +2672,6 @@ bool destroy_gpu(Gpu* restrict gpu)
 			VK_CALL(vkDestroySemaphore, device, semaphores[i], g_allocator);
 		}
 
-		VK_CALL(vkDestroyCommandPool, device, onetimeCmdPool,  g_allocator);
 		VK_CALL(vkDestroyCommandPool, device, computeCmdPool,  g_allocator);
 		VK_CALL(vkDestroyCommandPool, device, transferCmdPool, g_allocator);
 
@@ -2729,12 +2705,15 @@ bool destroy_gpu(Gpu* restrict gpu)
 
 void* wait_for_input(void* ptr)
 {
+	atomic_bool* input = (atomic_bool*) ptr;
+
 	puts("Calculating... press enter/return to stop\n");
 	getchar();
-	puts("Stopping...\n");
 
-	atomic_bool* input = (atomic_bool*) ptr;
-	atomic_store(input, true);
+	if (!atomic_load(input)) {
+		puts("Stopping...\n");
+		atomic_store(input, true);
+	}
 
 	return NULL;
 }

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024 Seth McDonald
+ * Copyright (C) 2024-2025 Seth McDonald
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -21,7 +21,7 @@
 
 const char* const PROGRAM_NAME      = COLLATZSIM_NAME;
 const char* const PROGRAM_EXE       = COLLATZSIM_EXECUTABLE;
-const char* const PROGRAM_COPYRIGHT = "Copyright (C) 2024 Seth McDonald";
+const char* const PROGRAM_COPYRIGHT = "Copyright (C) 2025 Seth McDonald";
 const char* const PROGRAM_LICENCE   = "Licence GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>";
 
 const char* const DEBUG_LOG_NAME      = "debug.log";

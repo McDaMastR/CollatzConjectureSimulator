@@ -103,6 +103,10 @@ target_precompile_headers(CollatzSim
 
 		<inttypes.h>
 		<limits.h>
+		<signal.h>
+		<string.h>
+		<time.h>
+
 		<stdalign.h>
 		<stdarg.h>
 		<stdatomic.h>
@@ -111,18 +115,17 @@ target_precompile_headers(CollatzSim
 		<stdint.h>
 		<stdio.h>
 		<stdlib.h>
-		<string.h>
 
 		"$<$<OR:$<C_COMPILER_ID:MSVC>,${USING_MINGW}>:<intrin.h$<ANGLE-R>>"
 )
 
 target_sources(CollatzSim
 	PRIVATE
-		main.c
 		defs.c
 		debug.c
 		dyarray.c
 		gpu.c
+		main.c
 		util.c
 	PRIVATE FILE_SET HEADERS FILES
 		defs.h

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024 Seth McDonald
+ * Copyright (C) 2024-2025 Seth McDonald
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -47,11 +47,9 @@ typedef struct Gpu
 
 	VkQueryPool queryPool;
 
-	VkCommandPool onetimeCommandPool;
 	VkCommandPool transferCommandPool;
 	VkCommandPool computeCommandPool;
 
-	VkCommandBuffer           onetimeCommandBuffer;
 	VkCommandBuffer* restrict transferCommandBuffers; // Count = inoutsPerHeap
 	VkCommandBuffer* restrict computeCommandBuffers;  // Count = inoutsPerHeap
 

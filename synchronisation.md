@@ -25,15 +25,6 @@ A description of Vulkan synchronisation within the program.
 | memory domain    | host domain           | device domain                      | vkQueueSubmit2KHR              |
 | visibility       | device domain         | (device agents; device references) |                                |
 
-## Onetime command buffer
-
-| Memory Operation | Source                   | Destination   | Function                 |
-| ---------------- | ------------------------ | ------------- | ------------------------ |
-| read             | HV-in                    |               | vkCmdCopyBuffer          |
-| write            |                          | DL-in         |                          |
-| availability     | (copy operations; DL-in) | device domain | vkCmdPipelineBarrier2KHR |
-| release          | DL-in                    |               |                          |
-
 ## Transfer command buffer
 
 | Memory Operation | Source                    | Destination               | Function                 |
