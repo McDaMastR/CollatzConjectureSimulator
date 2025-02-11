@@ -240,7 +240,8 @@ extern const char* const PROGRAM_LICENCE;
 extern const char* const DEBUG_LOG_NAME;
 extern const char* const ALLOC_LOG_NAME;
 extern const char* const PIPELINE_CACHE_NAME;
-extern const char* const PROGRESS_NAME;
+extern const char* const PROGRESS_FILE_NAME;
+extern const char* const CAPTURE_FILE_NAME;
 
 extern const char* const VK_KHR_PROFILES_LAYER_NAME;
 extern const char* const VK_KHR_VALIDATION_LAYER_NAME;

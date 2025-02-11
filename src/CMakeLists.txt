@@ -124,6 +124,7 @@ target_sources(CollatzSim
 		defs.c
 		debug.c
 		dyarray.c
+		dystring.c
 		gpu.c
 		main.c
 		util.c
@@ -131,6 +132,7 @@ target_sources(CollatzSim
 		defs.h
 		debug.h
 		dyarray.h
+		dystring.h
 		gpu.h
 		util.h
 )

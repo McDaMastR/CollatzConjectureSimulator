@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024 Seth McDonald
+ * Copyright (C) 2024-2025 Seth McDonald
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -25,7 +25,7 @@
 
 typedef struct AlignedInfo
 {
-	void* start;
+	void*  start;
 	size_t size;
 } AlignedInfo;
 
@@ -104,6 +104,8 @@ bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const c
 	info.objectType                    = type;
 	info.objectHandle                  = handle;
 	info.pObjectName                   = name;
+
+	if (!vkSetDebugUtilsObjectNameEXT) return true;
 
 	VK_CALL_RES(vkSetDebugUtilsObjectNameEXT, device, &info);
 	if EXPECT_FALSE (vkres) return false;
@@ -424,6 +426,7 @@ uint8_t maxu8v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast8_t arg = (uint_fast8_t) va_arg(args, unsigned int);
+
 		if (max < arg) { max = arg; }
 	}
 
@@ -443,6 +446,7 @@ uint8_t minu8v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast8_t arg = (uint_fast8_t) va_arg(args, unsigned int);
+
 		if (min > arg) { min = arg; }
 	}
 
@@ -462,6 +466,7 @@ uint16_t maxu16v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast16_t arg = (uint_fast16_t) va_arg(args, unsigned int);
+
 		if (max < arg) { max = arg; }
 	}
 
@@ -481,6 +486,7 @@ uint16_t minu16v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast16_t arg = (uint_fast16_t) va_arg(args, unsigned int);
+
 		if (min > arg) { min = arg; }
 	}
 
@@ -500,6 +506,7 @@ uint32_t maxu32v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast32_t arg = (uint_fast32_t) va_arg(args, uint32_t);
+
 		if (max < arg) { max = arg; }
 	}
 
@@ -519,6 +526,7 @@ uint32_t minu32v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast32_t arg = (uint_fast32_t) va_arg(args, uint32_t);
+
 		if (min > arg) { min = arg; }
 	}
 
@@ -538,6 +546,7 @@ uint64_t maxu64v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast64_t arg = (uint_fast64_t) va_arg(args, uint64_t);
+
 		if (max < arg) { max = arg; }
 	}
 
@@ -557,6 +566,7 @@ uint64_t minu64v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast64_t arg = (uint_fast64_t) va_arg(args, uint64_t);
+
 		if (min > arg) { min = arg; }
 	}
 

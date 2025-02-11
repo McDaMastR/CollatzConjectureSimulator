@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024 Seth McDonald
+ * Copyright (C) 2024-2025 Seth McDonald
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -19,29 +19,30 @@
 #include "debug.h"
 
 
-struct DyArray_T
+typedef struct DyArray_T
 {
-	size_t size;     // bytes per element
-	size_t count;    // elements currently in array
-	size_t capacity; // elements that could fit in allocated memory
+	size_t size;     // # bytes per element
+	size_t count;    // # elements currently in array
+	size_t capacity; // # elements that could fit in allocated memory
 	void*  raw;      // Raw array
-};
+} DyArray_T;
 
 
 static void* DyArray_stretch(restrict DyArray array)
 {
 	ASSUME(array->size != 0);
 
-	size_t size     = array->size;
-	size_t capacity = array->capacity;
-	void*  raw      = array->raw;
+	size_t size = array->size;
+	size_t cap  = array->capacity;
+	void*  raw  = array->raw;
 
-	capacity += (capacity + 1) / 2 + 1;
+	cap += (cap + 1) / 2 + 1; // TODO check for overflow
 
-	void* raw2 = realloc(raw, capacity * size);
-	if EXPECT_FALSE (!raw2) { REALLOC_FAILURE(raw2, raw, capacity * size); return NULL; }
+	void* raw2 = realloc(raw, cap * size);
 
-	array->capacity = capacity;
+	if EXPECT_FALSE (!raw2) { REALLOC_FAILURE(raw2, raw, cap * size); return NULL; }
+
+	array->capacity = cap;
 	array->raw      = raw2;
 
 	return raw2;
@@ -58,8 +59,9 @@ DyArray DyArray_create(size_t size, size_t count)
 {
 	ASSUME(size != 0);
 
-	DyArray array = (DyArray) malloc(sizeof(struct DyArray_T));
-	if EXPECT_FALSE (!array) { MALLOC_FAILURE(array, sizeof(struct DyArray_T)); return NULL; }
+	DyArray array = (DyArray) malloc(sizeof(DyArray_T));
+
+	if EXPECT_FALSE (!array) { MALLOC_FAILURE(array, sizeof(DyArray_T)); return NULL; }
 
 	array->size     = size;
 	array->count    = 0;
@@ -68,6 +70,7 @@ DyArray DyArray_create(size_t size, size_t count)
 
 	if EXPECT_TRUE (count) {
 		void* raw = malloc(count * size);
+
 		if EXPECT_FALSE (!raw) { MALLOC_FAILURE(raw, count * size); free(array); return NULL; }
 
 		array->raw = raw;
@@ -144,13 +147,14 @@ void* DyArray_append(restrict DyArray array, const void* restrict value)
 {
 	ASSUME(array->size != 0);
 
-	size_t size     = array->size;
-	size_t count    = array->count;
-	size_t capacity = array->capacity;
-	void*  raw      = array->raw;
+	size_t size  = array->size;
+	size_t count = array->count;
+	size_t cap   = array->capacity;
+	void*  raw   = array->raw;
 
-	if EXPECT_FALSE (count == capacity) {
+	if EXPECT_FALSE (count == cap) {
 		void* raw2 = DyArray_stretch(array);
+
 		if EXPECT_FALSE (!raw2) return NULL;
 
 		raw = raw2;
@@ -169,13 +173,14 @@ void* DyArray_prepend(restrict DyArray array, const void* restrict value)
 {
 	ASSUME(array->size != 0);
 
-	size_t size     = array->size;
-	size_t count    = array->count;
-	size_t capacity = array->capacity;
-	void*  raw      = array->raw;
+	size_t size  = array->size;
+	size_t count = array->count;
+	size_t cap   = array->capacity;
+	void*  raw   = array->raw;
 
-	if EXPECT_FALSE (count == capacity) {
+	if EXPECT_FALSE (count == cap) {
 		void* raw2 = DyArray_stretch(array);
+
 		if EXPECT_FALSE (!raw2) return NULL;
 
 		raw = raw2;

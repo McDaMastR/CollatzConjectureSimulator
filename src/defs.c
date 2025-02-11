@@ -27,7 +27,8 @@ const char* const PROGRAM_LICENCE   = "Licence GPLv3+: GNU GPL version 3 or late
 const char* const DEBUG_LOG_NAME      = "debug.log";
 const char* const ALLOC_LOG_NAME      = "alloc.log";
 const char* const PIPELINE_CACHE_NAME = "pipeline_cache.bin";
-const char* const PROGRESS_NAME       = "position.txt";
+const char* const PROGRESS_FILE_NAME  = "position.txt";
+const char* const CAPTURE_FILE_NAME   = "pipeline_capture.txt";
 
 const char* const VK_KHR_PROFILES_LAYER_NAME           = "VK_LAYER_KHRONOS_profiles";
 const char* const VK_KHR_VALIDATION_LAYER_NAME         = "VK_LAYER_KHRONOS_validation";
