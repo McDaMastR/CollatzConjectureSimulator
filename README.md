@@ -205,10 +205,11 @@ be tested per dispatch command, and by more evenly distributing the workload bet
 ## Artificial Intelligence
 
 The author of Collatz Conjecture Simulator is not a lawyer, but strongly believes the usage of GPLv3-licensed works in
-the training and development of AI is necessarily violating of said licence. However, in case of the event the GPLv3
-does not in itself prohibit the usage of works licensed under it in the training of AI, the following shall apply.
+the training and development of proprietary AI is necessarily violating of said licence. However, in the event the GPLv3
+does not in itself encompass the above restriction, the following shall apply.
 
 Collatz Conjecture Simulator includes in its terms and conditions regarding copying, distribution, and modification, in
-addition to those provided by version 3 of the GNU General Public Licence, the strict and absolute prohibition of its
-usage by Artificial Intelligence (AI) software, including but not limited to the training, prompting, or generation of
-AI models or algorithms.
+addition to those provided by version 3 of the GNU General Public Licence, the strict prohibition of its usage by
+artificial intelligence software not licensed in their entirety, as a whole, under version 3 or later of the GNU General
+Public Licence, including but not limited to the training, prompting, or generation of such artificial intelligence
+models or algorithms.
