@@ -106,24 +106,6 @@ typedef struct Gpu
 	bool usingShaderInt64;
 	bool usingSubgroupSizeControl;
 
-	CliOutput outputLevel;
-
-	uint32_t iterSize;
-	uint64_t maxLoops;
-	float    maxMemory;
-
-	bool preferInt16;
-	bool preferInt64;
-
-	bool extensionLayers;
-	bool profileLayers;
-	bool validationLayers;
-
-	bool restartCount;
-	bool queryBenchmarking;
-	bool logAllocations;
-	bool capturePipelines;
-
 	void* dynamicMemory;
 } Gpu;
 
@@ -139,29 +121,39 @@ typedef struct ValueInfo
 
 // If the return type is bool, then that function returns true on success, and false elsewise
 
-bool parse_cmdline(Gpu* gpu, int argc, char** argv) NONNULL_ARGS_ALL WR_ACCESS(1) RE_ACCESS(3);
-
-bool create_instance(Gpu* gpu) NONNULL_ARGS_ALL;
-bool select_device(Gpu* gpu) NONNULL_ARGS_ALL;
-bool create_device(Gpu* gpu) NONNULL_ARGS_ALL;
-bool manage_memory(Gpu* gpu) NONNULL_ARGS_ALL;
+bool create_instance(ProgramConfig config, Gpu* gpu) NONNULL_ARGS_ALL;
+bool select_device(ProgramConfig config, Gpu* gpu) NONNULL_ARGS_ALL;
+bool create_device(ProgramConfig config, Gpu* gpu) NONNULL_ARGS_ALL;
+bool manage_memory(ProgramConfig config, Gpu* gpu) NONNULL_ARGS_ALL;
 bool create_buffers(Gpu* gpu) NONNULL_ARGS_ALL;
 bool create_descriptors(Gpu* gpu) NONNULL_ARGS_ALL;
-bool create_pipeline(Gpu* gpu) NONNULL_ARGS_ALL;
+bool create_pipeline(ProgramConfig config, Gpu* gpu) NONNULL_ARGS_ALL;
 bool create_commands(Gpu* gpu) NONNULL_ARGS_ALL;
-bool submit_commands(Gpu* gpu) NONNULL_ARGS_ALL;
+bool submit_commands(ProgramConfig config, Gpu* gpu) NONNULL_ARGS_ALL;
 bool destroy_gpu(Gpu* gpu) NONNULL_ARGS_ALL;
 
-void* wait_for_input(void* ptr) NONNULL_ARGS_ALL WR_ACCESS(1);
+bool retrieve_queue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* queue, const char* name)
+	NONNULL_ARGS(1, 4) NULTSTR_ARG(5);
+bool create_command_handles(
+	VkDevice device,
+	uint32_t queueFamilyIndex,
+	VkCommandPool* commandPool,
+	const char* name,
+	uint32_t commandBufferCount,
+	VkCommandBuffer* commandBuffers) NONNULL_ARGS(1, 3, 6) NULTSTR_ARG(4);
+
+bool capture_pipeline(VkDevice device, VkPipeline pipeline);
+
+void* wait_for_input(void* ptr) NONNULL_ARGS_ALL;
 
 void write_inbuffer(Value* mappedInBuffer, Value* firstValue, uint32_t valuesPerInout, uint32_t valuesPerHeap)
-	NONNULL_ARGS_ALL WR_ACCESS(1);
+	NONNULL_ARGS_ALL;
 void read_outbuffer(
 	const Count* mappedOutBuffer,
 	ValueInfo* prevValues,
 	DyArray bestValues,
 	DyArray bestCounts,
-	uint32_t valuesPerInout) NONNULL_ARGS_ALL RE_ACCESS(1);
+	uint32_t valuesPerInout) NONNULL_ARGS_ALL;
 
 void new_high(
 	const Value* value,
@@ -170,4 +162,4 @@ void new_high(
 	Value* val0mod1off,
 	Value* val1mod6off,
 	DyArray bestValues,
-	DyArray bestCounts) NONNULL_ARGS_ALL RE_ACCESS(1);
+	DyArray bestCounts) NONNULL_ARGS_ALL;

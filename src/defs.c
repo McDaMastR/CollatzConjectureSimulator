@@ -53,13 +53,13 @@ const char* const VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME                 = "VK_EX
 const char* const VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME = "VK_EXT_pipeline_creation_cache_control";
 const char* const VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME           = "VK_EXT_subgroup_size_control";
 
-
 const uint32_t PROGRAM_VERSION = VK_MAKE_API_VERSION(
 	0, COLLATZSIM_VERSION_MAJOR, COLLATZSIM_VERSION_MINOR, COLLATZSIM_VERSION_PATCH);
 const uint32_t PROGRAM_VER_MAJOR = COLLATZSIM_VERSION_MAJOR;
 const uint32_t PROGRAM_VER_MINOR = COLLATZSIM_VERSION_MINOR;
 const uint32_t PROGRAM_VER_PATCH = COLLATZSIM_VERSION_PATCH;
 
+const double MS_PER_CLOCK = 1000. / CLOCKS_PER_SEC;
 
 const VkAllocationCallbacks* g_allocator = NULL;
 
@@ -71,6 +71,3 @@ const VkAllocationCallbacks g_allocationCallbacks = {
 	.pfnInternalAllocation = internal_allocation_callback,
 	.pfnInternalFree       = internal_free_callback
 };
-
-
-const double MS_PER_CLOCK = 1000. / CLOCKS_PER_SEC;

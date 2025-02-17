@@ -112,13 +112,26 @@ build Collatz Conjecture Simulator, execute the following command.
 cmake --build build
 ```
 
-By default, only the executable will be built. To instead build the SPIR-V, add `--target Spirv`. To build both, also
-add `--target CollatzSim`. To specify the build configuration, add `--config CONFIG` (only applies for multi-config
+By default, only the executable will be built. To instead build the SPIR-V, add `--target spirv`. To build both, also
+add `--target cltz`. To specify the build configuration, add `--config CONFIG` (only applies for multi-config
 generators).
 
 The above command will create a `bin` directory containing the SPIR-V and executable. If built in debug, the executable
-will be named `CollatzSimDebug`. Otherwise, it will be named `CollatzSim`. The executable must be run from within the
-`bin` directory, else it will be unable to locate the generated SPIR-V.
+will be named `cltzd`. Otherwise, it will be named `cltz`. The executable must be run from within the `bin` directory,
+else it will be unable to locate the generated SPIR-V.
+
+The executable provides a command line interface and uses the initial command line parameters to specify the operation
+of the program. Parameters beginning with a double hyphen (--) reference options. Some options themselves accept a
+parameter, which must be given immediately following the option as the next CLI parameter. To view a comprehensive list
+of possible options, use the `--help` option:
+
+```bash
+cltz --help
+```
+
+In most cases, the executable will initiate the program's main loop. If during this process the `Enter` or `Return` keys
+are pressed, the program will break from the main loop and begin to exit. Each iteration of the main loop will output
+information regarding the computations performed, most prominently including benchmarking data for various subprocesses.
 
 ## Inout-buffers
 
@@ -183,7 +196,7 @@ For example, the set of even starting values.
 The Collatz sequences of all even starting values $2n$ must have exactly one step between $2n$ and the first value less
 than it, namely $n$. So by knowing $s(n)$, $s(2n)$ can be calculated as $s(n) + 1$.
 
-Another set of interest is the set of starting values congruent to 1 modulo 4.
+Another set of interest is the set of starting values congruent to $1$ modulo $4$.
 
 ```math
 \begin{align*}
@@ -194,9 +207,9 @@ f(6n  + 2) = 3n + 1 \\
 \end{align*}
 ```
 
-These two patterns remove the requirement to iterate through the Collatz sequence of every 3 in 4 starting values,
-leaving only those congruent to 3 modulo 4. The step counts of all other starting values can be determined with the
-previously calculated step counts of lesser starting values.
+These two patterns remove the requirement to iterate through the Collatz sequence of every three in four starting
+values, leaving only those congruent to $3$ modulo $4$. The step counts of all other starting values can be determined
+with the previously calculated step counts of lesser starting values.
 
 Hence, Collatz Conjecture Simulator only iterates through the Collatz sequences of starting values
 $n \in \mathbb{Z}^+ : n \equiv 3 \pmod 4$. This improves performance by allowing larger intervals of starting values to

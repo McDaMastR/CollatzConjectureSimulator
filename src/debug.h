@@ -39,34 +39,33 @@ bool init_alloc_logfile(void);
 
 // Failure functions
 
-void print_malloc_failure(int line, void* res, size_t size) COLD_FUNC NO_ACCESS(2);
-void print_calloc_failure(int line, void* res, size_t num, size_t size) COLD_FUNC NO_ACCESS(2);
-void print_realloc_failure(int line, void* res, void* ptr, size_t size) COLD_FUNC NO_ACCESS(2) NO_ACCESS(3);
+void log_malloc_failure(int line, void* res, size_t size) COLD_FUNC NO_ACCESS(2);
+void log_calloc_failure(int line, void* res, size_t num, size_t size) COLD_FUNC NO_ACCESS(2);
+void log_realloc_failure(int line, void* res, void* ptr, size_t size) COLD_FUNC NO_ACCESS(2) NO_ACCESS(3);
 
-void print_fopen_failure(int line, FILE* res, const char* name, const char* mode)
-	COLD_FUNC NONNULL_ARGS(3, 4) NULTSTR_ARG(3) NULTSTR_ARG(4) NO_ACCESS(2) RE_ACCESS(3) RE_ACCESS(4);
-void print_fseek_failure(int line, int res, FILE* file, long offset, int origin) COLD_FUNC NO_ACCESS(3);
-void print_ftell_failure(int line, long res, FILE* file) COLD_FUNC NO_ACCESS(3);
+void log_fopen_failure(int line, FILE* res, const char* name, const char* mode)
+	COLD_FUNC NONNULL_ARGS(3, 4) NULTSTR_ARG(3) NULTSTR_ARG(4) NO_ACCESS(2);
+void log_fseek_failure(int line, int res, FILE* file, long offset, int origin) COLD_FUNC NO_ACCESS(3);
+void log_ftell_failure(int line, long res, FILE* file) COLD_FUNC NO_ACCESS(3);
 
-void print_fread_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file)
+void log_fread_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file)
 	COLD_FUNC NO_ACCESS(3) NO_ACCESS(6);
-void print_fwrite_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file)
+void log_fwrite_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file)
 	COLD_FUNC NO_ACCESS(3) NO_ACCESS(6);
 
-void print_fscanf_failure(int line, int res, FILE* file, const char* fmt)
-	COLD_FUNC NONNULL_ARGS(4) NULTSTR_ARG(4) NO_ACCESS(3) RE_ACCESS(4);
-void print_fprintf_failure(int line, int res, FILE* file, const char* fmt)
-	COLD_FUNC NONNULL_ARGS(4) NULTSTR_ARG(4) NO_ACCESS(3) RE_ACCESS(4);
+void log_fscanf_failure(int line, int res, FILE* file, const char* fmt)
+	COLD_FUNC NONNULL_ARGS(4) NULTSTR_ARG(4) NO_ACCESS(3);
+void log_fprintf_failure(int line, int res, FILE* file, const char* fmt)
+	COLD_FUNC NONNULL_ARGS(4) NULTSTR_ARG(4) NO_ACCESS(3);
 
-void print_pcreate_failure(int line, int res) COLD_FUNC;
-void print_pcancel_failure(int line, int res) COLD_FUNC;
-void print_pjoin_failure(int line, int res) COLD_FUNC;
-void print_pkill_failure(int line, int res, int sig) COLD_FUNC;
+void log_pcreate_failure(int line, int res) COLD_FUNC;
+void log_pcancel_failure(int line, int res) COLD_FUNC;
+void log_pjoin_failure(int line, int res) COLD_FUNC;
+void log_pkill_failure(int line, int res, int sig) COLD_FUNC;
 
-void print_vkinit_failure(int line, VkResult res) COLD_FUNC;
-void print_vkvers_failure(int line, uint32_t res) COLD_FUNC;
-void print_vulkan_failure(int line, VkResult res, const char* func)
-	COLD_FUNC NONNULL_ARGS_ALL NULTSTR_ARG(3) RE_ACCESS(3);
+void log_vkinit_failure(int line, VkResult res) COLD_FUNC;
+void log_vkvers_failure(int line, uint32_t res) COLD_FUNC;
+void log_vulkan_failure(int line, VkResult res, const char* func) COLD_FUNC NONNULL_ARGS_ALL NULTSTR_ARG(3);
 
 
 // Callback functions
@@ -91,34 +90,32 @@ VKAPI_ATTR void VKAPI_CALL internal_free_callback(
 
 // Helper macros
 
-#define MALLOC_FAILURE(res, size)       print_malloc_failure(__LINE__, (void*) (res), (size_t) (size))
-#define CALLOC_FAILURE(res, num, size)  print_calloc_failure(__LINE__, (void*) (res), (size_t) (num), (size_t) (size))
-#define REALLOC_FAILURE(res, ptr, size) print_realloc_failure(__LINE__, (void*) (res), (void*) (ptr), (size_t) (size))
+#define MALLOC_FAILURE(res, size)       log_malloc_failure(__LINE__, (void*) (res), (size_t) (size))
+#define CALLOC_FAILURE(res, num, size)  log_calloc_failure(__LINE__, (void*) (res), (size_t) (num), (size_t) (size))
+#define REALLOC_FAILURE(res, ptr, size) log_realloc_failure(__LINE__, (void*) (res), (void*) (ptr), (size_t) (size))
 
-#define FOPEN_FAILURE(res, name, mode)      print_fopen_failure(                                        \
+#define FOPEN_FAILURE(res, name, mode)      log_fopen_failure(                                        \
 	__LINE__, (FILE*) (res), (const char*) (name), (const char*) (mode))
-#define FSEEK_FAILURE(res, file, off, orig) print_fseek_failure(                                        \
+#define FSEEK_FAILURE(res, file, off, orig) log_fseek_failure(                                        \
 	__LINE__, (int) (res), (FILE*) (file), (long) (off), (int) (orig))
-#define FTELL_FAILURE(res, file)            print_ftell_failure(__LINE__, (long) (res), (FILE*) (file))
+#define FTELL_FAILURE(res, file)            log_ftell_failure(__LINE__, (long) (res), (FILE*) (file))
 
-#define FREAD_FAILURE(res, buf, size, count, file)  print_fread_failure(                              \
+#define FREAD_FAILURE(res, buf, size, count, file)  log_fread_failure(                                \
 	__LINE__, (size_t) (res), (const void*) (buf), (size_t) (size), (size_t) (count), (FILE*) (file))
-#define FWRITE_FAILURE(res, buf, size, count, file) print_fwrite_failure(                             \
+#define FWRITE_FAILURE(res, buf, size, count, file) log_fwrite_failure(                               \
 	__LINE__, (size_t) (res), (const void*) (buf), (size_t) (size), (size_t) (count), (FILE*) (file))
 
-#define FSCANF_FAILURE(res, file, fmt)  print_fscanf_failure(   \
-	__LINE__, (int) (res), (FILE*) (file), (const char*) (fmt))
-#define FPRINTF_FAILURE(res, file, fmt) print_fprintf_failure(  \
-	__LINE__, (int) (res), (FILE*) (file), (const char*) (fmt))
+#define FSCANF_FAILURE(res, file, fmt)  log_fscanf_failure(__LINE__, (int) (res), (FILE*) (file), (const char*) (fmt))
+#define FPRINTF_FAILURE(res, file, fmt) log_fprintf_failure(__LINE__, (int) (res), (FILE*) (file), (const char*) (fmt))
 
-#define PCREATE_FAILURE(res)    print_pcreate_failure(__LINE__, (int) (res))
-#define PCANCEL_FAILURE(res)    print_pcancel_failure(__LINE__, (int) (res))
-#define PJOIN_FAILURE(res)      print_pjoin_failure(__LINE__, (int) (res))
-#define PKILL_FAILURE(res, sig) print_pkill_failure(__LINE__, (int) (res), (int) (sig))
+#define PCREATE_FAILURE(res)    log_pcreate_failure(__LINE__, (int) (res))
+#define PCANCEL_FAILURE(res)    log_pcancel_failure(__LINE__, (int) (res))
+#define PJOIN_FAILURE(res)      log_pjoin_failure(__LINE__, (int) (res))
+#define PKILL_FAILURE(res, sig) log_pkill_failure(__LINE__, (int) (res), (int) (sig))
 
-#define VKINIT_FAILURE(res)  print_vkinit_failure(__LINE__, (VkResult) (res))
-#define VKVERS_FAILURE(res)  print_vkvers_failure(__LINE__, (uint32_t) (res))
-#define VULKAN_FAILURE(func) print_vulkan_failure(__LINE__, vkres, #func)
+#define VKINIT_FAILURE(res)  log_vkinit_failure(__LINE__, (VkResult) (res))
+#define VKVERS_FAILURE(res)  log_vkvers_failure(__LINE__, (uint32_t) (res))
+#define VULKAN_FAILURE(func) log_vulkan_failure(__LINE__, vkres, #func)
 
 #ifdef NDEBUG
 	#define VK_CALL(vkfunc, ...)   \

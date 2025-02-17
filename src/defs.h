@@ -217,13 +217,34 @@ typedef enum Endianness
 	ENDIANNESS_LITTLE = 1
 } Endianness;
 
-typedef enum CliOutput
+typedef enum OutputLevel
 {
-	CLI_OUTPUT_SILENT  = 0,
-	CLI_OUTPUT_QUIET   = 1,
-	CLI_OUTPUT_DEFAULT = 2,
-	CLI_OUTPUT_VERBOSE = 3
-} CliOutput;
+	OUTPUT_LEVEL_SILENT  = 0,
+	OUTPUT_LEVEL_QUIET   = 1,
+	OUTPUT_LEVEL_DEFAULT = 2,
+	OUTPUT_LEVEL_VERBOSE = 3
+} OutputLevel;
+
+typedef struct ProgramConfig
+{
+	OutputLevel outputLevel;
+
+	unsigned long iterSize;
+	unsigned long long maxLoops;
+	float maxMemory;
+
+	bool preferInt16;
+	bool preferInt64;
+
+	bool extensionLayers;
+	bool profileLayers;
+	bool validationLayers;
+
+	bool restartCount;
+	bool queryBenchmarking;
+	bool logAllocations;
+	bool capturePipelines;
+} ProgramConfig;
 
 typedef unsigned __int128 Value;
 
@@ -271,7 +292,7 @@ extern const uint32_t PROGRAM_VER_MAJOR;
 extern const uint32_t PROGRAM_VER_MINOR;
 extern const uint32_t PROGRAM_VER_PATCH;
 
+extern const double MS_PER_CLOCK;
+
 extern const VkAllocationCallbacks  g_allocationCallbacks;
 extern const VkAllocationCallbacks* g_allocator;
-
-extern const double MS_PER_CLOCK;

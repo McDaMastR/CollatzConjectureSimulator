@@ -76,7 +76,7 @@ bool init_alloc_logfile(void)
 }
 
 
-static void print_debug_callback(
+static void log_debug_callback(
 	FILE* restrict stream,
 	double time,
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -177,12 +177,12 @@ VkBool32 debug_callback(
 	g_debugCallbackCount++;
 
 	if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-		print_debug_callback(
+		log_debug_callback(
 			stderr, time, messageSeverity, messageTypes, pCallbackData, g_debugCallbackCount, data.func, data.file,
 			data.line);
 	}
 	else if (messageTypes & ~(VkDebugUtilsMessageTypeFlagsEXT) VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) {
-		print_debug_callback(
+		log_debug_callback(
 			stdout, time, messageSeverity, messageTypes, pCallbackData, g_debugCallbackCount, data.func, data.file,
 			data.line);
 	}
@@ -190,7 +190,7 @@ VkBool32 debug_callback(
 	FILE* file = fopen(DEBUG_LOG_NAME, "a");
 	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, DEBUG_LOG_NAME, "a"); return VK_FALSE; }
 
-	print_debug_callback(
+	log_debug_callback(
 		file, time, messageSeverity, messageTypes, pCallbackData, g_debugCallbackCount, data.func, data.file,
 		data.line);
 
@@ -200,7 +200,7 @@ VkBool32 debug_callback(
 }
 
 
-static void print_allocation_callback(
+static void log_allocation_callback(
 	FILE* restrict stream,
 	double time,
 	uint64_t allocationCount,
@@ -245,7 +245,7 @@ void* allocation_callback(
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
 	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return memory; }
 
-	print_allocation_callback(
+	log_allocation_callback(
 		file, time, g_allocCount, data.func, data.file, data.line, g_totalAllocSize, size, alignment, allocationScope,
 		memory);
 
@@ -254,7 +254,7 @@ void* allocation_callback(
 	return memory;
 }
 
-static void print_reallocation_callback(
+static void log_reallocation_callback(
 	FILE* restrict stream,
 	double time,
 	uint64_t reallocationCount,
@@ -318,7 +318,7 @@ void* reallocation_callback(
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
 	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return memory; }
 
-	print_reallocation_callback(
+	log_reallocation_callback(
 		file, time, g_reallocCount, data.func, data.file, data.line, g_totalAllocSize, originalSize, size, alignment,
 		allocationScope, pOriginal, memory);
 
@@ -327,7 +327,7 @@ void* reallocation_callback(
 	return memory;
 }
 
-static void print_free_callback(
+static void log_free_callback(
 	FILE* restrict stream,
 	double time,
 	uint64_t freeCount,
@@ -370,12 +370,12 @@ void free_callback(void* restrict pUserData, void* restrict pMemory)
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
 	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return; }
 
-	print_free_callback(file, time, g_freeCount, data.func, data.file, data.line, g_totalAllocSize, size, pMemory);
+	log_free_callback(file, time, g_freeCount, data.func, data.file, data.line, g_totalAllocSize, size, pMemory);
 
 	fclose(file);
 }
 
-static void print_internal_allocation_callback(
+static void log_internal_allocation_callback(
 	FILE* restrict stream,
 	double time,
 	uint64_t internalAllocationCount,
@@ -416,13 +416,13 @@ void internal_allocation_callback(
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
 	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return; }
 
-	print_internal_allocation_callback(
+	log_internal_allocation_callback(
 		file, time, g_internalAllocCount, data.func, data.file, data.line, size, allocationType, allocationScope);
 
 	fclose(file);
 }
 
-static void print_internal_free_callback(
+static void log_internal_free_callback(
 	FILE* restrict stream,
 	double time,
 	uint64_t internalFreeCount,
@@ -463,14 +463,14 @@ void internal_free_callback(
 	FILE* file = fopen(ALLOC_LOG_NAME, "a");
 	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return; }
 
-	print_internal_free_callback(
+	log_internal_free_callback(
 		file, time, g_internalFreeCount, data.func, data.file, data.line, size, allocationType, allocationScope);
 
 	fclose(file);
 }
 
 
-void print_malloc_failure(int line, void* res, size_t size)
+void log_malloc_failure(int line, void* res, size_t size)
 {
 	double time = program_time();
 
@@ -483,7 +483,7 @@ void print_malloc_failure(int line, void* res, size_t size)
 		line, time, (uintptr_t) res, size);
 }
 
-void print_calloc_failure(int line, void* res, size_t num, size_t size)
+void log_calloc_failure(int line, void* res, size_t num, size_t size)
 {
 	double time = program_time();
 
@@ -497,7 +497,7 @@ void print_calloc_failure(int line, void* res, size_t num, size_t size)
 		line, time, (uintptr_t) res, num, size);
 }
 
-void print_realloc_failure(int line, void* res, void* ptr, size_t size)
+void log_realloc_failure(int line, void* res, void* ptr, size_t size)
 {
 	double time = program_time();
 
@@ -511,7 +511,7 @@ void print_realloc_failure(int line, void* res, void* ptr, size_t size)
 		line, time, (uintptr_t) res, (uintptr_t) ptr, size);
 }
 
-void print_fopen_failure(int line, FILE* res, const char* name, const char* mode)
+void log_fopen_failure(int line, FILE* res, const char* name, const char* mode)
 {
 	double time = program_time();
 
@@ -525,7 +525,7 @@ void print_fopen_failure(int line, FILE* res, const char* name, const char* mode
 		line, time, (uintptr_t) res, name, mode);
 }
 
-void print_fseek_failure(int line, int res, FILE* file, long offset, int origin)
+void log_fseek_failure(int line, int res, FILE* file, long offset, int origin)
 {
 	double time = program_time();
 
@@ -540,7 +540,7 @@ void print_fseek_failure(int line, int res, FILE* file, long offset, int origin)
 		line, time, res, (uintptr_t) file, offset, origin);
 }
 
-void print_ftell_failure(int line, long res, FILE* file)
+void log_ftell_failure(int line, long res, FILE* file)
 {
 	double time = program_time();
 
@@ -553,7 +553,7 @@ void print_ftell_failure(int line, long res, FILE* file)
 		line, time, res, (uintptr_t) file);
 }
 
-void print_fread_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file)
+void log_fread_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file)
 {
 	double time = program_time();
 
@@ -569,7 +569,7 @@ void print_fread_failure(int line, size_t res, const void* buf, size_t size, siz
 		line, time, res, (uintptr_t) buf, size, count, (uintptr_t) file);
 }
 
-void print_fwrite_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file)
+void log_fwrite_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file)
 {
 	double time = program_time();
 
@@ -585,7 +585,7 @@ void print_fwrite_failure(int line, size_t res, const void* buf, size_t size, si
 		line, time, res, (uintptr_t) buf, size, count, (uintptr_t) file);
 }
 
-void print_fscanf_failure(int line, int res, FILE* file, const char* fmt)
+void log_fscanf_failure(int line, int res, FILE* file, const char* fmt)
 {
 	double time = program_time();
 
@@ -599,7 +599,7 @@ void print_fscanf_failure(int line, int res, FILE* file, const char* fmt)
 		line, time, res, (uintptr_t) file, fmt);
 }
 
-void print_fprintf_failure(int line, int res, FILE* file, const char* fmt)
+void log_fprintf_failure(int line, int res, FILE* file, const char* fmt)
 {
 	double time = program_time();
 
@@ -613,7 +613,7 @@ void print_fprintf_failure(int line, int res, FILE* file, const char* fmt)
 		line, time, res, (uintptr_t) file, fmt);
 }
 
-void print_pcreate_failure(int line, int res)
+void log_pcreate_failure(int line, int res)
 {
 	double time = program_time();
 
@@ -624,7 +624,7 @@ void print_pcreate_failure(int line, int res)
 		line, time, res);
 }
 
-void print_pcancel_failure(int line, int res)
+void log_pcancel_failure(int line, int res)
 {
 	double time = program_time();
 
@@ -635,7 +635,7 @@ void print_pcancel_failure(int line, int res)
 		line, time, res);
 }
 
-void print_pjoin_failure(int line, int res)
+void log_pjoin_failure(int line, int res)
 {
 	double time = program_time();
 
@@ -646,7 +646,7 @@ void print_pjoin_failure(int line, int res)
 		line, time, res);
 }
 
-void print_pkill_failure(int line, int res, int sig)
+void log_pkill_failure(int line, int res, int sig)
 {
 	double time = program_time();
 
@@ -659,7 +659,7 @@ void print_pkill_failure(int line, int res, int sig)
 		line, time, res, sig);
 }
 
-void print_vkinit_failure(int line, VkResult res)
+void log_vkinit_failure(int line, VkResult res)
 {
 	double time = program_time();
 
@@ -672,7 +672,7 @@ void print_vkinit_failure(int line, VkResult res)
 		line, time, sRes);
 }
 
-void print_vkvers_failure(int line, uint32_t res)
+void log_vkvers_failure(int line, uint32_t res)
 {
 	double time = program_time();
 
@@ -688,7 +688,7 @@ void print_vkvers_failure(int line, uint32_t res)
 		line, time, variant, major, minor, patch);
 }
 
-void print_vulkan_failure(int line, VkResult res, const char* func)
+void log_vulkan_failure(int line, VkResult res, const char* func)
 {
 	double time = program_time();
 

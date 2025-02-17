@@ -1,6 +1,6 @@
 # Vulkan Synchronisation
 
-A description of Vulkan synchronisation within the program.
+A description of the Vulkan synchronisation that occurs within Collatz Conjecture Simulator.
 
 ## Legend
 

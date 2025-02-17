@@ -137,6 +137,7 @@ bool get_buffer_requirements_noext(
 	VK_CALL(vkDestroyBuffer, device, buffer, g_allocator);
 
 	*requirements = memoryRequirements.memoryRequirements;
+
 	return true;
 }
 
@@ -155,6 +156,30 @@ bool get_buffer_requirements_main4(
 	VK_CALL(vkGetDeviceBufferMemoryRequirementsKHR, device, &requirementsInfo, &memoryRequirements);
 
 	*requirements = memoryRequirements.memoryRequirements;
+
+	return true;
+}
+
+bool save_pipeline_cache(VkDevice device, VkPipelineCache cache, const char* restrict filename)
+{
+	VkResult vkres;
+
+	size_t dataSize;
+
+	VK_CALL_RES(vkGetPipelineCacheData, device, cache, &dataSize, NULL);
+	if EXPECT_FALSE (vkres) return false;
+
+	void* data = malloc(dataSize);
+	if EXPECT_FALSE (!data) { MALLOC_FAILURE(data, dataSize); return false; }
+
+	VK_CALL_RES(vkGetPipelineCacheData, device, cache, &dataSize, data);
+	if EXPECT_FALSE (vkres) { free(data); return false; }
+
+	bool bres = write_file(filename, data, dataSize);
+	if EXPECT_FALSE (!bres) { free(data); return false; }
+
+	free(data);
+
 	return true;
 }
 
@@ -177,6 +202,7 @@ bool file_size(const char* restrict filename, size_t* restrict size)
 	fclose(file);
 
 	*size = (size_t) lres;
+
 	return true;
 }
 

@@ -21,45 +21,6 @@
 #include "util.h"
 
 
-static void print_version(void)
-{
-	printf(
-		"%s %" PRIu32 ".%" PRIu32 ".%" PRIu32 "\n%s\n%s\n\n",
-		PROGRAM_NAME, PROGRAM_VER_MAJOR, PROGRAM_VER_MINOR, PROGRAM_VER_PATCH, PROGRAM_COPYRIGHT, PROGRAM_LICENCE);
-}
-
-static void print_help(void)
-{
-	printf(
-		"Usage: %s [options]\n"
-		"\n"
-		"Options:\n"
-		"  --version                   Output version and licence information, then terminate.\n"
-		"  --help                      Output this hopefully helpful CLI overview, then terminate.\n"
-		"\n"
-		"  --silent                    Output no diagnostic information.\n"
-		"  --quiet                     Output minimal diagnostic information.\n"
-		"  --verbose                   Output maximal diagnostic information.\n"
-		"\n"
-		"  --int16                     Prefer shaders using 16-bit integers where appropriate.\n"
-		"  --int64                     Prefer shaders using 64-bit integers where appropriate.\n"
-		"\n"
-		"  --ext-layers                Enable the Khronos extension layers, if present.\n"
-		"  --profile-layers            Enable the Khronos profiles layer, if present.\n"
-		"  --validation                Enable the Khronos validation layer, if present.\n"
-		"\n"
-		"  --restart                   Restart the simulation. Do not overwrite previous progress.\n"
-		"  --no-query-benchmarks       Do not benchmark Vulkan commands via queries.\n"
-		"  --log-allocations           Log all memory allocations performed by Vulkan to %s.\n"
-		"  --capture-pipelines         Output pipeline data captured via %s, if present.\n"
-		"\n"
-		"  --iter-size <value>         Bit precision of the iterating value in shaders. Must be 128 or 256.\n"
-		"  --max-loops <value>         Maximum number of iterations of the main loop. Must be a non-negative integer.\n"
-		"  --max-memory <value>        Maximum proportion of available GPU heap memory to be allocated. Must be within "
-			"(0, 1].\n",
-		PROGRAM_EXE, ALLOC_LOG_NAME, VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME);
-}
-
 static void DyArray_destroy_stub(void* restrict array)
 {
 	DyArray_destroy((DyArray) array);
@@ -90,109 +51,7 @@ static void free_recursive(restrict DyArray array)
 }
 
 
-bool parse_cmdline(Gpu* restrict gpu, int argc, char** restrict argv)
-{
-	*gpu = (Gpu) {0};
-
-	gpu->outputLevel = CLI_OUTPUT_DEFAULT;
-
-	gpu->iterSize  = 128;
-	gpu->maxLoops  = UINT64_MAX;
-	gpu->maxMemory = .4f;
-
-	gpu->preferInt16 = false;
-	gpu->preferInt64 = false;
-
-	gpu->extensionLayers  = false;
-	gpu->profileLayers    = false;
-	gpu->validationLayers = false;
-
-	gpu->restartCount      = false;
-	gpu->queryBenchmarking = true;
-	gpu->logAllocations    = false;
-	gpu->capturePipelines  = false;
-
-	for (int i = 1; i < argc; i++) {
-		const char* arg = argv[i];
-		char* endChar;
-
-		if (!strcmp(arg, "--version")) { print_version(); return false; }
-		if (!strcmp(arg, "--help"))    { print_help();    return false; }
-
-		if (!strcmp(arg, "--silent"))  { gpu->outputLevel = CLI_OUTPUT_SILENT;  continue; }
-		if (!strcmp(arg, "--quiet"))   { gpu->outputLevel = CLI_OUTPUT_QUIET;   continue; }
-		if (!strcmp(arg, "--verbose")) { gpu->outputLevel = CLI_OUTPUT_VERBOSE; continue; }
-
-		if (!strcmp(arg, "--int16")) { gpu->preferInt16 = true; continue; }
-		if (!strcmp(arg, "--int64")) { gpu->preferInt64 = true; continue; }
-
-		if (!strcmp(arg, "--ext-layers"))     { gpu->extensionLayers  = true; continue; }
-		if (!strcmp(arg, "--profile-layers")) { gpu->profileLayers    = true; continue; }
-		if (!strcmp(arg, "--validation"))     { gpu->validationLayers = true; continue; }
-
-		if (!strcmp(arg, "--restart"))             { gpu->restartCount      = true;  continue; }
-		if (!strcmp(arg, "--no-query-benchmarks")) { gpu->queryBenchmarking = false; continue; }
-		if (!strcmp(arg, "--log-allocations"))     { gpu->logAllocations    = true;  continue; }
-		if (!strcmp(arg, "--capture-pipelines"))   { gpu->capturePipelines  = true;  continue; }
-
-		if (!strcmp(arg, "--iter-size")) {
-			if (i + 1 == argc) { printf("Warning: ignoring incomplete argument %d '%s'\n", i, arg); continue; }
-
-			i++;
-			arg = argv[i];
-
-			unsigned long iterSize = strtoul(arg, &endChar, 0);
-
-			if (*endChar != '\0') {
-				printf("Warning: partially interpreting argument %d '%s' as %lu\n", i, arg, iterSize); }
-			if (iterSize != 128 && iterSize != 256) {
-				printf("Warning: ignoring invalid argument %d '%s'\n", i, arg); continue; }
-
-			gpu->iterSize = (uint32_t) iterSize;
-			continue;
-		}
-
-		if (!strcmp(arg, "--max-loops")) {
-			if (i + 1 == argc) { printf("Warning: ignoring incomplete argument %d '%s'\n", i, arg); continue; }
-
-			i++;
-			arg = argv[i];
-
-			unsigned long long maxLoops = strtoull(arg, &endChar, 0);
-
-			if (*endChar != '\0') {
-				printf("Warning: partially interpreting argument %d '%s' as %llu\n", i, arg, maxLoops); }
-
-			gpu->maxLoops = (uint64_t) maxLoops;
-			continue;
-		}
-
-		if (!strcmp(arg, "--max-memory")) {
-			if (i + 1 == argc) { printf("Warning: ignoring incomplete argument %d '%s'\n", i, arg); continue; }
-
-			i++;
-			arg = argv[i];
-
-			float maxMemory = strtof(arg, &endChar);
-
-			if (*endChar != '\0') {
-				printf("Warning: partially interpreting argument %d '%s' as %f\n", i, arg, (double) maxMemory); }
-			if (maxMemory <= 0 || 1 < maxMemory) {
-				printf("Warning: ignoring invalid argument %d '%s'\n", i, arg); continue; }
-
-			gpu->maxMemory = maxMemory;
-			continue;
-		}
-
-		printf("Warning: ignoring unknown argument %d '%s'\n", i, arg);
-	}
-
-	NEWLINE();
-
-	return true;
-}
-
-bool create_instance(Gpu* restrict gpu)
+bool create_instance(ProgramConfig config, Gpu* restrict gpu)
 {
 	VkResult vkres;
 
@@ -207,7 +66,7 @@ bool create_instance(Gpu* restrict gpu)
 	if EXPECT_FALSE (instApiVersion == VK_API_VERSION_1_0) {
 		VKVERS_FAILURE(instApiVersion); free_recursive(dyMem); return false; }
 
-	if (gpu->logAllocations) {
+	if (config.logAllocations) {
 		g_allocator = &g_allocationCallbacks;
 
 		bool bres = init_alloc_logfile();
@@ -268,11 +127,11 @@ bool create_instance(Gpu* restrict gpu)
 		const char* layerName = layersProps[i].layerName;
 
 		if (
-			(gpu->extensionLayers && (
+			(config.extensionLayers && (
 				!strcmp(layerName, VK_KHR_SYNCHRONIZATION_2_LAYER_NAME) ||
 				!strcmp(layerName, VK_KHR_TIMELINE_SEMAPHORE_LAYER_NAME))) ||
-			(gpu->profileLayers && !strcmp(layerName, VK_KHR_PROFILES_LAYER_NAME)) ||
-			(gpu->validationLayers && !strcmp(layerName, VK_KHR_VALIDATION_LAYER_NAME)))
+			(config.profileLayers && !strcmp(layerName, VK_KHR_PROFILES_LAYER_NAME)) ||
+			(config.validationLayers && !strcmp(layerName, VK_KHR_VALIDATION_LAYER_NAME)))
 		{
 			DyArray_append(enabledLayers, &layerName);
 		}
@@ -329,7 +188,7 @@ bool create_instance(Gpu* restrict gpu)
 	instanceCreateInfo.enabledExtensionCount   = enabledExtCount;
 	instanceCreateInfo.ppEnabledExtensionNames = enabledExtNames;
 
-	if (gpu->outputLevel > CLI_OUTPUT_DEFAULT) {
+	if (config.outputLevel > OUTPUT_LEVEL_DEFAULT) {
 		printf("Enabled instance layers (%" PRIu32 "):\n", enabledLayerCount);
 		for (uint32_t i = 0; i < enabledLayerCount; i++) {
 			printf("\t%" PRIu32 ") %s\n", i + 1, enabledLayerNames[i]);
@@ -360,7 +219,7 @@ bool create_instance(Gpu* restrict gpu)
 	return true;
 }
 
-bool select_device(Gpu* restrict gpu)
+bool select_device(ProgramConfig config, Gpu* restrict gpu)
 {
 	VkInstance instance = volkGetLoadedInstance();
 
@@ -616,8 +475,8 @@ bool select_device(Gpu* restrict gpu)
 		if (hasVulkan13) { currScore += 50; }
 		if (hasVulkan14) { currScore += 50; }
 
-		if (gpu->preferInt16 && hasShaderInt16) { currScore += 1000; }
-		if (gpu->preferInt64 && hasShaderInt64) { currScore += 1000; }
+		if (config.preferInt16 && hasShaderInt16) { currScore += 1000; }
+		if (config.preferInt64 && hasShaderInt64) { currScore += 1000; }
 
 		if (hasDeviceNonHost) { currScore += 50; }
 
@@ -636,25 +495,25 @@ bool select_device(Gpu* restrict gpu)
 		if (hasStorageBuffer16BitAccess)     { currScore += 100; }
 		if (hasSubgroupSizeControl)          { currScore += 10;  }
 
-		if (gpu->validationLayers && has8BitStorage && hasUniformAndStorageBuffer8BitAccess) { currScore += 10; }
-		if (gpu->validationLayers && hasBufferDeviceAddress)                                 { currScore += 10; }
-		if (gpu->capturePipelines && hasPipelineExecutableProperties)                        { currScore += 10; }
+		if (config.validationLayers && has8BitStorage && hasUniformAndStorageBuffer8BitAccess) { currScore += 10; }
+		if (config.validationLayers && hasBufferDeviceAddress)                                 { currScore += 10; }
+		if (config.capturePipelines && hasPipelineExecutableProperties)                        { currScore += 10; }
 
 		if (currScore > bestScore) {
 			bestScore = currScore;
 			devIndex  = i;
 
-			using8BitStorage = gpu->validationLayers && has8BitStorage && hasUniformAndStorageBuffer8BitAccess;
+			using8BitStorage = config.validationLayers && has8BitStorage && hasUniformAndStorageBuffer8BitAccess;
 			using16BitStorage                 = hasStorageBuffer16BitAccess;
-			usingBufferDeviceAddress          = gpu->validationLayers && hasBufferDeviceAddress;
+			usingBufferDeviceAddress          = config.validationLayers && hasBufferDeviceAddress;
 			usingMaintenance4                 = hasMaintenance4;
 			usingMemoryBudget                 = hasMemoryBudget;
 			usingMemoryPriority               = hasMemoryPriority;
 			usingPipelineCreationCacheControl = hasPipelineCreationCacheControl;
-			usingPipelineExecutableProperties = gpu->capturePipelines && hasPipelineExecutableProperties;
+			usingPipelineExecutableProperties = config.capturePipelines && hasPipelineExecutableProperties;
 			usingPortabilitySubset            = hasPortabilitySubset;
-			usingShaderInt16                  = gpu->preferInt16 && hasShaderInt16;
-			usingShaderInt64                  = gpu->preferInt64 && hasShaderInt64;
+			usingShaderInt16                  = config.preferInt16 && hasShaderInt16;
+			usingShaderInt64                  = config.preferInt64 && hasShaderInt64;
 			usingSpirv14                      = hasSpirv14;
 			usingSubgroupSizeControl          = hasSubgroupSizeControl;
 			usingVulkan12                     = hasVulkan12;
@@ -758,7 +617,7 @@ bool select_device(Gpu* restrict gpu)
 	gpu->usingShaderInt64                  = usingShaderInt64;
 	gpu->usingSubgroupSizeControl          = usingSubgroupSizeControl;
 
-	if (gpu->queryBenchmarking) {
+	if (config.queryBenchmarking) {
 		gpu->transferQueueFamilyTimestampValidBits =
 			qfsProps[devIndex][transferQfIndex].queueFamilyProperties.timestampValidBits;
 		gpu->computeQueueFamilyTimestampValidBits =
@@ -766,10 +625,10 @@ bool select_device(Gpu* restrict gpu)
 		gpu->timestampPeriod = devsProps[devIndex].properties.limits.timestampPeriod;
 	}
 
-	switch (gpu->outputLevel) {
-		case CLI_OUTPUT_SILENT: break;
-		case CLI_OUTPUT_QUIET:  break;
-		case CLI_OUTPUT_DEFAULT:
+	switch (config.outputLevel) {
+		case OUTPUT_LEVEL_SILENT: break;
+		case OUTPUT_LEVEL_QUIET:  break;
+		case OUTPUT_LEVEL_DEFAULT:
 			printf(
 				"Device: %s\n"
 				"\tVulkan version:    %" PRIu32 ".%" PRIu32 "\n"
@@ -777,11 +636,11 @@ bool select_device(Gpu* restrict gpu)
 				"\tTransfer QF index: %" PRIu32 "\n"
 				"\tCompute QF index:  %" PRIu32 "\n",
 				deviceName, vkVerMajor, vkVerMinor, spvVerMajor, spvVerMinor, transferQfIndex, computeQfIndex);
-			if (gpu->preferInt16) { printf("\tshaderInt16:       %d\n", usingShaderInt16); }
-			if (gpu->preferInt64) { printf("\tshaderInt64:       %d\n", usingShaderInt64); }
+			if (config.preferInt16) { printf("\tshaderInt16:       %d\n", usingShaderInt16); }
+			if (config.preferInt64) { printf("\tshaderInt64:       %d\n", usingShaderInt64); }
 			NEWLINE();
 			break;
-		case CLI_OUTPUT_VERBOSE:
+		case OUTPUT_LEVEL_VERBOSE:
 			printf(
 				"Device: %s\n"
 				"\tScore:                             %" PRIu32 "\n"
@@ -813,26 +672,7 @@ bool select_device(Gpu* restrict gpu)
 	return true;
 }
 
-static bool retrieve_queue(
-	VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* restrict queue, const char* restrict name)
-{
-	(void) name;
-
-	VkDeviceQueueInfo2 queueInfo = {VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2};
-	queueInfo.queueFamilyIndex   = queueFamilyIndex;
-	queueInfo.queueIndex         = queueIndex;
-
-	VK_CALL(vkGetDeviceQueue2, device, &queueInfo, queue);
-
-#ifndef NDEBUG
-	bool bres = set_debug_name(device, VK_OBJECT_TYPE_QUEUE, (uint64_t) *queue, name);
-	if EXPECT_FALSE (!bres) return false;
-#endif
-
-	return true;
-}
-
-bool create_device(Gpu* restrict gpu)
+bool create_device(ProgramConfig config, Gpu* restrict gpu)
 {
 	VkPhysicalDevice physicalDevice = gpu->physicalDevice;
 
@@ -959,7 +799,7 @@ bool create_device(Gpu* restrict gpu)
 	deviceCreateInfo.enabledExtensionCount   = enabledExtCount;
 	deviceCreateInfo.ppEnabledExtensionNames = enabledExtNames;
 
-	if (gpu->outputLevel > CLI_OUTPUT_DEFAULT) {
+	if (config.outputLevel > OUTPUT_LEVEL_DEFAULT) {
 		printf("Enabled device extensions (%" PRIu32 "):\n", enabledExtCount);
 		for (uint32_t i = 0; i < enabledExtCount; i++) {
 			printf("\t%" PRIu32 ") %s\n", i + 1, enabledExtNames[i]);
@@ -993,7 +833,7 @@ bool create_device(Gpu* restrict gpu)
 	return true;
 }
 
-bool manage_memory(Gpu* restrict gpu)
+bool manage_memory(ProgramConfig config, Gpu* restrict gpu)
 {
 	VkPhysicalDevice physicalDevice = gpu->physicalDevice;
 	VkDevice         device         = gpu->device;
@@ -1131,7 +971,7 @@ bool manage_memory(Gpu* restrict gpu)
 	VkDeviceSize bytesPerDlHeap = gpu->usingMemoryBudget ? dlHeapBudget : dlHeapSize;
 
 	VkDeviceSize bytesPerHeap = minu64(bytesPerHvHeap, bytesPerDlHeap);
-	bytesPerHeap              = (VkDeviceSize) ((float) bytesPerHeap * gpu->maxMemory);
+	bytesPerHeap              = (VkDeviceSize) ((float) bytesPerHeap * config.maxMemory);
 
 	if (dlHeapIndex == hvHeapIndex) { bytesPerHeap /= 2; }
 
@@ -1240,10 +1080,10 @@ bool manage_memory(Gpu* restrict gpu)
 
 	gpu->hostNonCoherent = hasHostNonCoherent;
 
-	switch (gpu->outputLevel) {
-		case CLI_OUTPUT_SILENT: break;
-		case CLI_OUTPUT_QUIET:  break;
-		case CLI_OUTPUT_DEFAULT:
+	switch (config.outputLevel) {
+		case OUTPUT_LEVEL_SILENT: break;
+		case OUTPUT_LEVEL_QUIET:  break;
+		case OUTPUT_LEVEL_DEFAULT:
 			printf(
 				"Memory information:\n"
 				"\tHV memory type index:    %" PRIu32 "\n"
@@ -1254,7 +1094,7 @@ bool manage_memory(Gpu* restrict gpu)
 				"\tInout-buffers per heap:  %" PRIu32 "\n\n",
 				hvTypeIndex, dlTypeIndex, workgroupSize, workgroupCount, valuesPerInout, inoutsPerHeap);
 			break;
-		case CLI_OUTPUT_VERBOSE:
+		case OUTPUT_LEVEL_VERBOSE:
 			printf(
 				"Memory information:\n"
 				"\tHV non-coherent memory:   %d\n"
@@ -1584,167 +1424,7 @@ bool create_descriptors(Gpu* restrict gpu)
 	return true;
 }
 
-static bool capture_pipeline(VkDevice device, VkPipeline pipeline)
-{
-	VkResult vkres;
-
-	DyData dyData;
-	DyArray dyMem = DyArray_create(sizeof(DyData), 3);
-	if EXPECT_FALSE (!dyMem) return false;
-
-	VkPipelineInfoKHR pipelineInfo = {VK_STRUCTURE_TYPE_PIPELINE_INFO_KHR};
-	pipelineInfo.pipeline          = pipeline;
-
-	uint32_t executableCount;
-
-	VK_CALL_RES(vkGetPipelineExecutablePropertiesKHR, device, &pipelineInfo, &executableCount, NULL);
-	if EXPECT_FALSE (vkres)            { free_recursive(dyMem); return false; }
-	if EXPECT_FALSE (!executableCount) { free_recursive(dyMem); return true;  }
-
-	size_t size =
-		executableCount * sizeof(VkPipelineExecutablePropertiesKHR) +
-		executableCount * sizeof(VkPipelineExecutableStatisticKHR*) +
-		executableCount * sizeof(VkPipelineExecutableInfoKHR) +
-		executableCount * sizeof(uint32_t);
-
-	void* p = malloc(size);
-	if EXPECT_FALSE (!p) { MALLOC_FAILURE(p, size); free_recursive(dyMem); return false; }
-
-	dyData = (DyData) {p, free};
-	DyArray_append(dyMem, &dyData);
-
-	VkPipelineExecutablePropertiesKHR* pipelineExecutablesProperties = (VkPipelineExecutablePropertiesKHR*) p;
-	VkPipelineExecutableStatisticKHR** pipelineExecutablesStatistics = (VkPipelineExecutableStatisticKHR**) (
-		pipelineExecutablesProperties + executableCount);
-	VkPipelineExecutableInfoKHR* pipelineExecutablesInfo = (VkPipelineExecutableInfoKHR*) (
-		pipelineExecutablesStatistics + executableCount);
-
-	uint32_t* statisticCounts = (uint32_t*) (pipelineExecutablesInfo + executableCount);
-
-	VK_CALL_RES(
-		vkGetPipelineExecutablePropertiesKHR, device, &pipelineInfo, &executableCount, pipelineExecutablesProperties);
-
-	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
-	for (uint32_t i = 0; i < executableCount; i++) {
-		pipelineExecutablesInfo[i] = (VkPipelineExecutableInfoKHR) {VK_STRUCTURE_TYPE_PIPELINE_EXECUTABLE_INFO_KHR};
-		pipelineExecutablesInfo[i].pipeline        = pipeline;
-		pipelineExecutablesInfo[i].executableIndex = i;
-	}
-
-	uint32_t statisticTotal = 0;
-
-	for (uint32_t i = 0; i < executableCount; i++) {
-		VK_CALL_RES(
-			vkGetPipelineExecutableStatisticsKHR, device, &pipelineExecutablesInfo[i], &statisticCounts[i], NULL);
-
-		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
-		statisticTotal += statisticCounts[i];
-	}
-
-	size = statisticTotal * sizeof(VkPipelineExecutableStatisticKHR);
-
-	p = malloc(size);
-	if EXPECT_FALSE (!p) { MALLOC_FAILURE(p, size); free_recursive(dyMem); return false; }
-
-	dyData = (DyData) {p, free};
-	DyArray_append(dyMem, &dyData);
-
-	pipelineExecutablesStatistics[0] = (VkPipelineExecutableStatisticKHR*) p;
-
-	for (uint32_t i = 1; i < executableCount; i++) {
-		pipelineExecutablesStatistics[i] = pipelineExecutablesStatistics[i - 1] + statisticCounts[i - 1];
-	}
-
-	for (uint32_t i = 0; i < executableCount; i++) {
-		for (uint32_t j = 0; j < statisticCounts[i]; j++) {
-			pipelineExecutablesStatistics[i][j] = (VkPipelineExecutableStatisticKHR) {
-				VK_STRUCTURE_TYPE_PIPELINE_EXECUTABLE_STATISTIC_KHR};
-		}
-
-		VK_CALL_RES(
-			vkGetPipelineExecutableStatisticsKHR, device, &pipelineExecutablesInfo[i], &statisticCounts[i],
-			pipelineExecutablesStatistics[i]);
-		
-		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-	}
-
-	DyString message = DyString_create(1024);
-	if EXPECT_FALSE (!message) { free_recursive(dyMem); return false; }
-
-	dyData = (DyData) {message, DyString_destroy_stub};
-	DyArray_append(dyMem, &dyData);
-
-	for (uint32_t i = 0; i < executableCount; i++) {
-		char str[260];
-
-		sprintf(str, "\n%s\n", pipelineExecutablesProperties[i].name);
-		DyString_append(message, str);
-
-		for (uint32_t j = 0; j < sizeof(pipelineExecutablesProperties[i].stages) * CHAR_BIT; j++) {
-			VkShaderStageFlagBits stage = pipelineExecutablesProperties[i].stages & ((uint32_t) 1 << j);
-
-			if (stage) {
-				const char* sStage = string_VkShaderStageFlagBits(stage);
-				sprintf(str, "%s ", sStage);
-				DyString_append(message, str);
-			}
-		}
-
-		sprintf(str, "(%" PRIu32 ")\n",  pipelineExecutablesProperties[i].subgroupSize);
-		DyString_append(message, str);
-
-		sprintf(str, "%s\n", pipelineExecutablesProperties[i].description);
-		DyString_append(message, str);
-
-		for (uint32_t j = 0; j < statisticCounts[i]; j++) {
-			sprintf(str, "\n\t%s: ", pipelineExecutablesStatistics[i][j].name);
-			DyString_append(message, str);
-
-			switch (pipelineExecutablesStatistics[i][j].format) {
-				case VK_PIPELINE_EXECUTABLE_STATISTIC_FORMAT_BOOL32_KHR:
-					strcpy(str, pipelineExecutablesStatistics[i][j].value.b32 ? "True" : "False");
-					break;
-				case VK_PIPELINE_EXECUTABLE_STATISTIC_FORMAT_INT64_KHR:
-					sprintf(str, "%" PRId64, pipelineExecutablesStatistics[i][j].value.i64);
-					break;
-				case VK_PIPELINE_EXECUTABLE_STATISTIC_FORMAT_UINT64_KHR:
-					sprintf(str, "%" PRIu64, pipelineExecutablesStatistics[i][j].value.u64);
-					break;
-				case VK_PIPELINE_EXECUTABLE_STATISTIC_FORMAT_FLOAT64_KHR:
-					sprintf(str, "%g", pipelineExecutablesStatistics[i][j].value.f64);
-					break;
-				default: break;
-			}
-
-			DyString_append(message, str);
-
-			sprintf(str, "\n\t%s\n", pipelineExecutablesStatistics[i][j].description);
-			DyString_append(message, str);
-		}
-	}
-
-	const char* rawMessage = DyString_raw(message);
-
-	bool bres = write_text(
-		CAPTURE_FILE_NAME,
-		"PIPELINE CAPTURE DATA\n"
-		"\n"
-		"Total # executables: %" PRIu32 "\n"
-		"Total # statistics:  %" PRIu32 "\n"
-		"\n"
-		"%s",
-		executableCount, statisticTotal, rawMessage);
-	
-	if EXPECT_FALSE (!bres) { free_recursive(dyMem); return false; }
-
-	free_recursive(dyMem);
-
-	return true;
-}
-
-bool create_pipeline(Gpu* restrict gpu)
+bool create_pipeline(ProgramConfig config, Gpu* restrict gpu)
 {
 	VkDevice device = gpu->device;
 
@@ -1758,12 +1438,11 @@ bool create_pipeline(Gpu* restrict gpu)
 
 	uint32_t spvVerMajor = gpu->spvVerMajor;
 	uint32_t spvVerMinor = gpu->spvVerMinor;
-	uint32_t iterSize    = gpu->iterSize;
 
 	VkResult vkres;
 
 	DyData dyData;
-	DyArray dyMem = DyArray_create(sizeof(DyData), 2);
+	DyArray dyMem = DyArray_create(sizeof(DyData), 1);
 	if EXPECT_FALSE (!dyMem) return false;
 
 	char shaderName[52];
@@ -1777,9 +1456,9 @@ bool create_pipeline(Gpu* restrict gpu)
 		gpu->usingShaderInt16  ? "-int16" : "",
 		gpu->usingShaderInt64  ? "-int64" : "");
 
-	sprintf(entryPointName, "main-%" PRIu32 "-%" PRIu32, get_endianness(), iterSize);
+	sprintf(entryPointName, "main-%u-%lu", get_endianness(), config.iterSize);
 
-	if (gpu->outputLevel > CLI_OUTPUT_QUIET) {
+	if (config.outputLevel > OUTPUT_LEVEL_QUIET) {
 		printf("Selected shader: %s\nSelected entry point: %s\n\n", shaderName, entryPointName); }
 
 	size_t shaderSize;
@@ -1876,21 +1555,7 @@ bool create_pipeline(Gpu* restrict gpu)
 	VK_CALL(vkDestroyShaderModule, device, shaderModule, g_allocator);
 	gpu->shaderModule = VK_NULL_HANDLE;
 
-	VK_CALL_RES(vkGetPipelineCacheData, device, pipelineCache, &cacheSize, NULL);
-	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
-	p = malloc(cacheSize);
-	if EXPECT_FALSE (!p) { MALLOC_FAILURE(p, cacheSize); free_recursive(dyMem); return false; }
-
-	dyData = (DyData) {p, free};
-	DyArray_append(dyMem, &dyData);
-
-	cacheData = p;
-
-	VK_CALL_RES(vkGetPipelineCacheData, device, pipelineCache, &cacheSize, cacheData);
-	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
-	bres = write_file(PIPELINE_CACHE_NAME, cacheData, cacheSize);
+	bres = save_pipeline_cache(device, pipelineCache, PIPELINE_CACHE_NAME);
 	if EXPECT_FALSE (!bres) { free_recursive(dyMem); return false; }
 
 	VK_CALL(vkDestroyPipelineCache, device, pipelineCache, g_allocator);
@@ -1911,40 +1576,6 @@ bool create_pipeline(Gpu* restrict gpu)
 	}
 
 	free_recursive(dyMem);
-
-	return true;
-}
-
-static bool create_cmd_handles(
-	VkDevice device,
-	uint32_t qfIndex,
-	VkCommandPool* restrict cmdPool,
-	const char* restrict name,
-	uint32_t count,
-	VkCommandBuffer* restrict cmdBuffers)
-{
-	(void) name;
-
-	VkResult vkres;
-
-	VkCommandPoolCreateInfo createInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-	createInfo.queueFamilyIndex        = qfIndex;
-
-	VK_CALL_RES(vkCreateCommandPool, device, &createInfo, g_allocator, cmdPool);
-	if EXPECT_FALSE (vkres) return false;
-
-#ifndef NDEBUG
-	bool bres = set_debug_name(device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t) *cmdPool, name);
-	if EXPECT_FALSE (!bres) return false;
-#endif
-
-	VkCommandBufferAllocateInfo allocateInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-	allocateInfo.level                       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocateInfo.commandPool                 = *cmdPool;
-	allocateInfo.commandBufferCount          = count;
-
-	VK_CALL_RES(vkAllocateCommandBuffers, device, &allocateInfo, cmdBuffers);
-	if EXPECT_FALSE (vkres) return false;
 
 	return true;
 }
@@ -2091,12 +1722,12 @@ bool create_commands(Gpu* restrict gpu)
 		computeBufferMemoryBarriers + inoutsPerHeap);
 	VkDependencyInfo (*computeDependencyInfos)[2] = (VkDependencyInfo(*)[]) (transferDependencyInfos + inoutsPerHeap);
 
-	bool bres = create_cmd_handles(
+	bool bres = create_command_handles(
 		device, transferQfIndex, &gpu->transferCommandPool, "Transfer", inoutsPerHeap, transferCmdBuffers);
 
 	if EXPECT_FALSE (!bres) { free_recursive(dyMem); return false; }
 
-	bres = create_cmd_handles(
+	bres = create_command_handles(
 		device, computeQfIndex, &gpu->computeCommandPool, "Compute", inoutsPerHeap, computeCmdBuffers);
 
 	if EXPECT_FALSE (!bres) { free_recursive(dyMem); return false; }
@@ -2238,7 +1869,7 @@ bool create_commands(Gpu* restrict gpu)
 	return true;
 }
 
-bool submit_commands(Gpu* restrict gpu)
+bool submit_commands(ProgramConfig config, Gpu* restrict gpu)
 {
 	const VkDeviceMemory*  hvMemories         = gpu->hostVisibleDeviceMemories;
 	const VkCommandBuffer* transferCmdBuffers = gpu->transferCommandBuffers;
@@ -2270,9 +1901,6 @@ bool submit_commands(Gpu* restrict gpu)
 
 	double timestampPeriod = (double) gpu->timestampPeriod;
 	bool   hostNonCoherent = gpu->hostNonCoherent;
-
-	CliOutput outputLevel = gpu->outputLevel;
-	uint64_t  maxLoops    = gpu->maxLoops;
 
 	VkResult vkres;
 
@@ -2340,7 +1968,7 @@ bool submit_commands(Gpu* restrict gpu)
 
 	ValueInfo prevValues = {0};
 
-	if (!gpu->restartCount && fileSize) {
+	if (!config.restartCount && fileSize) {
 		uint64_t val0mod1off0Upper, val0mod1off0Lower;
 		uint64_t val0mod1off1Upper, val0mod1off1Lower;
 		uint64_t val0mod1off2Upper, val0mod1off2Lower;
@@ -2499,7 +2127,7 @@ bool submit_commands(Gpu* restrict gpu)
 	Value startValue = prevValues.curValue;
 
 	// ===== Enter main loop =====
-	for (uint64_t i = 0; i < maxLoops && !atomic_load(&input); i++) {
+	for (uint64_t i = 0; i < config.maxLoops && !atomic_load(&input); i++) {
 		clock_t mainLoopBmStart = clock();
 
 		Value initialValue = prevValues.curValue;
@@ -2511,7 +2139,7 @@ bool submit_commands(Gpu* restrict gpu)
 		double computeBmTotal      = 0;
 		double transferBmTotal     = 0;
 
-		if (outputLevel > CLI_OUTPUT_SILENT) { printf("Loop #%" PRIu64 "\n", i + 1); }
+		if (config.outputLevel > OUTPUT_LEVEL_SILENT) { printf("Loop #%" PRIu64 "\n", i + 1); }
 
 		for (uint32_t j = 0; j < inoutsPerHeap; j++) {
 			uint64_t timestamps[2];
@@ -2591,7 +2219,7 @@ bool submit_commands(Gpu* restrict gpu)
 			waitComputeBmTotal  += waitComputeBmark;
 			waitTransferBmTotal += waitTransferBmark;
 
-			if (outputLevel > CLI_OUTPUT_QUIET) {
+			if (config.outputLevel > OUTPUT_LEVEL_QUIET) {
 				printf(
 					"Inout-buffer %" PRIu32 "/%" PRIu32 "\n"
 					"\tReading buffers:    %8.0fms\n"
@@ -2612,15 +2240,15 @@ bool submit_commands(Gpu* restrict gpu)
 
 		Value currentValue = prevValues.curValue;
 
-		switch (outputLevel) {
-			case CLI_OUTPUT_SILENT: break;
-			case CLI_OUTPUT_QUIET:
+		switch (config.outputLevel) {
+			case OUTPUT_LEVEL_SILENT: break;
+			case OUTPUT_LEVEL_QUIET:
 				printf(
 					"Main loop: %.0fms\n"
 					"Current value: 0x %016" PRIx64 " %016" PRIx64 "\n\n",
 					mainLoopBmark, INT128_UPPER(currentValue - 3), INT128_LOWER(currentValue - 3));
 				break;
-			case CLI_OUTPUT_DEFAULT:
+			case OUTPUT_LEVEL_DEFAULT:
 				printf(
 					"Main loop: %.0fms\n"
 					"Reading buffers:    %8.1fms\n"
@@ -2638,7 +2266,7 @@ bool submit_commands(Gpu* restrict gpu)
 					INT128_UPPER(initialValue - 2), INT128_LOWER(initialValue - 2),
 					INT128_UPPER(currentValue - 3), INT128_LOWER(currentValue - 3));
 				break;
-			case CLI_OUTPUT_VERBOSE:
+			case OUTPUT_LEVEL_VERBOSE:
 				printf(
 					"Main loop: %.0fms\n"
 					"|      Benchmark     | Total (ms) | Average (ms) |\n"
@@ -2678,7 +2306,7 @@ bool submit_commands(Gpu* restrict gpu)
 
 	Value endValue = prevValues.curValue;
 
-	if (outputLevel > CLI_OUTPUT_SILENT) {
+	if (config.outputLevel > OUTPUT_LEVEL_SILENT) {
 		printf(
 			"Set of starting values tested: [0x %016" PRIx64 " %016" PRIx64 ", 0x %016" PRIx64 " %016" PRIx64 "]\n",
 			INT128_UPPER(startValue - 2), INT128_LOWER(startValue - 2),
@@ -2704,7 +2332,7 @@ bool submit_commands(Gpu* restrict gpu)
 			i + 1, INT128_UPPER(value), INT128_LOWER(value), steps);
 	}
 
-	if (outputLevel > CLI_OUTPUT_QUIET) {
+	if (config.outputLevel > OUTPUT_LEVEL_QUIET) {
 		printf(
 			"\n"
 			"Time: %.3fms\n"
@@ -2712,7 +2340,7 @@ bool submit_commands(Gpu* restrict gpu)
 			totalBmark, (double) (1000 * total) / totalBmark);
 	}
 
-	if (!gpu->restartCount) {
+	if (!config.restartCount) {
 		bres = write_text(
 			PROGRESS_FILE_NAME,
 			"%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n"
@@ -2807,11 +2435,233 @@ bool destroy_gpu(Gpu* restrict gpu)
 	return true;
 }
 
+bool retrieve_queue(
+	VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* restrict queue, const char* restrict name)
+{
+	(void) name;
+
+	VkDeviceQueueInfo2 queueInfo = {VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2};
+	queueInfo.queueFamilyIndex   = queueFamilyIndex;
+	queueInfo.queueIndex         = queueIndex;
+
+	VK_CALL(vkGetDeviceQueue2, device, &queueInfo, queue);
+
+#ifndef NDEBUG
+	if (name) {
+		bool bres = set_debug_name(device, VK_OBJECT_TYPE_QUEUE, (uint64_t) *queue, name);
+		if EXPECT_FALSE (!bres) return false;
+	}
+#endif
+
+	return true;
+}
+
+bool create_command_handles(
+	VkDevice device,
+	uint32_t queueFamilyIndex,
+	VkCommandPool* restrict commandPool,
+	const char* restrict name,
+	uint32_t commandBufferCount,
+	VkCommandBuffer* restrict commandBuffers)
+{
+	(void) name;
+
+	VkResult vkres;
+
+	VkCommandPoolCreateInfo createInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
+	createInfo.queueFamilyIndex        = queueFamilyIndex;
+
+	VK_CALL_RES(vkCreateCommandPool, device, &createInfo, g_allocator, commandPool);
+	if EXPECT_FALSE (vkres) return false;
+
+#ifndef NDEBUG
+	if (name) {
+		bool bres = set_debug_name(device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t) *commandPool, name);
+		if EXPECT_FALSE (!bres) return false;
+	}
+#endif
+
+	VkCommandBufferAllocateInfo allocateInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+	allocateInfo.level                       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocateInfo.commandPool                 = *commandPool;
+	allocateInfo.commandBufferCount          = commandBufferCount;
+
+	VK_CALL_RES(vkAllocateCommandBuffers, device, &allocateInfo, commandBuffers);
+	if EXPECT_FALSE (vkres) return false;
+
+	return true;
+}
+
+bool capture_pipeline(VkDevice device, VkPipeline pipeline)
+{
+	VkResult vkres;
+
+	DyData dyData;
+	DyArray dyMem = DyArray_create(sizeof(DyData), 3);
+	if EXPECT_FALSE (!dyMem) return false;
+
+	VkPipelineInfoKHR pipelineInfo = {VK_STRUCTURE_TYPE_PIPELINE_INFO_KHR};
+	pipelineInfo.pipeline          = pipeline;
+
+	uint32_t executableCount;
+
+	VK_CALL_RES(vkGetPipelineExecutablePropertiesKHR, device, &pipelineInfo, &executableCount, NULL);
+	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
+
+	if EXPECT_FALSE (!executableCount) {
+		printf("Warning: No pipeline executables are available for capture\n\n");
+		free_recursive(dyMem);
+		return true;
+	}
+
+	size_t size =
+		executableCount * sizeof(VkPipelineExecutablePropertiesKHR) +
+		executableCount * sizeof(VkPipelineExecutableStatisticKHR*) +
+		executableCount * sizeof(VkPipelineExecutableInfoKHR) +
+		executableCount * sizeof(uint32_t);
+
+	void* p = malloc(size);
+	if EXPECT_FALSE (!p) { MALLOC_FAILURE(p, size); free_recursive(dyMem); return false; }
+
+	dyData = (DyData) {p, free};
+	DyArray_append(dyMem, &dyData);
+
+	VkPipelineExecutablePropertiesKHR* pipelineExecutablesProperties = (VkPipelineExecutablePropertiesKHR*) p;
+	VkPipelineExecutableStatisticKHR** pipelineExecutablesStatistics = (VkPipelineExecutableStatisticKHR**) (
+		pipelineExecutablesProperties + executableCount);
+	VkPipelineExecutableInfoKHR* pipelineExecutablesInfo = (VkPipelineExecutableInfoKHR*) (
+		pipelineExecutablesStatistics + executableCount);
+
+	uint32_t* statisticCounts = (uint32_t*) (pipelineExecutablesInfo + executableCount);
+
+	VK_CALL_RES(
+		vkGetPipelineExecutablePropertiesKHR, device, &pipelineInfo, &executableCount, pipelineExecutablesProperties);
+
+	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
+
+	for (uint32_t i = 0; i < executableCount; i++) {
+		pipelineExecutablesInfo[i] = (VkPipelineExecutableInfoKHR) {VK_STRUCTURE_TYPE_PIPELINE_EXECUTABLE_INFO_KHR};
+		pipelineExecutablesInfo[i].pipeline        = pipeline;
+		pipelineExecutablesInfo[i].executableIndex = i;
+	}
+
+	uint32_t statisticTotal = 0;
+
+	for (uint32_t i = 0; i < executableCount; i++) {
+		VK_CALL_RES(
+			vkGetPipelineExecutableStatisticsKHR, device, &pipelineExecutablesInfo[i], &statisticCounts[i], NULL);
+
+		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
+
+		statisticTotal += statisticCounts[i];
+	}
+
+	size = statisticTotal * sizeof(VkPipelineExecutableStatisticKHR);
+
+	p = malloc(size);
+	if EXPECT_FALSE (!p) { MALLOC_FAILURE(p, size); free_recursive(dyMem); return false; }
+
+	dyData = (DyData) {p, free};
+	DyArray_append(dyMem, &dyData);
+
+	pipelineExecutablesStatistics[0] = (VkPipelineExecutableStatisticKHR*) p;
+
+	for (uint32_t i = 1; i < executableCount; i++) {
+		pipelineExecutablesStatistics[i] = pipelineExecutablesStatistics[i - 1] + statisticCounts[i - 1];
+	}
+
+	for (uint32_t i = 0; i < executableCount; i++) {
+		for (uint32_t j = 0; j < statisticCounts[i]; j++) {
+			pipelineExecutablesStatistics[i][j] = (VkPipelineExecutableStatisticKHR) {
+				VK_STRUCTURE_TYPE_PIPELINE_EXECUTABLE_STATISTIC_KHR};
+		}
+
+		VK_CALL_RES(
+			vkGetPipelineExecutableStatisticsKHR, device, &pipelineExecutablesInfo[i], &statisticCounts[i],
+			pipelineExecutablesStatistics[i]);
+		
+		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
+	}
+
+	DyString message = DyString_create(1024);
+	if EXPECT_FALSE (!message) { free_recursive(dyMem); return false; }
+
+	dyData = (DyData) {message, DyString_destroy_stub};
+	DyArray_append(dyMem, &dyData);
+
+	for (uint32_t i = 0; i < executableCount; i++) {
+		char str[260];
+
+		sprintf(str, "\n%s\n", pipelineExecutablesProperties[i].name);
+		DyString_append(message, str);
+
+		for (uint32_t j = 0; j < sizeof(pipelineExecutablesProperties[i].stages) * CHAR_BIT; j++) {
+			VkShaderStageFlagBits stage = pipelineExecutablesProperties[i].stages & ((uint32_t) 1 << j);
+
+			if (stage) {
+				const char* sStage = string_VkShaderStageFlagBits(stage);
+				sprintf(str, "%s ", sStage);
+				DyString_append(message, str);
+			}
+		}
+
+		sprintf(str, "(%" PRIu32 ")\n",  pipelineExecutablesProperties[i].subgroupSize);
+		DyString_append(message, str);
+
+		sprintf(str, "%s\n", pipelineExecutablesProperties[i].description);
+		DyString_append(message, str);
+
+		for (uint32_t j = 0; j < statisticCounts[i]; j++) {
+			sprintf(str, "\n\t%s: ", pipelineExecutablesStatistics[i][j].name);
+			DyString_append(message, str);
+
+			switch (pipelineExecutablesStatistics[i][j].format) {
+				case VK_PIPELINE_EXECUTABLE_STATISTIC_FORMAT_BOOL32_KHR:
+					strcpy(str, pipelineExecutablesStatistics[i][j].value.b32 ? "True" : "False");
+					break;
+				case VK_PIPELINE_EXECUTABLE_STATISTIC_FORMAT_INT64_KHR:
+					sprintf(str, "%" PRId64, pipelineExecutablesStatistics[i][j].value.i64);
+					break;
+				case VK_PIPELINE_EXECUTABLE_STATISTIC_FORMAT_UINT64_KHR:
+					sprintf(str, "%" PRIu64, pipelineExecutablesStatistics[i][j].value.u64);
+					break;
+				case VK_PIPELINE_EXECUTABLE_STATISTIC_FORMAT_FLOAT64_KHR:
+					sprintf(str, "%g", pipelineExecutablesStatistics[i][j].value.f64);
+					break;
+				default: break;
+			}
+
+			DyString_append(message, str);
+
+			sprintf(str, "\n\t%s\n", pipelineExecutablesStatistics[i][j].description);
+			DyString_append(message, str);
+		}
+	}
+
+	const char* rawMessage = DyString_raw(message);
+
+	bool bres = write_text(
+		CAPTURE_FILE_NAME,
+		"PIPELINE CAPTURE DATA\n"
+		"\n"
+		"Total # executables: %" PRIu32 "\n"
+		"Total # statistics:  %" PRIu32 "\n"
+		"\n"
+		"%s",
+		executableCount, statisticTotal, rawMessage);
+	
+	if EXPECT_FALSE (!bres) { free_recursive(dyMem); return false; }
+
+	free_recursive(dyMem);
+
+	return true;
+}
+
 void* wait_for_input(void* ptr)
 {
 	atomic_bool* input = (atomic_bool*) ptr;
 
-	puts("Calculating... press enter/return to stop\n");
+	puts("Calculating... press Enter/Return to stop\n");
 	getchar();
 
 	if (!atomic_load(input)) {

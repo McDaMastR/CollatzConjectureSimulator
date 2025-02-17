@@ -106,7 +106,7 @@ function(compile_shader INPUT_GLSL SPV_MAJOR SPV_MINOR STO16 INT16 INT64)
 	disassemble_output(${OUTPUT_SPV} ${OUTPUT_ASM})
 endfunction()
 
-add_custom_target(Spirv)
+add_custom_target(spirv)
 
 set(INPUT_GLSL ${CMAKE_CURRENT_SOURCE_DIR}/shader.comp)
 set(SPV_MAJOR 1)
@@ -120,8 +120,8 @@ foreach(SPV_MINOR RANGE 3 6)
 		endforeach()
 	endforeach()
 
-	add_custom_target(Spirv-${SPV_MAJOR}-${SPV_MINOR} DEPENDS ${ALL_SPV} "$<${USING_DISASSEMBLER}:${ALL_ASM}>")
-	add_dependencies(Spirv Spirv-${SPV_MAJOR}-${SPV_MINOR})
+	add_custom_target(spirv-${SPV_MAJOR}-${SPV_MINOR} DEPENDS ${ALL_SPV} "$<${USING_DISASSEMBLER}:${ALL_ASM}>")
+	add_dependencies(spirv spirv-${SPV_MAJOR}-${SPV_MINOR})
 
 	unset(ALL_SPV)
 	unset(ALL_ASM)

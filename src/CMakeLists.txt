@@ -1,4 +1,4 @@
-add_executable(CollatzSim)
+add_executable(cltz)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -52,7 +52,7 @@ set(COMPILE_WARNINGS_CLANG
 )
 
 set_target_properties(
-	CollatzSim
+	cltz
 
 	PROPERTIES
 
@@ -61,13 +61,13 @@ set_target_properties(
 	C_EXTENSIONS ON
 
 	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin
-	RUNTIME_OUTPUT_NAME_DEBUG CollatzSimDebug
+	RUNTIME_OUTPUT_NAME_DEBUG cltzd
 )
 
-target_compile_definitions(CollatzSim
+target_compile_definitions(cltz
 	PRIVATE
 		COLLATZSIM_NAME="Collatz Conjecture Simulator"
-		COLLATZSIM_EXECUTABLE="$<TARGET_FILE_NAME:CollatzSim>"
+		COLLATZSIM_EXECUTABLE="$<TARGET_FILE_NAME:cltz>"
 
 		COLLATZSIM_VERSION_MAJOR=${CollatzConjectureSimulator_VERSION_MAJOR}
 		COLLATZSIM_VERSION_MINOR=${CollatzConjectureSimulator_VERSION_MINOR}
@@ -76,7 +76,7 @@ target_compile_definitions(CollatzSim
 		"$<$<NOT:$<CONFIG:DEBUG>>:NDEBUG=1>"
 )
 
-target_compile_options(CollatzSim
+target_compile_options(cltz
 	PRIVATE
 		"$<$<AND:$<C_COMPILER_ID:GNU,CLANG>,$<CONFIG:DEBUG>>:-Og;-g>"
 		"$<$<AND:$<C_COMPILER_ID:GNU,CLANG>,$<CONFIG:RELEASE>>:-O3>"
@@ -88,14 +88,14 @@ target_compile_options(CollatzSim
 		"$<$<AND:${USING_STATIC_ANALYSIS},$<C_COMPILER_ID:GNU>>:-fanalyzer>"
 )
 
-target_link_libraries(CollatzSim
+target_link_libraries(cltz
 	PRIVATE
 		volk::volk
 		Vulkan::UtilityHeaders
 		Threads::Threads
 )
 
-target_precompile_headers(CollatzSim
+target_precompile_headers(cltz
 	PRIVATE
 		<volk.h>
 		<vulkan/vk_enum_string_helper.h>
@@ -119,8 +119,9 @@ target_precompile_headers(CollatzSim
 		"$<$<OR:$<C_COMPILER_ID:MSVC>,${USING_MINGW}>:<intrin.h$<ANGLE-R>>"
 )
 
-target_sources(CollatzSim
+target_sources(cltz
 	PRIVATE
+		cli.c
 		defs.c
 		debug.c
 		dyarray.c
@@ -129,6 +130,7 @@ target_sources(CollatzSim
 		main.c
 		util.c
 	PRIVATE FILE_SET HEADERS FILES
+		cli.h
 		defs.h
 		debug.h
 		dyarray.h
