@@ -20,6 +20,8 @@
 #include "defs.h"
 
 
+bool fisatty(FILE* stream) USE_RET;
+
 char*  stime(void) USE_RET;
 double program_time(void) USE_RET;
 

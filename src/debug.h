@@ -37,6 +37,14 @@ bool init_debug_logfile(void);
 bool init_alloc_logfile(void);
 
 
+// General logging functions
+
+bool log_debug(FILE* stream, const char* format, ...) PRINTF_FUNC(2, 3) NONNULL_ARGS(1, 2) NULTSTR_ARG(2);
+bool log_warning(FILE* stream, const char* format, ...) PRINTF_FUNC(2, 3) NONNULL_ARGS(1, 2) NULTSTR_ARG(2);
+bool log_error(FILE* stream, const char* format, ...) PRINTF_FUNC(2, 3) NONNULL_ARGS(1, 2) NULTSTR_ARG(2);
+bool log_critical(FILE* stream, const char* format, ...) PRINTF_FUNC(2, 3) NONNULL_ARGS(1, 2) NULTSTR_ARG(2);
+
+
 // Failure functions
 
 void log_malloc_failure(int line, void* res, size_t size) COLD_FUNC NO_ACCESS(2);

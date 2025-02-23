@@ -18,6 +18,7 @@
 #include "util.h"
 #include "debug.h"
 
+
 #ifdef _MSC_VER
 	#pragma intrinsic(_BitScanReverse)
 #endif
@@ -29,6 +30,22 @@ typedef struct AlignedInfo
 	size_t size;
 } AlignedInfo;
 
+
+bool fisatty(FILE* restrict stream)
+{
+	int fd;
+	int tty;
+
+#if defined(_MSC_VER) || defined(__MINGW32__)
+	fd  = _fileno(stream);
+	tty = _isatty(fd);
+#else
+	fd  = fileno(stream);
+	tty = isatty(fd);
+#endif
+
+	return (bool) tty;
+}
 
 char* stime(void)
 {

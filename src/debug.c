@@ -76,6 +76,129 @@ bool init_alloc_logfile(void)
 }
 
 
+static bool log_colour(
+	FILE* restrict stream,
+	const char* fmt,
+	const char* sgr1,
+	const char* sgr2,
+	const char* prefix,
+	const char* postfix,
+	va_list args)
+{
+	ColourLevel colourLevel = g_config.colourLevel;
+
+	bool tty = fisatty(stream);
+
+	/* Different methods of printing are used depending on whether the stream is a TTY,
+	   according to their benchmarked speed in each case. */
+
+	if (colourLevel == COLOUR_LEVEL_ALL && !tty) {
+		fputs(sgr1, stream);
+		fputs(prefix, stream);
+		vfprintf(stream, fmt, args);
+		fputs(postfix, stream);
+		fputs(sgr2, stream);
+	}
+	else if ((colourLevel == COLOUR_LEVEL_ALL || colourLevel == COLOUR_LEVEL_TTY) && tty) {
+		size_t lenSgr1 = strlen(sgr1);
+		size_t lenSgr2 = strlen(sgr2);
+		size_t lenPre  = strlen(prefix);
+		size_t lenPost = strlen(postfix);
+		size_t lenFmt  = strlen(fmt);
+
+		size_t size = lenSgr1 + lenPre + lenFmt + lenPost + lenSgr2 + 1;
+
+		char* newFmt = (char*) malloc(size);
+
+		if EXPECT_FALSE (!newFmt) { MALLOC_FAILURE(newFmt, size); return false; }
+
+		strcpy(newFmt, sgr1);
+		strcpy(newFmt + lenSgr1, prefix);
+		strcpy(newFmt + lenSgr1 + lenPre, fmt);
+		strcpy(newFmt + lenSgr1 + lenPre + lenFmt, postfix);
+		strcpy(newFmt + lenSgr1 + lenPre + lenFmt + lenPost, sgr2);
+
+		vfprintf(stream, newFmt, args);
+
+		free(newFmt);
+	}
+	else if (!tty) {
+		fputs(prefix, stream);
+		vfprintf(stream, fmt, args);
+		fputs(postfix, stream);
+	}
+	else {
+		size_t lenPre  = strlen(prefix);
+		size_t lenPost = strlen(postfix);
+		size_t lenFmt  = strlen(fmt);
+
+		size_t size = lenPre + lenFmt + lenPost + 1;
+
+		char* newFmt = (char*) malloc(size);
+
+		if EXPECT_FALSE (!newFmt) { MALLOC_FAILURE(newFmt, size); return false; }
+
+		strcpy(newFmt, prefix);
+		strcpy(newFmt + lenPre, fmt);
+		strcpy(newFmt + lenPre + lenFmt, postfix);
+
+		vfprintf(stream, newFmt, args);
+
+		free(newFmt);
+	}
+
+	return true;
+}
+
+bool log_debug(FILE* restrict stream, const char* restrict format, ...)
+{
+	va_list args;
+	va_start(args, format);
+
+	bool bres = log_colour(stream, format, SGR_FG_GREEN, SGR_RESET, "Debug: ", "\n", args);
+
+	va_end(args);
+
+	return bres;
+}
+
+bool log_warning(FILE* restrict stream, const char* restrict format, ...)
+{
+	va_list args;
+	va_start(args, format);
+
+	bool bres = log_colour(stream, format, SGR_FG_YELLOW, SGR_RESET, "Warning: ", "\n", args);
+
+	va_end(args);
+
+	return bres;
+}
+
+bool log_error(FILE* restrict stream, const char* restrict format, ...)
+{
+	va_list args;
+	va_start(args, format);
+
+	bool bres = log_colour(stream, format, SGR_FG_RED, SGR_RESET, "Error: ", "\n", args);
+
+	va_end(args);
+
+	return bres;
+}
+
+bool log_critical(FILE* restrict stream, const char* restrict format, ...)
+{
+	va_list args;
+	va_start(args, format);
+
+	bool bres = log_colour(stream, format, SGR_FG_BLACK SGR_BG_RED, SGR_RESET, "CRITICAL: ", "\n", args);
+
+	va_end(args);
+
+	return bres;
+}
+
+
 static void log_debug_callback(
 	FILE* restrict stream,
 	double time,
@@ -474,12 +597,12 @@ void log_malloc_failure(int line, void* res, size_t size)
 {
 	double time = program_time();
 
-	fprintf(
+	log_error(
 		stderr,
 		"Memory failure at line %d (%.3fms)\n"
 		"Failed function call 'malloc' with 0x%016" PRIxPTR "\n"
 		"Arguments:\n"
-		"\tsize = %zu\n\n",
+		"\tsize = %zu\n",
 		line, time, (uintptr_t) res, size);
 }
 
@@ -487,13 +610,13 @@ void log_calloc_failure(int line, void* res, size_t num, size_t size)
 {
 	double time = program_time();
 
-	fprintf(
+	log_error(
 		stderr,
 		"Memory failure at line %d (%.3fms)\n"
 		"Failed function call 'calloc' with 0x%016" PRIxPTR "\n"
 		"Arguments:\n"
 		"\tnum  = %zu\n"
-		"\tsize = %zu\n\n",
+		"\tsize = %zu\n",
 		line, time, (uintptr_t) res, num, size);
 }
 
@@ -501,13 +624,13 @@ void log_realloc_failure(int line, void* res, void* ptr, size_t size)
 {
 	double time = program_time();
 
-	fprintf(
+	log_error(
 		stderr,
 		"Memory failure at line %d (%.3fms)\n"
 		"Failed function call 'realloc' with 0x%016" PRIxPTR "\n"
 		"Arguments:\n"
 		"\tptr  = 0x%016" PRIxPTR "\n"
-		"\tsize = %zu\n\n",
+		"\tsize = %zu\n",
 		line, time, (uintptr_t) res, (uintptr_t) ptr, size);
 }
 
@@ -515,13 +638,13 @@ void log_fopen_failure(int line, FILE* res, const char* name, const char* mode)
 {
 	double time = program_time();
 
-	fprintf(
+	log_error(
 		stderr,
 		"IO error at line %d (%.3fms)\n"
 		"Failed function call 'fopen' with 0x%016" PRIxPTR "\n"
 		"Arguments:\n"
 		"\tname = %s\n"
-		"\tmode = %s\n\n",
+		"\tmode = %s\n",
 		line, time, (uintptr_t) res, name, mode);
 }
 
@@ -529,14 +652,14 @@ void log_fseek_failure(int line, int res, FILE* file, long offset, int origin)
 {
 	double time = program_time();
 
-	fprintf(
+	log_error(
 		stderr,
 		"IO error at line %d (%.3fms)\n"
 		"Failed function call 'fseek' with %d\n"
 		"Arguments:\n"
 		"\tfile   = 0x%016" PRIxPTR "\n"
 		"\toffset = %ld\n"
-		"\torigin = %d\n\n",
+		"\torigin = %d\n",
 		line, time, res, (uintptr_t) file, offset, origin);
 }
 
@@ -544,12 +667,12 @@ void log_ftell_failure(int line, long res, FILE* file)
 {
 	double time = program_time();
 
-	fprintf(
+	log_error(
 		stderr,
 		"IO error at line %d (%.3fms)\n"
 		"Failed function call 'ftell' with %ld\n"
 		"Arguments:\n"
-		"\tfile = 0x%016" PRIxPTR "\n\n",
+		"\tfile = 0x%016" PRIxPTR "\n",
 		line, time, res, (uintptr_t) file);
 }
 
@@ -557,7 +680,7 @@ void log_fread_failure(int line, size_t res, const void* buf, size_t size, size_
 {
 	double time = program_time();
 
-	fprintf(
+	log_error(
 		stderr,
 		"IO error at line %d (%.3fms)\n"
 		"Failed function call 'fread' with %zu\n"
@@ -565,7 +688,7 @@ void log_fread_failure(int line, size_t res, const void* buf, size_t size, size_
 		"\tbuffer = 0x%016" PRIxPTR "\n"
 		"\tsize   = %zu\n"
 		"\tcount  = %zu\n"
-		"\tfile   = 0x%016" PRIxPTR "\n\n",
+		"\tfile   = 0x%016" PRIxPTR "\n",
 		line, time, res, (uintptr_t) buf, size, count, (uintptr_t) file);
 }
 
@@ -573,7 +696,7 @@ void log_fwrite_failure(int line, size_t res, const void* buf, size_t size, size
 {
 	double time = program_time();
 
-	fprintf(
+	log_error(
 		stderr,
 		"IO error at line %d (%.3fms)\n"
 		"Failed function call 'fwrite' with %zu\n"
@@ -581,7 +704,7 @@ void log_fwrite_failure(int line, size_t res, const void* buf, size_t size, size
 		"\tbuffer = 0x%016" PRIxPTR "\n"
 		"\tsize   = %zu\n"
 		"\tcount  = %zu\n"
-		"\tfile   = 0x%016" PRIxPTR "\n\n",
+		"\tfile   = 0x%016" PRIxPTR "\n",
 		line, time, res, (uintptr_t) buf, size, count, (uintptr_t) file);
 }
 
@@ -589,13 +712,13 @@ void log_fscanf_failure(int line, int res, FILE* file, const char* fmt)
 {
 	double time = program_time();
 
-	fprintf(
+	log_error(
 		stderr,
 		"IO error at line %d (%.3fms)\n"
 		"Failed function call 'fscanf' with %d\n"
 		"Arguments:\n"
 		"\tfile   = 0x%016" PRIxPTR "\n"
-		"\tformat = %s\n\n",
+		"\tformat = %s\n",
 		line, time, res, (uintptr_t) file, fmt);
 }
 
@@ -603,13 +726,13 @@ void log_fprintf_failure(int line, int res, FILE* file, const char* fmt)
 {
 	double time = program_time();
 
-	fprintf(
+	log_error(
 		stderr,
 		"IO error at line %d (%.3fms)\n"
 		"Failed function call 'fprintf' with %d\n"
 		"Arguments:\n"
 		"\tfile   = 0x%016" PRIxPTR "\n"
-		"\tformat = %s\n\n",
+		"\tformat = %s\n",
 		line, time, res, (uintptr_t) file, fmt);
 }
 
@@ -617,10 +740,10 @@ void log_pcreate_failure(int line, int res)
 {
 	double time = program_time();
 
-	fprintf(
+	log_error(
 		stderr,
 		"Thread failure at line %d (%.3fms)\n"
-		"Failed function call 'pthread_create' with %d\n\n",
+		"Failed function call 'pthread_create' with %d\n",
 		line, time, res);
 }
 
@@ -628,10 +751,10 @@ void log_pcancel_failure(int line, int res)
 {
 	double time = program_time();
 
-	fprintf(
+	log_error(
 		stderr,
 		"Thread failure at line %d (%.3fms)\n"
-		"Failed function call 'pthread_cancel' with %d\n\n",
+		"Failed function call 'pthread_cancel' with %d\n",
 		line, time, res);
 }
 
@@ -639,10 +762,10 @@ void log_pjoin_failure(int line, int res)
 {
 	double time = program_time();
 
-	fprintf(
+	log_error(
 		stderr,
 		"Thread failure at line %d (%.3fms)\n"
-		"Failed function call 'pthread_join' with %d\n\n",
+		"Failed function call 'pthread_join' with %d\n",
 		line, time, res);
 }
 
@@ -650,12 +773,12 @@ void log_pkill_failure(int line, int res, int sig)
 {
 	double time = program_time();
 
-	fprintf(
+	log_error(
 		stderr,
 		"Thread failure at line %d (%.3fms)\n"
 		"Failed function call 'pthread_kill' with %d\n"
 		"Arguments:\n"
-		"\tsignal = %d\n\n",
+		"\tsignal = %d\n",
 		line, time, res, sig);
 }
 
@@ -665,10 +788,10 @@ void log_vkinit_failure(int line, VkResult res)
 
 	const char* sRes = string_VkResult(res);
 
-	fprintf(
+	log_error(
 		stderr,
 		"Vulkan failure at line %d (%.3fms)\n"
-		"Failed function call 'volkInitialize' with %s\n\n",
+		"Failed function call 'volkInitialize' with %s\n",
 		line, time, sRes);
 }
 
@@ -681,10 +804,10 @@ void log_vkvers_failure(int line, uint32_t res)
 	uint32_t minor   = VK_API_VERSION_MINOR(res);
 	uint32_t patch   = VK_API_VERSION_PATCH(res);
 
-	fprintf(
+	log_error(
 		stderr,
 		"Vulkan failure at line %d (%.3fms)\n"
-		"Failed function call 'volkGetInstanceVersion' with %" PRIu32 ".%" PRIu32 ".%" PRIu32 ".%" PRIu32 "\n\n",
+		"Failed function call 'volkGetInstanceVersion' with %" PRIu32 ".%" PRIu32 ".%" PRIu32 ".%" PRIu32 "\n",
 		line, time, variant, major, minor, patch);
 }
 
@@ -694,9 +817,9 @@ void log_vulkan_failure(int line, VkResult res, const char* func)
 
 	const char* sRes = string_VkResult(res);
 
-	fprintf(
+	log_error(
 		stderr,
 		"Vulkan failure at line %d (%.3fms)\n"
-		"Failed function call '%s' with %s\n\n",
+		"Failed function call '%s' with %s\n",
 		line, time, func, sRes);
 }

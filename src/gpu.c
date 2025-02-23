@@ -51,7 +51,7 @@ static void free_recursive(restrict DyArray array)
 }
 
 
-bool create_instance(ProgramConfig config, Gpu* restrict gpu)
+bool create_instance(Gpu* restrict gpu)
 {
 	VkResult vkres;
 
@@ -66,7 +66,7 @@ bool create_instance(ProgramConfig config, Gpu* restrict gpu)
 	if EXPECT_FALSE (instApiVersion == VK_API_VERSION_1_0) {
 		VKVERS_FAILURE(instApiVersion); free_recursive(dyMem); return false; }
 
-	if (config.logAllocations) {
+	if (g_config.logAllocations) {
 		g_allocator = &g_allocationCallbacks;
 
 		bool bres = init_alloc_logfile();
@@ -127,11 +127,11 @@ bool create_instance(ProgramConfig config, Gpu* restrict gpu)
 		const char* layerName = layersProps[i].layerName;
 
 		if (
-			(config.extensionLayers && (
+			(g_config.extensionLayers && (
 				!strcmp(layerName, VK_KHR_SYNCHRONIZATION_2_LAYER_NAME) ||
 				!strcmp(layerName, VK_KHR_TIMELINE_SEMAPHORE_LAYER_NAME))) ||
-			(config.profileLayers && !strcmp(layerName, VK_KHR_PROFILES_LAYER_NAME)) ||
-			(config.validationLayers && !strcmp(layerName, VK_KHR_VALIDATION_LAYER_NAME)))
+			(g_config.profileLayers && !strcmp(layerName, VK_KHR_PROFILES_LAYER_NAME)) ||
+			(g_config.validationLayers && !strcmp(layerName, VK_KHR_VALIDATION_LAYER_NAME)))
 		{
 			DyArray_append(enabledLayers, &layerName);
 		}
@@ -188,7 +188,7 @@ bool create_instance(ProgramConfig config, Gpu* restrict gpu)
 	instanceCreateInfo.enabledExtensionCount   = enabledExtCount;
 	instanceCreateInfo.ppEnabledExtensionNames = enabledExtNames;
 
-	if (config.outputLevel > OUTPUT_LEVEL_DEFAULT) {
+	if (g_config.outputLevel > OUTPUT_LEVEL_DEFAULT) {
 		printf("Enabled instance layers (%" PRIu32 "):\n", enabledLayerCount);
 		for (uint32_t i = 0; i < enabledLayerCount; i++) {
 			printf("\t%" PRIu32 ") %s\n", i + 1, enabledLayerNames[i]);
@@ -219,7 +219,7 @@ bool create_instance(ProgramConfig config, Gpu* restrict gpu)
 	return true;
 }
 
-bool select_device(ProgramConfig config, Gpu* restrict gpu)
+bool select_device(Gpu* restrict gpu)
 {
 	VkInstance instance = volkGetLoadedInstance();
 
@@ -234,7 +234,7 @@ bool select_device(ProgramConfig config, Gpu* restrict gpu)
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 	if EXPECT_FALSE (!deviceCount) {
-		fputs("Runtime failure\nNo physical devices are accessible to the Vulkan instance\n\n", stderr);
+		log_critical(stderr, "No physical devices are accessible to the Vulkan instance");
 		free_recursive(dyMem);
 		return false;
 	}
@@ -475,8 +475,8 @@ bool select_device(ProgramConfig config, Gpu* restrict gpu)
 		if (hasVulkan13) { currScore += 50; }
 		if (hasVulkan14) { currScore += 50; }
 
-		if (config.preferInt16 && hasShaderInt16) { currScore += 1000; }
-		if (config.preferInt64 && hasShaderInt64) { currScore += 1000; }
+		if (g_config.preferInt16 && hasShaderInt16) { currScore += 1000; }
+		if (g_config.preferInt64 && hasShaderInt64) { currScore += 1000; }
 
 		if (hasDeviceNonHost) { currScore += 50; }
 
@@ -495,25 +495,25 @@ bool select_device(ProgramConfig config, Gpu* restrict gpu)
 		if (hasStorageBuffer16BitAccess)     { currScore += 100; }
 		if (hasSubgroupSizeControl)          { currScore += 10;  }
 
-		if (config.validationLayers && has8BitStorage && hasUniformAndStorageBuffer8BitAccess) { currScore += 10; }
-		if (config.validationLayers && hasBufferDeviceAddress)                                 { currScore += 10; }
-		if (config.capturePipelines && hasPipelineExecutableProperties)                        { currScore += 10; }
+		if (g_config.validationLayers && has8BitStorage && hasUniformAndStorageBuffer8BitAccess) { currScore += 10; }
+		if (g_config.validationLayers && hasBufferDeviceAddress)                                 { currScore += 10; }
+		if (g_config.capturePipelines && hasPipelineExecutableProperties)                        { currScore += 10; }
 
 		if (currScore > bestScore) {
 			bestScore = currScore;
 			devIndex  = i;
 
-			using8BitStorage = config.validationLayers && has8BitStorage && hasUniformAndStorageBuffer8BitAccess;
+			using8BitStorage = g_config.validationLayers && has8BitStorage && hasUniformAndStorageBuffer8BitAccess;
 			using16BitStorage                 = hasStorageBuffer16BitAccess;
-			usingBufferDeviceAddress          = config.validationLayers && hasBufferDeviceAddress;
+			usingBufferDeviceAddress          = g_config.validationLayers && hasBufferDeviceAddress;
 			usingMaintenance4                 = hasMaintenance4;
 			usingMemoryBudget                 = hasMemoryBudget;
 			usingMemoryPriority               = hasMemoryPriority;
 			usingPipelineCreationCacheControl = hasPipelineCreationCacheControl;
-			usingPipelineExecutableProperties = config.capturePipelines && hasPipelineExecutableProperties;
+			usingPipelineExecutableProperties = g_config.capturePipelines && hasPipelineExecutableProperties;
 			usingPortabilitySubset            = hasPortabilitySubset;
-			usingShaderInt16                  = config.preferInt16 && hasShaderInt16;
-			usingShaderInt64                  = config.preferInt64 && hasShaderInt64;
+			usingShaderInt16                  = g_config.preferInt16 && hasShaderInt16;
+			usingShaderInt64                  = g_config.preferInt64 && hasShaderInt64;
 			usingSpirv14                      = hasSpirv14;
 			usingSubgroupSizeControl          = hasSubgroupSizeControl;
 			usingVulkan12                     = hasVulkan12;
@@ -523,11 +523,10 @@ bool select_device(ProgramConfig config, Gpu* restrict gpu)
 	}
 
 	if (devIndex == UINT32_MAX) {
-		fputs(
-			"Runtime failure\n"
-			"No physical device meets program requirements\n"
-			"See device_requirements.md for full physical device requirements\n\n",
-			stderr);
+		log_critical(
+			stderr,
+			"No physical device meets program requirements; "
+			"see device_requirements.md for comprehensive physical device requirements");
 		free_recursive(dyMem);
 		return false;
 	}
@@ -617,7 +616,7 @@ bool select_device(ProgramConfig config, Gpu* restrict gpu)
 	gpu->usingShaderInt64                  = usingShaderInt64;
 	gpu->usingSubgroupSizeControl          = usingSubgroupSizeControl;
 
-	if (config.queryBenchmarking) {
+	if (g_config.queryBenchmarking) {
 		gpu->transferQueueFamilyTimestampValidBits =
 			qfsProps[devIndex][transferQfIndex].queueFamilyProperties.timestampValidBits;
 		gpu->computeQueueFamilyTimestampValidBits =
@@ -625,7 +624,7 @@ bool select_device(ProgramConfig config, Gpu* restrict gpu)
 		gpu->timestampPeriod = devsProps[devIndex].properties.limits.timestampPeriod;
 	}
 
-	switch (config.outputLevel) {
+	switch (g_config.outputLevel) {
 		case OUTPUT_LEVEL_SILENT: break;
 		case OUTPUT_LEVEL_QUIET:  break;
 		case OUTPUT_LEVEL_DEFAULT:
@@ -636,8 +635,8 @@ bool select_device(ProgramConfig config, Gpu* restrict gpu)
 				"\tTransfer QF index: %" PRIu32 "\n"
 				"\tCompute QF index:  %" PRIu32 "\n",
 				deviceName, vkVerMajor, vkVerMinor, spvVerMajor, spvVerMinor, transferQfIndex, computeQfIndex);
-			if (config.preferInt16) { printf("\tshaderInt16:       %d\n", usingShaderInt16); }
-			if (config.preferInt64) { printf("\tshaderInt64:       %d\n", usingShaderInt64); }
+			if (g_config.preferInt16) { printf("\tshaderInt16:       %d\n", usingShaderInt16); }
+			if (g_config.preferInt64) { printf("\tshaderInt64:       %d\n", usingShaderInt64); }
 			NEWLINE();
 			break;
 		case OUTPUT_LEVEL_VERBOSE:
@@ -672,7 +671,7 @@ bool select_device(ProgramConfig config, Gpu* restrict gpu)
 	return true;
 }
 
-bool create_device(ProgramConfig config, Gpu* restrict gpu)
+bool create_device(Gpu* restrict gpu)
 {
 	VkPhysicalDevice physicalDevice = gpu->physicalDevice;
 
@@ -799,7 +798,7 @@ bool create_device(ProgramConfig config, Gpu* restrict gpu)
 	deviceCreateInfo.enabledExtensionCount   = enabledExtCount;
 	deviceCreateInfo.ppEnabledExtensionNames = enabledExtNames;
 
-	if (config.outputLevel > OUTPUT_LEVEL_DEFAULT) {
+	if (g_config.outputLevel > OUTPUT_LEVEL_DEFAULT) {
 		printf("Enabled device extensions (%" PRIu32 "):\n", enabledExtCount);
 		for (uint32_t i = 0; i < enabledExtCount; i++) {
 			printf("\t%" PRIu32 ") %s\n", i + 1, enabledExtNames[i]);
@@ -833,7 +832,7 @@ bool create_device(ProgramConfig config, Gpu* restrict gpu)
 	return true;
 }
 
-bool manage_memory(ProgramConfig config, Gpu* restrict gpu)
+bool manage_memory(Gpu* restrict gpu)
 {
 	VkPhysicalDevice physicalDevice = gpu->physicalDevice;
 	VkDevice         device         = gpu->device;
@@ -971,7 +970,7 @@ bool manage_memory(ProgramConfig config, Gpu* restrict gpu)
 	VkDeviceSize bytesPerDlHeap = gpu->usingMemoryBudget ? dlHeapBudget : dlHeapSize;
 
 	VkDeviceSize bytesPerHeap = minu64(bytesPerHvHeap, bytesPerDlHeap);
-	bytesPerHeap              = (VkDeviceSize) ((float) bytesPerHeap * config.maxMemory);
+	bytesPerHeap              = (VkDeviceSize) ((float) bytesPerHeap * g_config.maxMemory);
 
 	if (dlHeapIndex == hvHeapIndex) { bytesPerHeap /= 2; }
 
@@ -1080,7 +1079,7 @@ bool manage_memory(ProgramConfig config, Gpu* restrict gpu)
 
 	gpu->hostNonCoherent = hasHostNonCoherent;
 
-	switch (config.outputLevel) {
+	switch (g_config.outputLevel) {
 		case OUTPUT_LEVEL_SILENT: break;
 		case OUTPUT_LEVEL_QUIET:  break;
 		case OUTPUT_LEVEL_DEFAULT:
@@ -1424,7 +1423,7 @@ bool create_descriptors(Gpu* restrict gpu)
 	return true;
 }
 
-bool create_pipeline(ProgramConfig config, Gpu* restrict gpu)
+bool create_pipeline(Gpu* restrict gpu)
 {
 	VkDevice device = gpu->device;
 
@@ -1446,7 +1445,7 @@ bool create_pipeline(ProgramConfig config, Gpu* restrict gpu)
 	if EXPECT_FALSE (!dyMem) return false;
 
 	char shaderName[52];
-	char entryPointName[27];
+	char entryPointName[37];
 
 	sprintf(
 		shaderName,
@@ -1456,9 +1455,9 @@ bool create_pipeline(ProgramConfig config, Gpu* restrict gpu)
 		gpu->usingShaderInt16  ? "-int16" : "",
 		gpu->usingShaderInt64  ? "-int64" : "");
 
-	sprintf(entryPointName, "main-%u-%lu", get_endianness(), config.iterSize);
+	sprintf(entryPointName, "main-%u-%lu", get_endianness(), g_config.iterSize);
 
-	if (config.outputLevel > OUTPUT_LEVEL_QUIET) {
+	if (g_config.outputLevel > OUTPUT_LEVEL_QUIET) {
 		printf("Selected shader: %s\nSelected entry point: %s\n\n", shaderName, entryPointName); }
 
 	size_t shaderSize;
@@ -1869,7 +1868,7 @@ bool create_commands(Gpu* restrict gpu)
 	return true;
 }
 
-bool submit_commands(ProgramConfig config, Gpu* restrict gpu)
+bool submit_commands(Gpu* restrict gpu)
 {
 	const VkDeviceMemory*  hvMemories         = gpu->hostVisibleDeviceMemories;
 	const VkCommandBuffer* transferCmdBuffers = gpu->transferCommandBuffers;
@@ -1968,7 +1967,7 @@ bool submit_commands(ProgramConfig config, Gpu* restrict gpu)
 
 	ValueInfo prevValues = {0};
 
-	if (!config.restartCount && fileSize) {
+	if (!g_config.restartCount && fileSize) {
 		uint64_t val0mod1off0Upper, val0mod1off0Lower;
 		uint64_t val0mod1off1Upper, val0mod1off1Lower;
 		uint64_t val0mod1off2Upper, val0mod1off2Lower;
@@ -2127,7 +2126,7 @@ bool submit_commands(ProgramConfig config, Gpu* restrict gpu)
 	Value startValue = prevValues.curValue;
 
 	// ===== Enter main loop =====
-	for (uint64_t i = 0; i < config.maxLoops && !atomic_load(&input); i++) {
+	for (uint64_t i = 0; i < g_config.maxLoops && !atomic_load(&input); i++) {
 		clock_t mainLoopBmStart = clock();
 
 		Value initialValue = prevValues.curValue;
@@ -2139,7 +2138,14 @@ bool submit_commands(ProgramConfig config, Gpu* restrict gpu)
 		double computeBmTotal      = 0;
 		double transferBmTotal     = 0;
 
-		if (config.outputLevel > OUTPUT_LEVEL_SILENT) { printf("Loop #%" PRIu64 "\n", i + 1); }
+		if (g_config.outputLevel > OUTPUT_LEVEL_SILENT) { printf("Loop #%" PRIu64 "\n", i + 1); }
+
+		/*
+		 * The following loop has two invocations of the vkGetQueryPoolResults function. On my Windows PC, these
+		 * functions always return VK_SUCCESS. But on my Macbook, they very rarely return VK_NOT_READY. I'm yet to find
+		 * a consistent pattern regarding when these failures occur, nor have I found a way to reliably replicate them.
+		 * TODO Figure out what on Earth is going on here???
+		 */
 
 		for (uint32_t j = 0; j < inoutsPerHeap; j++) {
 			uint64_t timestamps[2];
@@ -2219,7 +2225,7 @@ bool submit_commands(ProgramConfig config, Gpu* restrict gpu)
 			waitComputeBmTotal  += waitComputeBmark;
 			waitTransferBmTotal += waitTransferBmark;
 
-			if (config.outputLevel > OUTPUT_LEVEL_QUIET) {
+			if (g_config.outputLevel > OUTPUT_LEVEL_QUIET) {
 				printf(
 					"Inout-buffer %" PRIu32 "/%" PRIu32 "\n"
 					"\tReading buffers:    %8.0fms\n"
@@ -2240,7 +2246,7 @@ bool submit_commands(ProgramConfig config, Gpu* restrict gpu)
 
 		Value currentValue = prevValues.curValue;
 
-		switch (config.outputLevel) {
+		switch (g_config.outputLevel) {
 			case OUTPUT_LEVEL_SILENT: break;
 			case OUTPUT_LEVEL_QUIET:
 				printf(
@@ -2306,7 +2312,7 @@ bool submit_commands(ProgramConfig config, Gpu* restrict gpu)
 
 	Value endValue = prevValues.curValue;
 
-	if (config.outputLevel > OUTPUT_LEVEL_SILENT) {
+	if (g_config.outputLevel > OUTPUT_LEVEL_SILENT) {
 		printf(
 			"Set of starting values tested: [0x %016" PRIx64 " %016" PRIx64 ", 0x %016" PRIx64 " %016" PRIx64 "]\n",
 			INT128_UPPER(startValue - 2), INT128_LOWER(startValue - 2),
@@ -2332,7 +2338,7 @@ bool submit_commands(ProgramConfig config, Gpu* restrict gpu)
 			i + 1, INT128_UPPER(value), INT128_LOWER(value), steps);
 	}
 
-	if (config.outputLevel > OUTPUT_LEVEL_QUIET) {
+	if (g_config.outputLevel > OUTPUT_LEVEL_QUIET) {
 		printf(
 			"\n"
 			"Time: %.3fms\n"
@@ -2340,7 +2346,7 @@ bool submit_commands(ProgramConfig config, Gpu* restrict gpu)
 			totalBmark, (double) (1000 * total) / totalBmark);
 	}
 
-	if (!config.restartCount) {
+	if (!g_config.restartCount) {
 		bres = write_text(
 			PROGRESS_FILE_NAME,
 			"%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n"
@@ -2371,8 +2377,6 @@ bool destroy_gpu(Gpu* restrict gpu)
 	const VkDeviceMemory* hvMemories = gpu->hostVisibleDeviceMemories;
 	const VkDeviceMemory* dlMemories = gpu->deviceLocalDeviceMemories;
 	const VkSemaphore*    semaphores = gpu->semaphores;
-
-	VkDebugUtilsMessengerEXT debugUtilsMessenger = gpu->debugUtilsMessenger;
 
 	VkDevice device = gpu->device;
 
@@ -2424,7 +2428,7 @@ bool destroy_gpu(Gpu* restrict gpu)
 
 	if (instance) {
 #ifndef NDEBUG
-		VK_CALL(vkDestroyDebugUtilsMessengerEXT, instance, debugUtilsMessenger, g_allocator);
+		VK_CALL(vkDestroyDebugUtilsMessengerEXT, instance, gpu->debugUtilsMessenger, g_allocator);
 #endif
 		VK_CALL(vkDestroyInstance, instance, g_allocator);
 	}
@@ -2509,7 +2513,7 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 	if EXPECT_FALSE (!executableCount) {
-		printf("Warning: No pipeline executables are available for capture\n\n");
+		log_warning(stdout, "No pipeline executables are available for capture");
 		free_recursive(dyMem);
 		return true;
 	}

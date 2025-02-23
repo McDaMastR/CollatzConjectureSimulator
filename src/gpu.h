@@ -121,15 +121,15 @@ typedef struct ValueInfo
 
 // If the return type is bool, then that function returns true on success, and false elsewise
 
-bool create_instance(ProgramConfig config, Gpu* gpu) NONNULL_ARGS_ALL;
-bool select_device(ProgramConfig config, Gpu* gpu) NONNULL_ARGS_ALL;
-bool create_device(ProgramConfig config, Gpu* gpu) NONNULL_ARGS_ALL;
-bool manage_memory(ProgramConfig config, Gpu* gpu) NONNULL_ARGS_ALL;
+bool create_instance(Gpu* gpu) NONNULL_ARGS_ALL;
+bool select_device(Gpu* gpu) NONNULL_ARGS_ALL;
+bool create_device(Gpu* gpu) NONNULL_ARGS_ALL;
+bool manage_memory(Gpu* gpu) NONNULL_ARGS_ALL;
 bool create_buffers(Gpu* gpu) NONNULL_ARGS_ALL;
 bool create_descriptors(Gpu* gpu) NONNULL_ARGS_ALL;
-bool create_pipeline(ProgramConfig config, Gpu* gpu) NONNULL_ARGS_ALL;
+bool create_pipeline(Gpu* gpu) NONNULL_ARGS_ALL;
 bool create_commands(Gpu* gpu) NONNULL_ARGS_ALL;
-bool submit_commands(ProgramConfig config, Gpu* gpu) NONNULL_ARGS_ALL;
+bool submit_commands(Gpu* gpu) NONNULL_ARGS_ALL;
 bool destroy_gpu(Gpu* gpu) NONNULL_ARGS_ALL;
 
 bool retrieve_queue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* queue, const char* name)

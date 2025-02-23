@@ -17,7 +17,7 @@
 
 #include "cli.h"
 #include "debug.h"
-#include "dystring.h"
+#include "dyarray.h"
 
 
 typedef union CliData
@@ -43,9 +43,15 @@ typedef struct CliOption
 typedef struct Cli_T
 {
 	DyArray opts;
-	void* data;
+	void*   data;
 } Cli_T;
 
+
+void cli_destroy(Cli cli)
+{
+	DyArray_destroy(cli->opts);
+	free(cli);
+}
 
 Cli cli_create(void* data, size_t count)
 {
@@ -63,12 +69,6 @@ Cli cli_create(void* data, size_t count)
 	return cli;
 }
 
-void cli_free(Cli cli)
-{
-	DyArray_destroy(cli->opts);
-	free(cli);
-}
-
 static bool cli_parse_arg(CliDatatype type, const char* opt, const char* arg, CliData* res)
 {
 	char* end = NULL;
@@ -77,7 +77,7 @@ static bool cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 
 	if (type == CLI_DATATYPE_NONE) return true;
 
-	if (!arg) { printf("Warning: Ignoring incomplete option '%s'\n", opt); return false; }
+	if (!arg) { log_warning(stdout, "Ignoring incomplete option '%s'", opt); return false; }
 
 	switch (type) {
 		case CLI_DATATYPE_CHAR:
@@ -91,7 +91,8 @@ static bool cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 		case CLI_DATATYPE_FLOAT:;
 			float f = strtof(arg, &end);
 
-			if (*end != '\0') { printf("Warning: Partially interpreting argument '%s' as %f\n", arg, (double) f); }
+			if (*end != '\0') { 
+				log_warning(stdout, "Partially interpreting argument '%s' as %f", arg, (double) f); }
 
 			res->f = f;
 			break;
@@ -99,7 +100,8 @@ static bool cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 		case CLI_DATATYPE_DOUBLE:;
 			double d = strtod(arg, &end);
 
-			if (*end != '\0') { printf("Warning: Partially interpreting argument '%s' as %f\n", arg, d); }
+			if (*end != '\0') {
+				log_warning(stdout, "Partially interpreting argument '%s' as %f", arg, d); }
 
 			res->d = d;
 			break;
@@ -107,7 +109,8 @@ static bool cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 		case CLI_DATATYPE_LDOUBLE:;
 			long double ld = strtold(arg, &end);
 
-			if (*end != '\0') { printf("Warning: Partially interpreting argument '%s' as %Lf\n", arg, ld); }
+			if (*end != '\0') {
+				log_warning(stdout, "Partially interpreting argument '%s' as %Lf", arg, ld); }
 
 			res->ld = ld;
 			break;
@@ -115,7 +118,8 @@ static bool cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 		case CLI_DATATYPE_LONG:;
 			long l = strtol(arg, &end, 0);
 
-			if (*end != '\0') { printf("Warning: Partially interpreting argument '%s' as %ld\n", arg, l); }
+			if (*end != '\0') {
+				log_warning(stdout, "Partially interpreting argument '%s' as %ld", arg, l); }
 
 			res->l = l;
 			break;
@@ -123,7 +127,8 @@ static bool cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 		case CLI_DATATYPE_LLONG:;
 			long long ll = strtoll(arg, &end, 0);
 
-			if (*end != '\0') { printf("Warning: Partially interpreting argument '%s' as %lld\n", arg, ll); }
+			if (*end != '\0') {
+				log_warning(stdout, "Partially interpreting argument '%s' as %lld", arg, ll); }
 
 			res->ll = ll;
 			break;
@@ -131,7 +136,8 @@ static bool cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 		case CLI_DATATYPE_ULONG:;
 			unsigned long ul = strtoul(arg, &end, 0);
 
-			if (*end != '\0') { printf("Warning: Partially interpreting argument '%s' as %lu\n", arg, ul); }
+			if (*end != '\0') {
+				log_warning(stdout, "Partially interpreting argument '%s' as %lu", arg, ul); }
 
 			res->ul = ul;
 			break;
@@ -139,13 +145,14 @@ static bool cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 		case CLI_DATATYPE_ULLONG:;
 			unsigned long long ull = strtoull(arg, &end, 0);
 
-			if (*end != '\0') { printf("Warning: Partially interpreting argument '%s' as %llu\n", arg, ull); }
+			if (*end != '\0') {
+				log_warning(stdout, "Partially interpreting argument '%s' as %llu", arg, ull); }
 
 			res->ull = ull;
 			break;
 
 		default:
-			printf("Error: Invalid datatype for option '%s'\n", opt);
+			log_error(stderr, "Invalid datatype for option '%s'", opt);
 			return false;
 	}
 
@@ -196,7 +203,7 @@ bool cli_parse(Cli cli, int argc, char** argv)
 				}
 			}
 
-			if (!found) { printf("Warning: Ignoring unknown option '--%s'\n", arg); }
+			if (!found) { log_warning(stdout, "Ignoring unknown option '--%s'", arg); }
 		}
 	}
 

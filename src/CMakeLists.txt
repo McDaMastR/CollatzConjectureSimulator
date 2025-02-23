@@ -61,7 +61,7 @@ set_target_properties(
 	C_EXTENSIONS ON
 
 	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin
-	RUNTIME_OUTPUT_NAME_DEBUG cltzd
+	RUNTIME_OUTPUT_NAME_DEBUG cltz-dbg
 )
 
 target_compile_definitions(cltz
@@ -74,6 +74,9 @@ target_compile_definitions(cltz
 		COLLATZSIM_VERSION_PATCH=${CollatzConjectureSimulator_VERSION_PATCH}
 
 		"$<$<NOT:$<CONFIG:DEBUG>>:NDEBUG=1>"
+
+		#"$<$<AND:${USING_EXCESS_WARNINGS},${USING_MINGW}>:__MINGW_MSVC_COMPAT_WARNINGS=1>"
+		"$<$<OR:$<C_COMPILER_ID:MSVC>,${USING_MINGW}>:_CRT_SECURE_NO_WARNINGS=1>"
 )
 
 target_compile_options(cltz
@@ -116,7 +119,8 @@ target_precompile_headers(cltz
 		<stdio.h>
 		<stdlib.h>
 
-		"$<$<OR:$<C_COMPILER_ID:MSVC>,${USING_MINGW}>:<intrin.h$<ANGLE-R>>"
+		"$<$<OR:$<C_COMPILER_ID:GNU,CLANG>,${USING_MINGW}>:<unistd.h$<ANGLE-R>>"
+		"$<$<OR:$<C_COMPILER_ID:MSVC>,${USING_MINGW}>:<intrin.h$<ANGLE-R>;<windows.h$<ANGLE-R>>"
 )
 
 target_sources(cltz

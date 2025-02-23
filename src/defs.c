@@ -71,3 +71,20 @@ const VkAllocationCallbacks g_allocationCallbacks = {
 	.pfnInternalAllocation = internal_allocation_callback,
 	.pfnInternalFree       = internal_free_callback
 };
+
+ProgramConfig g_config = {
+	.outputLevel       = OUTPUT_LEVEL_DEFAULT,
+	.colourLevel       = COLOUR_LEVEL_TTY,
+	.iterSize          = 128,
+	.maxLoops          = ULONG_LONG_MAX,
+	.maxMemory         = .4f,
+	.preferInt16       = false,
+	.preferInt64       = false,
+	.extensionLayers   = false,
+	.profileLayers     = false,
+	.validationLayers  = false,
+	.restartCount      = false,
+	.queryBenchmarking = true,
+	.logAllocations    = false,
+	.capturePipelines  = false
+};

@@ -117,8 +117,8 @@ add `--target cltz`. To specify the build configuration, add `--config CONFIG` (
 generators).
 
 The above command will create a `bin` directory containing the SPIR-V and executable. If built in debug, the executable
-will be named `cltzd`. Otherwise, it will be named `cltz`. The executable must be run from within the `bin` directory,
-else it will be unable to locate the generated SPIR-V.
+will be named `cltz-dbg`. Otherwise, it will be named `cltz`. The executable must be run from within the `bin`
+directory, else it will be unable to locate the generated SPIR-V.
 
 The executable provides a command line interface and uses the initial command line parameters to specify the operation
 of the program. Parameters beginning with a double hyphen (--) reference options. Some options themselves accept a

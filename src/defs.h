@@ -174,6 +174,40 @@
 #endif
 
 
+// ANSI escape codes regarding Select Graphic Rendition
+
+#define SGR_RESET      "\e[m"
+#define SGR_BOLD       "\e[1m"
+#define SGR_FAINT      "\e[2m"
+#define SGR_ITALIC     "\e[3m"
+#define SGR_UNDERLINE  "\e[4m"
+#define SGR_SLOW_BLINK "\e[5m"
+#define SGR_FAST_BLINK "\e[6m"
+#define SGR_INVERT     "\e[7m"
+#define SGR_CONCEAL    "\e[8m"
+#define SGR_STRIKE     "\e[9m"
+
+#define SGR_FG_BLACK   "\e[30m"
+#define SGR_FG_RED     "\e[31m"
+#define SGR_FG_GREEN   "\e[32m"
+#define SGR_FG_YELLOW  "\e[33m"
+#define SGR_FG_BLUE    "\e[34m"
+#define SGR_FG_MAGENTA "\e[35m"
+#define SGR_FG_CYAN    "\e[36m"
+#define SGR_FG_WHITE   "\e[37m"
+#define SGR_FG_DEFAULT "\e[39m"
+
+#define SGR_BG_BLACK   "\e[40m"
+#define SGR_BG_RED     "\e[41m"
+#define SGR_BG_GREEN   "\e[42m"
+#define SGR_BG_YELLOW  "\e[43m"
+#define SGR_BG_BLUE    "\e[44m"
+#define SGR_BG_MAGENTA "\e[45m"
+#define SGR_BG_CYAN    "\e[46m"
+#define SGR_BG_WHITE   "\e[47m"
+#define SGR_BG_DEFAULT "\e[49m"
+
+
 // Helper macros
 
 #define NEWLINE() putchar('\n')
@@ -225,13 +259,21 @@ typedef enum OutputLevel
 	OUTPUT_LEVEL_VERBOSE = 3
 } OutputLevel;
 
+typedef enum ColourLevel
+{
+	COLOUR_LEVEL_NONE = 0,
+	COLOUR_LEVEL_TTY  = 1,
+	COLOUR_LEVEL_ALL  = 2
+} ColourLevel;
+
 typedef struct ProgramConfig
 {
 	OutputLevel outputLevel;
+	ColourLevel colourLevel;
 
-	unsigned long iterSize;
+	unsigned long      iterSize;
 	unsigned long long maxLoops;
-	float maxMemory;
+	float              maxMemory;
 
 	bool preferInt16;
 	bool preferInt64;
@@ -296,3 +338,5 @@ extern const double MS_PER_CLOCK;
 
 extern const VkAllocationCallbacks  g_allocationCallbacks;
 extern const VkAllocationCallbacks* g_allocator;
+
+extern ProgramConfig g_config;

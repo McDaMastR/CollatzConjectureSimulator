@@ -18,7 +18,6 @@
 #pragma once
 
 #include "defs.h"
-#include "dyarray.h"
 
 
 #define CLI_MAX_OPTION_LENGTH 64ULL
@@ -43,10 +42,12 @@ typedef bool (*CliCallback)(void* data, void* arg);
 typedef struct Cli_T* Cli;
 
 
-Cli cli_create(void* data, size_t count);
+// TODO Document these functions like the Dy* functions
 
-void cli_free(Cli cli);
+void cli_destroy(Cli cli);
 
-bool cli_parse(Cli cli, int argc, char** argv);
+Cli cli_create(void* data, size_t count) FREE_FUNC(cli_destroy, 1) NO_ACCESS(1) USE_RET;
 
-bool cli_add(Cli cli, const char* name, CliDatatype type, CliCallback cb);
+bool cli_parse(Cli cli, int argc, char** argv) NONNULL_ARGS_ALL;
+
+bool cli_add(Cli cli, const char* name, CliDatatype type, CliCallback cb) NONNULL_ARGS_ALL NULTSTR_ARG(2);

@@ -32,7 +32,7 @@
 	while (0)
 
 
-static bool version_option_callback(void* restrict data, void* restrict arg)
+static bool version_option_callback(void* data, void* restrict arg)
 {
 	(void) data;
 	(void) arg;
@@ -40,11 +40,11 @@ static bool version_option_callback(void* restrict data, void* restrict arg)
 	printf(
 		"%s %" PRIu32 ".%" PRIu32 ".%" PRIu32 "\n%s\n%s\n",
 		PROGRAM_NAME, PROGRAM_VER_MAJOR, PROGRAM_VER_MINOR, PROGRAM_VER_PATCH, PROGRAM_COPYRIGHT, PROGRAM_LICENCE);
-	
+
 	return false;
 }
 
-static bool help_option_callback(void* restrict data, void* restrict arg)
+static bool help_option_callback(void* data, void* restrict arg)
 {
 	(void) data;
 	(void) arg;
@@ -59,6 +59,10 @@ static bool help_option_callback(void* restrict data, void* restrict arg)
 		"  --silent                    Output no diagnostic information.\n"
 		"  --quiet                     Output minimal diagnostic information.\n"
 		"  --verbose                   Output maximal diagnostic information.\n"
+		"\n"
+		"  --no-colour                 Do not use colour in terminal and file output.\n"
+		"  --colour                    Use colour in terminal output, but not file output. (default)\n"
+		"  --colour-all                Use colour in both terminal and file output.\n"
 		"\n"
 		"  --int16                     Prefer shaders using 16-bit integers where appropriate.\n"
 		"  --int64                     Prefer shaders using 64-bit integers where appropriate.\n"
@@ -77,203 +81,218 @@ static bool help_option_callback(void* restrict data, void* restrict arg)
 		"  --max-memory <value>        Maximum proportion of available GPU heap memory to be allocated. Must be within "
 			"(0, 1].\n",
 		PROGRAM_EXE, ALLOC_LOG_NAME, VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME);
-	
+
 	return false;
 }
 
-static bool silent_option_callback(void* restrict data, void* restrict arg)
+static bool silent_option_callback(void* data, void* restrict arg)
 {
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
 
 	config->outputLevel = OUTPUT_LEVEL_SILENT;
-	
+
 	return true;
 }
 
-static bool quiet_option_callback(void* restrict data, void* restrict arg)
+static bool quiet_option_callback(void* data, void* restrict arg)
 {
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
 
 	config->outputLevel = OUTPUT_LEVEL_QUIET;
-	
+
 	return true;
 }
 
-static bool verbose_option_callback(void* restrict data, void* restrict arg)
+static bool verbose_option_callback(void* data, void* restrict arg)
 {
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
 
 	config->outputLevel = OUTPUT_LEVEL_VERBOSE;
-	
+
 	return true;
 }
 
-static bool int16_option_callback(void* restrict data, void* restrict arg)
+static bool no_colour_option_callback(void* data, void* restrict arg)
+{
+	(void) arg;
+
+	ProgramConfig* config = (ProgramConfig*) data;
+
+	config->colourLevel = COLOUR_LEVEL_NONE;
+
+	return true;
+}
+
+static bool colour_option_callback(void* data, void* restrict arg)
+{
+	(void) arg;
+
+	ProgramConfig* config = (ProgramConfig*) data;
+
+	config->colourLevel = COLOUR_LEVEL_TTY;
+
+	return true;
+}
+
+static bool colour_all_option_callback(void* data, void* restrict arg)
+{
+	(void) arg;
+
+	ProgramConfig* config = (ProgramConfig*) data;
+
+	config->colourLevel = COLOUR_LEVEL_ALL;
+
+	return true;
+}
+
+static bool int16_option_callback(void* data, void* restrict arg)
 {
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
 
 	config->preferInt16 = true;
-	
+
 	return true;
 }
 
-static bool int64_option_callback(void* restrict data, void* restrict arg)
+static bool int64_option_callback(void* data, void* restrict arg)
 {
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
 
 	config->preferInt64 = true;
-	
+
 	return true;
 }
 
-static bool ext_layers_option_callback(void* restrict data, void* restrict arg)
+static bool ext_layers_option_callback(void* data, void* restrict arg)
 {
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
 
 	config->extensionLayers = true;
-	
+
 	return true;
 }
 
-static bool profile_layers_option_callback(void* restrict data, void* restrict arg)
+static bool profile_layers_option_callback(void* data, void* restrict arg)
 {
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
 
 	config->profileLayers = true;
-	
+
 	return true;
 }
 
-static bool validation_option_callback(void* restrict data, void* restrict arg)
+static bool validation_option_callback(void* data, void* restrict arg)
 {
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
 
 	config->validationLayers = true;
-	
+
 	return true;
 }
 
-static bool restart_option_callback(void* restrict data, void* restrict arg)
+static bool restart_option_callback(void* data, void* restrict arg)
 {
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
 
 	config->restartCount = true;
-	
+
 	return true;
 }
 
-static bool no_query_benchmarks_option_callback(void* restrict data, void* restrict arg)
+static bool no_query_benchmarks_option_callback(void* data, void* restrict arg)
 {
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
 
 	config->queryBenchmarking = false;
-	
+
 	return true;
 }
 
-static bool log_allocations_option_callback(void* restrict data, void* restrict arg)
+static bool log_allocations_option_callback(void* data, void* restrict arg)
 {
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
 
 	config->logAllocations = false;
-	
+
 	return true;
 }
 
-static bool capture_pipelines_option_callback(void* restrict data, void* restrict arg)
+static bool capture_pipelines_option_callback(void* data, void* restrict arg)
 {
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
 
 	config->capturePipelines = false;
-	
+
 	return true;
 }
 
-static bool iter_size_option_callback(void* restrict data, void* restrict arg)
+static bool iter_size_option_callback(void* data, void* restrict arg)
 {
 	ProgramConfig* config  = (ProgramConfig*) data;
 	unsigned long iterSize = *(unsigned long*) arg;
 
 	if (iterSize != 128 && iterSize != 256) {
-		printf("Warning: Ignoring invalid '--iter-size' argument '%lu'\n", iterSize);
+		log_warning(stdout, "Ignoring invalid '--iter-size' argument '%lu'", iterSize);
 		return true;
 	}
 
 	config->iterSize = iterSize;
-	
+
 	return true;
 }
 
-static bool max_loops_option_callback(void* restrict data, void* restrict arg)
+static bool max_loops_option_callback(void* data, void* restrict arg)
 {
 	ProgramConfig*     config   = (ProgramConfig*) data;
 	unsigned long long maxLoops = *(unsigned long long*) arg;
 
 	config->maxLoops = maxLoops;
-	
+
 	return true;
 }
 
-static bool max_memory_option_callback(void* restrict data, void* restrict arg)
+static bool max_memory_option_callback(void* data, void* restrict arg)
 {
 	ProgramConfig* config    = (ProgramConfig*) data;
 	float          maxMemory = *(float*) arg;
 
 	if (maxMemory <= 0 || maxMemory > 1) {
-		printf("Warning: Ignoring invalid '--max-memory' argument '%f'\n", (double) maxMemory);
+		log_warning(stdout, "Ignoring invalid '--max-memory' argument '%f'", (double) maxMemory);
 		return true;
 	}
 
 	config->maxMemory = maxMemory;
-	
+
 	return true;
 }
 
-static bool init_config(ProgramConfig* config, int argc, char** argv)
+static bool init_config(int argc, char** argv)
 {
-	config->outputLevel = OUTPUT_LEVEL_DEFAULT;
-
-	config->maxMemory = .4f;
-	config->iterSize  = 128;
-	config->maxLoops  = ULONG_LONG_MAX;
-
-	config->preferInt16 = false;
-	config->preferInt64 = false;
-
-	config->extensionLayers  = false;
-	config->profileLayers    = false;
-	config->validationLayers = false;
-
-	config->restartCount      = false;
-	config->queryBenchmarking = true;
-	config->logAllocations    = false;
-	config->capturePipelines  = false;
-
-	Cli cli = cli_create(config, 17);
+	Cli cli = cli_create(&g_config, 20);
 
 	if EXPECT_FALSE (!cli) return false;
 
@@ -283,6 +302,10 @@ static bool init_config(ProgramConfig* config, int argc, char** argv)
 	cli_add(cli, "silent",  CLI_DATATYPE_NONE, silent_option_callback);
 	cli_add(cli, "quiet",   CLI_DATATYPE_NONE, quiet_option_callback);
 	cli_add(cli, "verbose", CLI_DATATYPE_NONE, verbose_option_callback);
+
+	cli_add(cli, "no-colour",  CLI_DATATYPE_NONE, no_colour_option_callback);
+	cli_add(cli, "colour",     CLI_DATATYPE_NONE, colour_option_callback);
+	cli_add(cli, "colour-all", CLI_DATATYPE_NONE, colour_all_option_callback);
 
 	cli_add(cli, "int16", CLI_DATATYPE_NONE, int16_option_callback);
 	cli_add(cli, "int64", CLI_DATATYPE_NONE, int64_option_callback);
@@ -302,9 +325,32 @@ static bool init_config(ProgramConfig* config, int argc, char** argv)
 
 	bool bres = cli_parse(cli, argc, argv);
 
-	if (!bres) { cli_free(cli); return false; }
+	if (!bres) { cli_destroy(cli); return false; }
 
-	cli_free(cli);
+	cli_destroy(cli);
+
+	return true;
+}
+
+
+static bool init_env(void)
+{
+#ifdef _WIN32
+	HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+	DWORD  dwMode;
+
+	WINBOOL winres = GetConsoleMode(hOutput, &dwMode);
+
+	if (!winres) return false;
+
+	// Enable ANSI escape codes
+	dwMode |= ENABLE_PROCESSED_OUTPUT;
+	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+
+	winres = SetConsoleMode(hOutput, dwMode);
+
+	if (!winres) return false;
+#endif
 
 	return true;
 }
@@ -312,22 +358,25 @@ static bool init_config(ProgramConfig* config, int argc, char** argv)
 
 int main(int argc, char** argv)
 {
-	ProgramConfig config = {0};
 	Gpu gpu = {0};
 
-	bool bres = init_config(&config, argc, argv);
+	bool bres = init_env();
+
+	if (!bres) return EXIT_FAILURE;
+
+	bres = init_config(argc, argv);
 
 	if (!bres) return EXIT_SUCCESS;
 
-	CHECK_RESULT(create_instance, config, &gpu);
-	CHECK_RESULT(select_device, config, &gpu);
-	CHECK_RESULT(create_device, config, &gpu);
-	CHECK_RESULT(manage_memory, config, &gpu);
+	CHECK_RESULT(create_instance, &gpu);
+	CHECK_RESULT(select_device, &gpu);
+	CHECK_RESULT(create_device, &gpu);
+	CHECK_RESULT(manage_memory, &gpu);
 	CHECK_RESULT(create_buffers, &gpu);
 	CHECK_RESULT(create_descriptors, &gpu);
-	CHECK_RESULT(create_pipeline, config, &gpu);
+	CHECK_RESULT(create_pipeline, &gpu);
 	CHECK_RESULT(create_commands, &gpu);
-	CHECK_RESULT(submit_commands, config, &gpu);
+	CHECK_RESULT(submit_commands, &gpu);
 
 	destroy_gpu(&gpu);
 
