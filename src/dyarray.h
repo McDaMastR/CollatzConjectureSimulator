@@ -35,7 +35,7 @@ typedef struct DyArray_T* DyArray;
  * 
  * @param[inout] arr The dynamic array to destroy.
  */
-void DyArray_destroy(DyArray arr);
+void dyarray_destroy(DyArray arr);
 
 /**
  * @brief Creates a new DyArray object.
@@ -48,7 +48,7 @@ void DyArray_destroy(DyArray arr);
  * 
  * @return The new dynamic array, or NULL.
  */
-DyArray DyArray_create(size_t size, size_t count) FREE_FUNC(DyArray_destroy, 1) USE_RET;
+DyArray dyarray_create(size_t size, size_t count) FREE_FUNC(dyarray_destroy, 1) USE_RET;
 
 
 /**
@@ -62,7 +62,7 @@ DyArray DyArray_create(size_t size, size_t count) FREE_FUNC(DyArray_destroy, 1) 
  * 
  * @return The number of elements in the dynamic array.
  */
-size_t DyArray_size(DyArray arr) RE_ACCESS(1) USE_RET;
+size_t dyarray_size(DyArray arr) RE_ACCESS(1) USE_RET;
 
 /**
  * @brief Retrieves the raw array of a DyArray object.
@@ -75,7 +75,7 @@ size_t DyArray_size(DyArray arr) RE_ACCESS(1) USE_RET;
  * 
  * @return The raw array.
  */
-void* DyArray_raw(DyArray arr) RE_ACCESS(1) USE_RET;
+void* dyarray_raw(DyArray arr) RE_ACCESS(1) USE_RET;
 
 
 /**
@@ -87,7 +87,7 @@ void* DyArray_raw(DyArray arr) RE_ACCESS(1) USE_RET;
  * @param[out] val A pointer to the memory to copy the retrieved value into. Must not be NULL.
  * @param[in] idx The index of the element to retrieve. Must be less than the size of the array.
  */
-void DyArray_get(DyArray arr, void* restrict val, size_t idx) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
+void dyarray_get(DyArray arr, void* restrict val, size_t idx) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
 
 /**
  * @brief Sets an element from a DyArray object.
@@ -98,7 +98,7 @@ void DyArray_get(DyArray arr, void* restrict val, size_t idx) NONNULL_ARGS_ALL R
  * @param[in] val A pointer to the value to set the element to. Must not be NULL.
  * @param[in] idx The index of the element to set. Must be less than the size of the array.
  */
-void DyArray_set(DyArray arr, const void* restrict val, size_t idx) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
+void dyarray_set(DyArray arr, const void* restrict val, size_t idx) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
 
 /**
  * @brief Retrieves the last element from a DyArray object.
@@ -108,7 +108,7 @@ void DyArray_set(DyArray arr, const void* restrict val, size_t idx) NONNULL_ARGS
  * @param[in] arr The dynamic array. Must not be NULL.
  * @param[out] val A pointer to the memory to copy the retrieved value into. Must not be NULL.
  */
-void DyArray_last(DyArray arr, void* restrict val) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
+void dyarray_last(DyArray arr, void* restrict val) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
 
 /**
  * @brief Retrieves the first element from a DyArray object.
@@ -118,7 +118,7 @@ void DyArray_last(DyArray arr, void* restrict val) NONNULL_ARGS_ALL RE_ACCESS(1)
  * @param[in] arr The dynamic array. Must not be NULL.
  * @param[out] val A pointer to the memory to copy the retrieved value into. Must not be NULL.
  */
-void DyArray_first(DyArray arr, void* restrict val) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
+void dyarray_first(DyArray arr, void* restrict val) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
 
 
 /**
@@ -132,7 +132,7 @@ void DyArray_first(DyArray arr, void* restrict val) NONNULL_ARGS_ALL RE_ACCESS(1
  * 
  * @return A pointer to the new element, or NULL.
  */
-void* DyArray_append(DyArray arr, const void* restrict val) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
+void* dyarray_append(DyArray arr, const void* restrict val) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
 
 /**
  * @brief Prepends an element to a DyArray object.
@@ -145,7 +145,7 @@ void* DyArray_append(DyArray arr, const void* restrict val) NONNULL_ARGS_ALL RW_
  * 
  * @return A pointer to the new element, or NULL.
  */
-void* DyArray_prepend(DyArray arr, const void* restrict val) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
+void* dyarray_prepend(DyArray arr, const void* restrict val) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
 
 /**
  * @brief Inserts an element into a DyArray object.
@@ -159,4 +159,4 @@ void* DyArray_prepend(DyArray arr, const void* restrict val) NONNULL_ARGS_ALL RW
  * 
  * @return A pointer to the new element, or NULL.
  */
-void* DyArray_insert(DyArray arr, const void* restrict val, size_t idx) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
+void* dyarray_insert(DyArray arr, const void* restrict val, size_t idx) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);

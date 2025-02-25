@@ -75,7 +75,7 @@ correctly. The full requirements of the GPU are given in [device_requirements.md
   - `spirv-link`
   - `spirv-opt`
   - `spirv-dis`
-- [C](https://en.wikipedia.org/wiki/C_(programming_language))17
+- [C](https://en.wikipedia.org/wiki/C_(programming_language))11
   - `_Atomic` (Optional C11 feature)
   - `__int128` (GNU C extension)
 - [Vulkan](https://www.vulkan.org) 1.1

@@ -49,7 +49,7 @@ typedef struct Cli_T
 
 void cli_destroy(Cli cli)
 {
-	DyArray_destroy(cli->opts);
+	dyarray_destroy(cli->opts);
 	free(cli);
 }
 
@@ -59,7 +59,7 @@ Cli cli_create(void* data, size_t count)
 
 	if EXPECT_FALSE (!cli) { MALLOC_FAILURE(cli, sizeof(Cli_T)); return NULL; }
 
-	DyArray opts = DyArray_create(sizeof(CliOption), count);
+	DyArray opts = dyarray_create(sizeof(CliOption), count);
 
 	if EXPECT_FALSE (!opts) { free(cli); return NULL; }
 
@@ -161,7 +161,7 @@ static bool cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 
 bool cli_parse(Cli cli, int argc, char** argv)
 {
-	size_t optc = DyArray_size(cli->opts);
+	size_t optc = dyarray_size(cli->opts);
 	void*  data = cli->data;
 
 	for (int i = 1; i < argc; i++) {
@@ -174,7 +174,7 @@ bool cli_parse(Cli cli, int argc, char** argv)
 
 			for (size_t j = 0; j < optc; j++) {
 				CliOption opt;
-				DyArray_get(cli->opts, &opt, j);
+				dyarray_get(cli->opts, &opt, j);
 
 				if (!strncmp(arg, opt.name, CLI_MAX_OPTION_LENGTH)) {
 					found = true;
@@ -219,7 +219,7 @@ bool cli_add(Cli cli, const char* name, CliDatatype type, CliCallback cb)
 	newopt.type = type;
 	newopt.cb   = cb;
 
-	void* pres = DyArray_append(cli->opts, &newopt);
+	void* pres = dyarray_append(cli->opts, &newopt);
 	if EXPECT_FALSE (!pres) return false;
 
 	return true;

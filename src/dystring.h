@@ -35,7 +35,7 @@ typedef struct DyString_T* DyString;
  * 
  * @param[inout] str The dynamic string to destroy. Must not be NULL.
  */
-void DyString_destroy(DyString str);
+void dystring_destroy(DyString str);
 
 /**
  * @brief Creates a new DyString object.
@@ -47,7 +47,7 @@ void DyString_destroy(DyString str);
  * 
  * @return The new dynamic string, or NULL.
  */
-DyString DyString_create(size_t count) FREE_FUNC(DyString_destroy, 1) USE_RET;
+DyString dystring_create(size_t count) FREE_FUNC(dystring_destroy, 1) USE_RET;
 
 
 /**
@@ -61,7 +61,7 @@ DyString DyString_create(size_t count) FREE_FUNC(DyString_destroy, 1) USE_RET;
  * 
  * @return The number of characters in the dynamic string.
  */
-size_t DyString_length(DyString str) RE_ACCESS(1) USE_RET;
+size_t dystring_length(DyString str) RE_ACCESS(1) USE_RET;
 
 /**
  * @brief Retrieves the raw string of a DyString object.
@@ -74,7 +74,7 @@ size_t DyString_length(DyString str) RE_ACCESS(1) USE_RET;
  * 
  * @return The raw string.
  */
-char* DyString_raw(DyString str) RE_ACCESS(1) USE_RET;
+char* dystring_raw(DyString str) RE_ACCESS(1) USE_RET;
 
 
 /**
@@ -88,7 +88,7 @@ char* DyString_raw(DyString str) RE_ACCESS(1) USE_RET;
  * 
  * @return A pointer to the added substring, or NULL.
  */
-char* DyString_append(DyString str, const char* restrict sub) NONNULL_ARGS_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
+char* dystring_append(DyString str, const char* restrict sub) NONNULL_ARGS_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
 
 /**
  * @brief Prepends a substring to a DyString object.
@@ -101,7 +101,7 @@ char* DyString_append(DyString str, const char* restrict sub) NONNULL_ARGS_ALL N
  * 
  * @return A pointer to the added substring, or NULL.
  */
-char* DyString_prepend(DyString str, const char* restrict sub)
+char* dystring_prepend(DyString str, const char* restrict sub)
 	NONNULL_ARGS_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
 
 /**
@@ -116,5 +116,5 @@ char* DyString_prepend(DyString str, const char* restrict sub)
  * 
  * @return A pointer to the added substring, or NULL.
  */
-char* DyString_insert(DyString str, const char* restrict sub, size_t idx)
+char* dystring_insert(DyString str, const char* restrict sub, size_t idx)
 	NONNULL_ARGS_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);

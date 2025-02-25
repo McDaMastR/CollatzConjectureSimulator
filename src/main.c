@@ -339,17 +339,17 @@ static bool init_env(void)
 	HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
 	DWORD  dwMode;
 
-	WINBOOL winres = GetConsoleMode(hOutput, &dwMode);
+	WINBOOL wbres = GetConsoleMode(hOutput, &dwMode);
 
-	if (!winres) return false;
+	if (!wbres) return false;
 
 	// Enable ANSI escape codes
 	dwMode |= ENABLE_PROCESSED_OUTPUT;
 	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 
-	winres = SetConsoleMode(hOutput, dwMode);
+	wbres = SetConsoleMode(hOutput, dwMode);
 
-	if (!winres) return false;
+	if (!wbres) return false;
 #endif
 
 	return true;
