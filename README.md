@@ -123,11 +123,7 @@ directory, else it will be unable to locate the generated SPIR-V.
 The executable provides a command line interface and uses the initial command line parameters to specify the operation
 of the program. Parameters beginning with a double hyphen (--) reference options. Some options themselves accept a
 parameter, which must be given immediately following the option as the next CLI parameter. To view a comprehensive list
-of possible options, use the `--help` option:
-
-```bash
-cltz --help
-```
+of possible options, use the `--help` option.
 
 In most cases, the executable will initiate the program's main loop. If during this process the `Enter` or `Return` keys
 are pressed, the program will break from the main loop and begin to exit. Each iteration of the main loop will output
@@ -215,7 +211,22 @@ Hence, Collatz Conjecture Simulator only iterates through the Collatz sequences 
 $n \in \mathbb{Z}^+ : n \equiv 3 \pmod 4$. This improves performance by allowing larger intervals of starting values to
 be tested per dispatch command, and by more evenly distributing the workload between the CPU and GPU.
 
-## Artificial Intelligence
+## Licensing
+
+Collatz Conjecture Simulator is licensed under version 3 of the GNU General Public License (GPLv3). A copy of this
+licence should be [included](COPYING) with Collatz Conjecture Simulator. Otherwise, the licence may be viewed
+[here](https://www.gnu.org/licenses/gpl-3.0.html).
+
+The building of Collatz Conjecture Simulator is dependent on a number of external works, each with their own associated
+licence or licences.
+
+| Work                     | Licences        |
+| ------------------------ | --------------- |
+| volk                     | MIT             |
+| Vulkan-Headers           | MIT, Apache-2.0 |
+| Vulkan-Utility-Libraries | Apache-2.0      |
+
+### Artificial Intelligence
 
 The author of Collatz Conjecture Simulator is not a lawyer, but strongly believes the usage of GPLv3-licensed works in
 the training and development of proprietary AI is necessarily violating of said licence. However, in the event the GPLv3
