@@ -76,8 +76,11 @@ bool init_alloc_logfile(void)
 }
 
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-format-attribute"
+
 static bool log_colour(
-	FILE* restrict stream,
+	FILE* stream,
 	const char* fmt,
 	const char* sgr1,
 	const char* sgr2,
@@ -150,7 +153,10 @@ static bool log_colour(
 	return true;
 }
 
-bool log_debug(FILE* restrict stream, const char* restrict format, ...)
+#pragma GCC diagnostic pop
+
+
+bool log_debug(FILE* stream, const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -162,7 +168,7 @@ bool log_debug(FILE* restrict stream, const char* restrict format, ...)
 	return bres;
 }
 
-bool log_warning(FILE* restrict stream, const char* restrict format, ...)
+bool log_warning(FILE* stream, const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -174,7 +180,7 @@ bool log_warning(FILE* restrict stream, const char* restrict format, ...)
 	return bres;
 }
 
-bool log_error(FILE* restrict stream, const char* restrict format, ...)
+bool log_error(FILE* stream, const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -186,7 +192,7 @@ bool log_error(FILE* restrict stream, const char* restrict format, ...)
 	return bres;
 }
 
-bool log_critical(FILE* restrict stream, const char* restrict format, ...)
+bool log_critical(FILE* stream, const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);

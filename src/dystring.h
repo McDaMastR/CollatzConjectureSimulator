@@ -33,7 +33,7 @@ typedef struct DyString_T* DyString;
  * 
  * If @p str is NULL, the function does nothing.
  * 
- * @param[inout] str The dynamic string to destroy. Must not be NULL.
+ * @param[inout] str The dynamic string.
  */
 void dystring_destroy(DyString str);
 

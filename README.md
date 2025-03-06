@@ -123,7 +123,7 @@ directory, else it will be unable to locate the generated SPIR-V.
 The executable provides a command line interface and uses the initial command line parameters to specify the operation
 of the program. Parameters beginning with a double hyphen (--) reference options. Some options themselves accept a
 parameter, which must be given immediately following the option as the next CLI parameter. To view a comprehensive list
-of possible options, use the `--help` option.
+of possible options, use the `-h` or `--help` option.
 
 In most cases, the executable will initiate the program's main loop. If during this process the `Enter` or `Return` keys
 are pressed, the program will break from the main loop and begin to exit. Each iteration of the main loop will output

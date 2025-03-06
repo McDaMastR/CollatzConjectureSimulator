@@ -32,7 +32,7 @@
 	while (0)
 
 
-static bool version_option_callback(void* data, void* restrict arg)
+static bool version_option_callback(void* data, void* arg)
 {
 	(void) data;
 	(void) arg;
@@ -44,7 +44,7 @@ static bool version_option_callback(void* data, void* restrict arg)
 	return false;
 }
 
-static bool help_option_callback(void* data, void* restrict arg)
+static bool help_option_callback(void* data, void* arg)
 {
 	(void) data;
 	(void) arg;
@@ -53,26 +53,26 @@ static bool help_option_callback(void* data, void* restrict arg)
 		"Usage: %s [options]\n"
 		"\n"
 		"Options:\n"
-		"  --version                   Output version and licence information, then terminate.\n"
-		"  --help                      Output this hopefully helpful CLI overview, then terminate.\n"
+		"  -V --version                Output version and licence information, then terminate.\n"
+		"  -h --help                   Output this hopefully helpful CLI overview, then terminate.\n"
 		"\n"
-		"  --silent                    Output no diagnostic information.\n"
-		"  --quiet                     Output minimal diagnostic information.\n"
-		"  --verbose                   Output maximal diagnostic information.\n"
+		"  -s --silent                 Output no diagnostic information.\n"
+		"  -q --quiet                  Output minimal diagnostic information.\n"
+		"  -v --verbose                Output maximal diagnostic information.\n"
 		"\n"
-		"  --no-colour                 Do not use colour in terminal and file output.\n"
-		"  --colour                    Use colour in terminal output, but not file output. (default)\n"
-		"  --colour-all                Use colour in both terminal and file output.\n"
+		"  -n --no-colour              Do not use colour in terminal and file output.\n"
+		"  -c --colour                 Use colour in terminal output, but not file output. (default)\n"
+		"  -C --colour-all             Use colour in both terminal and file output.\n"
+		"\n"
+		"  -e --ext-layers             Enable the Khronos extension layers, if present.\n"
+		"  -p --profile-layers         Enable the Khronos profiles layer, if present.\n"
+		"  -d --validation             Enable the Khronos validation layer, if present.\n"
 		"\n"
 		"  --int16                     Prefer shaders using 16-bit integers where appropriate.\n"
 		"  --int64                     Prefer shaders using 64-bit integers where appropriate.\n"
 		"\n"
-		"  --ext-layers                Enable the Khronos extension layers, if present.\n"
-		"  --profile-layers            Enable the Khronos profiles layer, if present.\n"
-		"  --validation                Enable the Khronos validation layer, if present.\n"
-		"\n"
-		"  --restart                   Restart the simulation. Do not overwrite previous progress.\n"
-		"  --no-query-benchmarks       Do not benchmark Vulkan commands via queries.\n"
+		"  -r --restart                Restart the simulation. Do not overwrite previous progress.\n"
+		"  -b --no-query-benchmarks    Do not benchmark Vulkan commands via queries.\n"
 		"  --log-allocations           Log all memory allocations performed by Vulkan to %s.\n"
 		"  --capture-pipelines         Output pipeline data captured via %s, if present.\n"
 		"\n"
@@ -85,7 +85,7 @@ static bool help_option_callback(void* data, void* restrict arg)
 	return false;
 }
 
-static bool silent_option_callback(void* data, void* restrict arg)
+static bool silent_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
@@ -96,7 +96,7 @@ static bool silent_option_callback(void* data, void* restrict arg)
 	return true;
 }
 
-static bool quiet_option_callback(void* data, void* restrict arg)
+static bool quiet_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
@@ -107,7 +107,7 @@ static bool quiet_option_callback(void* data, void* restrict arg)
 	return true;
 }
 
-static bool verbose_option_callback(void* data, void* restrict arg)
+static bool verbose_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
@@ -118,7 +118,7 @@ static bool verbose_option_callback(void* data, void* restrict arg)
 	return true;
 }
 
-static bool no_colour_option_callback(void* data, void* restrict arg)
+static bool no_colour_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
@@ -129,7 +129,7 @@ static bool no_colour_option_callback(void* data, void* restrict arg)
 	return true;
 }
 
-static bool colour_option_callback(void* data, void* restrict arg)
+static bool colour_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
@@ -140,7 +140,7 @@ static bool colour_option_callback(void* data, void* restrict arg)
 	return true;
 }
 
-static bool colour_all_option_callback(void* data, void* restrict arg)
+static bool colour_all_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
@@ -151,29 +151,7 @@ static bool colour_all_option_callback(void* data, void* restrict arg)
 	return true;
 }
 
-static bool int16_option_callback(void* data, void* restrict arg)
-{
-	(void) arg;
-
-	ProgramConfig* config = (ProgramConfig*) data;
-
-	config->preferInt16 = true;
-
-	return true;
-}
-
-static bool int64_option_callback(void* data, void* restrict arg)
-{
-	(void) arg;
-
-	ProgramConfig* config = (ProgramConfig*) data;
-
-	config->preferInt64 = true;
-
-	return true;
-}
-
-static bool ext_layers_option_callback(void* data, void* restrict arg)
+static bool ext_layers_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
@@ -184,7 +162,7 @@ static bool ext_layers_option_callback(void* data, void* restrict arg)
 	return true;
 }
 
-static bool profile_layers_option_callback(void* data, void* restrict arg)
+static bool profile_layers_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
@@ -195,7 +173,7 @@ static bool profile_layers_option_callback(void* data, void* restrict arg)
 	return true;
 }
 
-static bool validation_option_callback(void* data, void* restrict arg)
+static bool validation_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
@@ -206,7 +184,29 @@ static bool validation_option_callback(void* data, void* restrict arg)
 	return true;
 }
 
-static bool restart_option_callback(void* data, void* restrict arg)
+static bool int16_option_callback(void* data, void* arg)
+{
+	(void) arg;
+
+	ProgramConfig* config = (ProgramConfig*) data;
+
+	config->preferInt16 = true;
+
+	return true;
+}
+
+static bool int64_option_callback(void* data, void* arg)
+{
+	(void) arg;
+
+	ProgramConfig* config = (ProgramConfig*) data;
+
+	config->preferInt64 = true;
+
+	return true;
+}
+
+static bool restart_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
@@ -217,7 +217,7 @@ static bool restart_option_callback(void* data, void* restrict arg)
 	return true;
 }
 
-static bool no_query_benchmarks_option_callback(void* data, void* restrict arg)
+static bool no_query_benchmarks_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
@@ -228,7 +228,7 @@ static bool no_query_benchmarks_option_callback(void* data, void* restrict arg)
 	return true;
 }
 
-static bool log_allocations_option_callback(void* data, void* restrict arg)
+static bool log_allocations_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
@@ -239,7 +239,7 @@ static bool log_allocations_option_callback(void* data, void* restrict arg)
 	return true;
 }
 
-static bool capture_pipelines_option_callback(void* data, void* restrict arg)
+static bool capture_pipelines_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
@@ -250,13 +250,13 @@ static bool capture_pipelines_option_callback(void* data, void* restrict arg)
 	return true;
 }
 
-static bool iter_size_option_callback(void* data, void* restrict arg)
+static bool iter_size_option_callback(void* data, void* arg)
 {
 	ProgramConfig* config  = (ProgramConfig*) data;
 	unsigned long iterSize = *(unsigned long*) arg;
 
 	if (iterSize != 128 && iterSize != 256) {
-		log_warning(stdout, "Ignoring invalid '--iter-size' argument '%lu'", iterSize);
+		log_warning(stdout, "Ignoring invalid --iter-size argument %lu", iterSize);
 		return true;
 	}
 
@@ -265,7 +265,7 @@ static bool iter_size_option_callback(void* data, void* restrict arg)
 	return true;
 }
 
-static bool max_loops_option_callback(void* data, void* restrict arg)
+static bool max_loops_option_callback(void* data, void* arg)
 {
 	ProgramConfig*     config   = (ProgramConfig*) data;
 	unsigned long long maxLoops = *(unsigned long long*) arg;
@@ -275,13 +275,13 @@ static bool max_loops_option_callback(void* data, void* restrict arg)
 	return true;
 }
 
-static bool max_memory_option_callback(void* data, void* restrict arg)
+static bool max_memory_option_callback(void* data, void* arg)
 {
 	ProgramConfig* config    = (ProgramConfig*) data;
 	float          maxMemory = *(float*) arg;
 
 	if (maxMemory <= 0 || maxMemory > 1) {
-		log_warning(stdout, "Ignoring invalid '--max-memory' argument '%f'", (double) maxMemory);
+		log_warning(stdout, "Ignoring invalid --max-memory argument %f", (double) maxMemory);
 		return true;
 	}
 
@@ -296,32 +296,32 @@ static bool init_config(int argc, char** argv)
 
 	if EXPECT_FALSE (!cli) return false;
 
-	cli_add(cli, "version", CLI_DATATYPE_NONE, version_option_callback);
-	cli_add(cli, "help",    CLI_DATATYPE_NONE, help_option_callback);
+	cli_add(cli, 'V', "version", CLI_DATATYPE_NONE, version_option_callback);
+	cli_add(cli, 'h', "help",    CLI_DATATYPE_NONE, help_option_callback);
 
-	cli_add(cli, "silent",  CLI_DATATYPE_NONE, silent_option_callback);
-	cli_add(cli, "quiet",   CLI_DATATYPE_NONE, quiet_option_callback);
-	cli_add(cli, "verbose", CLI_DATATYPE_NONE, verbose_option_callback);
+	cli_add(cli, 's', "silent",  CLI_DATATYPE_NONE, silent_option_callback);
+	cli_add(cli, 'q', "quiet",   CLI_DATATYPE_NONE, quiet_option_callback);
+	cli_add(cli, 'v', "verbose", CLI_DATATYPE_NONE, verbose_option_callback);
 
-	cli_add(cli, "no-colour",  CLI_DATATYPE_NONE, no_colour_option_callback);
-	cli_add(cli, "colour",     CLI_DATATYPE_NONE, colour_option_callback);
-	cli_add(cli, "colour-all", CLI_DATATYPE_NONE, colour_all_option_callback);
+	cli_add(cli, 'n', "no-colour",  CLI_DATATYPE_NONE, no_colour_option_callback);
+	cli_add(cli, 'c', "colour",     CLI_DATATYPE_NONE, colour_option_callback);
+	cli_add(cli, 'C', "colour-all", CLI_DATATYPE_NONE, colour_all_option_callback);
 
-	cli_add(cli, "int16", CLI_DATATYPE_NONE, int16_option_callback);
-	cli_add(cli, "int64", CLI_DATATYPE_NONE, int64_option_callback);
+	cli_add(cli, 'e', "ext-layers",     CLI_DATATYPE_NONE, ext_layers_option_callback);
+	cli_add(cli, 'p', "profile-layers", CLI_DATATYPE_NONE, profile_layers_option_callback);
+	cli_add(cli, 'd', "validation",     CLI_DATATYPE_NONE, validation_option_callback);
 
-	cli_add(cli, "ext-layers",     CLI_DATATYPE_NONE, ext_layers_option_callback);
-	cli_add(cli, "profile-layers", CLI_DATATYPE_NONE, profile_layers_option_callback);
-	cli_add(cli, "validation",     CLI_DATATYPE_NONE, validation_option_callback);
+	cli_add(cli, '\0', "int16", CLI_DATATYPE_NONE, int16_option_callback);
+	cli_add(cli, '\0', "int64", CLI_DATATYPE_NONE, int64_option_callback);
 
-	cli_add(cli, "restart",             CLI_DATATYPE_NONE, restart_option_callback);
-	cli_add(cli, "no-query-benchmarks", CLI_DATATYPE_NONE, no_query_benchmarks_option_callback);
-	cli_add(cli, "log-allocations",     CLI_DATATYPE_NONE, log_allocations_option_callback);
-	cli_add(cli, "capture-pipelines",   CLI_DATATYPE_NONE, capture_pipelines_option_callback);
+	cli_add(cli, 'r',  "restart",             CLI_DATATYPE_NONE, restart_option_callback);
+	cli_add(cli, 'b',  "no-query-benchmarks", CLI_DATATYPE_NONE, no_query_benchmarks_option_callback);
+	cli_add(cli, '\0', "log-allocations",     CLI_DATATYPE_NONE, log_allocations_option_callback);
+	cli_add(cli, '\0', "capture-pipelines",   CLI_DATATYPE_NONE, capture_pipelines_option_callback);
 
-	cli_add(cli, "iter-size",  CLI_DATATYPE_ULONG,  iter_size_option_callback);
-	cli_add(cli, "max-loops",  CLI_DATATYPE_ULLONG, max_loops_option_callback);
-	cli_add(cli, "max-memory", CLI_DATATYPE_FLOAT,  max_memory_option_callback);
+	cli_add(cli, '\0', "iter-size",  CLI_DATATYPE_ULONG,  iter_size_option_callback);
+	cli_add(cli, '\0', "max-loops",  CLI_DATATYPE_ULLONG, max_loops_option_callback);
+	cli_add(cli, '\0', "max-memory", CLI_DATATYPE_FLOAT,  max_memory_option_callback);
 
 	bool bres = cli_parse(cli, argc, argv);
 

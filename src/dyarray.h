@@ -33,7 +33,7 @@ typedef struct DyArray_T* DyArray;
  * 
  * If @p arr is NULL, the function does nothing.
  * 
- * @param[inout] arr The dynamic array to destroy.
+ * @param[inout] arr The dynamic array.
  */
 void dyarray_destroy(DyArray arr);
 
@@ -83,7 +83,7 @@ void* dyarray_raw(DyArray arr) RE_ACCESS(1) USE_RET;
  * 
  * This function copies the value of an element in a dynamic array into @p val.
  * 
- * @param[in] arr The dynamic array. Must not be NULL.
+ * @param[in] arr The dynamic array. Must not be NULL. Must not be empty.
  * @param[out] val A pointer to the memory to copy the retrieved value into. Must not be NULL.
  * @param[in] idx The index of the element to retrieve. Must be less than the size of the array.
  */
@@ -94,7 +94,7 @@ void dyarray_get(DyArray arr, void* restrict val, size_t idx) NONNULL_ARGS_ALL R
  * 
  * This function copies the value of @p val into an element in a dynamic array.
  * 
- * @param[inout] arr The dynamic array. Must not be NULL.
+ * @param[inout] arr The dynamic array. Must not be NULL. Must not be empty.
  * @param[in] val A pointer to the value to set the element to. Must not be NULL.
  * @param[in] idx The index of the element to set. Must be less than the size of the array.
  */
@@ -105,7 +105,7 @@ void dyarray_set(DyArray arr, const void* restrict val, size_t idx) NONNULL_ARGS
  * 
  * This function copies the value of the last element in a dynamic array into @p val.
  * 
- * @param[in] arr The dynamic array. Must not be NULL.
+ * @param[in] arr The dynamic array. Must not be NULL. Must not be empty.
  * @param[out] val A pointer to the memory to copy the retrieved value into. Must not be NULL.
  */
 void dyarray_last(DyArray arr, void* restrict val) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
@@ -115,7 +115,7 @@ void dyarray_last(DyArray arr, void* restrict val) NONNULL_ARGS_ALL RE_ACCESS(1)
  * 
  * This function copies the value of the first element in a dynamic array into @p val.
  * 
- * @param[in] arr The dynamic array. Must not be NULL.
+ * @param[in] arr The dynamic array. Must not be NULL. Must not be empty.
  * @param[out] val A pointer to the memory to copy the retrieved value into. Must not be NULL.
  */
 void dyarray_first(DyArray arr, void* restrict val) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
