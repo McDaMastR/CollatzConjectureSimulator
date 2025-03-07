@@ -21,20 +21,20 @@
 
 typedef struct DyString_T
 {
-	size_t length;   // # characters currently in string
-	size_t capacity; // # characters that could fit in allocated memory
+	size_t length;   // No. characters currently in string
+	size_t capacity; // No. characters that could fit in allocated memory
 	char*  raw;      // Raw string
 } DyString_T;
 
 
-static char* dystring_stretch(restrict DyString str, size_t size)
+static char* dystring_stretch(restrict DyString string, size_t size)
 {
-	ASSUME(str->capacity != 0);
-	ASSUME(str->raw != NULL);
+	ASSUME(string->capacity != 0);
+	ASSUME(string->raw != NULL);
 	ASSUME(size != 0);
 
-	size_t cap = str->capacity;
-	char*  raw = str->raw;
+	size_t cap = string->capacity;
+	char*  raw = string->raw;
 
 	size_t cap2 = size + cap / 2;
 
@@ -46,62 +46,62 @@ static char* dystring_stretch(restrict DyString str, size_t size)
 
 	memset(raw2 + cap, '\0', cap2 - cap);
 
-	str->capacity = cap2;
-	str->raw      = raw2;
+	string->capacity = cap2;
+	string->raw      = raw2;
 
 	return raw2;
 }
 
 
-void dystring_destroy(restrict DyString str)
+void dystring_destroy(restrict DyString string)
 {
-	if EXPECT_TRUE (str) {
-		free(str->raw);
-		free(str);
+	if EXPECT_TRUE (string) {
+		free(string->raw);
+		free(string);
 	}
 }
 
 DyString dystring_create(size_t count)
 {
-	DyString str = (DyString) malloc(sizeof(DyString_T));
+	DyString string = (DyString) malloc(sizeof(DyString_T));
 
-	if EXPECT_FALSE (!str) { MALLOC_FAILURE(str, sizeof(DyString_T)); return NULL; }
+	if EXPECT_FALSE (!string) { MALLOC_FAILURE(string, sizeof(DyString_T)); return NULL; }
 
 	char* raw = (char*) calloc(count ?: 1, sizeof(char));
 
-	if EXPECT_FALSE (!raw) { CALLOC_FAILURE(raw, count ?: 1, sizeof(char)); free(str); return NULL; }
+	if EXPECT_FALSE (!raw) { CALLOC_FAILURE(raw, count ?: 1, sizeof(char)); free(string); return NULL; }
 
-	str->length   = 1;
-	str->capacity = count ?: 1;
-	str->raw      = raw;
+	string->length   = 1;
+	string->capacity = count ?: 1;
+	string->raw      = raw;
 
-	return str;
+	return string;
 }
 
-size_t dystring_length(restrict DyString str)
+size_t dystring_length(restrict DyString string)
 {
-	return EXPECT_TRUE (str) ? str->length : 0;
+	return EXPECT_TRUE (string) ? string->length : 0;
 }
 
-char* dystring_raw(restrict DyString str)
+char* dystring_raw(restrict DyString string)
 {
-	return EXPECT_TRUE (str) ? str->raw : NULL;
+	return EXPECT_TRUE (string) ? string->raw : NULL;
 }
 
-char* dystring_append(restrict DyString str, const char* restrict sub)
+char* dystring_append(restrict DyString string, const char* restrict substring)
 {
-	ASSUME(str->length != 0);
-	ASSUME(str->capacity != 0);
-	ASSUME(str->raw != NULL);
+	ASSUME(string->length != 0);
+	ASSUME(string->capacity != 0);
+	ASSUME(string->raw != NULL);
 
-	size_t len = str->length;
-	size_t cap = str->capacity;
-	char*  raw = str->raw;
+	size_t len = string->length;
+	size_t cap = string->capacity;
+	char*  raw = string->raw;
 
-	size_t sublen = strlen(sub);
+	size_t sublen = strlen(substring);
 
 	if EXPECT_FALSE (len + sublen > cap) {
-		char* raw2 = dystring_stretch(str, len + sublen);
+		char* raw2 = dystring_stretch(string, len + sublen);
 
 		if EXPECT_FALSE (!raw2) return NULL;
 
@@ -110,27 +110,27 @@ char* dystring_append(restrict DyString str, const char* restrict sub)
 
 	char* subraw = raw + len - 1;
 
-	memcpy(subraw, sub, sublen);
+	memcpy(subraw, substring, sublen);
 
-	str->length = len + sublen;
+	string->length = len + sublen;
 
 	return subraw;
 }
 
-char* dystring_prepend(restrict DyString str, const char* restrict sub)
+char* dystring_prepend(restrict DyString string, const char* restrict substring)
 {
-	ASSUME(str->length != 0);
-	ASSUME(str->capacity != 0);
-	ASSUME(str->raw != NULL);
+	ASSUME(string->length != 0);
+	ASSUME(string->capacity != 0);
+	ASSUME(string->raw != NULL);
 
-	size_t len = str->length;
-	size_t cap = str->capacity;
-	char*  raw = str->raw;
+	size_t len = string->length;
+	size_t cap = string->capacity;
+	char*  raw = string->raw;
 
-	size_t sublen = strlen(sub);
+	size_t sublen = strlen(substring);
 
 	if EXPECT_FALSE (len + sublen > cap) {
-		char* raw2 = dystring_stretch(str, len + sublen);
+		char* raw2 = dystring_stretch(string, len + sublen);
 
 		if EXPECT_FALSE (!raw2) return NULL;
 
@@ -140,39 +140,39 @@ char* dystring_prepend(restrict DyString str, const char* restrict sub)
 	char* subraw = raw;
 
 	memmove(subraw + sublen, subraw, len - 1);
-	memcpy(subraw, sub, sublen);
+	memcpy(subraw, substring, sublen);
 
-	str->length = len + sublen;
+	string->length = len + sublen;
 
 	return subraw;
 }
 
-char* dystring_insert(restrict DyString str, const char* restrict sub, size_t idx)
+char* dystring_insert(restrict DyString string, const char* restrict substring, size_t index)
 {
-	ASSUME(str->length != 0);
-	ASSUME(str->capacity != 0);
-	ASSUME(str->raw != NULL);
+	ASSUME(string->length != 0);
+	ASSUME(string->capacity != 0);
+	ASSUME(string->raw != NULL);
 
-	size_t len = str->length;
-	size_t cap = str->capacity;
-	char*  raw = str->raw;
+	size_t len = string->length;
+	size_t cap = string->capacity;
+	char*  raw = string->raw;
 
-	size_t sublen = strlen(sub);
+	size_t sublen = strlen(substring);
 
 	if EXPECT_FALSE (len + sublen > cap) {
-		char* raw2 = dystring_stretch(str, len + sublen);
+		char* raw2 = dystring_stretch(string, len + sublen);
 
 		if EXPECT_FALSE (!raw2) return NULL;
 
 		raw = raw2;
 	}
 
-	char* subraw = raw + idx;
+	char* subraw = raw + index;
 
-	memmove(subraw + sublen, subraw, len - idx - 1);
-	memcpy(subraw, sub, sublen);
+	memmove(subraw + sublen, subraw, len - index - 1);
+	memcpy(subraw, substring, sublen);
 
-	str->length = len + sublen;
+	string->length = len + sublen;
 
 	return subraw;
 }

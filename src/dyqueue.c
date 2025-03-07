@@ -21,8 +21,8 @@
 
 typedef struct DyQueue_T
 {
-	size_t size;  // # bytes per element
-	size_t count; // # elements currently in queue
+	size_t size;  // No. bytes per element
+	size_t count; // No. elements currently in queue
 	void** head;  // Head node
 	void** tail;  // Tail node
 } DyQueue_T;

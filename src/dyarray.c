@@ -21,20 +21,20 @@
 
 typedef struct DyArray_T
 {
-	size_t size;     // # bytes per element
-	size_t count;    // # elements currently in array
-	size_t capacity; // # elements that could fit in allocated memory
+	size_t size;     // No. bytes per element
+	size_t count;    // No. elements currently in array
+	size_t capacity; // No. elements that could fit in allocated memory
 	void*  raw;      // Raw array
 } DyArray_T;
 
 
-static void* dyarray_stretch(restrict DyArray arr)
+static void* dyarray_stretch(restrict DyArray array)
 {
-	ASSUME(arr->size != 0);
+	ASSUME(array->size != 0);
 
-	size_t size = arr->size;
-	size_t cap  = arr->capacity;
-	void*  raw  = arr->raw;
+	size_t size = array->size;
+	size_t cap  = array->capacity;
+	void*  raw  = array->raw;
 
 	size_t cap2 = cap + cap / 2 + 1;
 
@@ -44,18 +44,18 @@ static void* dyarray_stretch(restrict DyArray arr)
 
 	if EXPECT_FALSE (!raw2) { REALLOC_FAILURE(raw2, raw, cap2 * size); return NULL; }
 
-	arr->capacity = cap2;
-	arr->raw      = raw2;
+	array->capacity = cap2;
+	array->raw      = raw2;
 
 	return raw2;
 }
 
 
-void dyarray_destroy(restrict DyArray arr)
+void dyarray_destroy(restrict DyArray array)
 {
-	if EXPECT_TRUE (arr) {
-		free(arr->raw);
-		free(arr);
+	if EXPECT_TRUE (array) {
+		free(array->raw);
+		free(array);
 	}
 }
 
@@ -63,101 +63,101 @@ DyArray dyarray_create(size_t size, size_t count)
 {
 	ASSUME(size != 0);
 
-	DyArray arr = (DyArray) malloc(sizeof(DyArray_T));
+	DyArray array = (DyArray) malloc(sizeof(DyArray_T));
 
-	if EXPECT_FALSE (!arr) { MALLOC_FAILURE(arr, sizeof(DyArray_T)); return NULL; }
+	if EXPECT_FALSE (!array) { MALLOC_FAILURE(array, sizeof(DyArray_T)); return NULL; }
 
-	arr->size     = size;
-	arr->count    = 0;
-	arr->capacity = count;
-	arr->raw      = NULL;
+	array->size     = size;
+	array->count    = 0;
+	array->capacity = count;
+	array->raw      = NULL;
 
 	if EXPECT_TRUE (count) {
 		void* raw = malloc(count * size);
 
-		if EXPECT_FALSE (!raw) { MALLOC_FAILURE(raw, count * size); free(arr); return NULL; }
+		if EXPECT_FALSE (!raw) { MALLOC_FAILURE(raw, count * size); free(array); return NULL; }
 
-		arr->raw = raw;
+		array->raw = raw;
 	}
 
-	return arr;
+	return array;
 }
 
-size_t dyarray_size(restrict DyArray arr)
+size_t dyarray_size(restrict DyArray array)
 {
-	return EXPECT_TRUE (arr) ? arr->count : 0;
+	return EXPECT_TRUE (array) ? array->count : 0;
 }
 
-void* dyarray_raw(restrict DyArray arr)
+void* dyarray_raw(restrict DyArray array)
 {
-	return EXPECT_TRUE (arr) ? arr->raw : NULL;
+	return EXPECT_TRUE (array) ? array->raw : NULL;
 }
 
-void dyarray_get(restrict DyArray arr, void* restrict val, size_t idx)
+void dyarray_get(restrict DyArray array, void* restrict value, size_t index)
 {
-	ASSUME(arr->size != 0);
-	ASSUME(arr->raw != NULL);
+	ASSUME(array->size != 0);
+	ASSUME(array->raw != NULL);
 
-	size_t      size = arr->size;
-	const void* raw  = arr->raw;
+	size_t      size = array->size;
+	const void* raw  = array->raw;
 
-	const void* element = (const char*) raw + idx * size;
+	const void* element = (const char*) raw + index * size;
 
-	memcpy(val, element, size);
+	memcpy(value, element, size);
 }
 
-void dyarray_set(restrict DyArray arr, const void* restrict val, size_t idx)
+void dyarray_set(restrict DyArray array, const void* restrict value, size_t index)
 {
-	ASSUME(arr->size != 0);
-	ASSUME(arr->raw != NULL);
+	ASSUME(array->size != 0);
+	ASSUME(array->raw != NULL);
 
-	size_t size = arr->size;
-	void*  raw  = arr->raw;
+	size_t size = array->size;
+	void*  raw  = array->raw;
 
-	void* element = (char*) raw + idx * size;
+	void* element = (char*) raw + index * size;
 
-	memcpy(element, val, size);
+	memcpy(element, value, size);
 }
 
-void dyarray_last(restrict DyArray arr, void* restrict val)
+void dyarray_last(restrict DyArray array, void* restrict value)
 {
-	ASSUME(arr->size != 0);
-	ASSUME(arr->count != 0);
-	ASSUME(arr->raw != NULL);
+	ASSUME(array->size != 0);
+	ASSUME(array->count != 0);
+	ASSUME(array->raw != NULL);
 
-	size_t      size  = arr->size;
-	size_t      count = arr->count;
-	const void* raw   = arr->raw;
+	size_t      size  = array->size;
+	size_t      count = array->count;
+	const void* raw   = array->raw;
 
 	const void* element = (const char*) raw + (count - 1) * size;
 
-	memcpy(val, element, size);
+	memcpy(value, element, size);
 }
 
-void dyarray_first(restrict DyArray arr, void* restrict val)
+void dyarray_first(restrict DyArray array, void* restrict value)
 {
-	ASSUME(arr->size != 0);
-	ASSUME(arr->raw != NULL);
+	ASSUME(array->size != 0);
+	ASSUME(array->raw != NULL);
 
-	size_t      size = arr->size;
-	const void* raw  = arr->raw;
+	size_t      size = array->size;
+	const void* raw  = array->raw;
 
 	const void* element = raw;
 
-	memcpy(val, element, size);
+	memcpy(value, element, size);
 }
 
-void* dyarray_append(restrict DyArray arr, const void* restrict val)
+void* dyarray_append(restrict DyArray array, const void* restrict value)
 {
-	ASSUME(arr->size != 0);
+	ASSUME(array->size != 0);
 
-	size_t size  = arr->size;
-	size_t count = arr->count;
-	size_t cap   = arr->capacity;
-	void*  raw   = arr->raw;
+	size_t size  = array->size;
+	size_t count = array->count;
+	size_t cap   = array->capacity;
+	void*  raw   = array->raw;
 
 	if EXPECT_FALSE (count == cap) {
-		void* raw2 = dyarray_stretch(arr);
+		void* raw2 = dyarray_stretch(array);
 
 		if EXPECT_FALSE (!raw2) return NULL;
 
@@ -166,24 +166,24 @@ void* dyarray_append(restrict DyArray arr, const void* restrict val)
 
 	void* element = (char*) raw + count * size;
 
-	memcpy(element, val, size);
+	memcpy(element, value, size);
 
-	arr->count = count + 1;
+	array->count = count + 1;
 
 	return element;
 }
 
-void* dyarray_prepend(restrict DyArray arr, const void* restrict val)
+void* dyarray_prepend(restrict DyArray array, const void* restrict value)
 {
-	ASSUME(arr->size != 0);
+	ASSUME(array->size != 0);
 
-	size_t size  = arr->size;
-	size_t count = arr->count;
-	size_t cap   = arr->capacity;
-	void*  raw   = arr->raw;
+	size_t size  = array->size;
+	size_t count = array->count;
+	size_t cap   = array->capacity;
+	void*  raw   = array->raw;
 
 	if EXPECT_FALSE (count == cap) {
-		void* raw2 = dyarray_stretch(arr);
+		void* raw2 = dyarray_stretch(array);
 
 		if EXPECT_FALSE (!raw2) return NULL;
 
@@ -193,36 +193,36 @@ void* dyarray_prepend(restrict DyArray arr, const void* restrict val)
 	void* element = raw;
 
 	memmove((char*) element + size, element, count * size);
-	memcpy(element, val, size);
+	memcpy(element, value, size);
 
-	arr->count = count + 1;
+	array->count = count + 1;
 
 	return element;
 }
 
-void* dyarray_insert(restrict DyArray arr, const void* restrict val, size_t idx)
+void* dyarray_insert(restrict DyArray array, const void* restrict value, size_t index)
 {
-	ASSUME(arr->size != 0);
+	ASSUME(array->size != 0);
 
-	size_t size  = arr->size;
-	size_t count = arr->count;
-	size_t cap   = arr->capacity;
-	void*  raw   = arr->raw;
+	size_t size  = array->size;
+	size_t count = array->count;
+	size_t cap   = array->capacity;
+	void*  raw   = array->raw;
 
 	if EXPECT_FALSE (count == cap) {
-		void* raw2 = dyarray_stretch(arr);
+		void* raw2 = dyarray_stretch(array);
 
 		if EXPECT_FALSE (!raw2) return NULL;
 
 		raw = raw2;
 	}
 
-	void* element = (char*) raw + idx * size;
+	void* element = (char*) raw + index * size;
 
-	memmove((char*) element + size, element, (count - idx) * size);
-	memcpy(element, val, size);
+	memmove((char*) element + size, element, (count - index) * size);
+	memcpy(element, value, size);
 
-	arr->count = count + 1;
+	array->count = count + 1;
 
 	return element;
 }

@@ -33,7 +33,7 @@ typedef struct DyQueue_T* DyQueue;
  * 
  * If @p queue is NULL, the function does nothing.
  * 
- * @param[inout] queue The dynamic queue to destroy.
+ * @param[in,out] queue The dynamic queue to destroy.
  */
 void dyqueue_destroy(DyQueue queue);
 
@@ -69,7 +69,7 @@ size_t dyqueue_size(DyQueue queue) RE_ACCESS(1) USE_RET;
  * This function enqueues an element onto the end of a dynamic queue. The element is initialised as a copy of @p value.
  * On failure, returns NULL.
  * 
- * @param[inout] queue The dynamic queue. Must not be NULL.
+ * @param[in,out] queue The dynamic queue. Must not be NULL.
  * @param[in] value A pointer to the initialising value. Must not be NULL.
  * 
  * @return A pointer to the new element, or NULL.
@@ -82,7 +82,7 @@ void* dyqueue_add(DyQueue queue, const void* restrict value) NONNULL_ARGS_ALL RW
  * This function dequeues an element from the front of a dynamic queue. The value of the element is copied into
  * @p value.
  * 
- * @param[inout] queue The dynamic queue. Must not be NULL. Must not be empty.
+ * @param[in,out] queue The dynamic queue. Must not be NULL. Must not be empty.
  * @param[out] value A pointer to the memory to copy the element's value into. Must not be NULL.
  */
 void dyqueue_pop(DyQueue queue, void* restrict value) NONNULL_ARGS_ALL RW_ACCESS(1) WR_ACCESS(2);

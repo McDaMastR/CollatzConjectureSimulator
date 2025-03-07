@@ -77,6 +77,7 @@ bool init_alloc_logfile(void)
 
 
 #pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #pragma GCC diagnostic ignored "-Wmissing-format-attribute"
 
 static bool log_colour(

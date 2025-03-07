@@ -45,9 +45,10 @@ set(COMPILE_WARNINGS_GNU
 )
 
 set(COMPILE_WARNINGS_CLANG
-	-Weverything                         -Wno-declaration-after-statement
-	-Wno-gnu-conditional-omitted-operand -Wno-implicit-int-float-conversion
-	-Wno-missing-field-initializers      -Wno-padded
+	-Weverything                         -Wno-covered-switch-default
+	-Wno-declaration-after-statement     -Wno-gnu-conditional-omitted-operand
+	-Wno-implicit-int-float-conversion   -Wno-missing-field-initializers
+	-Wno-padded                          -Wno-pre-c11-compat
 	-Wno-switch-enum                     -Wno-unsafe-buffer-usage
 )
 
@@ -81,13 +82,13 @@ target_compile_definitions(cltz
 
 target_compile_options(cltz
 	PRIVATE
-		"$<$<AND:$<C_COMPILER_ID:GNU,CLANG>,$<CONFIG:DEBUG>>:-Og;-g>"
-		"$<$<AND:$<C_COMPILER_ID:GNU,CLANG>,$<CONFIG:RELEASE>>:-O3>"
-		"$<$<AND:$<C_COMPILER_ID:GNU,CLANG>,$<CONFIG:MINSIZEREL>>:-Os>"
-		"$<$<AND:$<C_COMPILER_ID:GNU,CLANG>,$<CONFIG:RELWITHDEBINFO>>:-O2;-g>"
+		"$<$<AND:$<C_COMPILER_ID:GNU,Clang>,$<CONFIG:DEBUG>>:-Og;-g>"
+		"$<$<AND:$<C_COMPILER_ID:GNU,Clang>,$<CONFIG:RELEASE>>:-O3>"
+		"$<$<AND:$<C_COMPILER_ID:GNU,Clang>,$<CONFIG:MINSIZEREL>>:-Os>"
+		"$<$<AND:$<C_COMPILER_ID:GNU,Clang>,$<CONFIG:RELWITHDEBINFO>>:-O2;-g>"
 
 		"$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:GNU>>:${COMPILE_WARNINGS_GNU}>"
-		"$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:CLANG>>:${COMPILE_WARNINGS_CLANG}>"
+		"$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:Clang>>:${COMPILE_WARNINGS_CLANG}>"
 		"$<$<AND:${USING_STATIC_ANALYSIS},$<C_COMPILER_ID:GNU>>:-fanalyzer>"
 )
 
@@ -119,7 +120,7 @@ target_precompile_headers(cltz
 		<stdio.h>
 		<stdlib.h>
 
-		"$<$<OR:$<C_COMPILER_ID:GNU,CLANG>,${USING_MINGW}>:<unistd.h$<ANGLE-R>>"
+		"$<$<OR:$<C_COMPILER_ID:GNU,Clang>,${USING_MINGW}>:<unistd.h$<ANGLE-R>>"
 		"$<$<OR:$<C_COMPILER_ID:MSVC>,${USING_MINGW}>:<intrin.h$<ANGLE-R>;<windows.h$<ANGLE-R>>"
 )
 
