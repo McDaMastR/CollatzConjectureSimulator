@@ -75,10 +75,11 @@ bool init_alloc_logfile(void)
 	return true;
 }
 
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-nonliteral"
-#pragma GCC diagnostic ignored "-Wmissing-format-attribute"
+#ifdef __GNUC__
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+	#pragma GCC diagnostic ignored "-Wmissing-format-attribute"
+#endif
 
 static bool log_colour(
 	FILE* stream,
@@ -154,8 +155,9 @@ static bool log_colour(
 	return true;
 }
 
-#pragma GCC diagnostic pop
-
+#ifdef __GNUC__
+	#pragma GCC diagnostic pop
+#endif
 
 bool log_debug(FILE* stream, const char* format, ...)
 {
@@ -207,14 +209,14 @@ bool log_critical(FILE* stream, const char* format, ...)
 
 
 static void log_debug_callback(
-	FILE* restrict stream,
+	FILE* stream,
 	double time,
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-	const VkDebugUtilsMessengerCallbackDataEXT* restrict pCallbackData,
+	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 	uint64_t callbackCount,
-	const char* restrict func,
-	const char* restrict file,
+	const char* func,
+	const char* file,
 	uint64_t line)
 {
 	const char* message         = pCallbackData->pMessage;
@@ -297,8 +299,8 @@ static void log_debug_callback(
 VkBool32 debug_callback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-	const VkDebugUtilsMessengerCallbackDataEXT* restrict pCallbackData,
-	void* restrict pUserData)
+	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+	void* pUserData)
 {
 	double time = program_time();
 
@@ -331,17 +333,17 @@ VkBool32 debug_callback(
 
 
 static void log_allocation_callback(
-	FILE* restrict stream,
+	FILE* stream,
 	double time,
 	uint64_t allocationCount,
-	const char* restrict func,
-	const char* restrict file,
+	const char* func,
+	const char* file,
 	uint64_t line,
 	size_t totalSize,
 	size_t size,
 	size_t alignment,
 	VkSystemAllocationScope allocationScope,
-	const void* restrict memory)
+	const void* memory)
 {
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 
@@ -360,8 +362,7 @@ static void log_allocation_callback(
 		size, alignment, sAllocationScope, (uintptr_t) memory);
 }
 
-void* allocation_callback(
-	void* restrict pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
+void* allocation_callback(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 {
 	double time = program_time();
 
@@ -385,11 +386,11 @@ void* allocation_callback(
 }
 
 static void log_reallocation_callback(
-	FILE* restrict stream,
+	FILE* stream,
 	double time,
 	uint64_t reallocationCount,
-	const char* restrict func,
-	const char* restrict file,
+	const char* func,
+	const char* file,
 	uint64_t line,
 	size_t totalSize,
 	size_t originalSize,
@@ -419,11 +420,7 @@ static void log_reallocation_callback(
 }
 
 void* reallocation_callback(
-	void* restrict pUserData,
-	void* restrict pOriginal,
-	size_t size,
-	size_t alignment,
-	VkSystemAllocationScope allocationScope)
+	void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 {
 	double time = program_time();
 
@@ -458,15 +455,15 @@ void* reallocation_callback(
 }
 
 static void log_free_callback(
-	FILE* restrict stream,
+	FILE* stream,
 	double time,
 	uint64_t freeCount,
-	const char* restrict func,
-	const char* restrict file,
+	const char* func,
+	const char* file,
 	uint64_t line,
 	size_t totalSize,
 	size_t size,
-	const void* restrict memory)
+	const void* memory)
 {
 	fprintf(stream, "Free callback %" PRIu64 " (%.3fms)\n", freeCount, time);
 
@@ -480,7 +477,7 @@ static void log_free_callback(
 		totalSize, (double) totalSize / 1024, (double) totalSize / 1048576, size, (uintptr_t) memory);
 }
 
-void free_callback(void* restrict pUserData, void* restrict pMemory)
+void free_callback(void* pUserData, void* pMemory)
 {
 	double time = program_time();
 
@@ -506,11 +503,11 @@ void free_callback(void* restrict pUserData, void* restrict pMemory)
 }
 
 static void log_internal_allocation_callback(
-	FILE* restrict stream,
+	FILE* stream,
 	double time,
 	uint64_t internalAllocationCount,
-	const char* restrict func,
-	const char* restrict file,
+	const char* func,
+	const char* file,
 	uint64_t line,
 	size_t size,
 	VkInternalAllocationType allocationType,
@@ -532,10 +529,7 @@ static void log_internal_allocation_callback(
 }
 
 void internal_allocation_callback(
-	void* restrict pUserData,
-	size_t size,
-	VkInternalAllocationType allocationType,
-	VkSystemAllocationScope allocationScope)
+	void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope)
 {
 	double time = program_time();
 
@@ -553,11 +547,11 @@ void internal_allocation_callback(
 }
 
 static void log_internal_free_callback(
-	FILE* restrict stream,
+	FILE* stream,
 	double time,
 	uint64_t internalFreeCount,
-	const char* restrict func,
-	const char* restrict file,
+	const char* func,
+	const char* file,
 	uint64_t line,
 	size_t size,
 	VkInternalAllocationType allocationType,
@@ -579,10 +573,7 @@ static void log_internal_free_callback(
 }
 
 void internal_free_callback(
-	void* restrict pUserData,
-	size_t size,
-	VkInternalAllocationType allocationType,
-	VkSystemAllocationScope allocationScope)
+	void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope)
 {
 	double time = program_time();
 

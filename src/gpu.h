@@ -121,19 +121,20 @@ typedef struct ValueInfo
 
 // If the return type is bool, then that function returns true on success, and false elsewise
 
-bool create_instance(Gpu* gpu) NONNULL_ARGS_ALL;
-bool select_device(Gpu* gpu) NONNULL_ARGS_ALL;
-bool create_device(Gpu* gpu) NONNULL_ARGS_ALL;
-bool manage_memory(Gpu* gpu) NONNULL_ARGS_ALL;
-bool create_buffers(Gpu* gpu) NONNULL_ARGS_ALL;
-bool create_descriptors(Gpu* gpu) NONNULL_ARGS_ALL;
-bool create_pipeline(Gpu* gpu) NONNULL_ARGS_ALL;
-bool create_commands(Gpu* gpu) NONNULL_ARGS_ALL;
-bool submit_commands(Gpu* gpu) NONNULL_ARGS_ALL;
-bool destroy_gpu(Gpu* gpu) NONNULL_ARGS_ALL;
+bool create_instance   (Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool select_device     (Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool create_device     (Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool manage_memory     (Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool create_buffers    (Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool create_descriptors(Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool create_pipeline   (Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool create_commands   (Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool submit_commands   (Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool destroy_gpu       (Gpu* restrict gpu) NONNULL_ARGS_ALL;
 
 bool retrieve_queue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* queue, const char* name)
 	NONNULL_ARGS(1, 4) NULTSTR_ARG(5);
+
 bool create_command_handles(
 	VkDevice device,
 	uint32_t queueFamilyIndex,
@@ -146,20 +147,22 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline);
 
 void* wait_for_input(void* ptr) NONNULL_ARGS_ALL;
 
-void write_inbuffer(Value* mappedInBuffer, Value* firstValue, uint32_t valuesPerInout, uint32_t valuesPerHeap)
+void write_inbuffer(
+	Value* restrict mappedInBuffer, Value* restrict firstValue, uint32_t valuesPerInout, uint32_t valuesPerHeap)
 	NONNULL_ARGS_ALL;
+
 void read_outbuffer(
-	const Count* mappedOutBuffer,
-	ValueInfo* prevValues,
+	const Count* restrict mappedOutBuffer,
+	ValueInfo* restrict prevValues,
 	DyArray bestValues,
 	DyArray bestCounts,
 	uint32_t valuesPerInout) NONNULL_ARGS_ALL;
 
 void new_high(
-	const Value* value,
-	Count* count,
+	const Value* restrict value,
+	Count* restrict count,
 	Count newCount,
-	Value* val0mod1off,
-	Value* val1mod6off,
+	Value* restrict val0mod1off,
+	Value* restrict val1mod6off,
 	DyArray bestValues,
 	DyArray bestCounts) NONNULL_ARGS_ALL;

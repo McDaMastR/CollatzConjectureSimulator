@@ -31,7 +31,7 @@ typedef struct AlignedInfo
 } AlignedInfo;
 
 
-bool fisatty(FILE* restrict stream)
+bool fisatty(FILE* stream)
 {
 	int fd;
 	int tty;
@@ -113,7 +113,7 @@ double get_benchmark(clock_t start, clock_t end)
 	return (double) (end - start) * MS_PER_CLOCK;
 }
 
-bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const char* restrict name)
+bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const char* name)
 {
 	VkResult vkres;
 
@@ -131,7 +131,7 @@ bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const c
 }
 
 bool get_buffer_requirements_noext(
-	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict requirements)
+	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* requirements)
 {
 	VkResult vkres;
 
@@ -159,7 +159,7 @@ bool get_buffer_requirements_noext(
 }
 
 bool get_buffer_requirements_main4(
-	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* restrict requirements)
+	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* requirements)
 {
 	VkBufferCreateInfo createInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
 	createInfo.size               = size;
@@ -177,7 +177,7 @@ bool get_buffer_requirements_main4(
 	return true;
 }
 
-bool save_pipeline_cache(VkDevice device, VkPipelineCache cache, const char* restrict filename)
+bool save_pipeline_cache(VkDevice device, VkPipelineCache cache, const char* filename)
 {
 	VkResult vkres;
 
@@ -201,7 +201,7 @@ bool save_pipeline_cache(VkDevice device, VkPipelineCache cache, const char* res
 }
 
 
-bool file_size(const char* restrict filename, size_t* restrict size)
+bool file_size(const char* filename, size_t* size)
 {
 	FILE* file = fopen(filename, "rb");
 
@@ -223,7 +223,7 @@ bool file_size(const char* restrict filename, size_t* restrict size)
 	return true;
 }
 
-bool read_file(const char* restrict filename, void* restrict data, size_t size)
+bool read_file(const char* filename, void* data, size_t size)
 {
 	FILE* file = fopen(filename, "rb");
 	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, "rb"); return false; }
@@ -236,7 +236,7 @@ bool read_file(const char* restrict filename, void* restrict data, size_t size)
 	return true;
 }
 
-bool write_file(const char* restrict filename, const void* restrict data, size_t size)
+bool write_file(const char* filename, const void* data, size_t size)
 {
 	FILE* file = fopen(filename, "wb");
 	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, "wb"); return false; }
@@ -249,7 +249,7 @@ bool write_file(const char* restrict filename, const void* restrict data, size_t
 	return true;
 }
 
-bool read_text(const char* restrict filename, const char* restrict format, ...)
+bool read_text(const char* filename, const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -266,7 +266,7 @@ bool read_text(const char* restrict filename, const char* restrict format, ...)
 	return true;
 }
 
-bool write_text(const char* restrict filename, const char* restrict format, ...)
+bool write_text(const char* filename, const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -326,10 +326,10 @@ void* aligned_malloc(size_t size, size_t alignment)
 	return memory;
 }
 
-void* aligned_realloc(void* restrict memory, size_t size, size_t alignment)
+void* aligned_realloc(void* memory, size_t size, size_t alignment)
 {
 	ASSUME(size != 0);
-	ASSUME((alignment & (alignment - 1)) == 0);
+	ASSUME((alignment & (alignment - 1)) == 0); // alignment is a power of two
 
 	uintptr_t address = (uintptr_t) memory;
 
@@ -383,7 +383,7 @@ void* aligned_realloc(void* restrict memory, size_t size, size_t alignment)
 	return newMemory;
 }
 
-void* aligned_free(void* restrict memory)
+void* aligned_free(void* memory)
 {
 	uintptr_t address = (uintptr_t) memory;
 
@@ -400,7 +400,7 @@ void* aligned_free(void* restrict memory)
 	return NULL;
 }
 
-size_t aligned_size(const void* restrict memory)
+size_t aligned_size(const void* memory)
 {
 	uintptr_t address = (uintptr_t) memory;
 

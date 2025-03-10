@@ -27,7 +27,7 @@ typedef struct DyString_T
 } DyString_T;
 
 
-static char* dystring_stretch(restrict DyString string, size_t size)
+static char* dystring_stretch(DyString string, size_t size)
 {
 	ASSUME(string->capacity != 0);
 	ASSUME(string->raw != NULL);
@@ -53,7 +53,7 @@ static char* dystring_stretch(restrict DyString string, size_t size)
 }
 
 
-void dystring_destroy(restrict DyString string)
+void dystring_destroy(DyString string)
 {
 	if EXPECT_TRUE (string) {
 		free(string->raw);
@@ -78,17 +78,17 @@ DyString dystring_create(size_t count)
 	return string;
 }
 
-size_t dystring_length(restrict DyString string)
+size_t dystring_length(DyString string)
 {
-	return EXPECT_TRUE (string) ? string->length : 0;
+	return string->length;
 }
 
-char* dystring_raw(restrict DyString string)
+char* dystring_raw(DyString string)
 {
-	return EXPECT_TRUE (string) ? string->raw : NULL;
+	return string->raw;
 }
 
-char* dystring_append(restrict DyString string, const char* restrict substring)
+char* dystring_append(DyString string, const char* restrict substring)
 {
 	ASSUME(string->length != 0);
 	ASSUME(string->capacity != 0);
@@ -117,7 +117,7 @@ char* dystring_append(restrict DyString string, const char* restrict substring)
 	return subraw;
 }
 
-char* dystring_prepend(restrict DyString string, const char* restrict substring)
+char* dystring_prepend(DyString string, const char* restrict substring)
 {
 	ASSUME(string->length != 0);
 	ASSUME(string->capacity != 0);
@@ -147,7 +147,7 @@ char* dystring_prepend(restrict DyString string, const char* restrict substring)
 	return subraw;
 }
 
-char* dystring_insert(restrict DyString string, const char* restrict substring, size_t index)
+char* dystring_insert(DyString string, const char* restrict substring, size_t index)
 {
 	ASSUME(string->length != 0);
 	ASSUME(string->capacity != 0);

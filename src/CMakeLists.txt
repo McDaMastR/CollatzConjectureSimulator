@@ -67,12 +67,12 @@ set_target_properties(
 
 target_compile_definitions(cltz
 	PRIVATE
-		COLLATZSIM_NAME="Collatz Conjecture Simulator"
-		COLLATZSIM_EXECUTABLE="$<TARGET_FILE_NAME:cltz>"
+		CLTZ_NAME="Collatz Conjecture Simulator"
+		CLTZ_EXECUTABLE="$<TARGET_FILE_NAME:cltz>"
 
-		COLLATZSIM_VERSION_MAJOR=${CollatzConjectureSimulator_VERSION_MAJOR}
-		COLLATZSIM_VERSION_MINOR=${CollatzConjectureSimulator_VERSION_MINOR}
-		COLLATZSIM_VERSION_PATCH=${CollatzConjectureSimulator_VERSION_PATCH}
+		CLTZ_VERSION_MAJOR=${CollatzConjectureSimulator_VERSION_MAJOR}
+		CLTZ_VERSION_MINOR=${CollatzConjectureSimulator_VERSION_MINOR}
+		CLTZ_VERSION_PATCH=${CollatzConjectureSimulator_VERSION_PATCH}
 
 		"$<$<NOT:$<CONFIG:DEBUG>>:NDEBUG=1>"
 

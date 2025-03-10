@@ -234,7 +234,7 @@ static bool log_allocations_option_callback(void* data, void* arg)
 
 	ProgramConfig* config = (ProgramConfig*) data;
 
-	config->logAllocations = false;
+	config->logAllocations = true;
 
 	return true;
 }
@@ -245,7 +245,7 @@ static bool capture_pipelines_option_callback(void* data, void* arg)
 
 	ProgramConfig* config = (ProgramConfig*) data;
 
-	config->capturePipelines = false;
+	config->capturePipelines = true;
 
 	return true;
 }

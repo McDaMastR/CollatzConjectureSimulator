@@ -21,14 +21,19 @@
 #include "util.h"
 
 
-static void DyArray_destroy_stub(void* restrict array)
+static void* dyarray_append_str(DyArray array, const char* string)
+{
+	return dyarray_append(array, (const void*) &string);
+}
+
+static void dyarray_destroy_stub(void* array)
 {
 	dyarray_destroy((DyArray) array);
 }
 
-static void DyString_destroy_stub(void* restrict str)
+static void dystring_destroy_stub(void* string)
 {
-	dystring_destroy((DyString) str);
+	dystring_destroy((DyString) string);
 }
 
 typedef struct DyData
@@ -37,7 +42,7 @@ typedef struct DyData
 	void (*free)(void*);
 } DyData;
 
-static void free_recursive(restrict DyArray array)
+static void free_recursive(DyArray array)
 {
 	size_t count = dyarray_size(array);
 
@@ -76,6 +81,7 @@ bool create_instance(Gpu* restrict gpu)
 #ifndef NDEBUG
 	bool bres = init_debug_logfile();
 	if EXPECT_FALSE (!bres) { free_recursive(dyMem); return false; }
+#endif
 
 	VkDebugUtilsMessengerCreateInfoEXT messengerCreateInfo = {VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
 	messengerCreateInfo.messageSeverity =
@@ -89,7 +95,6 @@ bool create_instance(Gpu* restrict gpu)
 		VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	messengerCreateInfo.pfnUserCallback = debug_callback;
 	messengerCreateInfo.pUserData       = &g_callbackData;
-#endif
 
 	uint32_t layerCount;
 	uint32_t extCount;
@@ -120,7 +125,7 @@ bool create_instance(Gpu* restrict gpu)
 	DyArray enabledLayers = dyarray_create(sizeof(const char*), 4);
 	if EXPECT_FALSE (!enabledLayers) { free_recursive(dyMem); return false; }
 
-	dyData = (DyData) {enabledLayers, DyArray_destroy_stub};
+	dyData = (DyData) {enabledLayers, dyarray_destroy_stub};
 	dyarray_append(dyMem, &dyData);
 
 	for (uint32_t i = 0; i < layerCount; i++) {
@@ -146,24 +151,23 @@ bool create_instance(Gpu* restrict gpu)
 	DyArray enabledExts = dyarray_create(sizeof(const char*), 2);
 	if EXPECT_FALSE (!enabledExts) { free_recursive(dyMem); return false; }
 
-	dyData = (DyData) {enabledExts, DyArray_destroy_stub};
+	dyData = (DyData) {enabledExts, dyarray_destroy_stub};
 	dyarray_append(dyMem, &dyData);
 
 	for (uint32_t i = 0; i < extCount; i++) {
 		const char* extName = extsProps[i].extensionName;
 
 		if (!strcmp(extName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
+			(void) next;
 			dyarray_append(enabledExts, &extName);
 			usingPortabilityEnumeration = true;
-			continue;
 		}
 
 #ifndef NDEBUG
-		if (!strcmp(extName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
+		else if (!strcmp(extName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
 			PNEXT_ADD(next, messengerCreateInfo);
 			dyarray_append(enabledExts, &extName);
 			usingDebugUtils = true;
-			continue;
 		}
 #endif
 	}
@@ -207,14 +211,13 @@ bool create_instance(Gpu* restrict gpu)
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
 	free_recursive(dyMem);
+
 	volkLoadInstanceOnly(instance);
 
-#ifndef NDEBUG
 	if (usingDebugUtils) {
 		VK_CALL_RES(
 			vkCreateDebugUtilsMessengerEXT, instance, &messengerCreateInfo, g_allocator, &gpu->debugUtilsMessenger);
 	}
-#endif
 
 	return true;
 }
@@ -689,28 +692,28 @@ bool create_device(Gpu* restrict gpu)
 	DyArray enabledExts = dyarray_create(sizeof(const char*), 13);
 	if EXPECT_FALSE (!enabledExts) { free_recursive(dyMem); return false; }
 
-	dyData = (DyData) {enabledExts, DyArray_destroy_stub};
+	dyData = (DyData) {enabledExts, dyarray_destroy_stub};
 	dyarray_append(dyMem, &dyData);
 
-	dyarray_append(enabledExts, &VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
-	dyarray_append(enabledExts, &VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
+	dyarray_append_str(enabledExts, VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
+	dyarray_append_str(enabledExts, VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
 
-	if (gpu->using8BitStorage)         { dyarray_append(enabledExts, &VK_KHR_8BIT_STORAGE_EXTENSION_NAME);          }
-	if (gpu->usingBufferDeviceAddress) { dyarray_append(enabledExts, &VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME); }
-	if (gpu->usingMaintenance4)        { dyarray_append(enabledExts, &VK_KHR_MAINTENANCE_4_EXTENSION_NAME);         }
-	if (gpu->usingPortabilitySubset)   { dyarray_append(enabledExts, &VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);    }
-	if (gpu->usingMemoryBudget)        { dyarray_append(enabledExts, &VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);         }
-	if (gpu->usingMemoryPriority)      { dyarray_append(enabledExts, &VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME);       }
-	if (gpu->usingSubgroupSizeControl) { dyarray_append(enabledExts, &VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME); }
+	if (gpu->using8BitStorage)         { dyarray_append_str(enabledExts, VK_KHR_8BIT_STORAGE_EXTENSION_NAME);          }
+	if (gpu->usingBufferDeviceAddress) { dyarray_append_str(enabledExts, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME); }
+	if (gpu->usingMaintenance4)        { dyarray_append_str(enabledExts, VK_KHR_MAINTENANCE_4_EXTENSION_NAME);         }
+	if (gpu->usingPortabilitySubset)   { dyarray_append_str(enabledExts, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);    }
+	if (gpu->usingMemoryBudget)        { dyarray_append_str(enabledExts, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);         }
+	if (gpu->usingMemoryPriority)      { dyarray_append_str(enabledExts, VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME);       }
+	if (gpu->usingSubgroupSizeControl) { dyarray_append_str(enabledExts, VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME); }
 
 	if (gpu->usingPipelineExecutableProperties) {
-		dyarray_append(enabledExts, &VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME); }
+		dyarray_append_str(enabledExts, VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME); }
 	if (gpu->usingPipelineCreationCacheControl) {
-		dyarray_append(enabledExts, &VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME); }
+		dyarray_append_str(enabledExts, VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME); }
 
 	if (spvVerMinor >= 4) {
-		dyarray_append(enabledExts, &VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
-		dyarray_append(enabledExts, &VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+		dyarray_append_str(enabledExts, VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
+		dyarray_append_str(enabledExts, VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 	}
 
 	VkPhysicalDeviceFeatures generalFeats = {VK_FALSE};
@@ -815,7 +818,7 @@ bool create_device(Gpu* restrict gpu)
 
 	volkLoadDevice(device);
 
-	if (gpu->transferQueue != gpu->computeQueue) {
+	if (computeQfIndex != transferQfIndex) {
 		bool bres = retrieve_queue(device, transferQfIndex, 0, &gpu->transferQueue, "Transfer");
 		if EXPECT_FALSE (!bres) return false;
 
@@ -1583,9 +1586,9 @@ static bool record_transfer_cmdbuffer(
 	VkCommandBuffer cmdBuffer,
 	VkBuffer hvBuffer,
 	VkBuffer dlBuffer,
-	const VkBufferCopy* restrict inBufferRegion,
-	const VkBufferCopy* restrict outBufferRegion,
-	const VkDependencyInfo* restrict depInfos,
+	const VkBufferCopy* inBufferRegion,
+	const VkBufferCopy* outBufferRegion,
+	const VkDependencyInfo* depInfos,
 	VkQueryPool queryPool,
 	uint32_t firstQuery,
 	uint32_t timestampValidBits)
@@ -1623,8 +1626,8 @@ static bool record_compute_cmdbuffer(
 	VkCommandBuffer cmdBuffer,
 	VkPipeline pipeline,
 	VkPipelineLayout layout,
-	const VkDescriptorSet* restrict descSet,
-	const VkDependencyInfo* restrict depInfos,
+	const VkDescriptorSet* descSet,
+	const VkDependencyInfo* depInfos,
 	VkQueryPool queryPool,
 	uint32_t firstQuery,
 	uint32_t timestampValidBits,
@@ -1952,13 +1955,13 @@ bool submit_commands(Gpu* restrict gpu)
 	DyArray bestValues = dyarray_create(sizeof(Value), 64);
 	if EXPECT_FALSE (!bestValues) { free_recursive(dyMem); return false; }
 
-	dyData = (DyData) {bestValues, DyArray_destroy_stub};
+	dyData = (DyData) {bestValues, dyarray_destroy_stub};
 	dyarray_append(dyMem, &dyData);
 
 	DyArray bestCounts = dyarray_create(sizeof(Count), 64);
 	if EXPECT_FALSE (!bestCounts) { free_recursive(dyMem); return false; }
 
-	dyData = (DyData) {bestCounts, DyArray_destroy_stub};
+	dyData = (DyData) {bestCounts, dyarray_destroy_stub};
 	dyarray_append(dyMem, &dyData);
 
 	size_t fileSize;
@@ -2439,8 +2442,7 @@ bool destroy_gpu(Gpu* restrict gpu)
 	return true;
 }
 
-bool retrieve_queue(
-	VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* restrict queue, const char* restrict name)
+bool retrieve_queue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* queue, const char* name)
 {
 	(void) name;
 
@@ -2463,10 +2465,10 @@ bool retrieve_queue(
 bool create_command_handles(
 	VkDevice device,
 	uint32_t queueFamilyIndex,
-	VkCommandPool* restrict commandPool,
-	const char* restrict name,
+	VkCommandPool* commandPool,
+	const char* name,
 	uint32_t commandBufferCount,
-	VkCommandBuffer* restrict commandBuffers)
+	VkCommandBuffer* commandBuffers)
 {
 	(void) name;
 
@@ -2590,7 +2592,7 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 	DyString message = dystring_create(1024);
 	if EXPECT_FALSE (!message) { free_recursive(dyMem); return false; }
 
-	dyData = (DyData) {message, DyString_destroy_stub};
+	dyData = (DyData) {message, dystring_destroy_stub};
 	dyarray_append(dyMem, &dyData);
 
 	for (uint32_t i = 0; i < executableCount; i++) {
@@ -2696,8 +2698,8 @@ void write_inbuffer(
 void read_outbuffer(
 	const Count* restrict mappedOutBuffer,
 	ValueInfo* restrict prevValues,
-	restrict DyArray bestValues,
-	restrict DyArray bestCounts,
+	DyArray bestValues,
+	DyArray bestCounts,
 	uint32_t valuesPerInout)
 {
 	ASSUME(prevValues->curValue % 8 == 3);
@@ -2842,8 +2844,8 @@ void new_high(
 	Count newCount,
 	Value* restrict val0mod1off,
 	Value* restrict val1mod6off,
-	restrict DyArray bestValues,
-	restrict DyArray bestCounts)
+	DyArray bestValues,
+	DyArray bestCounts)
 {
 	uint32_t oldCount = *count;
 	uint32_t difCount = minu32(newCount - oldCount, 3);

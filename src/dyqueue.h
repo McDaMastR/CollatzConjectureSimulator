@@ -54,19 +54,17 @@ DyQueue dyqueue_create(size_t size) FREE_FUNC(dyqueue_destroy, 1) USE_RET;
  * 
  * This function retrieves the number of elements in a dynamic queue.
  * 
- * If @p queue is NULL, the function returns 0.
- * 
- * @param[in] queue The dynamic queue.
+ * @param[in] queue The dynamic queue. Must not be NULL.
  * 
  * @return The number of elements in the dynamic queue.
  */
-size_t dyqueue_size(DyQueue queue) RE_ACCESS(1) USE_RET;
+size_t dyqueue_size(DyQueue queue) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
 
 
 /**
  * @brief Adds an element to a DyQueue object.
  * 
- * This function enqueues an element onto the end of a dynamic queue. The element is initialised as a copy of @p value.
+ * This function enqueues an element onto the back of a dynamic queue. The element is initialised as a copy of @p value.
  * On failure, returns NULL.
  * 
  * @param[in,out] queue The dynamic queue. Must not be NULL.
@@ -74,7 +72,7 @@ size_t dyqueue_size(DyQueue queue) RE_ACCESS(1) USE_RET;
  * 
  * @return A pointer to the new element, or NULL.
  */
-void* dyqueue_add(DyQueue queue, const void* restrict value) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
+void* dyqueue_enqueue(DyQueue queue, const void* value) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
 
 /**
  * @brief Removes an element from a DyQueue object.
@@ -82,7 +80,7 @@ void* dyqueue_add(DyQueue queue, const void* restrict value) NONNULL_ARGS_ALL RW
  * This function dequeues an element from the front of a dynamic queue. The value of the element is copied into
  * @p value.
  * 
- * @param[in,out] queue The dynamic queue. Must not be NULL. Must not be empty.
+ * @param[in,out] queue The non-empty dynamic queue. Must not be NULL.
  * @param[out] value A pointer to the memory to copy the element's value into. Must not be NULL.
  */
-void dyqueue_pop(DyQueue queue, void* restrict value) NONNULL_ARGS_ALL RW_ACCESS(1) WR_ACCESS(2);
+void dyqueue_dequeue(DyQueue queue, void* restrict value) NONNULL_ARGS_ALL RW_ACCESS(1) WR_ACCESS(2);

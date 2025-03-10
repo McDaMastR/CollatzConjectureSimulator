@@ -28,7 +28,7 @@ typedef struct DyQueue_T
 } DyQueue_T;
 
 
-void dyqueue_destroy(restrict DyQueue queue)
+void dyqueue_destroy(DyQueue queue)
 {
 	if EXPECT_FALSE (!queue) return;
 
@@ -60,12 +60,12 @@ DyQueue dyqueue_create(size_t size)
 	return queue;
 }
 
-size_t dyqueue_size(restrict DyQueue queue)
+size_t dyqueue_size(DyQueue queue)
 {
-	return EXPECT_TRUE (queue) ? queue->count : 0;
+	return queue->count;
 }
 
-void* dyqueue_add(restrict DyQueue queue, const void* restrict value)
+void* dyqueue_enqueue(DyQueue queue, const void* value)
 {
 	ASSUME(queue->size != 0);
 
@@ -90,7 +90,7 @@ void* dyqueue_add(restrict DyQueue queue, const void* restrict value)
 	return (char*) node + sizeof(void*);
 }
 
-void dyqueue_pop(restrict DyQueue queue, void* restrict value)
+void dyqueue_dequeue(DyQueue queue, void* restrict value)
 {
 	ASSUME(queue->size != 0);
 	ASSUME(queue->count != 0);

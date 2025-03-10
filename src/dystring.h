@@ -55,26 +55,22 @@ DyString dystring_create(size_t count) FREE_FUNC(dystring_destroy, 1) USE_RET;
  * 
  * This function retrieves the number of characters in a dynamic string, including the null terminator.
  * 
- * If @p string is NULL, the function returns 0.
- * 
- * @param[in] string The dynamic string.
+ * @param[in] string The dynamic string. Must not be NULL.
  * 
  * @return The number of characters in the dynamic string.
  */
-size_t dystring_length(DyString string) RE_ACCESS(1) USE_RET;
+size_t dystring_length(DyString string) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
 
 /**
  * @brief Retrieves the raw string of a DyString object.
  * 
  * This function retrieves the underlying raw string of a dynamic string.
  * 
- * If @p string is NULL, the function returns NULL.
- * 
- * @param[in] string The dynamic string.
+ * @param[in] string The dynamic string. Must not be NULL.
  * 
  * @return The raw string.
  */
-char* dystring_raw(DyString string) RE_ACCESS(1) USE_RET;
+char* dystring_raw(DyString string) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
 
 
 /**
@@ -84,7 +80,7 @@ char* dystring_raw(DyString string) RE_ACCESS(1) USE_RET;
  * failure, returns NULL.
  * 
  * @param[in,out] string The dynamic string. Must not be NULL.
- * @param[in] substring The substring to append. Must be null-terminated. Must not be NULL.
+ * @param[in] substring The null-terminated substring to append. Must not be NULL.
  * 
  * @return A pointer to the added substring, or NULL.
  */
@@ -98,7 +94,7 @@ char* dystring_append(DyString string, const char* restrict substring)
  * failure, returns NULL.
  * 
  * @param[in,out] string The dynamic string. Must not be NULL.
- * @param[in] substring The substring to prepend. Must be null-terminated. Must not be NULL.
+ * @param[in] substring The null-terminated substring to prepend. Must not be NULL.
  * 
  * @return A pointer to the added substring, or NULL.
  */
@@ -112,8 +108,8 @@ char* dystring_prepend(DyString string, const char* restrict substring)
  * On failure, returns NULL.
  * 
  * @param[in,out] string The dynamic string. Must not be NULL.
- * @param[in] substring The substring to insert. Must be null-terminated. Must not be NULL.
- * @param[in] index The index at which to insert the substring. Must be less than the length of the string.
+ * @param[in] substring The null-terminated substring to insert. Must not be NULL.
+ * @param[in] index The index at which to insert the substring. Must be less than the length of @p string.
  * 
  * @return A pointer to the added substring, or NULL.
  */

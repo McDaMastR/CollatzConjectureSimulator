@@ -56,26 +56,22 @@ DyArray dyarray_create(size_t size, size_t count) FREE_FUNC(dyarray_destroy, 1) 
  * 
  * This function retrieves the number of elements in a dynamic array.
  * 
- * If @p array is NULL, the function returns 0.
- * 
- * @param[in] array The dynamic array.
+ * @param[in] array The dynamic array. Must not be NULL.
  * 
  * @return The number of elements in the dynamic array.
  */
-size_t dyarray_size(DyArray array) RE_ACCESS(1) USE_RET;
+size_t dyarray_size(DyArray array) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
 
 /**
  * @brief Retrieves the raw array of a DyArray object.
  * 
  * This function retrieves the underlying raw array of a dynamic array.
  * 
- * If @p array is NULL, the function returns NULL.
- * 
- * @param[in] array The dynamic array.
+ * @param[in] array The dynamic array. Must not be NULL.
  * 
  * @return The raw array.
  */
-void* dyarray_raw(DyArray array) RE_ACCESS(1) USE_RET;
+void* dyarray_raw(DyArray array) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
 
 
 /**
@@ -83,9 +79,9 @@ void* dyarray_raw(DyArray array) RE_ACCESS(1) USE_RET;
  * 
  * This function copies the value of an element in a dynamic array into @p value.
  * 
- * @param[in] array The dynamic array. Must not be NULL. Must not be empty.
+ * @param[in] array The non-empty dynamic array. Must not be NULL.
  * @param[out] value A pointer to the memory to copy the retrieved value into. Must not be NULL.
- * @param[in] index The index of the element to retrieve. Must be less than the size of the array.
+ * @param[in] index The index of the element to retrieve. Must be less than the size of @p array.
  */
 void dyarray_get(DyArray array, void* restrict value, size_t index) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
 
@@ -94,9 +90,9 @@ void dyarray_get(DyArray array, void* restrict value, size_t index) NONNULL_ARGS
  * 
  * This function copies the value of @p value into an element in a dynamic array.
  * 
- * @param[in,out] array The dynamic array. Must not be NULL. Must not be empty.
+ * @param[in,out] array The non-empty dynamic array. Must not be NULL.
  * @param[in] value A pointer to the value to set the element to. Must not be NULL.
- * @param[in] index The index of the element to set. Must be less than the size of the array.
+ * @param[in] index The index of the element to set. Must be less than the size of @p array.
  */
 void dyarray_set(DyArray array, const void* restrict value, size_t index) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
 
@@ -105,7 +101,7 @@ void dyarray_set(DyArray array, const void* restrict value, size_t index) NONNUL
  * 
  * This function copies the value of the last element in a dynamic array into @p value.
  * 
- * @param[in] array The dynamic array. Must not be NULL. Must not be empty.
+ * @param[in] array The non-empty dynamic array. Must not be NULL.
  * @param[out] value A pointer to the memory to copy the retrieved value into. Must not be NULL.
  */
 void dyarray_last(DyArray array, void* restrict value) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
@@ -115,7 +111,7 @@ void dyarray_last(DyArray array, void* restrict value) NONNULL_ARGS_ALL RE_ACCES
  * 
  * This function copies the value of the first element in a dynamic array into @p value.
  * 
- * @param[in] array The dynamic array. Must not be NULL. Must not be empty.
+ * @param[in] array The non-empty dynamic array. Must not be NULL.
  * @param[out] value A pointer to the memory to copy the retrieved value into. Must not be NULL.
  */
 void dyarray_first(DyArray array, void* restrict value) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
@@ -155,7 +151,7 @@ void* dyarray_prepend(DyArray array, const void* restrict value) NONNULL_ARGS_AL
  * 
  * @param[in,out] array The dynamic array. Must not be NULL.
  * @param[in] value A pointer to the initialising value. Must not be NULL.
- * @param[in] index The index of the new element. Must be less than or equal to the size of the array.
+ * @param[in] index The index of the new element. Must be less than or equal to the size of @p array.
  * 
  * @return A pointer to the new element, or NULL.
  */

@@ -184,7 +184,7 @@ bool cli_parse(Cli cli, int argc, char** argv)
 		if (argType) {
 			cli_parse_arg(argType, optName, arg, &cbd.data);
 
-			void* pres = dyqueue_add(callbacks, &cbd);
+			void* pres = dyqueue_enqueue(callbacks, &cbd);
 			if EXPECT_FALSE (!pres) { dyqueue_destroy(callbacks); return false; }
 
 			argType = CLI_DATATYPE_NONE;
@@ -209,7 +209,7 @@ bool cli_parse(Cli cli, int argc, char** argv)
 			}
 
 			if (optName && !argType) {
-				void* pres = dyqueue_add(callbacks, &cbd);
+				void* pres = dyqueue_enqueue(callbacks, &cbd);
 				if EXPECT_FALSE (!pres) { dyqueue_destroy(callbacks); return false; }
 
 				optName = NULL;
@@ -243,7 +243,7 @@ bool cli_parse(Cli cli, int argc, char** argv)
 				}
 
 				if (optName && !argType) {
-					void* pres = dyqueue_add(callbacks, &cbd);
+					void* pres = dyqueue_enqueue(callbacks, &cbd);
 					if EXPECT_FALSE (!pres) { dyqueue_destroy(callbacks); return false; }
 
 					optName = NULL;
@@ -261,7 +261,7 @@ bool cli_parse(Cli cli, int argc, char** argv)
 	size_t cbc = dyqueue_size(callbacks);
 
 	for (size_t i = 0; i < cbc; i++) {
-		dyqueue_pop(callbacks, &cbd);
+		dyqueue_dequeue(callbacks, &cbd);
 
 		bool bres = cbd.cb(config, cbd.type ? &cbd.data : NULL);
 		if (!bres) { dyqueue_destroy(callbacks); return false; }
