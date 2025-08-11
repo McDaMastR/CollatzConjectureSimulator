@@ -1,84 +1,77 @@
 # Collatz Conjecture Simulator
 
-A program to efficiently determine the total stopping time of the Collatz sequence of any 128-bit integer starting
-value, and output all starting values $n$ whose total stopping time is the greatest of all integers in the interval
-$[1, n]$.
+A program to efficiently determine the total stopping time of the Collatz sequence of any 128-bit integer, and find all
+starting values $`n`$ whose total stopping time is the greatest of all integers in the interval $`[1,\,n]`$.
 
 ## Mathematical Notation
 
-For the purposes of this document, the following mathematical symbols will represent the corresponding concepts.
+This document assumes familiarity with mathematical concepts including sequences, functions, recursion, and modular
+arithmetic. Additionally, the following conventions and notation will be used.
 
-- $\mathbb{Z}$ represents the set of all integers.
-- $\mathbb{Z}^+$ represents the set of all positive integers.
-- $\mathbb{Z}^{0+}$ represents the set of all non-negative integers.
-- $f(n)$ represents the Collatz function applied to $n$.
-- $f^k(n)$ represents the Collatz function applied recursively $k$ times to $n$.
-- $s(n)$ represents the total stopping time of the starting value $n$.
+- $`0\notin\mathbb N`$.
+- $`\mathbb N^*=\mathbb N\cup\{0,\infty\}`$.
+- $`f^0(x)=x`$ and $`f^n(x)=(f\circ f^{n-1})(x)`$ for any function $`f`$, real $`x`$, and natural $`n`$.
 
 ## The Collatz Conjecture
 
-The [Collatz Conjecture](https://en.wikipedia.org/wiki/Collatz_conjecture) is a famous unsolved mathematical problem. It
-regards the _Collatz function_, a mathematical function which takes a positive integer input $n$ and gives a positive
-integer output $f(n)$. If the input is even, the function returns half the input. If the input is odd, the function
-returns triple the input, plus one.
+The [Collatz Conjecture](https://en.wikipedia.org/wiki/Collatz_conjecture) is an iconic unsolved problem in number
+theory. It regards the _Collatz function_ $`f:\mathbb N\to\mathbb N`$, commonly defined as
 
 ```math
-f(n) =
+f(x)=
  \begin{cases}
-  \frac{1}{2} n & \text{if } n \equiv 0 \pmod 2 \\
-  3n + 1        & \text{if } n \equiv 1 \pmod 2
+  \frac12x &\text{if }x\text{ is even,}\\
+  3x+1     &\text{if }x\text{ is odd.}
  \end{cases}
 ```
 
-The Collatz function can be applied recursively, meaning given an initial input $n$ and resultant output $f(n)$, this
-first output can be used as an input, resulting in a second output $f(f(n))$. This second output can again be used as an
-input, resulting in a third output $f^3(n)$. And so on.
+The _Collatz sequence_ of some $`n\in\mathbb N`$ is the infinite sequence $`(f^i(n))_{i=0}^\infty`$ in which the element
+at index $`i`$ is given by the $`i`$-th recursive application of the Collatz function evaluated at the _starting value_
+$`n`$. A _cycle_ is a finite contiguous subsequence $`(a_i)_{i=0}^k`$ of a Collatz sequence in which every element is
+distinct and $`f(a_k)=a_0`$. The _trivial cycle_ is the cycle $`(1,4,2)`$.
 
-By applying the Collatz function recursively, the sequence of successive inputs and outputs will form a _Collatz
-sequence_. If a Collatz sequence includes the value $1$, then the number of elements in the sequence from the starting
-value to the first instance of the value $1$ is the _total stopping time_. That is, given a starting value $n$ and total
-stopping time $k$, $f^k(n) = 1$.
+If the Collatz sequence of $`n`$ contains some element less than $`n`$, then the index of the first such element is the
+_stopping time_ of $`n`$. So $`k`$ is the stopping time of $`n`$ iff $`f^k(n)<n`$ and $`f^i(n)\ge n`$ for all $`i<k`$.
+Similarly, if the Collatz sequence of $`n`$ contains the value $`1`$, then the index of the first element of value $`1`$
+is the _total stopping time_ of $`n`$. So $`k`$ is the total stopping time of $`n`$ iff $`f^k(n)=1`$ and $`f^i(n)>1`$
+for all $`i<k`$.
 
-The Collatz Conjecture states that for all positive integer starting values $n$, finite recursive application of the
-Collatz function will eventually result in the value $1$. Or, expressed with mathematical logic:
+The following additional notation and terminology will be used. A _step_ is a single application of the Collatz
+function. The _step count function_ $`s:\mathbb N\to\mathbb N^*`$ outputs the total stopping time of the argument, if it
+exists. Otherwise, it outputs positive infinity.
+
+The Collatz Conjecture posits that every natural number has a finite total stopping time. This means
 
 ```math
-\forall n \in \mathbb{Z}^+, \exists k \in \mathbb{Z}^{0+} : f^k(n) = 1
+\forall n\in\mathbb N\,,\;\exists k\in\mathbb N\,,\;f^k(n)=1\,.
 ```
 
 ## The Simulation
 
-Collatz Conjecture Simulator aims to find the Collatz sequences with the greatest total stopping times. That is,
-positive integer values $n$ such that of the set of integers in the interval $[1, n]$, the starting value with the
-greatest total stopping time is $n$.
-
-```math
-n \in \mathbb{Z}^+ : \forall x \in \{ p \in \mathbb{Z}^+ : p < n \}, s(n) > s(x)
-```
-
-Total stopping times are calculated by iterating through Collatz sequences and counting each step (application of the
-Collatz function) until a value of $1$ is found. Due to every iteration through a Collatz sequence being computationally
-independent of any other, it is possible to calculate the total stopping times of multiple starting values
-simultaneously. As such, the program uses the GPU to iterate through multiple Collatz sequences in parallel. The GPU is
-accessed via the Vulkan API, and uses compute shaders to perform the iterations. Collatz Conjecture Simulator is
-primarily written in C, however the shaders are written in GLSL and compiled to SPIR-V.
+Collatz Conjecture Simulator aims to find the starting values with the greatest total stopping times. That is, positive
+integers $`n`$ such that $`s(n)>s(m)`$ for all $`m<n`$. Total stopping times are calculated by iterating through Collatz
+sequences and counting each step until a value of $`1`$ is found. Because each such iteration is computationally
+independent, the program uses the GPU to iterate through multiple Collatz sequences in parallel. The GPU is accessed via
+the Vulkan API and uses compute shaders to perform the iterations. Collatz Conjecture Simulator is primarily written in
+C, however the shaders are written in GLSL and compiled to SPIR-V.
 
 ## Program Requirements
 
 The general environment and system requirements that must be met for Collatz Conjecture Simulator to build and run
-correctly. The full requirements of the GPU are given in [device_requirements.md](device_requirements.md).
+correctly are listed below. The full requirements of the GPU are given in
+[device_requirements.md](device_requirements.md).
 
-- [CMake](https://cmake.org) 3.23
-- [pthreads](https://en.wikipedia.org/wiki/Pthreads)
-- [glslang](https://github.com/KhronosGroup/glslang)
-- [SPIR-V Tools](https://github.com/KhronosGroup/SPIRV-Tools)
+- [CMake](https://cmake.org) 3.23.
+- [pthreads](https://en.wikipedia.org/wiki/Pthreads).
+- [glslang](https://github.com/KhronosGroup/glslang).
+- [SPIR-V Tools](https://github.com/KhronosGroup/SPIRV-Tools).
   - `spirv-link`
   - `spirv-opt`
   - `spirv-dis`
-- [C](https://en.wikipedia.org/wiki/C_(programming_language))11
+- [C](https://en.wikipedia.org/wiki/C_(programming_language))11.
   - `_Atomic` (Optional C11 feature)
   - `__int128` (GNU C extension)
-- [Vulkan](https://www.vulkan.org) 1.1
+- [Vulkan](https://www.vulkan.org) 1.1.
   - `synchronization2`
   - `timelineSemaphore`
 
@@ -92,8 +85,7 @@ directory and execute the following command.
 cmake -S . -B build
 ```
 
-Several options can be optionally specified to customise the build system by appending `-D OPTION=CONFIG` to the above
-command.
+Several options can be specified to customise the build system by appending `-D OPTION=CONFIG` to the above command.
 
 - `CMAKE_BUILD_TYPE` specifies the build variant and can be set to _Debug_, _Release_, _MinSizeRel_, or
   _RelWithDebInfo_. If not set, it defaults to _Debug_.
@@ -123,7 +115,7 @@ directory, else it will be unable to locate the generated SPIR-V.
 The executable provides a command line interface and uses the initial command line parameters to specify the operation
 of the program. Parameters beginning with a double hyphen (--) reference options. Some options themselves accept a
 parameter, which must be given immediately following the option as the next CLI parameter. To view a comprehensive list
-of possible options, use the `-h` or `--help` option.
+of options, use the `-h` or `--help` option.
 
 In most cases, the executable will initiate the program's main loop. If during this process the `Enter` or `Return` keys
 are pressed, the program will break from the main loop and begin to exit. Each iteration of the main loop will output
@@ -134,25 +126,25 @@ information regarding the computations performed, most prominently including ben
 To facilitate this use of the GPU, _inout-buffers_ are used. Inout-buffers are ranges of GPU memory within `VkBuffer`
 objects and consist of an _in-buffer_ and _out-buffer_. In-buffers are shader storage buffer objects (SSBOs) and contain
 an array of 128-bit unsigned integer starting values. Out-buffers are also SSBOs and contain an array of 16-bit unsigned
-integer total stopping times (step counts).
+integer total stopping times.
 
 The main loop consists of the CPU writing starting values to in-buffers; the GPU reading starting values from
-in-buffers, iterating through Collatz sequences, and writing step counts to out-buffers; and the CPU reading step
-counts from out-buffers. The number of inout-buffers is dependent on the system's specifications. There are one or more
-inout-buffers per `VkBuffer` object, one `VkBuffer` object per `VkDeviceMemory` object, and two or more `VkDeviceMemory`
-objects.
+in-buffers, iterating through Collatz sequences, and writing total stopping times to out-buffers; and the CPU reading
+total stopping times from out-buffers. The number of inout-buffers is dependent on the system's specifications. There
+are one or more inout-buffers per `VkBuffer` object, one `VkBuffer` object per `VkDeviceMemory` object, and two or more
+`VkDeviceMemory` objects.
 
 Collatz Conjecture Simulator attempts to minimise the time spent idle by the CPU and GPU due to one waiting for the
-other to complete execution. Such as the GPU waiting for starting values, or the CPU waiting for step counts. This is
-done by having an even number of `VkDeviceMemory` objects, where half contain memory close to the GPU (device local
-memory), and half contain memory visible to both the CPU and GPU (host visible memory). There are therefore four types
-of memory ranges: host visible in-buffers (HV-in), host visible out-buffers (HV-out), device local in-buffers (DL-in),
-and device local out-buffers (DL-out).
+other. Such as the GPU waiting for starting values, or the CPU waiting for total stopping times. This is done by having
+an even number of `VkDeviceMemory` objects, where half contain memory close to the GPU (device local memory) and half
+contain memory visible to both the CPU and GPU (host visible memory). There are thus four types of memory ranges: host
+visible in-buffers (HV-in), host visible out-buffers (HV-out), device local in-buffers (DL-in), and device local
+out-buffers (DL-out).
 
-Rather than the CPU and GPU taking turns executing, both processors spend time running in parallel. The CPU reads and
-writes host visible inout-buffers, and the GPU reads and writes device local inout-buffers, simultaneously. Starting
-values are written to HV-in, copied from HV-in to DL-in, and read from DL-in. Step counts are written to DL-out, copied
-from DL-out to HV-out, and read from HV-out.
+Rather than the CPU and GPU taking turns executing, both processors spend time running in parallel. The CPU reads from
+and writes to host visible inout-buffers, and the GPU reads from and writes to device local inout-buffers,
+simultaneously. Starting values are written to HV-in, copied from HV-in to DL-in, and read from DL-in. Total stopping
+times are written to DL-out, copied from DL-out to HV-out, and read from HV-out.
 
 ```mermaid
 flowchart LR
@@ -172,44 +164,29 @@ flowchart LR
 
 ## Starting Value Selection
 
-It can be mathematically demonstrated that particular sets of starting values will always generate Collatz sequences
-that contain a smaller value. The step counts of these starting values can thus be expressed as the sum of the step
-count of the smaller value, and the distance between the starting value and smaller value in the Collatz sequence.
+A property of the step count function is that if a starting value $`n`$ has a Collatz sequence containing the starting
+value $`m`$ at index $`k`$, then $`s(n)`$ can be expressed as the sum of $`s(m)`$ and $`k`$. That is, $`f^k(n)=m`$
+implies $`s(n)=s(m)+k`$. It can be mathematically demonstrated that particular starting values will always have Collatz
+sequences with finite stopping times. So for such starting values $`n`$, there must be some index $`k`$ such that
+$`f^k(n)=m`$ for some $`m<n`$. As such, by knowing the values of $`s(m)`$ and $`k`$, it is possible to calculate the
+total stopping time of $`n`$ as their sum rather than by iterating through the Collatz sequence of $`n`$.
 
-```math
-\exists n, k \in \mathbb{Z}^+ : n > f^k(n) \implies s(n) = s(f^k(n)) + k
-```
+This can be advantageous since a single addition operation is significantly less computationally intensive than
+iterating through a Collatz sequence. It can also allow for greater parallelism if such calculations are performed by
+the CPU, as this would have both the CPU and GPU calculating total stopping times and thereby more evenly splitting the
+workload between the two processors. For these reasons, Collatz Conjecture Simulator partitions the workload for
+calculating total stopping times between the CPU and GPU according to this logic. In particular, two sets of starting
+values are allocated to the CPU.
 
-For example, the set of even starting values.
+The first set is the even starting values; all $`n\in\mathbb N`$ such that $`n\equiv0\pmod2`$ and hence $`n=2m`$ for
+some $`m\in\mathbb N`$. A single step from $`n`$ results in $`f(2m)=m`$, meaning $`s(2m)=s(m)+1`$.
 
-```math
-\begin{align*}
-\forall n \in \mathbb{Z}^+, f(2n) = n \\
-\implies s(2n) = s(n) + 1
-\end{align*}
-```
+The second set is the starting values $`n`$ such that $`n\equiv1\pmod4`$ and hence $`n=4m+1`$ for some
+$`m\in\mathbb N`$. Stepping three times from $`n`$ results in $`f^3(4m+1)=f^2(12m+4)=f(6m+2)=3m+1`$, meaning
+$`s(4m+1)=s(3m+1)+3`$.
 
-The Collatz sequences of all even starting values $2n$ must have exactly one step between $2n$ and the first value less
-than it, namely $n$. So by knowing $s(n)$, $s(2n)$ can be calculated as $s(n) + 1$.
-
-Another set of interest is the set of starting values congruent to $1$ modulo $4$.
-
-```math
-\begin{align*}
-\forall n \in \mathbb{Z}^+, f(4n + 1) = 12n + 4 \\
-f(12n + 4) = 6n + 2 \\
-f(6n  + 2) = 3n + 1 \\
-\implies s(4n + 1) = s(3n + 1) + 3
-\end{align*}
-```
-
-These two patterns remove the requirement to iterate through the Collatz sequence of every three in four starting
-values, leaving only those congruent to $3$ modulo $4$. The step counts of all other starting values can be determined
-with the previously calculated step counts of lesser starting values.
-
-Hence, Collatz Conjecture Simulator only iterates through the Collatz sequences of starting values
-$n \in \mathbb{Z}^+ : n \equiv 3 \pmod 4$. This improves performance by allowing larger intervals of starting values to
-be tested per dispatch command, and by more evenly distributing the workload between the CPU and GPU.
+The union of these two sets excludes only starting values $`n`$ such that $`n\equiv3\pmod4`$, whose total stopping times
+are calculated by the GPU. The remaining starting values' total stopping times are calculated by the CPU.
 
 ## Licensing
 
