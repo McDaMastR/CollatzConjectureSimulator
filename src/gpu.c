@@ -250,7 +250,6 @@ bool select_device(Gpu* restrict gpu)
 		deviceCount * sizeof(VkPhysicalDeviceProperties2) +
 		deviceCount * sizeof(VkPhysicalDeviceFeatures2) +
 		deviceCount * sizeof(VkPhysicalDevice16BitStorageFeatures) +
-		deviceCount * sizeof(VkPhysicalDevice8BitStorageFeatures) +
 		deviceCount * sizeof(uint32_t) * 2;
 
 	void* p = malloc(size);
@@ -270,10 +269,8 @@ bool select_device(Gpu* restrict gpu)
 	VkPhysicalDeviceFeatures2* devsFeats = (VkPhysicalDeviceFeatures2*) (devsProps + deviceCount);
 	VkPhysicalDevice16BitStorageFeatures* devs16BitStorageFeats = (VkPhysicalDevice16BitStorageFeatures*) (
 		devsFeats + deviceCount);
-	VkPhysicalDevice8BitStorageFeatures* devs8BitStorageFeats = (VkPhysicalDevice8BitStorageFeatures*) (
-		devs16BitStorageFeats + deviceCount);
 
-	uint32_t* extCounts = (uint32_t*) (devs8BitStorageFeats + deviceCount);
+	uint32_t* extCounts = (uint32_t*) (devs16BitStorageFeats + deviceCount);
 	uint32_t* qfCounts  = (uint32_t*) (extCounts + deviceCount);
 
 	VK_CALL_RES(vkEnumeratePhysicalDevices, instance, &deviceCount, devices);
@@ -329,12 +326,8 @@ bool select_device(Gpu* restrict gpu)
 
 		VK_CALL(vkGetPhysicalDeviceProperties2, devices[i], &devsProps[i]);
 
-		devs8BitStorageFeats[i] = (VkPhysicalDevice8BitStorageFeatures) {
-			VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES};
-
 		devs16BitStorageFeats[i] = (VkPhysicalDevice16BitStorageFeatures) {
 			VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES};
-		devs16BitStorageFeats[i].pNext = &devs8BitStorageFeats[i];
 
 		devsFeats[i]       = (VkPhysicalDeviceFeatures2) {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
 		devsFeats[i].pNext = &devs16BitStorageFeats[i];
@@ -345,9 +338,7 @@ bool select_device(Gpu* restrict gpu)
 	uint32_t devIndex  = UINT32_MAX;
 	uint32_t bestScore = 0;
 
-	bool using8BitStorage                  = false;
 	bool using16BitStorage                 = false;
-	bool usingBufferDeviceAddress          = false;
 	bool usingMaintenance4                 = false;
 	bool usingMemoryBudget                 = false;
 	bool usingMemoryPriority               = false;
@@ -375,8 +366,7 @@ bool select_device(Gpu* restrict gpu)
 		bool hasShaderInt16 = devsFeats[i].features.shaderInt16;
 		bool hasShaderInt64 = devsFeats[i].features.shaderInt64;
 
-		bool hasUniformAndStorageBuffer8BitAccess = devs8BitStorageFeats[i].uniformAndStorageBuffer8BitAccess;
-		bool hasStorageBuffer16BitAccess          = devs16BitStorageFeats[i].storageBuffer16BitAccess;
+		bool hasStorageBuffer16BitAccess = devs16BitStorageFeats[i].storageBuffer16BitAccess;
 
 		bool hasDedicatedTransfer = false;
 		bool hasDedicatedCompute  = false;
@@ -430,8 +420,6 @@ bool select_device(Gpu* restrict gpu)
 			}
 		}
 
-		bool has8BitStorage                  = false;
-		bool hasBufferDeviceAddress          = false;
 		bool hasMaintenance4                 = false;
 		bool hasPipelineExecutableProperties = false;
 		bool hasPortabilitySubset            = false;
@@ -446,9 +434,7 @@ bool select_device(Gpu* restrict gpu)
 		for (uint32_t j = 0; j < extCount; j++) {
 			const char* extName = extsProps[i][j].extensionName;
 
-			if      (!strcmp(extName, VK_KHR_8BIT_STORAGE_EXTENSION_NAME))          { has8BitStorage         = true; }
-			else if (!strcmp(extName, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME)) { hasBufferDeviceAddress = true; }
-			else if (!strcmp(extName, VK_KHR_MAINTENANCE_4_EXTENSION_NAME))         { hasMaintenance4        = true; }
+			if      (!strcmp(extName, VK_KHR_MAINTENANCE_4_EXTENSION_NAME)) { hasMaintenance4 = true; }
 			else if (!strcmp(extName, VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME)) {
 				hasPipelineExecutableProperties = true; }
 			else if (!strcmp(extName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) { hasPortabilitySubset = true; }
@@ -498,17 +484,13 @@ bool select_device(Gpu* restrict gpu)
 		if (hasStorageBuffer16BitAccess)     { currScore += 100; }
 		if (hasSubgroupSizeControl)          { currScore += 10;  }
 
-		if (g_config.validationLayers && has8BitStorage && hasUniformAndStorageBuffer8BitAccess) { currScore += 10; }
-		if (g_config.validationLayers && hasBufferDeviceAddress)                                 { currScore += 10; }
-		if (g_config.capturePipelines && hasPipelineExecutableProperties)                        { currScore += 10; }
+		if (g_config.capturePipelines && hasPipelineExecutableProperties) { currScore += 10; }
 
 		if (currScore > bestScore) {
 			bestScore = currScore;
 			devIndex  = i;
 
-			using8BitStorage = g_config.validationLayers && has8BitStorage && hasUniformAndStorageBuffer8BitAccess;
 			using16BitStorage                 = hasStorageBuffer16BitAccess;
-			usingBufferDeviceAddress          = g_config.validationLayers && hasBufferDeviceAddress;
 			usingMaintenance4                 = hasMaintenance4;
 			usingMemoryBudget                 = hasMemoryBudget;
 			usingMemoryPriority               = hasMemoryPriority;
@@ -538,10 +520,10 @@ bool select_device(Gpu* restrict gpu)
 
 	uint32_t qfCount = qfCounts[devIndex];
 
-	uint32_t vkVerMajor = 1;
-	uint32_t vkVerMinor;
+	uint32_t vkVerMajor  = 1;
+	uint32_t vkVerMinor  = 0;
 	uint32_t spvVerMajor = 1;
-	uint32_t spvVerMinor;
+	uint32_t spvVerMinor = 0;
 
 	if      (usingVulkan14) { vkVerMinor = 4; spvVerMinor = 6; }
 	else if (usingVulkan13) { vkVerMinor = 3; spvVerMinor = 6; }
@@ -606,9 +588,7 @@ bool select_device(Gpu* restrict gpu)
 	gpu->spvVerMajor = spvVerMajor;
 	gpu->spvVerMinor = spvVerMinor;
 
-	gpu->using8BitStorage                  = using8BitStorage;
 	gpu->using16BitStorage                 = using16BitStorage;
-	gpu->usingBufferDeviceAddress          = usingBufferDeviceAddress;
 	gpu->usingMaintenance4                 = usingMaintenance4;
 	gpu->usingMemoryBudget                 = usingMemoryBudget;
 	gpu->usingMemoryPriority               = usingMemoryPriority;
@@ -619,7 +599,7 @@ bool select_device(Gpu* restrict gpu)
 	gpu->usingShaderInt64                  = usingShaderInt64;
 	gpu->usingSubgroupSizeControl          = usingSubgroupSizeControl;
 
-	if (g_config.queryBenchmarking) {
+	if (g_config.queryBenchmarks) {
 		gpu->transferQueueFamilyTimestampValidBits =
 			qfsProps[devIndex][transferQfIndex].queueFamilyProperties.timestampValidBits;
 		gpu->computeQueueFamilyTimestampValidBits =
@@ -650,7 +630,6 @@ bool select_device(Gpu* restrict gpu)
 				"\tSPIR-V version:                    %" PRIu32 ".%" PRIu32 "\n"
 				"\tTransfer QF index:                 %" PRIu32 "\n"
 				"\tCompute QF index:                  %" PRIu32 "\n"
-				"\tbufferDeviceAddress                %d\n"
 				"\tmaintenance4                       %d\n"
 				"\tmemoryPriority:                    %d\n"
 				"\tpipelineCreationCacheControl:      %d\n"
@@ -658,13 +637,12 @@ bool select_device(Gpu* restrict gpu)
 				"\tshaderInt16:                       %d\n"
 				"\tshaderInt64:                       %d\n"
 				"\tstorageBuffer16BitAccess:          %d\n"
-				"\tsubgroupSizeControl:               %d\n"
-				"\tuniformAndStorageBuffer8BitAccess: %d\n\n",
+				"\tsubgroupSizeControl:               %d\n\n",
 				deviceName, bestScore, vkVerMajor, vkVerMinor, spvVerMajor, spvVerMinor,
 				transferQfIndex, computeQfIndex,
-				usingBufferDeviceAddress, usingMaintenance4, usingMemoryPriority, usingPipelineCreationCacheControl,
+				usingMaintenance4, usingMemoryPriority, usingPipelineCreationCacheControl,
 				usingPipelineExecutableProperties, usingShaderInt16, usingShaderInt64, using16BitStorage,
-				usingSubgroupSizeControl, using8BitStorage);
+				usingSubgroupSizeControl);
 			break;
 		default: break;
 	}
@@ -689,7 +667,7 @@ bool create_device(Gpu* restrict gpu)
 	DyArray dyMem = dyarray_create(sizeof(DyData), 1);
 	if EXPECT_FALSE (!dyMem) return false;
 
-	DyArray enabledExts = dyarray_create(sizeof(const char*), 13);
+	DyArray enabledExts = dyarray_create(sizeof(const char*), 11);
 	if EXPECT_FALSE (!enabledExts) { free_recursive(dyMem); return false; }
 
 	dyData = (DyData) {enabledExts, dyarray_destroy_stub};
@@ -698,8 +676,6 @@ bool create_device(Gpu* restrict gpu)
 	dyarray_append_str(enabledExts, VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 	dyarray_append_str(enabledExts, VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
 
-	if (gpu->using8BitStorage)         { dyarray_append_str(enabledExts, VK_KHR_8BIT_STORAGE_EXTENSION_NAME);          }
-	if (gpu->usingBufferDeviceAddress) { dyarray_append_str(enabledExts, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME); }
 	if (gpu->usingMaintenance4)        { dyarray_append_str(enabledExts, VK_KHR_MAINTENANCE_4_EXTENSION_NAME);         }
 	if (gpu->usingPortabilitySubset)   { dyarray_append_str(enabledExts, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);    }
 	if (gpu->usingMemoryBudget)        { dyarray_append_str(enabledExts, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);         }
@@ -716,24 +692,13 @@ bool create_device(Gpu* restrict gpu)
 		dyarray_append_str(enabledExts, VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 	}
 
-	VkPhysicalDeviceFeatures generalFeats = {VK_FALSE};
-	generalFeats.shaderInt64              = gpu->usingShaderInt64;
-	generalFeats.shaderInt16              = gpu->usingShaderInt16;
-
 	VkPhysicalDeviceFeatures2 devFeats = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
-	devFeats.features                  = generalFeats;
+	devFeats.features.shaderInt64      = gpu->usingShaderInt64;
+	devFeats.features.shaderInt16      = gpu->usingShaderInt16;
 
 	VkPhysicalDevice16BitStorageFeatures dev16BitStorageFeats = {
 		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES};
 	dev16BitStorageFeats.storageBuffer16BitAccess = VK_TRUE;
-
-	VkPhysicalDevice8BitStorageFeatures dev8BitStorageFeats = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES};
-	dev8BitStorageFeats.storageBuffer8BitAccess             = VK_TRUE;
-	dev8BitStorageFeats.uniformAndStorageBuffer8BitAccess   = VK_TRUE;
-
-	VkPhysicalDeviceBufferDeviceAddressFeatures devBufferDeviceAddressFeats = {
-		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES};
-	devBufferDeviceAddressFeats.bufferDeviceAddress = VK_TRUE;
 
 	VkPhysicalDeviceMaintenance4Features devMaintenance4Feats = {
 		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_FEATURES};
@@ -768,9 +733,7 @@ bool create_device(Gpu* restrict gpu)
 	PNEXT_ADD(next, devSynchronization2Feats);
 	PNEXT_ADD(next, devTimelineSemaphoreFeats);
 
-	if (gpu->using8BitStorage)                  { PNEXT_ADD(next, dev8BitStorageFeats);                  }
 	if (gpu->using16BitStorage)                 { PNEXT_ADD(next, dev16BitStorageFeats);                 }
-	if (gpu->usingBufferDeviceAddress)          { PNEXT_ADD(next, devBufferDeviceAddressFeats);          }
 	if (gpu->usingMaintenance4)                 { PNEXT_ADD(next, devMaintenance4Feats);                 }
 	if (gpu->usingMemoryPriority)               { PNEXT_ADD(next, devMemoryPriorityFeats);               }
 	if (gpu->usingPipelineCreationCacheControl) { PNEXT_ADD(next, devPipelineCreationCacheControlFeats); }
@@ -909,15 +872,17 @@ bool manage_memory(Gpu* restrict gpu)
 		VkMemoryPropertyFlags propFlags = devMemoryProps.memoryProperties.memoryTypes[i].propertyFlags;
 		uint32_t              heapIndex = devMemoryProps.memoryProperties.memoryTypes[i].heapIndex;
 
-		bool isDeviceLocal    = propFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-		bool isHostVisible    = propFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-		bool isHostCoherent   = propFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-		bool isHostCached     = propFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
-		bool isProtected      = propFlags & VK_MEMORY_PROPERTY_PROTECTED_BIT;
-		bool isDeviceCoherent = propFlags & VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD;
+		bool isDeviceLocal     = propFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+		bool isHostVisible     = propFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+		bool isHostCoherent    = propFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		bool isHostCached      = propFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+		bool isLazilyAllocated = propFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;
+		bool isProtected       = propFlags & VK_MEMORY_PROPERTY_PROTECTED_BIT;
+		bool isDeviceCoherent  = propFlags & VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD;
 
-		if (isProtected)      continue;
-		if (isDeviceCoherent) continue;
+		if (isLazilyAllocated) continue;
+		if (isProtected)       continue;
+		if (isDeviceCoherent)  continue;
 
 		if (isDeviceLocal && (dlMemoryTypeBits & memoryTypeBit)) {
 			if (!isHostVisible && !hasDeviceNonHost) {
@@ -992,15 +957,15 @@ bool manage_memory(Gpu* restrict gpu)
 
 	uint32_t workgroupSize  = floor_pow2(maxWorkgroupSize);
 	uint32_t workgroupCount = minu32(
-		maxWorkgroupCount, (uint32_t) (maxStorageBufferRange / (workgroupSize * sizeof(Value))));
+		maxWorkgroupCount, (uint32_t) (maxStorageBufferRange / (workgroupSize * sizeof(StartValue))));
 
 	uint32_t     valuesPerInout  = workgroupSize * workgroupCount;
-	VkDeviceSize bytesPerInout   = valuesPerInout * (sizeof(Value) + sizeof(Count));
+	VkDeviceSize bytesPerInout   = valuesPerInout * (sizeof(StartValue) + sizeof(StopTime));
 	uint32_t     inoutsPerBuffer = (uint32_t) (bytesPerBuffer / bytesPerInout);
 
-	if (bytesPerBuffer % bytesPerInout > inoutsPerBuffer * workgroupSize * (sizeof(Value) + sizeof(Count))) {
+	if (bytesPerBuffer % bytesPerInout > inoutsPerBuffer * workgroupSize * (sizeof(StartValue) + sizeof(StopTime))) {
 		uint32_t excessValues =
-			valuesPerInout - (uint32_t) (bytesPerBuffer % bytesPerInout / (sizeof(Value) + sizeof(Count)));
+			valuesPerInout - (uint32_t) (bytesPerBuffer % bytesPerInout / (sizeof(StartValue) + sizeof(StopTime)));
 
 		inoutsPerBuffer++;
 		valuesPerInout -= excessValues / inoutsPerBuffer;
@@ -1017,8 +982,8 @@ bool manage_memory(Gpu* restrict gpu)
 		workgroupCount = valuesPerInout / workgroupSize;
 	}
 
-	VkDeviceSize bytesPerIn  = valuesPerInout * sizeof(Value);
-	VkDeviceSize bytesPerOut = valuesPerInout * sizeof(Count);
+	VkDeviceSize bytesPerIn  = valuesPerInout * sizeof(StartValue);
+	VkDeviceSize bytesPerOut = valuesPerInout * sizeof(StopTime);
 
 	bytesPerInout  = bytesPerIn + bytesPerOut;
 	bytesPerBuffer = bytesPerInout * inoutsPerBuffer;
@@ -1117,8 +1082,8 @@ bool manage_memory(Gpu* restrict gpu)
 	}
 
 	size_t size =
-		inoutsPerHeap  * sizeof(Value*) +
-		inoutsPerHeap  * sizeof(Count*) +
+		inoutsPerHeap  * sizeof(StartValue*) +
+		inoutsPerHeap  * sizeof(StopTime*) +
 		buffersPerHeap * sizeof(VkBuffer) * 2 +
 		buffersPerHeap * sizeof(VkDeviceMemory) * 2 +
 		inoutsPerHeap  * sizeof(VkDescriptorSet) +
@@ -1128,8 +1093,8 @@ bool manage_memory(Gpu* restrict gpu)
 	gpu->dynamicMemory = calloc(size, sizeof(char));
 	if EXPECT_FALSE (!gpu->dynamicMemory) { CALLOC_FAILURE(gpu->dynamicMemory, size, sizeof(char)); return false; }
 
-	gpu->mappedInBuffers  = (Value**) gpu->dynamicMemory;
-	gpu->mappedOutBuffers = (Count**) (gpu->mappedInBuffers + inoutsPerHeap);
+	gpu->mappedInBuffers  = (StartValue**) gpu->dynamicMemory;
+	gpu->mappedOutBuffers = (StopTime**) (gpu->mappedInBuffers + inoutsPerHeap);
 
 	gpu->hostVisibleBuffers = (VkBuffer*) (gpu->mappedOutBuffers + inoutsPerHeap);
 	gpu->deviceLocalBuffers = (VkBuffer*) (gpu->hostVisibleBuffers + buffersPerHeap);
@@ -1153,8 +1118,8 @@ bool create_buffers(Gpu* restrict gpu)
 	VkBuffer*       dlBuffers        = gpu->deviceLocalBuffers;
 	VkDeviceMemory* hvMemories       = gpu->hostVisibleDeviceMemories;
 	VkDeviceMemory* dlMemories       = gpu->deviceLocalDeviceMemories;
-	Value**         mappedInBuffers  = gpu->mappedInBuffers;
-	Count**         mappedOutBuffers = gpu->mappedOutBuffers;
+	StartValue**    mappedInBuffers  = gpu->mappedInBuffers;
+	StopTime**      mappedOutBuffers = gpu->mappedOutBuffers;
 
 	VkDevice device = gpu->device;
 
@@ -1266,14 +1231,14 @@ bool create_buffers(Gpu* restrict gpu)
 		VK_CALL_RES(vkMapMemory, device, hvMemories[i], 0, bytesPerHvMemory, 0, (void**) &mappedInBuffers[j]);
 		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
-		mappedOutBuffers[j] = (Count*) (mappedInBuffers[j] + valuesPerInout);
+		mappedOutBuffers[j] = (StopTime*) (mappedInBuffers[j] + valuesPerInout);
 		j++;
 
 		for (uint32_t k = 1; k < inoutsPerBuffer; j++, k++) {
 			mappedInBuffers[j] =
-				mappedInBuffers[j - 1] + valuesPerInout + valuesPerInout * sizeof(Count) / sizeof(Value);
+				mappedInBuffers[j - 1] + valuesPerInout + valuesPerInout * sizeof(StopTime) / sizeof(StartValue);
 			mappedOutBuffers[j] =
-				mappedOutBuffers[j - 1] + valuesPerInout + valuesPerInout * sizeof(Value) / sizeof(Count);
+				mappedOutBuffers[j - 1] + valuesPerInout + valuesPerInout * sizeof(StartValue) / sizeof(StopTime);
 		}
 	}
 
@@ -1878,8 +1843,8 @@ bool submit_commands(Gpu* restrict gpu)
 	const VkCommandBuffer* computeCmdBuffers  = gpu->computeCommandBuffers;
 	const VkSemaphore*     semaphores         = gpu->semaphores;
 
-	Value*       const* mappedInBuffers  = gpu->mappedInBuffers;
-	const Count* const* mappedOutBuffers = (const Count* const*) gpu->mappedOutBuffers;
+	StartValue*     const* mappedInBuffers  = gpu->mappedInBuffers;
+	const StopTime* const* mappedOutBuffers = (const StopTime* const*) gpu->mappedOutBuffers;
 
 	VkDevice device = gpu->device;
 
@@ -1911,7 +1876,7 @@ bool submit_commands(Gpu* restrict gpu)
 	if EXPECT_FALSE (!dyMem) return false;
 
 	size_t size =
-		inoutsPerHeap * sizeof(Value) +
+		inoutsPerHeap * sizeof(StartValue) +
 		inoutsPerHeap * sizeof(VkMappedMemoryRange) * 2 +
 		inoutsPerHeap * sizeof(VkSubmitInfo2) * 2 +
 		inoutsPerHeap * sizeof(VkCommandBufferSubmitInfo) * 2 +
@@ -1924,7 +1889,7 @@ bool submit_commands(Gpu* restrict gpu)
 	dyData = (DyData) {p, free};
 	dyarray_append(dyMem, &dyData);
 
-	Value* testedValues = (Value*) p;
+	StartValue* testedValues = (StartValue*) p;
 
 	VkMappedMemoryRange* hvInBuffersMappedMemoryRanges = (VkMappedMemoryRange*) (testedValues + inoutsPerHeap);
 	VkMappedMemoryRange* hvOutBuffersMappedMemoryRanges = (VkMappedMemoryRange*) (
@@ -1952,13 +1917,13 @@ bool submit_commands(Gpu* restrict gpu)
 	VkSemaphoreWaitInfo* computeSemaphoreWaitInfos = (VkSemaphoreWaitInfo*) (
 		transferSemaphoreWaitInfos + inoutsPerHeap);
 
-	DyArray bestValues = dyarray_create(sizeof(Value), 64);
+	DyArray bestValues = dyarray_create(sizeof(StartValue), 32);
 	if EXPECT_FALSE (!bestValues) { free_recursive(dyMem); return false; }
 
 	dyData = (DyData) {bestValues, dyarray_destroy_stub};
 	dyarray_append(dyMem, &dyData);
 
-	DyArray bestCounts = dyarray_create(sizeof(Count), 64);
+	DyArray bestCounts = dyarray_create(sizeof(StopTime), 32);
 	if EXPECT_FALSE (!bestCounts) { free_recursive(dyMem); return false; }
 
 	dyData = (DyData) {bestCounts, dyarray_destroy_stub};
@@ -1968,9 +1933,9 @@ bool submit_commands(Gpu* restrict gpu)
 	bool bres = file_size(PROGRESS_FILE_NAME, &fileSize);
 	if EXPECT_FALSE (!bres) { free_recursive(dyMem); return false; }
 
-	ValueInfo prevValues = {0};
+	Position position = {0};
 
-	if (!g_config.restartCount && fileSize) {
+	if (!g_config.restart && fileSize) {
 		uint64_t val0mod1off0Upper, val0mod1off0Lower;
 		uint64_t val0mod1off1Upper, val0mod1off1Lower;
 		uint64_t val0mod1off2Upper, val0mod1off2Lower;
@@ -1978,7 +1943,7 @@ bool submit_commands(Gpu* restrict gpu)
 		uint64_t val1mod6off1Upper, val1mod6off1Lower;
 		uint64_t val1mod6off2Upper, val1mod6off2Lower;
 		uint64_t curValueUpper, curValueLower;
-		uint16_t curCount;
+		uint16_t bestTime;
 
 		bres = read_text(
 			PROGRESS_FILE_NAME,
@@ -1991,24 +1956,24 @@ bool submit_commands(Gpu* restrict gpu)
 			&val1mod6off0Upper, &val1mod6off0Lower,
 			&val1mod6off1Upper, &val1mod6off1Lower,
 			&val1mod6off2Upper, &val1mod6off2Lower,
-			&curValueUpper, &curValueLower, &curCount);
+			&curValueUpper, &curValueLower, &bestTime);
 
 		if EXPECT_FALSE (!bres) { free_recursive(dyMem); return false; }
 
-		prevValues.val0mod1off[0] = INT128(val0mod1off0Upper, val0mod1off0Lower);
-		prevValues.val0mod1off[1] = INT128(val0mod1off1Upper, val0mod1off1Lower);
-		prevValues.val0mod1off[2] = INT128(val0mod1off2Upper, val0mod1off2Lower);
+		position.val0mod1off[0] = INT128(val0mod1off0Upper, val0mod1off0Lower);
+		position.val0mod1off[1] = INT128(val0mod1off1Upper, val0mod1off1Lower);
+		position.val0mod1off[2] = INT128(val0mod1off2Upper, val0mod1off2Lower);
 
-		prevValues.val1mod6off[0] = INT128(val1mod6off0Upper, val1mod6off0Lower);
-		prevValues.val1mod6off[1] = INT128(val1mod6off1Upper, val1mod6off1Lower);
-		prevValues.val1mod6off[2] = INT128(val1mod6off2Upper, val1mod6off2Lower);
+		position.val1mod6off[0] = INT128(val1mod6off0Upper, val1mod6off0Lower);
+		position.val1mod6off[1] = INT128(val1mod6off1Upper, val1mod6off1Lower);
+		position.val1mod6off[2] = INT128(val1mod6off2Upper, val1mod6off2Lower);
 
-		prevValues.curValue = INT128(curValueUpper, curValueLower);
-		prevValues.curCount = curCount;
+		position.curStartValue = INT128(curValueUpper, curValueLower);
+		position.bestStopTime  = bestTime;
 	}
 	else {
-		prevValues.val0mod1off[0] = 1;
-		prevValues.curValue       = 3;
+		position.val0mod1off[0] = 1;
+		position.curStartValue  = 3;
 	}
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
@@ -2081,7 +2046,7 @@ bool submit_commands(Gpu* restrict gpu)
 
 	clock_t totalBmStart = clock();
 
-	Value tested = prevValues.curValue;
+	StartValue tested = position.curStartValue;
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		testedValues[i] = tested;
@@ -2125,14 +2090,14 @@ bool submit_commands(Gpu* restrict gpu)
 	VK_CALL_RES(vkQueueSubmit2KHR, transferQueue, inoutsPerHeap, transferSubmitInfos, VK_NULL_HANDLE);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 
-	Value total      = 0;
-	Value startValue = prevValues.curValue;
+	StartValue total             = 0;
+	StartValue initialStartValue = position.curStartValue;
 
 	// ===== Enter main loop =====
 	for (uint64_t i = 0; i < g_config.maxLoops && !atomic_load(&input); i++) {
 		clock_t mainLoopBmStart = clock();
 
-		Value initialValue = prevValues.curValue;
+		StartValue initialValue = position.curStartValue;
 
 		double readBmTotal         = 0;
 		double writeBmTotal        = 0;
@@ -2198,7 +2163,7 @@ bool submit_commands(Gpu* restrict gpu)
 			}
 
 			clock_t readBmStart = clock();
-			read_outbuffer(mappedOutBuffers[j], &prevValues, bestValues, bestCounts, valuesPerInout);
+			read_outbuffer(mappedOutBuffers[j], &position, bestValues, bestCounts, valuesPerInout);
 			clock_t readBmEnd = clock();
 
 			clock_t writeBmStart = clock();
@@ -2247,15 +2212,13 @@ bool submit_commands(Gpu* restrict gpu)
 		clock_t mainLoopBmEnd = clock();
 		double  mainLoopBmark = get_benchmark(mainLoopBmStart, mainLoopBmEnd);
 
-		Value currentValue = prevValues.curValue;
-
 		switch (g_config.outputLevel) {
 			case OUTPUT_LEVEL_SILENT: break;
 			case OUTPUT_LEVEL_QUIET:
 				printf(
 					"Main loop: %.0fms\n"
 					"Current value: 0x %016" PRIx64 " %016" PRIx64 "\n\n",
-					mainLoopBmark, INT128_UPPER(currentValue - 3), INT128_LOWER(currentValue - 3));
+					mainLoopBmark, INT128_UPPER(position.curStartValue - 3), INT128_LOWER(position.curStartValue - 3));
 				break;
 			case OUTPUT_LEVEL_DEFAULT:
 				printf(
@@ -2272,8 +2235,8 @@ bool submit_commands(Gpu* restrict gpu)
 					readBmTotal / (double) inoutsPerHeap,        writeBmTotal / (double) inoutsPerHeap,
 					computeBmTotal / (double) inoutsPerHeap,     transferBmTotal / (double) inoutsPerHeap,
 					waitComputeBmTotal / (double) inoutsPerHeap, waitTransferBmTotal / (double) inoutsPerHeap,
-					INT128_UPPER(initialValue - 2), INT128_LOWER(initialValue - 2),
-					INT128_UPPER(currentValue - 3), INT128_LOWER(currentValue - 3));
+					INT128_UPPER(initialValue - 2),           INT128_LOWER(initialValue - 2),
+					INT128_UPPER(position.curStartValue - 3), INT128_LOWER(position.curStartValue - 3));
 				break;
 			case OUTPUT_LEVEL_VERBOSE:
 				printf(
@@ -2294,8 +2257,8 @@ bool submit_commands(Gpu* restrict gpu)
 					transferBmTotal, transferBmTotal / (double) inoutsPerHeap,
 					waitComputeBmTotal,  waitComputeBmTotal / (double) inoutsPerHeap,
 					waitTransferBmTotal, waitTransferBmTotal / (double) inoutsPerHeap,
-					INT128_UPPER(initialValue - 2), INT128_LOWER(initialValue - 2),
-					INT128_UPPER(currentValue - 3), INT128_LOWER(currentValue - 3));
+					INT128_UPPER(initialValue - 2),           INT128_LOWER(initialValue - 2),
+					INT128_UPPER(position.curStartValue - 3), INT128_LOWER(position.curStartValue - 3));
 				break;
 			default: break;
 		}
@@ -2311,37 +2274,35 @@ bool submit_commands(Gpu* restrict gpu)
 	}
 	else { atomic_store(&input, true); }
 
-	uint32_t count = (uint32_t) dyarray_size(bestValues);
-
-	Value endValue = prevValues.curValue;
-
 	if (g_config.outputLevel > OUTPUT_LEVEL_SILENT) {
 		printf(
 			"Set of starting values tested: [0x %016" PRIx64 " %016" PRIx64 ", 0x %016" PRIx64 " %016" PRIx64 "]\n",
-			INT128_UPPER(startValue - 2), INT128_LOWER(startValue - 2),
-			INT128_UPPER(endValue - 3),   INT128_LOWER(endValue - 3));
+			INT128_UPPER(initialStartValue - 2),      INT128_LOWER(initialStartValue - 2),
+			INT128_UPPER(position.curStartValue - 3), INT128_LOWER(position.curStartValue - 3));
 	}
+
+	uint32_t count = (uint32_t) dyarray_size(bestValues);
 
 	if (count) {
 		printf(
-			"New highest step counts (%" PRIu32 "):\n"
-			"|   #   |   Starting value (hexadecimal)    | Step count |\n",
+			"New highest total stopping times (%" PRIu32 "):\n"
+			"|   #   |   Starting value (hexadecimal)    | Total stopping time |\n",
 			count);
 	}
 
 	for (uint32_t i = 0; i < count; i++) {
-		Value value;
-		Count steps;
+		StartValue startValue;
+		StopTime   stopTime;
 
-		dyarray_get(bestValues, &value, i);
-		dyarray_get(bestCounts, &steps, i);
+		dyarray_get(bestValues, &startValue, i);
+		dyarray_get(bestCounts, &stopTime, i);
 
 		printf(
-			"| %5" PRIu32 " | %016" PRIx64 " %016" PRIx64 " | %10" PRIu16 " |\n",
-			i + 1, INT128_UPPER(value), INT128_LOWER(value), steps);
+			"| %5" PRIu32 " | %016" PRIx64 " %016" PRIx64 " | %19" PRIu16 " |\n",
+			i + 1, INT128_UPPER(startValue), INT128_LOWER(startValue), stopTime);
 	}
 
-	if (g_config.outputLevel > OUTPUT_LEVEL_QUIET) {
+	if (g_config.outputLevel > OUTPUT_LEVEL_SILENT) {
 		printf(
 			"\n"
 			"Time: %.3fms\n"
@@ -2349,19 +2310,19 @@ bool submit_commands(Gpu* restrict gpu)
 			totalBmark, (double) (1000 * total) / totalBmark);
 	}
 
-	if (!g_config.restartCount) {
+	if (!g_config.restart) {
 		bres = write_text(
 			PROGRESS_FILE_NAME,
 			"%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n"
 			"%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n"
 			"%016" PRIx64 " %016" PRIx64 "\n%04"  PRIx16,
-			INT128_UPPER(prevValues.val0mod1off[0]), INT128_LOWER(prevValues.val0mod1off[0]),
-			INT128_UPPER(prevValues.val0mod1off[1]), INT128_LOWER(prevValues.val0mod1off[1]),
-			INT128_UPPER(prevValues.val0mod1off[2]), INT128_LOWER(prevValues.val0mod1off[2]),
-			INT128_UPPER(prevValues.val1mod6off[0]), INT128_LOWER(prevValues.val1mod6off[0]),
-			INT128_UPPER(prevValues.val1mod6off[1]), INT128_LOWER(prevValues.val1mod6off[1]),
-			INT128_UPPER(prevValues.val1mod6off[2]), INT128_LOWER(prevValues.val1mod6off[2]),
-			INT128_UPPER(prevValues.curValue), INT128_LOWER(prevValues.curValue), prevValues.curCount);
+			INT128_UPPER(position.val0mod1off[0]), INT128_LOWER(position.val0mod1off[0]),
+			INT128_UPPER(position.val0mod1off[1]), INT128_LOWER(position.val0mod1off[1]),
+			INT128_UPPER(position.val0mod1off[2]), INT128_LOWER(position.val0mod1off[2]),
+			INT128_UPPER(position.val1mod6off[0]), INT128_LOWER(position.val1mod6off[0]),
+			INT128_UPPER(position.val1mod6off[1]), INT128_LOWER(position.val1mod6off[1]),
+			INT128_UPPER(position.val1mod6off[2]), INT128_LOWER(position.val1mod6off[2]),
+			INT128_UPPER(position.curStartValue),  INT128_LOWER(position.curStartValue), position.bestStopTime);
 
 		if EXPECT_FALSE (!bres) { free_recursive(dyMem); return false; }
 	}
@@ -2596,30 +2557,32 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 	dyarray_append(dyMem, &dyData);
 
 	for (uint32_t i = 0; i < executableCount; i++) {
-		char str[260];
+		char str[21];
 
-		sprintf(str, "\n%s\n", pipelineExecutablesProperties[i].name);
-		dystring_append(message, str);
+		dystring_append(message, "\n");
+		dystring_append(message, pipelineExecutablesProperties[i].name);
+		dystring_append(message, "\n");
 
 		for (uint32_t j = 0; j < sizeof(pipelineExecutablesProperties[i].stages) * CHAR_BIT; j++) {
 			VkShaderStageFlagBits stage = pipelineExecutablesProperties[i].stages & ((uint32_t) 1 << j);
 
 			if (stage) {
 				const char* sStage = string_VkShaderStageFlagBits(stage);
-				sprintf(str, "%s ", sStage);
-				dystring_append(message, str);
+
+				dystring_append(message, sStage);
+				dystring_append(message, " ");
 			}
 		}
 
 		sprintf(str, "(%" PRIu32 ")\n",  pipelineExecutablesProperties[i].subgroupSize);
 		dystring_append(message, str);
-
-		sprintf(str, "%s\n", pipelineExecutablesProperties[i].description);
-		dystring_append(message, str);
+		dystring_append(message, pipelineExecutablesProperties[i].description);
+		dystring_append(message, "\n");
 
 		for (uint32_t j = 0; j < statisticCounts[i]; j++) {
-			sprintf(str, "\n\t%s: ", pipelineExecutablesStatistics[i][j].name);
-			dystring_append(message, str);
+			dystring_append(message, "\n\t");
+			dystring_append(message, pipelineExecutablesStatistics[i][j].name);
+			dystring_append(message, ": ");
 
 			switch (pipelineExecutablesStatistics[i][j].format) {
 				case VK_PIPELINE_EXECUTABLE_STATISTIC_FORMAT_BOOL32_KHR:
@@ -2638,9 +2601,9 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 			}
 
 			dystring_append(message, str);
-
-			sprintf(str, "\n\t%s\n", pipelineExecutablesStatistics[i][j].description);
-			dystring_append(message, str);
+			dystring_append(message, "\n\t");
+			dystring_append(message, pipelineExecutablesStatistics[i][j].description);
+			dystring_append(message, "\n");
 		}
 	}
 
@@ -2679,94 +2642,105 @@ void* wait_for_input(void* ptr)
 }
 
 void write_inbuffer(
-	Value* restrict mappedInBuffer, Value* restrict firstValue, uint32_t valuesPerInout, uint32_t valuesPerHeap)
+	StartValue* restrict mappedInBuffer,
+	StartValue* restrict firstStartValue,
+	uint32_t valuesPerInout,
+	uint32_t valuesPerHeap)
 {
-	ASSUME(*firstValue % 8 == 3);
+	ASSUME(*firstStartValue % 8 == 3);
 	ASSUME(valuesPerInout % 128 == 0);
 	ASSUME(valuesPerInout != 0);
 
-	Value value = *firstValue;
+	StartValue startValue = *firstStartValue;
 
 	for (uint32_t i = 0; i < valuesPerInout; i++) {
-		mappedInBuffer[i] = value;
-		value += 4;
+		mappedInBuffer[i] = startValue;
+		startValue += 4;
 	}
 
-	*firstValue += valuesPerHeap * 4;
+	*firstStartValue += valuesPerHeap * 4;
 }
 
 void read_outbuffer(
-	const Count* restrict mappedOutBuffer,
-	ValueInfo* restrict prevValues,
-	DyArray bestValues,
-	DyArray bestCounts,
+	const StopTime* restrict mappedOutBuffer,
+	Position* restrict position,
+	DyArray bestStartValues,
+	DyArray bestStopTimes,
 	uint32_t valuesPerInout)
 {
-	ASSUME(prevValues->curValue % 8 == 3);
+	ASSUME(position->curStartValue % 8 == 3);
 	ASSUME(valuesPerInout % 128 == 0);
 	ASSUME(valuesPerInout != 0);
 
-	Value val0mod1off[3];
-	Value val1mod6off[3];
+	StartValue val0mod1off[3];
+	StartValue val1mod6off[3];
 
-	memcpy(val0mod1off, prevValues->val0mod1off, sizeof(val0mod1off));
-	memcpy(val1mod6off, prevValues->val1mod6off, sizeof(val1mod6off));
+	memcpy(val0mod1off, position->val0mod1off, sizeof(val0mod1off));
+	memcpy(val1mod6off, position->val1mod6off, sizeof(val1mod6off));
 
-	Value value = prevValues->curValue - 2;
-	Count count = prevValues->curCount;
+	StartValue curValue = position->curStartValue - 2;
+	StopTime   bestTime = position->bestStopTime;
 
 	for (uint32_t i = 0; i < valuesPerInout;) {
-		value++; // value % 8 == 2
+		curValue++; // curValue % 8 == 2
 
-		if (value == val0mod1off[0] * 2) {
-			new_high(&value, &count, (Count) (count + 1), val0mod1off, val1mod6off, bestValues, bestCounts); }
+		if (curValue == val0mod1off[0] * 2) {
+			new_high(
+				&curValue, &bestTime, (StopTime) (bestTime + 1), val0mod1off, val1mod6off, bestStartValues,
+				bestStopTimes);
+		}
 		else {
 			for (uint32_t j = 2; j < ARR_SIZE(val0mod1off); j++) {
-				if (val0mod1off[j - 1] || value != val0mod1off[j] * 2) continue;
+				if (val0mod1off[j - 1] || curValue != val0mod1off[j] * 2) continue;
 
-				val0mod1off[j - 1] = value;
+				val0mod1off[j - 1] = curValue;
 
 				break;
 			}
 		}
 
-		value++; // value % 8 == 3
+		curValue++; // curValue % 8 == 3
 
-		if (mappedOutBuffer[i] > count) {
-			new_high(&value, &count, mappedOutBuffer[i], val0mod1off, val1mod6off, bestValues, bestCounts); }
-		else if (mappedOutBuffer[i] == count && !val1mod6off[0] && value % 6 == 1) { val1mod6off[0] = value; }
+		if (mappedOutBuffer[i] > bestTime) {
+			new_high(
+				&curValue, &bestTime, mappedOutBuffer[i], val0mod1off, val1mod6off, bestStartValues, bestStopTimes);
+		}
+		else if (mappedOutBuffer[i] == bestTime && !val1mod6off[0] && curValue % 6 == 1) { val1mod6off[0] = curValue; }
 		else {
 			for (uint32_t j = 1; j < ARR_SIZE(val0mod1off); j++) {
-				if (mappedOutBuffer[i] != count - j) continue;
+				if (mappedOutBuffer[i] != bestTime - j) continue;
 
-				if (!val0mod1off[j])                   { val0mod1off[j] = value; }
-				if (!val1mod6off[j] && value % 6 == 1) { val1mod6off[j] = value; }
+				if (!val0mod1off[j])                      { val0mod1off[j] = curValue; }
+				if (!val1mod6off[j] && curValue % 6 == 1) { val1mod6off[j] = curValue; }
 
 				break;
 			}
 		}
 
-		value++; // value % 8 == 4
+		curValue++; // curValue % 8 == 4
 
-		if (value == val0mod1off[1] * 4) {
-			new_high(&value, &count, (Count) (count + 1), val0mod1off, val1mod6off, bestValues, bestCounts); }
+		if (curValue == val0mod1off[1] * 4) {
+			new_high(
+				&curValue, &bestTime, (StopTime) (bestTime + 1), val0mod1off, val1mod6off, bestStartValues,
+				bestStopTimes);
+		}
 		else {
 			for (uint32_t j = 3; j < ARR_SIZE(val0mod1off); j++) {
-				if (val0mod1off[j - 2] || value != val0mod1off[j] * 4) continue;
+				if (val0mod1off[j - 2] || curValue != val0mod1off[j] * 4) continue;
 
-				val0mod1off[j - 2] = value;
+				val0mod1off[j - 2] = curValue;
 
 				break;
 			}
 		}
 
-		value++; // value % 8 == 5
+		curValue++; // curValue % 8 == 5
 
-		if (value % 6 == 1) {
+		if (curValue % 6 == 1) {
 			for (uint32_t j = 0; j < ARR_SIZE(val0mod1off); j++) {
-				if (val1mod6off[j] || value - 1 != val0mod1off[j]) continue;
+				if (val1mod6off[j] || curValue - 1 != val0mod1off[j]) continue;
 
-				val1mod6off[j] = value;
+				val1mod6off[j] = curValue;
 
 				break;
 			}
@@ -2774,56 +2748,66 @@ void read_outbuffer(
 
 		i++;
 
-		value++; // value % 8 == 6
+		curValue++; // curValue % 8 == 6
 
-		if (value == val0mod1off[0] * 2) {
-			new_high(&value, &count, (Count) (count + 1), val0mod1off, val1mod6off, bestValues, bestCounts); }
+		if (curValue == val0mod1off[0] * 2) {
+			new_high(
+				&curValue, &bestTime, (StopTime) (bestTime + 1), val0mod1off, val1mod6off, bestStartValues,
+				bestStopTimes);
+		}
 		else {
 			for (uint32_t j = 2; j < ARR_SIZE(val0mod1off); j++) {
-				if (val0mod1off[j - 1] || value != val0mod1off[j] * 2) continue;
+				if (val0mod1off[j - 1] || curValue != val0mod1off[j] * 2) continue;
 
-				val0mod1off[j - 1] = value;
+				val0mod1off[j - 1] = curValue;
 
 				break;
 			}
 		}
 
-		value++; // value % 8 == 7
+		curValue++; // curValue % 8 == 7
 
-		if (mappedOutBuffer[i] > count) {
-			new_high(&value, &count, mappedOutBuffer[i], val0mod1off, val1mod6off, bestValues, bestCounts); }
-		else if (mappedOutBuffer[i] == count && !val1mod6off[0] && value % 6 == 1) { val1mod6off[0] = value; }
+		if (mappedOutBuffer[i] > bestTime) {
+			new_high(
+				&curValue, &bestTime, mappedOutBuffer[i], val0mod1off, val1mod6off, bestStartValues, bestStopTimes);
+		}
+		else if (mappedOutBuffer[i] == bestTime && !val1mod6off[0] && curValue % 6 == 1) { val1mod6off[0] = curValue; }
 		else {
 			for (uint32_t j = 1; j < ARR_SIZE(val0mod1off); j++) {
-				if (mappedOutBuffer[i] != count - j) continue;
+				if (mappedOutBuffer[i] != bestTime - j) continue;
 
-				if (!val0mod1off[j])                   { val0mod1off[j] = value; }
-				if (!val1mod6off[j] && value % 6 == 1) { val1mod6off[j] = value; }
+				if (!val0mod1off[j])                      { val0mod1off[j] = curValue; }
+				if (!val1mod6off[j] && curValue % 6 == 1) { val1mod6off[j] = curValue; }
 			
 				break;
 			}
 		}
 
-		value++; // value % 8 == 0
+		curValue++; // curValue % 8 == 0
 
-		if (value == val0mod1off[2] * 8) {
-			new_high(&value, &count, (Count) (count + 1), val0mod1off, val1mod6off, bestValues, bestCounts); }
+		if (curValue == val0mod1off[2] * 8) {
+			new_high(
+				&curValue, &bestTime, (StopTime) (bestTime + 1), val0mod1off, val1mod6off, bestStartValues,
+				bestStopTimes);
+		}
 		else {
 			for (uint32_t j = 4; j < ARR_SIZE(val0mod1off); j++) {
-				if (val0mod1off[j - 3] || value != val0mod1off[j] * 8) continue;
+				if (val0mod1off[j - 3] || curValue != val0mod1off[j] * 8) continue;
 
-				val0mod1off[j - 3] = value;
+				val0mod1off[j - 3] = curValue;
 
 				break;
 			}
 		}
 
-		value++; // value % 8 == 1
+		curValue++; // curValue % 8 == 1
 
 		for (uint32_t j = 0; j < ARR_SIZE(val0mod1off); j++) {
-			if (!val1mod6off[j] || (value - 1) / 4 != (val1mod6off[j] - 1) / 3) continue;
+			if (!val1mod6off[j] || (curValue - 1) / 4 != (val1mod6off[j] - 1) / 3) continue;
 
-			new_high(&value, &count, (Count) (count - j + 3), val0mod1off, val1mod6off, bestValues, bestCounts);
+			new_high(
+				&curValue, &bestTime, (StopTime) (bestTime - j + 3), val0mod1off, val1mod6off, bestStartValues,
+				bestStopTimes);
 
 			break;
 		}
@@ -2831,36 +2815,34 @@ void read_outbuffer(
 		i++;
 	}
 
-	memcpy(prevValues->val0mod1off, val0mod1off, sizeof(val0mod1off));
-	memcpy(prevValues->val1mod6off, val1mod6off, sizeof(val1mod6off));
+	memcpy(position->val0mod1off, val0mod1off, sizeof(val0mod1off));
+	memcpy(position->val1mod6off, val1mod6off, sizeof(val1mod6off));
 
-	prevValues->curValue = value + 2;
-	prevValues->curCount = count;
+	position->curStartValue = curValue + 2;
+	position->bestStopTime  = bestTime;
 }
 
 void new_high(
-	const Value* restrict value,
-	Count* restrict count,
-	Count newCount,
-	Value* restrict val0mod1off,
-	Value* restrict val1mod6off,
-	DyArray bestValues,
-	DyArray bestCounts)
+	const StartValue* restrict startValue,
+	StopTime* restrict curBestTime,
+	StopTime newBestTime,
+	StartValue* restrict val0mod1off,
+	StartValue* restrict val1mod6off,
+	DyArray bestStartValues,
+	DyArray bestStopTimes)
 {
-	uint32_t oldCount = *count;
-	uint32_t difCount = minu32(newCount - oldCount, 3);
+	uint32_t difTime = minu32((uint32_t) (newBestTime - *curBestTime), 3);
+	*curBestTime = newBestTime;
 
-	*count = newCount;
+	memmove(val0mod1off + difTime, val0mod1off, sizeof(StartValue) * (3 - difTime));
+	memmove(val1mod6off + difTime, val1mod6off, sizeof(StartValue) * (3 - difTime));
 
-	memmove(val0mod1off + difCount, val0mod1off, sizeof(Value) * (3 - difCount));
-	memmove(val1mod6off + difCount, val1mod6off, sizeof(Value) * (3 - difCount));
+	memset(val0mod1off + 1, 0, sizeof(StartValue) * (difTime - 1));
+	memset(val1mod6off + 1, 0, sizeof(StartValue) * (difTime - 1));
 
-	memset(val0mod1off + 1, 0, sizeof(Value) * (difCount - 1));
-	memset(val1mod6off + 1, 0, sizeof(Value) * (difCount - 1));
+	val0mod1off[0] = *startValue;
+	val1mod6off[0] = *startValue % 6 == 1 ? *startValue : 0;
 
-	val0mod1off[0] = *value;
-	val1mod6off[0] = *value % 6 == 1 ? *value : 0;
-
-	dyarray_append(bestValues, value);
-	dyarray_append(bestCounts, count);
+	dyarray_append(bestStartValues, startValue);
+	dyarray_append(bestStopTimes, curBestTime);
 }

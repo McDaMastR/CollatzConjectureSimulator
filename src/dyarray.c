@@ -37,11 +37,9 @@ static void* dyarray_stretch(DyArray array)
 	void*  raw  = array->raw;
 
 	size_t cap2 = cap + cap / 2 + 1;
-
-	if EXPECT_FALSE (cap > cap2) { cap2 = cap + (SIZE_MAX / size - cap) / 2 + 1; }
+	if (cap > cap2) { cap2 = cap + (SIZE_MAX / size - cap) / 2 + 1; }
 
 	void* raw2 = realloc(raw, cap2 * size);
-
 	if EXPECT_FALSE (!raw2) { REALLOC_FAILURE(raw2, raw, cap2 * size); return NULL; }
 
 	array->capacity = cap2;
@@ -53,10 +51,10 @@ static void* dyarray_stretch(DyArray array)
 
 void dyarray_destroy(DyArray array)
 {
-	if EXPECT_TRUE (array) {
-		free(array->raw);
-		free(array);
-	}
+	if EXPECT_FALSE (!array) return;
+
+	free(array->raw);
+	free(array);
 }
 
 DyArray dyarray_create(size_t size, size_t count)
@@ -64,7 +62,6 @@ DyArray dyarray_create(size_t size, size_t count)
 	ASSUME(size != 0);
 
 	DyArray array = (DyArray) malloc(sizeof(DyArray_T));
-
 	if EXPECT_FALSE (!array) { MALLOC_FAILURE(array, sizeof(DyArray_T)); return NULL; }
 
 	array->size     = size;
@@ -72,9 +69,8 @@ DyArray dyarray_create(size_t size, size_t count)
 	array->capacity = count;
 	array->raw      = NULL;
 
-	if EXPECT_TRUE (count) {
+	if (count) {
 		void* raw = malloc(count * size);
-
 		if EXPECT_FALSE (!raw) { MALLOC_FAILURE(raw, count * size); free(array); return NULL; }
 
 		array->raw = raw;
@@ -156,9 +152,8 @@ void* dyarray_append(DyArray array, const void* restrict value)
 	size_t cap   = array->capacity;
 	void*  raw   = array->raw;
 
-	if EXPECT_FALSE (count == cap) {
+	if (count == cap) {
 		void* raw2 = dyarray_stretch(array);
-
 		if EXPECT_FALSE (!raw2) return NULL;
 
 		raw = raw2;
@@ -182,9 +177,8 @@ void* dyarray_prepend(DyArray array, const void* restrict value)
 	size_t cap   = array->capacity;
 	void*  raw   = array->raw;
 
-	if EXPECT_FALSE (count == cap) {
+	if (count == cap) {
 		void* raw2 = dyarray_stretch(array);
-
 		if EXPECT_FALSE (!raw2) return NULL;
 
 		raw = raw2;
@@ -209,9 +203,8 @@ void* dyarray_insert(DyArray array, const void* restrict value, size_t index)
 	size_t cap   = array->capacity;
 	void*  raw   = array->raw;
 
-	if EXPECT_FALSE (count == cap) {
+	if (count == cap) {
 		void* raw2 = dyarray_stretch(array);
-
 		if EXPECT_FALSE (!raw2) return NULL;
 
 		raw = raw2;

@@ -54,18 +54,18 @@ const VkAllocationCallbacks g_allocationCallbacks = {
 };
 
 ProgramConfig g_config = {
-	.outputLevel       = OUTPUT_LEVEL_DEFAULT,
-	.colourLevel       = COLOUR_LEVEL_TTY,
-	.iterSize          = 128,
-	.maxLoops          = ULONG_LONG_MAX,
-	.maxMemory         = .4f,
-	.preferInt16       = false,
-	.preferInt64       = false,
-	.extensionLayers   = false,
-	.profileLayers     = false,
-	.validationLayers  = false,
-	.restartCount      = false,
-	.queryBenchmarking = true,
-	.logAllocations    = false,
-	.capturePipelines  = false
+	.outputLevel      = OUTPUT_LEVEL_DEFAULT,
+	.colourLevel      = COLOUR_LEVEL_TTY,
+	.iterSize         = 128,
+	.maxLoops         = ULONG_LONG_MAX,
+	.maxMemory        = .4f,
+	.preferInt16      = false,
+	.preferInt64      = false,
+	.extensionLayers  = false,
+	.profileLayers    = false,
+	.validationLayers = false,
+	.restart          = false,
+	.queryBenchmarks  = true,
+	.logAllocations   = false,
+	.capturePipelines = false
 };

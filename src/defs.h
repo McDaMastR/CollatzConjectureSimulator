@@ -108,8 +108,8 @@
 		#define SCANF_FUNC(fmt, args)  __attribute__ (( format (gnu_scanf,  fmt, args) ))
 	#endif
 #else
-	#define PRINTF_FUNC(fmt, varg)
-	#define SCANF_FUNC(fmt, varg)
+	#define PRINTF_FUNC(fmt, args)
+	#define SCANF_FUNC(fmt, args)
 #endif
 
 #if has_attribute(nonnull)
@@ -118,6 +118,12 @@
 #else
 	#define NONNULL_ARGS(...)
 	#define NONNULL_ARGS_ALL
+#endif
+
+#if has_attribute(nonnull_if_nonzero)
+	#define NONNULL_NONZERO_ARGS(arg1, arg2) __attribute__ (( nonnull_if_nonzero (arg1, arg2) ))
+#else
+	#define NONNULL_NONZERO_ARGS(arg1, arg2)
 #endif
 
 #if has_attribute(alloc_size)
@@ -223,7 +229,7 @@
 #define INT128_UPPER(x) ( (uint64_t) ((x) >> 64)   )
 #define INT128_LOWER(x) ( (uint64_t) ((x) & ~0ULL) )
 
-#define INT128(upper, lower) ( (Value) (upper) << 64 | (Value) (lower) )
+#define INT128(upper, lower) ( (StartValue) (upper) << 64 | (StartValue) (lower) )
 
 #define PNEXT_ADD(p, s) do { *(p) = &(s); (p) = &(s).pNext; } while (0)
 
@@ -267,15 +273,14 @@ typedef struct ProgramConfig
 	bool profileLayers;
 	bool validationLayers;
 
-	bool restartCount;
-	bool queryBenchmarking;
+	bool restart;
+	bool queryBenchmarks;
 	bool logAllocations;
 	bool capturePipelines;
 } ProgramConfig;
 
-typedef unsigned __int128 Value;
-
-typedef uint16_t Count;
+typedef unsigned __int128 StartValue;
+typedef uint16_t StopTime;
 
 
 // Global constants

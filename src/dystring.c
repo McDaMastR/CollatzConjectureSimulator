@@ -37,11 +37,9 @@ static char* dystring_stretch(DyString string, size_t size)
 	char*  raw = string->raw;
 
 	size_t cap2 = size + cap / 2;
-
-	if EXPECT_FALSE (cap > cap2) { cap2 = size; }
+	if (cap > cap2) { cap2 = size; }
 
 	char* raw2 = (char*) realloc(raw, cap2);
-
 	if EXPECT_FALSE (!raw2) { REALLOC_FAILURE(raw2, raw, cap2); return NULL; }
 
 	memset(raw2 + cap, '\0', cap2 - cap);
@@ -55,24 +53,24 @@ static char* dystring_stretch(DyString string, size_t size)
 
 void dystring_destroy(DyString string)
 {
-	if EXPECT_TRUE (string) {
-		free(string->raw);
-		free(string);
-	}
+	if EXPECT_FALSE (!string) return;
+
+	free(string->raw);
+	free(string);
 }
 
 DyString dystring_create(size_t count)
 {
-	DyString string = (DyString) malloc(sizeof(DyString_T));
+	if (!count) { count = 1; }
 
+	DyString string = (DyString) malloc(sizeof(DyString_T));
 	if EXPECT_FALSE (!string) { MALLOC_FAILURE(string, sizeof(DyString_T)); return NULL; }
 
-	char* raw = (char*) calloc(count ?: 1, sizeof(char));
-
-	if EXPECT_FALSE (!raw) { CALLOC_FAILURE(raw, count ?: 1, sizeof(char)); free(string); return NULL; }
+	char* raw = (char*) calloc(count, sizeof(char));
+	if EXPECT_FALSE (!raw) { CALLOC_FAILURE(raw, count, sizeof(char)); free(string); return NULL; }
 
 	string->length   = 1;
-	string->capacity = count ?: 1;
+	string->capacity = count;
 	string->raw      = raw;
 
 	return string;
@@ -100,9 +98,8 @@ char* dystring_append(DyString string, const char* restrict substring)
 
 	size_t sublen = strlen(substring);
 
-	if EXPECT_FALSE (len + sublen > cap) {
+	if (len + sublen > cap) {
 		char* raw2 = dystring_stretch(string, len + sublen);
-
 		if EXPECT_FALSE (!raw2) return NULL;
 
 		raw = raw2;
@@ -129,9 +126,8 @@ char* dystring_prepend(DyString string, const char* restrict substring)
 
 	size_t sublen = strlen(substring);
 
-	if EXPECT_FALSE (len + sublen > cap) {
+	if (len + sublen > cap) {
 		char* raw2 = dystring_stretch(string, len + sublen);
-
 		if EXPECT_FALSE (!raw2) return NULL;
 
 		raw = raw2;
@@ -159,9 +155,8 @@ char* dystring_insert(DyString string, const char* restrict substring, size_t in
 
 	size_t sublen = strlen(substring);
 
-	if EXPECT_FALSE (len + sublen > cap) {
+	if (len + sublen > cap) {
 		char* raw2 = dystring_stretch(string, len + sublen);
-
 		if EXPECT_FALSE (!raw2) return NULL;
 
 		raw = raw2;

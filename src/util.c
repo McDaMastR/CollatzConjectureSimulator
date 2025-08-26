@@ -33,15 +33,10 @@ typedef struct AlignedInfo
 
 bool fisatty(FILE* stream)
 {
-	int fd;
-	int tty;
-
 #if defined(_MSC_VER) || defined(__MINGW32__)
-	fd  = _fileno(stream);
-	tty = _isatty(fd);
+	int tty = _isatty(_fileno(stream));
 #else
-	fd  = fileno(stream);
-	tty = isatty(fd);
+	int tty = isatty(fileno(stream));
 #endif
 
 	return (bool) tty;
@@ -204,11 +199,7 @@ bool save_pipeline_cache(VkDevice device, VkPipelineCache cache, const char* fil
 bool file_size(const char* filename, size_t* size)
 {
 	FILE* file = fopen(filename, "rb");
-
-	if (!file) {
-		*size = 0;
-		return true;
-	}
+	if (!file) { *size = 0; return true; }
 
 	int ires = fseek(file, 0, SEEK_END);
 	if EXPECT_FALSE (ires) { FSEEK_FAILURE(ires, file, 0, SEEK_END); fclose(file); return false; }
@@ -283,47 +274,32 @@ bool write_text(const char* filename, const char* format, ...)
 	return true;
 }
 
-
 void* aligned_malloc(size_t size, size_t alignment)
 {
 	ASSUME(size != 0);
-	ASSUME((alignment & (alignment - 1)) == 0);
+	ASSUME((alignment & (alignment - 1)) == 0); // alignment is a power of two
 
-	void*     memory;
-	uintptr_t address;
+	void* memory;
+	AlignedInfo* info;
+
+	alignment = maxz(alignment, alignof(AlignedInfo));
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
-	if (alignment < alignof(size_t)) { alignment = alignof(size_t); }
-
-	memory = _aligned_offset_malloc(size + sizeof(size_t), alignment, sizeof(size_t));
+	memory = _aligned_offset_malloc(size + sizeof(AlignedInfo), alignment, sizeof(AlignedInfo));
 	if EXPECT_FALSE (!memory) return NULL;
 
-	address = (uintptr_t) memory;
-
-	size_t* info = (size_t*) address;
-	*info        = size;
-
-	address += sizeof(size_t);
-	memory  = (void*) address;
+	info = (AlignedInfo*) memory;
 #else
-	if (alignment < alignof(AlignedInfo)) { alignment = alignof(AlignedInfo); }
-
-	int ires = posix_memalign(&memory, alignment, size + alignment + sizeof(AlignedInfo));
+	int ires = posix_memalign(&memory, alignment, size + maxz(alignment, sizeof(AlignedInfo)));
 	if EXPECT_FALSE (ires) return NULL;
 
-	address = (uintptr_t) memory;
-	address += ((sizeof(AlignedInfo) - 1) / alignment + 1) * alignment;
-	address -= sizeof(AlignedInfo);
-
-	AlignedInfo* info = (AlignedInfo*) address;
-	info->start       = memory;
-	info->size        = size;
-
-	address += sizeof(AlignedInfo);
-	memory  = (void*) address;
+	info = (AlignedInfo*) memory + maxz(alignment, sizeof(AlignedInfo)) / sizeof(AlignedInfo) - 1;
 #endif
 
-	return memory;
+	info->start = memory;
+	info->size  = size;
+
+	return (void*) (info + 1);
 }
 
 void* aligned_realloc(void* memory, size_t size, size_t alignment)
@@ -331,70 +307,43 @@ void* aligned_realloc(void* memory, size_t size, size_t alignment)
 	ASSUME(size != 0);
 	ASSUME((alignment & (alignment - 1)) == 0); // alignment is a power of two
 
-	uintptr_t address = (uintptr_t) memory;
-
 	void* newMemory;
 
+	AlignedInfo* info = (AlignedInfo*) memory - 1;
+	void*  oldMemory = info->start;
+	size_t oldSize   = info->size;
+
+	alignment = maxz(alignment, alignof(AlignedInfo));
+
 #if defined(_MSC_VER) || defined(__MINGW32__)
-	address -= sizeof(size_t);
-	memory  = (void*) address;
-
-	if (alignment < alignof(size_t)) { alignment = alignof(size_t); }
-
-	newMemory = _aligned_offset_realloc(memory, size + sizeof(size_t), alignment, sizeof(size_t));
+	newMemory = _aligned_offset_realloc(oldMemory, size + sizeof(AlignedInfo), alignment, sizeof(AlignedInfo));
 	if EXPECT_FALSE (!newMemory) return NULL;
 
-	address = (uintptr_t) newMemory;
-
-	size_t* info = (size_t*) address;
-	*info        = size;
-
-	address   += sizeof(size_t);
-	newMemory = (void*) address;
+	info = (AlignedInfo*) newMemory;
 #else
-	address -= sizeof(AlignedInfo);
-
-	AlignedInfo* info = (AlignedInfo*) address;
-	void*  prevMemory = info->start;
-	size_t prevSize   = info->size;
-
-	size_t minSize = minz(size, prevSize);
-
-	if (alignment < alignof(AlignedInfo)) { alignment = alignof(AlignedInfo); }
-
-	int ires = posix_memalign(&newMemory, alignment, size + alignment + sizeof(AlignedInfo));
+	int ires = posix_memalign(&newMemory, alignment, size + maxz(alignment, sizeof(AlignedInfo)));
 	if EXPECT_FALSE (ires) return NULL;
 
-	address = (uintptr_t) newMemory;
-	address += ((sizeof(AlignedInfo) - 1) / alignment + 1) * alignment;
-	address -= sizeof(AlignedInfo);
+	info = (AlignedInfo*) newMemory + maxz(alignment, sizeof(AlignedInfo)) / sizeof(AlignedInfo) - 1;
 
-	info        = (AlignedInfo*) address;
+	memcpy(info + 1, memory, minz(size, oldSize));
+	free(oldMemory);
+#endif
+
 	info->start = newMemory;
 	info->size  = size;
 
-	address   += sizeof(AlignedInfo);
-	newMemory = (void*) address;
-
-	memcpy(newMemory, memory, minSize);
-	free(prevMemory);
-#endif
-
-	return newMemory;
+	return (void*) (info + 1);
 }
 
 void* aligned_free(void* memory)
 {
-	uintptr_t address = (uintptr_t) memory;
+	AlignedInfo* info = (AlignedInfo*) memory - 1;
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
-	address -= sizeof(size_t);
-	memory  = (void*) address;
-	_aligned_free(memory);
+	_aligned_free(info->start);
 #else
-	address -= sizeof(AlignedInfo);
-	memory  = ((AlignedInfo*) address)->start;
-	free(memory);
+	free(info->start);
 #endif
 
 	return NULL;
@@ -402,61 +351,26 @@ void* aligned_free(void* memory)
 
 size_t aligned_size(const void* memory)
 {
-	uintptr_t address = (uintptr_t) memory;
-
-	size_t size;
-
-#if defined(_MSC_VER) || defined(__MINGW32__)
-	address -= sizeof(size_t);
-	size    = *(size_t*) address;
-#else
-	address -= sizeof(AlignedInfo);
-	size    = ((AlignedInfo*) address)->size;
-#endif
-
-	return size;
+	const AlignedInfo* info = (const AlignedInfo*) memory - 1;
+	return info->size;
 }
 
 
-uint8_t maxu8(uint8_t x, uint8_t y)
-{
-	return x > y ? x : y;
-}
+#define UINT(sz) uint##sz##_t
+#define UMAX_DEF(sz) UINT(sz) maxu##sz(UINT(sz) x, UINT(sz) y) { return x > y ? x : y; }
+#define UMIN_DEF(sz) UINT(sz) minu##sz(UINT(sz) x, UINT(sz) y) { return x < y ? x : y; }
 
-uint8_t minu8(uint8_t x, uint8_t y)
-{
-	return x < y ? x : y;
-}
+UMAX_DEF(8)
+UMIN_DEF(8)
 
-uint16_t maxu16(uint16_t x, uint16_t y)
-{
-	return x > y ? x : y;
-}
+UMAX_DEF(16)
+UMIN_DEF(16)
 
-uint16_t minu16(uint16_t x, uint16_t y)
-{
-	return x < y ? x : y;
-}
+UMAX_DEF(32)
+UMIN_DEF(32)
 
-uint32_t maxu32(uint32_t x, uint32_t y)
-{
-	return x > y ? x : y;
-}
-
-uint32_t minu32(uint32_t x, uint32_t y)
-{
-	return x < y ? x : y;
-}
-
-uint64_t maxu64(uint64_t x, uint64_t y)
-{
-	return x > y ? x : y;
-}
-
-uint64_t minu64(uint64_t x, uint64_t y)
-{
-	return x < y ? x : y;
-}
+UMAX_DEF(64)
+UMIN_DEF(64)
 
 uint8_t maxu8v(size_t count, ...)
 {
@@ -469,7 +383,6 @@ uint8_t maxu8v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast8_t arg = (uint_fast8_t) va_arg(args, unsigned int);
-
 		if (max < arg) { max = arg; }
 	}
 
@@ -489,7 +402,6 @@ uint8_t minu8v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast8_t arg = (uint_fast8_t) va_arg(args, unsigned int);
-
 		if (min > arg) { min = arg; }
 	}
 
@@ -509,7 +421,6 @@ uint16_t maxu16v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast16_t arg = (uint_fast16_t) va_arg(args, unsigned int);
-
 		if (max < arg) { max = arg; }
 	}
 
@@ -529,7 +440,6 @@ uint16_t minu16v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast16_t arg = (uint_fast16_t) va_arg(args, unsigned int);
-
 		if (min > arg) { min = arg; }
 	}
 
@@ -549,7 +459,6 @@ uint32_t maxu32v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast32_t arg = (uint_fast32_t) va_arg(args, uint32_t);
-
 		if (max < arg) { max = arg; }
 	}
 
@@ -569,7 +478,6 @@ uint32_t minu32v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast32_t arg = (uint_fast32_t) va_arg(args, uint32_t);
-
 		if (min > arg) { min = arg; }
 	}
 
@@ -589,7 +497,6 @@ uint64_t maxu64v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast64_t arg = (uint_fast64_t) va_arg(args, uint64_t);
-
 		if (max < arg) { max = arg; }
 	}
 
@@ -609,7 +516,6 @@ uint64_t minu64v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast64_t arg = (uint_fast64_t) va_arg(args, uint64_t);
-
 		if (min > arg) { min = arg; }
 	}
 

@@ -20,15 +20,15 @@
 #include "debug.h"
 
 
-#define CHECK_RESULT(func, ...)             \
-	do {                                    \
-		bres = (func)(__VA_ARGS__);         \
-		if EXPECT_FALSE (!bres) {           \
-			puts("EXIT FAILURE AT " #func); \
-			destroy_gpu(&gpu);              \
-			return EXIT_FAILURE;            \
-		}                                   \
-	}                                       \
+#define CHECK_RESULT(func, ...)                  \
+	do {                                         \
+		bool _bres_##func = (func)(__VA_ARGS__); \
+		if EXPECT_FALSE (!_bres_##func) {        \
+			puts("EXIT FAILURE AT " #func);      \
+			destroy_gpu(&gpu);                   \
+			return EXIT_FAILURE;                 \
+		}                                        \
+	}                                            \
 	while (0)
 
 
@@ -68,18 +68,20 @@ static bool help_option_callback(void* data, void* arg)
 		"  -p --profile-layers         Enable the Khronos profiles layer, if present.\n"
 		"  -d --validation             Enable the Khronos validation layer, if present.\n"
 		"\n"
-		"  --int16                     Prefer shaders using 16-bit integers where appropriate.\n"
-		"  --int64                     Prefer shaders using 64-bit integers where appropriate.\n"
+		"  -i --int16                  Prefer shaders using 16-bit integers where appropriate.\n"
+		"  -I --int64                  Prefer shaders using 64-bit integers where appropriate.\n"
 		"\n"
 		"  -r --restart                Restart the simulation. Do not overwrite previous progress.\n"
 		"  -b --no-query-benchmarks    Do not benchmark Vulkan commands via queries.\n"
 		"  --log-allocations           Log all memory allocations performed by Vulkan to %s.\n"
 		"  --capture-pipelines         Output pipeline data captured via %s, if present.\n"
 		"\n"
-		"  --iter-size <value>         Bit precision of the iterating value in shaders. Must be 128 or 256.\n"
-		"  --max-loops <value>         Maximum number of iterations of the main loop. Must be a non-negative integer.\n"
+		"  --iter-size <value>         Bit precision of the iterating value in shaders. Must be 128 or 256. Defaults "
+			"to 128.\n"
+		"  --max-loops <value>         Maximum number of iterations of the main loop. Must be a nonnegative integer. "
+			"Defaults to 2^64-1.\n"
 		"  --max-memory <value>        Maximum proportion of available GPU heap memory to be allocated. Must be within "
-			"(0, 1].\n",
+			"(0, 1]. Defaults to 0.4.\n",
 		PROGRAM_EXE, ALLOC_LOG_NAME, VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME);
 
 	return false;
@@ -90,7 +92,6 @@ static bool silent_option_callback(void* data, void* arg)
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
-
 	config->outputLevel = OUTPUT_LEVEL_SILENT;
 
 	return true;
@@ -101,7 +102,6 @@ static bool quiet_option_callback(void* data, void* arg)
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
-
 	config->outputLevel = OUTPUT_LEVEL_QUIET;
 
 	return true;
@@ -112,7 +112,6 @@ static bool verbose_option_callback(void* data, void* arg)
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
-
 	config->outputLevel = OUTPUT_LEVEL_VERBOSE;
 
 	return true;
@@ -123,7 +122,6 @@ static bool no_colour_option_callback(void* data, void* arg)
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
-
 	config->colourLevel = COLOUR_LEVEL_NONE;
 
 	return true;
@@ -134,7 +132,6 @@ static bool colour_option_callback(void* data, void* arg)
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
-
 	config->colourLevel = COLOUR_LEVEL_TTY;
 
 	return true;
@@ -145,7 +142,6 @@ static bool colour_all_option_callback(void* data, void* arg)
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
-
 	config->colourLevel = COLOUR_LEVEL_ALL;
 
 	return true;
@@ -156,7 +152,6 @@ static bool ext_layers_option_callback(void* data, void* arg)
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
-
 	config->extensionLayers = true;
 
 	return true;
@@ -167,7 +162,6 @@ static bool profile_layers_option_callback(void* data, void* arg)
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
-
 	config->profileLayers = true;
 
 	return true;
@@ -178,7 +172,6 @@ static bool validation_option_callback(void* data, void* arg)
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
-
 	config->validationLayers = true;
 
 	return true;
@@ -189,7 +182,6 @@ static bool int16_option_callback(void* data, void* arg)
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
-
 	config->preferInt16 = true;
 
 	return true;
@@ -200,7 +192,6 @@ static bool int64_option_callback(void* data, void* arg)
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
-
 	config->preferInt64 = true;
 
 	return true;
@@ -211,8 +202,7 @@ static bool restart_option_callback(void* data, void* arg)
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
-
-	config->restartCount = true;
+	config->restart = true;
 
 	return true;
 }
@@ -222,8 +212,7 @@ static bool no_query_benchmarks_option_callback(void* data, void* arg)
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
-
-	config->queryBenchmarking = false;
+	config->queryBenchmarks = false;
 
 	return true;
 }
@@ -233,7 +222,6 @@ static bool log_allocations_option_callback(void* data, void* arg)
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
-
 	config->logAllocations = true;
 
 	return true;
@@ -244,7 +232,6 @@ static bool capture_pipelines_option_callback(void* data, void* arg)
 	(void) arg;
 
 	ProgramConfig* config = (ProgramConfig*) data;
-
 	config->capturePipelines = true;
 
 	return true;
@@ -293,7 +280,6 @@ static bool max_memory_option_callback(void* data, void* arg)
 static bool init_config(int argc, char** argv)
 {
 	Cli cli = cli_create(&g_config, 20);
-
 	if EXPECT_FALSE (!cli) return false;
 
 	cli_add(cli, 'V', "version", CLI_DATATYPE_NONE, version_option_callback);
@@ -311,8 +297,8 @@ static bool init_config(int argc, char** argv)
 	cli_add(cli, 'p', "profile-layers", CLI_DATATYPE_NONE, profile_layers_option_callback);
 	cli_add(cli, 'd', "validation",     CLI_DATATYPE_NONE, validation_option_callback);
 
-	cli_add(cli, '\0', "int16", CLI_DATATYPE_NONE, int16_option_callback);
-	cli_add(cli, '\0', "int64", CLI_DATATYPE_NONE, int64_option_callback);
+	cli_add(cli, 'i', "int16", CLI_DATATYPE_NONE, int16_option_callback);
+	cli_add(cli, 'I', "int64", CLI_DATATYPE_NONE, int64_option_callback);
 
 	cli_add(cli, 'r',  "restart",             CLI_DATATYPE_NONE, restart_option_callback);
 	cli_add(cli, 'b',  "no-query-benchmarks", CLI_DATATYPE_NONE, no_query_benchmarks_option_callback);
@@ -324,7 +310,6 @@ static bool init_config(int argc, char** argv)
 	cli_add(cli, '\0', "max-memory", CLI_DATATYPE_FLOAT,  max_memory_option_callback);
 
 	bool bres = cli_parse(cli, argc, argv);
-
 	if (!bres) { cli_destroy(cli); return false; }
 
 	cli_destroy(cli);
@@ -340,7 +325,6 @@ static bool init_env(void)
 	DWORD  dwMode;
 
 	WINBOOL wbres = GetConsoleMode(hOutput, &dwMode);
-
 	if (!wbres) return false;
 
 	// Enable ANSI escape codes
@@ -348,7 +332,6 @@ static bool init_env(void)
 	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 
 	wbres = SetConsoleMode(hOutput, dwMode);
-
 	if (!wbres) return false;
 #endif
 
@@ -361,11 +344,9 @@ int main(int argc, char** argv)
 	Gpu gpu = {0};
 
 	bool bres = init_env();
-
 	if (!bres) return EXIT_FAILURE;
 
 	bres = init_config(argc, argv);
-
 	if (!bres) return EXIT_SUCCESS;
 
 	CHECK_RESULT(create_instance, &gpu);

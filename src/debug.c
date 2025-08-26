@@ -114,7 +114,6 @@ static bool log_colour(
 		size_t size = lenSgr1 + lenPre + lenFmt + lenPost + lenSgr2 + 1;
 
 		char* newFmt = (char*) malloc(size);
-
 		if EXPECT_FALSE (!newFmt) { MALLOC_FAILURE(newFmt, size); return false; }
 
 		strcpy(newFmt, sgr1);
@@ -140,7 +139,6 @@ static bool log_colour(
 		size_t size = lenPre + lenFmt + lenPost + 1;
 
 		char* newFmt = (char*) malloc(size);
-
 		if EXPECT_FALSE (!newFmt) { MALLOC_FAILURE(newFmt, size); return false; }
 
 		strcpy(newFmt, prefix);
@@ -347,11 +345,11 @@ static void log_allocation_callback(
 {
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 
-	fprintf(stream, "Allocation callback %" PRIu64 " (%.3fms)\n", allocationCount, time);
+	log_debug(stream, "Allocation callback %" PRIu64 " (%.3fms)\n", allocationCount, time);
 
-	if (line) { fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
+	if (line) { log_debug(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
 
-	fprintf(
+	log_debug(
 		stream,
 		"Memory usage: %zu B (%.2f KiB, %.2f MiB)\n"
 		"Size:      %zu\n"
@@ -402,11 +400,11 @@ static void log_reallocation_callback(
 {
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 
-	fprintf(stream, "Reallocation callback %" PRIu64 " (%.3fms)\n", reallocationCount, time);
+	log_debug(stream, "Reallocation callback %" PRIu64 " (%.3fms)\n", reallocationCount, time);
 
-	if (line) { fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
+	if (line) { log_debug(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
 
-	fprintf(
+	log_debug(
 		stream,
 		"Memory usage: %zu B (%.2f KiB, %.2f MiB)\n"
 		"Original size:     %zu\n"
@@ -465,11 +463,11 @@ static void log_free_callback(
 	size_t size,
 	const void* memory)
 {
-	fprintf(stream, "Free callback %" PRIu64 " (%.3fms)\n", freeCount, time);
+	log_debug(stream, "Free callback %" PRIu64 " (%.3fms)\n", freeCount, time);
 
-	if (line) { fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
+	if (line) { log_debug(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
 
-	fprintf(
+	log_debug(
 		stream,
 		"Memory usage: %zu B (%.2f KiB, %.2f MiB)\n"
 		"Size:    %zu\n"
@@ -516,11 +514,11 @@ static void log_internal_allocation_callback(
 	const char* sAllocationType  = string_VkInternalAllocationType(allocationType);
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 
-	fprintf(stream, "Internal allocation callback %" PRIu64 " (%.3fms)\n", internalAllocationCount, time);
+	log_debug(stream, "Internal allocation callback %" PRIu64 " (%.3fms)\n", internalAllocationCount, time);
 
-	if (line) { fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
+	if (line) { log_debug(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
 
-	fprintf(
+	log_debug(
 		stream,
 		"Size:  %zu\n"
 		"Type:  %s\n"
@@ -560,11 +558,11 @@ static void log_internal_free_callback(
 	const char* sAllocationType  = string_VkInternalAllocationType(allocationType);
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 
-	fprintf(stream, "Internal free callback %" PRIu64 " (%.3fms)\n", internalFreeCount, time);
+	log_debug(stream, "Internal free callback %" PRIu64 " (%.3fms)\n", internalFreeCount, time);
 
-	if (line) { fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
+	if (line) { log_debug(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
 
-	fprintf(
+	log_debug(
 		stream,
 		"Size:  %zu\n"
 		"Type:  %s\n"

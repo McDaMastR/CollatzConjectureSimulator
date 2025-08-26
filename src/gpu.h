@@ -55,8 +55,8 @@ typedef struct Gpu
 
 	VkSemaphore* restrict semaphores; // Count = inoutsPerHeap
 
-	Value** restrict mappedInBuffers;  // Count = inoutsPerHeap, valuesPerInout
-	Count** restrict mappedOutBuffers; // Count = inoutsPerHeap, valuesPerInout
+	StartValue** restrict mappedInBuffers;  // Count = inoutsPerHeap, valuesPerInout
+	StopTime**   restrict mappedOutBuffers; // Count = inoutsPerHeap, valuesPerInout
 
 	VkDeviceSize bytesPerIn;
 	VkDeviceSize bytesPerOut;
@@ -93,9 +93,7 @@ typedef struct Gpu
 	float timestampPeriod;
 
 	bool hostNonCoherent;
-	bool using8BitStorage;
 	bool using16BitStorage;
-	bool usingBufferDeviceAddress;
 	bool usingMaintenance4;
 	bool usingMemoryBudget;
 	bool usingMemoryPriority;
@@ -109,28 +107,30 @@ typedef struct Gpu
 	void* dynamicMemory;
 } Gpu;
 
-typedef struct ValueInfo
+typedef struct Position
 {
-	Value val0mod1off[3];
-	Value val1mod6off[3];
+	/* Suppose the current longest total stopping time is T. Then val-a-mod-m-off[k] gives the least starting value x
+	 * with total stopping time t such that (1) x ≡ a (mod m) and (2) t + k = T. */
+	StartValue val0mod1off[3];
+	StartValue val1mod6off[3];
 
-	Value curValue;
-	Count curCount;
-} ValueInfo;
+	StartValue curStartValue; // First starting value being checked in the current dispatch.
+	StopTime   bestStopTime;  // Current longest total stopping time.
+} Position;
 
 
 // If the return type is bool, then that function returns true on success, and false elsewise
 
-bool create_instance   (Gpu* restrict gpu) NONNULL_ARGS_ALL;
-bool select_device     (Gpu* restrict gpu) NONNULL_ARGS_ALL;
-bool create_device     (Gpu* restrict gpu) NONNULL_ARGS_ALL;
-bool manage_memory     (Gpu* restrict gpu) NONNULL_ARGS_ALL;
-bool create_buffers    (Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool create_instance(Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool select_device(Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool create_device(Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool manage_memory(Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool create_buffers(Gpu* restrict gpu) NONNULL_ARGS_ALL;
 bool create_descriptors(Gpu* restrict gpu) NONNULL_ARGS_ALL;
-bool create_pipeline   (Gpu* restrict gpu) NONNULL_ARGS_ALL;
-bool create_commands   (Gpu* restrict gpu) NONNULL_ARGS_ALL;
-bool submit_commands   (Gpu* restrict gpu) NONNULL_ARGS_ALL;
-bool destroy_gpu       (Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool create_pipeline(Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool create_commands(Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool submit_commands(Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool destroy_gpu(Gpu* restrict gpu) NONNULL_ARGS_ALL;
 
 bool retrieve_queue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* queue, const char* name)
 	NONNULL_ARGS(1, 4) NULTSTR_ARG(5);
@@ -148,21 +148,23 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline);
 void* wait_for_input(void* ptr) NONNULL_ARGS_ALL;
 
 void write_inbuffer(
-	Value* restrict mappedInBuffer, Value* restrict firstValue, uint32_t valuesPerInout, uint32_t valuesPerHeap)
-	NONNULL_ARGS_ALL;
+	StartValue* restrict mappedInBuffer,
+	StartValue* restrict firstStartValue,
+	uint32_t valuesPerInout,
+	uint32_t valuesPerHeap) NONNULL_ARGS_ALL;
 
 void read_outbuffer(
-	const Count* restrict mappedOutBuffer,
-	ValueInfo* restrict prevValues,
-	DyArray bestValues,
-	DyArray bestCounts,
+	const StopTime* restrict mappedOutBuffer,
+	Position* restrict position,
+	DyArray bestStartValues,
+	DyArray bestStopTimes,
 	uint32_t valuesPerInout) NONNULL_ARGS_ALL;
 
 void new_high(
-	const Value* restrict value,
-	Count* restrict count,
-	Count newCount,
-	Value* restrict val0mod1off,
-	Value* restrict val1mod6off,
-	DyArray bestValues,
-	DyArray bestCounts) NONNULL_ARGS_ALL;
+	const StartValue* restrict startValue,
+	StopTime* restrict curBestTime,
+	StopTime newBestTime,
+	StartValue* restrict val0mod1off,
+	StartValue* restrict val1mod6off,
+	DyArray bestStartValues,
+	DyArray bestStopTimes) NONNULL_ARGS_ALL;

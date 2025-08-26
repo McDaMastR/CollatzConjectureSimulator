@@ -49,7 +49,6 @@ DyQueue dyqueue_create(size_t size)
 	ASSUME(size != 0);
 
 	DyQueue queue = (DyQueue) malloc(sizeof(DyQueue_T));
-
 	if EXPECT_FALSE (!queue) { MALLOC_FAILURE(queue, sizeof(DyQueue_T)); return NULL; }
 
 	queue->size  = size;
@@ -74,7 +73,6 @@ void* dyqueue_enqueue(DyQueue queue, const void* value)
 	void** tail  = queue->tail;
 
 	void** node = (void**) malloc(sizeof(void*) + size);
-
 	if EXPECT_FALSE (!node) { MALLOC_FAILURE(node, sizeof(void*) + size); return NULL; }
 
 	*node = NULL;
@@ -94,6 +92,8 @@ void dyqueue_dequeue(DyQueue queue, void* restrict value)
 {
 	ASSUME(queue->size != 0);
 	ASSUME(queue->count != 0);
+	ASSUME(queue->head != NULL);
+	ASSUME(queue->tail != NULL);
 
 	size_t size  = queue->size;
 	size_t count = queue->count;

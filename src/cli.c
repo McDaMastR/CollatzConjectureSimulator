@@ -59,10 +59,10 @@ typedef struct Cli_T
 
 void cli_destroy(Cli cli)
 {
-	if EXPECT_TRUE (cli) {
-		dyarray_destroy(cli->opts);
-		free(cli);
-	}
+	if EXPECT_FALSE (!cli) return;
+
+	dyarray_destroy(cli->opts);
+	free(cli);
 }
 
 Cli cli_create(void* config, size_t count)
@@ -97,7 +97,6 @@ static void cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 
 		case CLI_DATATYPE_FLOAT:;
 			float f = strtof(arg, &end);
-
 			if (*end != '\0') { 
 				log_warning(stdout, "Partially interpreting argument %s for option %s as %f", arg, opt, (double) f); }
 
@@ -106,7 +105,6 @@ static void cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 
 		case CLI_DATATYPE_DOUBLE:;
 			double d = strtod(arg, &end);
-
 			if (*end != '\0') {
 				log_warning(stdout, "Partially interpreting argument %s for option %s as %f", arg, opt, d); }
 
@@ -115,7 +113,6 @@ static void cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 
 		case CLI_DATATYPE_LDOUBLE:;
 			long double ld = strtold(arg, &end);
-
 			if (*end != '\0') {
 				log_warning(stdout, "Partially interpreting argument %s for option %s as %Lf", arg, opt, ld); }
 
@@ -124,7 +121,6 @@ static void cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 
 		case CLI_DATATYPE_LONG:;
 			long l = strtol(arg, &end, 0);
-
 			if (*end != '\0') {
 				log_warning(stdout, "Partially interpreting argument %s for option %s as %ld", arg, opt, l); }
 
@@ -133,7 +129,6 @@ static void cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 
 		case CLI_DATATYPE_LLONG:;
 			long long ll = strtoll(arg, &end, 0);
-
 			if (*end != '\0') {
 				log_warning(stdout, "Partially interpreting argument %s for option %s as %lld", arg, opt, ll); }
 
@@ -142,7 +137,6 @@ static void cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 
 		case CLI_DATATYPE_ULONG:;
 			unsigned long ul = strtoul(arg, &end, 0);
-
 			if (*end != '\0') {
 				log_warning(stdout, "Partially interpreting argument %s for option %s as %lu", arg, opt, ul); }
 
@@ -151,7 +145,6 @@ static void cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 
 		case CLI_DATATYPE_ULLONG:;
 			unsigned long long ull = strtoull(arg, &end, 0);
-
 			if (*end != '\0') {
 				log_warning(stdout, "Partially interpreting argument %s for option %s as %llu", arg, opt, ull); }
 
@@ -256,7 +249,6 @@ bool cli_parse(Cli cli, int argc, char** argv)
 	}
 
 	if (argType) { log_warning(stdout, "Ignoring incomplete option %s", optName); }
-
 
 	size_t cbc = dyqueue_size(callbacks);
 

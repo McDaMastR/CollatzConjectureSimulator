@@ -102,15 +102,15 @@ VKAPI_ATTR void VKAPI_CALL internal_free_callback(
 #define CALLOC_FAILURE(res, num, size)  log_calloc_failure(__LINE__, (void*) (res), (size_t) (num), (size_t) (size))
 #define REALLOC_FAILURE(res, ptr, size) log_realloc_failure(__LINE__, (void*) (res), (void*) (ptr), (size_t) (size))
 
-#define FOPEN_FAILURE(res, name, mode)      log_fopen_failure(                                        \
+#define FOPEN_FAILURE(res, name, mode) log_fopen_failure( \
 	__LINE__, (FILE*) (res), (const char*) (name), (const char*) (mode))
-#define FSEEK_FAILURE(res, file, off, orig) log_fseek_failure(                                        \
+#define FSEEK_FAILURE(res, file, off, orig) log_fseek_failure( \
 	__LINE__, (int) (res), (FILE*) (file), (long) (off), (int) (orig))
-#define FTELL_FAILURE(res, file)            log_ftell_failure(__LINE__, (long) (res), (FILE*) (file))
+#define FTELL_FAILURE(res, file) log_ftell_failure(__LINE__, (long) (res), (FILE*) (file))
 
-#define FREAD_FAILURE(res, buf, size, count, file)  log_fread_failure(                                \
+#define FREAD_FAILURE(res, buf, size, count, file) log_fread_failure( \
 	__LINE__, (size_t) (res), (const void*) (buf), (size_t) (size), (size_t) (count), (FILE*) (file))
-#define FWRITE_FAILURE(res, buf, size, count, file) log_fwrite_failure(                               \
+#define FWRITE_FAILURE(res, buf, size, count, file) log_fwrite_failure( \
 	__LINE__, (size_t) (res), (const void*) (buf), (size_t) (size), (size_t) (count), (FILE*) (file))
 
 #define FSCANF_FAILURE(res, file, fmt)  log_fscanf_failure(__LINE__, (int) (res), (FILE*) (file), (const char*) (fmt))
