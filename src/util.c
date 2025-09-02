@@ -26,7 +26,7 @@
 
 typedef struct AlignedInfo
 {
-	void*  start;
+	void* start;
 	size_t size;
 } AlignedInfo;
 
@@ -56,7 +56,7 @@ double program_time(void)
 
 Endianness get_endianness(void)
 {
-	int  x = 1;
+	int x = 1;
 	char c = *(char*) &x;
 	return c ? ENDIANNESS_LITTLE : ENDIANNESS_BIG;
 }
@@ -67,16 +67,16 @@ uint32_t ceil_pow2(uint32_t x)
 
 #if has_builtin(stdc_bit_ceil)
 	return __builtin_stdc_bit_ceil(x);
-#elif UINT32_MAX == UINT_MAX && has_builtin(clz)
-	return x == 1U ? 1U : 2U << (31 - __builtin_clz(x - 1U));
-#elif UINT32_MAX == ULONG_MAX && has_builtin(clzl)
-	return x == 1UL ? 1UL : 2UL << (31 - __builtin_clzl(x - 1UL));
+#elif has_builtin(clz) && UINT32_MAX == UINT_MAX
+	return x == 1 ? UINT32_C(1) : UINT32_C(2) << (31 - __builtin_clz(x - 1));
+#elif has_builtin(clzl) && UINT32_MAX == ULONG_MAX
+	return x == 1 ? UINT32_C(1) : UINT32_C(2) << (31 - __builtin_clzl(x - 1));
 #elif defined(_MSC_VER) || defined(__MINGW32__)
 	unsigned long i;
-	_BitScanReverse(&i, x - 1UL);
-	return 1UL << (i + 1UL);
+	_BitScanReverse(&i, x - 1);
+	return UINT32_C(1) << (i + 1);
 #else
-	uint32_t y = (uint32_t) 1 << 31;
+	uint32_t y = UINT32_C(1) << 31;
 	while (!(x & y)) { y >>= 1; }
 	return y << 1;
 #endif
@@ -88,16 +88,16 @@ uint32_t floor_pow2(uint32_t x)
 
 #if has_builtin(stdc_bit_floor)
 	return __builtin_stdc_bit_floor(x);
-#elif UINT32_MAX == UINT_MAX && has_builtin(clz)
-	return 1U << (31 - __builtin_clz(x));
-#elif UINT32_MAX == ULONG_MAX && has_builtin(clzl)
-	return 1UL << (31 - __builtin_clzl(x));
+#elif has_builtin(clz) && UINT32_MAX == UINT_MAX
+	return UINT32_C(1) << (31 - __builtin_clz(x));
+#elif has_builtin(clzl) && UINT32_MAX == ULONG_MAX
+	return UINT32_C(1) << (31 - __builtin_clzl(x));
 #elif defined(_MSC_VER) || defined(__MINGW32__)
 	unsigned long i;
 	_BitScanReverse(&i, x);
-	return 1UL << i;
+	return UINT32_C(1) << i;
 #else
-	uint32_t y = (uint32_t) 1 << 31;
+	uint32_t y = UINT32_C(1) << 31;
 	while (!(x & y)) { y >>= 1; }
 	return y;
 #endif
@@ -112,15 +112,16 @@ bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const c
 {
 	VkResult vkres;
 
-	VkDebugUtilsObjectNameInfoEXT info = {VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
-	info.objectType                    = type;
-	info.objectHandle                  = handle;
-	info.pObjectName                   = name;
+	VkDebugUtilsObjectNameInfoEXT info = {0};
+	info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+	info.objectType = type;
+	info.objectHandle = handle;
+	info.pObjectName = name;
 
-	if (!vkSetDebugUtilsObjectNameEXT) return true;
+	if (!vkSetDebugUtilsObjectNameEXT) { return true; }
 
 	VK_CALL_RES(vkSetDebugUtilsObjectNameEXT, device, &info);
-	if EXPECT_FALSE (vkres) return false;
+	if EXPECT_FALSE (vkres) { return false; }
 
 	return true;
 }
@@ -130,45 +131,47 @@ bool get_buffer_requirements_noext(
 {
 	VkResult vkres;
 
-	VkBufferCreateInfo createInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-	createInfo.size               = size;
-	createInfo.usage              = usage;
+	VkBufferCreateInfo createInfo = {0};
+	createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	createInfo.size = size;
+	createInfo.usage = usage;
 
 	VkBuffer buffer;
-
 	VK_CALL_RES(vkCreateBuffer, device, &createInfo, g_allocator, &buffer);
-	if EXPECT_FALSE (vkres) return false;
+	if EXPECT_FALSE (vkres) { return false; }
 
-	VkBufferMemoryRequirementsInfo2 requirementsInfo = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2};
-	requirementsInfo.buffer                          = buffer;
+	VkBufferMemoryRequirementsInfo2 requirementsInfo = {0};
+	requirementsInfo.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2;
+	requirementsInfo.buffer = buffer;
 
-	VkMemoryRequirements2 memoryRequirements = {VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2};
+	VkMemoryRequirements2 memoryRequirements = {0};
+	memoryRequirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
 
 	VK_CALL(vkGetBufferMemoryRequirements2, device, &requirementsInfo, &memoryRequirements);
-
 	VK_CALL(vkDestroyBuffer, device, buffer, g_allocator);
 
 	*requirements = memoryRequirements.memoryRequirements;
-
 	return true;
 }
 
 bool get_buffer_requirements_main4(
 	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* requirements)
 {
-	VkBufferCreateInfo createInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-	createInfo.size               = size;
-	createInfo.usage              = usage;
+	VkBufferCreateInfo createInfo = {0};
+	createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	createInfo.size = size;
+	createInfo.usage = usage;
 
-	VkDeviceBufferMemoryRequirements requirementsInfo = {VK_STRUCTURE_TYPE_DEVICE_BUFFER_MEMORY_REQUIREMENTS};
-	requirementsInfo.pCreateInfo                      = &createInfo;
+	VkDeviceBufferMemoryRequirements requirementsInfo = {0};
+	requirementsInfo.sType = VK_STRUCTURE_TYPE_DEVICE_BUFFER_MEMORY_REQUIREMENTS;
+	requirementsInfo.pCreateInfo = &createInfo;
 
-	VkMemoryRequirements2 memoryRequirements = {VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2};
+	VkMemoryRequirements2 memoryRequirements = {0};
+	memoryRequirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
 
 	VK_CALL(vkGetDeviceBufferMemoryRequirementsKHR, device, &requirementsInfo, &memoryRequirements);
 
 	*requirements = memoryRequirements.memoryRequirements;
-
 	return true;
 }
 
@@ -177,9 +180,8 @@ bool save_pipeline_cache(VkDevice device, VkPipelineCache cache, const char* fil
 	VkResult vkres;
 
 	size_t dataSize;
-
 	VK_CALL_RES(vkGetPipelineCacheData, device, cache, &dataSize, NULL);
-	if EXPECT_FALSE (vkres) return false;
+	if EXPECT_FALSE (vkres) { return false; }
 
 	void* data = malloc(dataSize);
 	if EXPECT_FALSE (!data) { MALLOC_FAILURE(data, dataSize); return false; }
@@ -191,24 +193,30 @@ bool save_pipeline_cache(VkDevice device, VkPipelineCache cache, const char* fil
 	if EXPECT_FALSE (!bres) { free(data); return false; }
 
 	free(data);
-
 	return true;
 }
 
 
 bool file_size(const char* filename, size_t* size)
 {
-	FILE* file = fopen(filename, "rb");
-	if (!file) { *size = 0; return true; }
+	const char* mode = "rb";
+	FILE* file = fopen(filename, mode);
 
-	int ires = fseek(file, 0, SEEK_END);
-	if EXPECT_FALSE (ires) { FSEEK_FAILURE(ires, file, 0, SEEK_END); fclose(file); return false; }
+	if (!file) {
+		*size = 0;
+		return true;
+	}
+
+	long offset = 0;
+	int origin = SEEK_END;
+
+	int ires = fseek(file, offset, origin);
+	if EXPECT_FALSE (ires) { FSEEK_FAILURE(ires, file, offset, origin); fclose(file); return false; }
 
 	long lres = ftell(file);
 	if EXPECT_FALSE (lres == -1) { FTELL_FAILURE(lres, file); fclose(file); return false; }
 
 	fclose(file);
-
 	*size = (size_t) lres;
 
 	return true;
@@ -216,27 +224,33 @@ bool file_size(const char* filename, size_t* size)
 
 bool read_file(const char* filename, void* data, size_t size)
 {
-	FILE* file = fopen(filename, "rb");
-	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, "rb"); return false; }
+	const char* mode = "rb";
+	FILE* file = fopen(filename, mode);
+	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, mode); return false; }
 
-	size_t sres = fread(data, sizeof(char), size, file);
-	if EXPECT_FALSE (sres != size) { FREAD_FAILURE(sres, data, sizeof(char), size, file); fclose(file); return false; }
+	size_t objSize = sizeof(char);
+	size_t objCount = size;
+
+	size_t sres = fread(data, objSize, objCount, file);
+	if EXPECT_FALSE (sres != size) { FREAD_FAILURE(sres, data, objSize, objCount, file); fclose(file); return false; }
 
 	fclose(file);
-
 	return true;
 }
 
 bool write_file(const char* filename, const void* data, size_t size)
 {
-	FILE* file = fopen(filename, "wb");
-	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, "wb"); return false; }
+	const char* mode = "wb";
+	FILE* file = fopen(filename, mode);
+	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, mode); return false; }
 
-	size_t sres = fwrite(data, sizeof(char), size, file);
-	if EXPECT_FALSE (sres != size) { FWRITE_FAILURE(sres, data, sizeof(char), size, file); fclose(file); return false; }
+	size_t objSize = sizeof(char);
+	size_t objCount = size;
+
+	size_t sres = fwrite(data, objSize, objCount, file);
+	if EXPECT_FALSE (sres != size) { FWRITE_FAILURE(sres, data, objSize, objCount, file); fclose(file); return false; }
 
 	fclose(file);
-
 	return true;
 }
 
@@ -245,8 +259,9 @@ bool read_text(const char* filename, const char* format, ...)
 	va_list args;
 	va_start(args, format);
 
-	FILE* file = fopen(filename, "r");
-	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, "r"); va_end(args); return false; }
+	const char* mode = "r";
+	FILE* file = fopen(filename, mode);
+	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, mode); va_end(args); return false; }
 
 	int ires = vfscanf(file, format, args);
 	if EXPECT_FALSE (ires == EOF) { FSCANF_FAILURE(ires, file, format); fclose(file); va_end(args); return false; }
@@ -262,8 +277,9 @@ bool write_text(const char* filename, const char* format, ...)
 	va_list args;
 	va_start(args, format);
 
-	FILE* file = fopen(filename, "w");
-	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, "w"); va_end(args); return false; }
+	const char* mode = "w";
+	FILE* file = fopen(filename, mode);
+	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, mode); va_end(args); return false; }
 
 	int ires = vfprintf(file, format, args);
 	if EXPECT_FALSE (ires < 0) { FPRINTF_FAILURE(ires, file, format); fclose(file); va_end(args); return false; }
@@ -282,24 +298,29 @@ void* aligned_malloc(size_t size, size_t alignment)
 	void* memory;
 	AlignedInfo* info;
 
-	alignment = maxz(alignment, alignof(AlignedInfo));
-
 #if defined(_MSC_VER) || defined(__MINGW32__)
-	memory = _aligned_offset_malloc(size + sizeof(AlignedInfo), alignment, sizeof(AlignedInfo));
-	if EXPECT_FALSE (!memory) return NULL;
+	size_t allocSize = size + sizeof(AlignedInfo);
+	size_t allocAlignment = maxz(alignment, alignof(AlignedInfo));
+	size_t offset = sizeof(AlignedInfo);
 
-	info = (AlignedInfo*) memory;
+	memory = _aligned_offset_malloc(allocSize, allocAlignment, offset);
+	if EXPECT_FALSE (!memory) { return NULL; }
+
+	info = memory;
 #else
-	int ires = posix_memalign(&memory, alignment, size + maxz(alignment, sizeof(AlignedInfo)));
-	if EXPECT_FALSE (ires) return NULL;
+	size_t allocAlignment = maxz(alignment, alignof(AlignedInfo));
+	size_t allocSize = size + maxz(alignment, sizeof(AlignedInfo));
+
+	int ires = posix_memalign(&memory, allocAlignment, allocSize);
+	if EXPECT_FALSE (ires) { return NULL; }
 
 	info = (AlignedInfo*) memory + maxz(alignment, sizeof(AlignedInfo)) / sizeof(AlignedInfo) - 1;
 #endif
 
 	info->start = memory;
-	info->size  = size;
+	info->size = size;
 
-	return (void*) (info + 1);
+	return info + 1;
 }
 
 void* aligned_realloc(void* memory, size_t size, size_t alignment)
@@ -307,36 +328,45 @@ void* aligned_realloc(void* memory, size_t size, size_t alignment)
 	ASSUME(size != 0);
 	ASSUME((alignment & (alignment - 1)) == 0); // alignment is a power of two
 
+	AlignedInfo* info = (AlignedInfo*) memory - 1;
+	void* oldMemory = info->start;
+	size_t oldSize = info->size;
+
 	void* newMemory;
 
-	AlignedInfo* info = (AlignedInfo*) memory - 1;
-	void*  oldMemory = info->start;
-	size_t oldSize   = info->size;
-
-	alignment = maxz(alignment, alignof(AlignedInfo));
-
 #if defined(_MSC_VER) || defined(__MINGW32__)
-	newMemory = _aligned_offset_realloc(oldMemory, size + sizeof(AlignedInfo), alignment, sizeof(AlignedInfo));
-	if EXPECT_FALSE (!newMemory) return NULL;
+	size_t allocSize = size + sizeof(AlignedInfo);
+	size_t allocAlignment = maxz(alignment, alignof(AlignedInfo));
+	size_t offset = sizeof(AlignedInfo);
 
-	info = (AlignedInfo*) newMemory;
+	newMemory = _aligned_offset_realloc(oldMemory, allocSize, allocAlignment, offset);
+	if EXPECT_FALSE (!newMemory) { return NULL; }
+
+	info = newMemory;
 #else
-	int ires = posix_memalign(&newMemory, alignment, size + maxz(alignment, sizeof(AlignedInfo)));
-	if EXPECT_FALSE (ires) return NULL;
+	size_t allocAlignment = maxz(alignment, alignof(AlignedInfo));
+	size_t allocSize = size + maxz(alignment, sizeof(AlignedInfo));
+
+	int ires = posix_memalign(&newMemory, allocAlignment, allocSize);
+	if EXPECT_FALSE (ires) { return NULL; }
 
 	info = (AlignedInfo*) newMemory + maxz(alignment, sizeof(AlignedInfo)) / sizeof(AlignedInfo) - 1;
 
-	memcpy(info + 1, memory, minz(size, oldSize));
+	void* cpyDest = info + 1;
+	void* cpySrc = memory;
+	size_t cpySize = minz(size, oldSize);
+
+	memcpy(cpyDest, cpySrc, cpySize);
 	free(oldMemory);
 #endif
 
 	info->start = newMemory;
-	info->size  = size;
+	info->size = size;
 
-	return (void*) (info + 1);
+	return info + 1;
 }
 
-void* aligned_free(void* memory)
+void aligned_free(void* memory)
 {
 	AlignedInfo* info = (AlignedInfo*) memory - 1;
 
@@ -345,8 +375,6 @@ void* aligned_free(void* memory)
 #else
 	free(info->start);
 #endif
-
-	return NULL;
 }
 
 size_t aligned_size(const void* memory)
@@ -383,11 +411,13 @@ uint8_t maxu8v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast8_t arg = (uint_fast8_t) va_arg(args, unsigned int);
-		if (max < arg) { max = arg; }
+
+		if (max < arg) {
+			max = arg;
+		}
 	}
 
 	va_end(args);
-
 	return (uint8_t) max;
 }
 
@@ -402,11 +432,13 @@ uint8_t minu8v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast8_t arg = (uint_fast8_t) va_arg(args, unsigned int);
-		if (min > arg) { min = arg; }
+
+		if (min > arg) {
+			min = arg;
+		}
 	}
 
 	va_end(args);
-
 	return (uint8_t) min;
 }
 
@@ -421,11 +453,13 @@ uint16_t maxu16v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast16_t arg = (uint_fast16_t) va_arg(args, unsigned int);
-		if (max < arg) { max = arg; }
+
+		if (max < arg) {
+			max = arg;
+		}
 	}
 
 	va_end(args);
-
 	return (uint16_t) max;
 }
 
@@ -440,11 +474,13 @@ uint16_t minu16v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast16_t arg = (uint_fast16_t) va_arg(args, unsigned int);
-		if (min > arg) { min = arg; }
+
+		if (min > arg) {
+			min = arg;
+		}
 	}
 
 	va_end(args);
-
 	return (uint16_t) min;
 }
 
@@ -459,11 +495,13 @@ uint32_t maxu32v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast32_t arg = (uint_fast32_t) va_arg(args, uint32_t);
-		if (max < arg) { max = arg; }
+
+		if (max < arg) {
+			max = arg;
+		}
 	}
 
 	va_end(args);
-
 	return (uint32_t) max;
 }
 
@@ -478,11 +516,13 @@ uint32_t minu32v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast32_t arg = (uint_fast32_t) va_arg(args, uint32_t);
-		if (min > arg) { min = arg; }
+
+		if (min > arg) {
+			min = arg;
+		}
 	}
 
 	va_end(args);
-
 	return (uint32_t) min;
 }
 
@@ -497,11 +537,13 @@ uint64_t maxu64v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast64_t arg = (uint_fast64_t) va_arg(args, uint64_t);
-		if (max < arg) { max = arg; }
+
+		if (max < arg) {
+			max = arg;
+		}
 	}
 
 	va_end(args);
-
 	return (uint64_t) max;
 }
 
@@ -516,10 +558,12 @@ uint64_t minu64v(size_t count, ...)
 
 	for (size_t i = 0; i < count; i++) {
 		uint_fast64_t arg = (uint_fast64_t) va_arg(args, uint64_t);
-		if (min > arg) { min = arg; }
+
+		if (min > arg) {
+			min = arg;
+		}
 	}
 
 	va_end(args);
-
 	return (uint64_t) min;
 }

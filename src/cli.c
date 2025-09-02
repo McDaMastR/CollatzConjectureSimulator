@@ -47,19 +47,19 @@ typedef struct CliCallbackData
 {
 	CliCallback cb;
 	CliDatatype type;
-	CliData     data;
+	CliData data;
 } CliCallbackData;
 
 typedef struct Cli_T
 {
 	DyArray opts;
-	void*   config;
+	void* config;
 } Cli_T;
 
 
 void cli_destroy(Cli cli)
 {
-	if EXPECT_FALSE (!cli) return;
+	if EXPECT_FALSE (!cli) { return; }
 
 	dyarray_destroy(cli->opts);
 	free(cli);
@@ -67,13 +67,17 @@ void cli_destroy(Cli cli)
 
 Cli cli_create(void* config, size_t count)
 {
-	Cli cli = (Cli) malloc(sizeof(Cli_T));
-	if EXPECT_FALSE (!cli) { MALLOC_FAILURE(cli, sizeof(Cli_T)); return NULL; }
+	size_t allocSize = sizeof(Cli_T);
+	Cli cli = malloc(allocSize);
+	if EXPECT_FALSE (!cli) { MALLOC_FAILURE(cli, allocSize); return NULL; }
 
-	DyArray opts = dyarray_create(sizeof(CliOption), count);
+	size_t elmSize = sizeof(CliOption);
+	size_t elmCount = count;
+
+	DyArray opts = dyarray_create(elmSize, elmCount);
 	if EXPECT_FALSE (!opts) { free(cli); return NULL; }
 
-	cli->opts   = opts;
+	cli->opts = opts;
 	cli->config = config;
 
 	return cli;
@@ -98,7 +102,8 @@ static void cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 		case CLI_DATATYPE_FLOAT:;
 			float f = strtof(arg, &end);
 			if (*end != '\0') { 
-				log_warning(stdout, "Partially interpreting argument %s for option %s as %f", arg, opt, (double) f); }
+				log_warning(stdout, "Partially interpreting argument %s for option %s as %f", arg, opt, (double) f);
+			}
 
 			res->f = f;
 			break;
@@ -106,7 +111,8 @@ static void cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 		case CLI_DATATYPE_DOUBLE:;
 			double d = strtod(arg, &end);
 			if (*end != '\0') {
-				log_warning(stdout, "Partially interpreting argument %s for option %s as %f", arg, opt, d); }
+				log_warning(stdout, "Partially interpreting argument %s for option %s as %f", arg, opt, d);
+			}
 
 			res->d = d;
 			break;
@@ -114,7 +120,8 @@ static void cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 		case CLI_DATATYPE_LDOUBLE:;
 			long double ld = strtold(arg, &end);
 			if (*end != '\0') {
-				log_warning(stdout, "Partially interpreting argument %s for option %s as %Lf", arg, opt, ld); }
+				log_warning(stdout, "Partially interpreting argument %s for option %s as %Lf", arg, opt, ld);
+			}
 
 			res->ld = ld;
 			break;
@@ -122,7 +129,8 @@ static void cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 		case CLI_DATATYPE_LONG:;
 			long l = strtol(arg, &end, 0);
 			if (*end != '\0') {
-				log_warning(stdout, "Partially interpreting argument %s for option %s as %ld", arg, opt, l); }
+				log_warning(stdout, "Partially interpreting argument %s for option %s as %ld", arg, opt, l);
+			}
 
 			res->l = l;
 			break;
@@ -130,7 +138,8 @@ static void cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 		case CLI_DATATYPE_LLONG:;
 			long long ll = strtoll(arg, &end, 0);
 			if (*end != '\0') {
-				log_warning(stdout, "Partially interpreting argument %s for option %s as %lld", arg, opt, ll); }
+				log_warning(stdout, "Partially interpreting argument %s for option %s as %lld", arg, opt, ll);
+			}
 
 			res->ll = ll;
 			break;
@@ -138,7 +147,8 @@ static void cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 		case CLI_DATATYPE_ULONG:;
 			unsigned long ul = strtoul(arg, &end, 0);
 			if (*end != '\0') {
-				log_warning(stdout, "Partially interpreting argument %s for option %s as %lu", arg, opt, ul); }
+				log_warning(stdout, "Partially interpreting argument %s for option %s as %lu", arg, opt, ul);
+			}
 
 			res->ul = ul;
 			break;
@@ -146,7 +156,8 @@ static void cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 		case CLI_DATATYPE_ULLONG:;
 			unsigned long long ull = strtoull(arg, &end, 0);
 			if (*end != '\0') {
-				log_warning(stdout, "Partially interpreting argument %s for option %s as %llu", arg, opt, ull); }
+				log_warning(stdout, "Partially interpreting argument %s for option %s as %llu", arg, opt, ull);
+			}
 
 			res->ull = ull;
 			break;
@@ -159,17 +170,17 @@ static void cli_parse_arg(CliDatatype type, const char* opt, const char* arg, Cl
 
 bool cli_parse(Cli cli, int argc, char** argv)
 {
-	DyQueue callbacks = dyqueue_create(sizeof(CliCallbackData));
-	if EXPECT_FALSE (!callbacks) return false;
+	size_t elmSize = sizeof(CliCallbackData);
+	DyQueue callbacks = dyqueue_create(elmSize);
+	if EXPECT_FALSE (!callbacks) { return false; }
 
-	DyArray opts   = cli->opts;
-	size_t  optc   = dyarray_size(opts);
-	void*   config = cli->config;
-
-	CliDatatype argType = CLI_DATATYPE_NONE;
-	const char* optName = NULL;
+	DyArray opts = cli->opts;
+	size_t optc = dyarray_size(opts);
+	void* config = cli->config;
 
 	CliCallbackData cbd = {0};
+	CliDatatype argType = CLI_DATATYPE_NONE;
+	const char* optName = NULL;
 
 	for (int i = 1; i < argc; i++) {
 		const char* arg = argv[i];
@@ -193,7 +204,7 @@ bool cli_parse(Cli cli, int argc, char** argv)
 					argType = opt.type;
 					optName = arg;
 
-					cbd.cb   = opt.cb;
+					cbd.cb = opt.cb;
 					cbd.type = opt.type;
 					cbd.data = (CliData) {0};
 
@@ -207,7 +218,9 @@ bool cli_parse(Cli cli, int argc, char** argv)
 
 				optName = NULL;
 			}
-			else if (!optName) { log_warning(stdout, "Ignoring unknown option %s", arg); }
+			else if (!optName) {
+				log_warning(stdout, "Ignoring unknown option %s", arg);
+			}
 		}
 
 		else if (!strncmp(arg, "-", 1)) {
@@ -227,7 +240,7 @@ bool cli_parse(Cli cli, int argc, char** argv)
 						argType = opt.type;
 						optName = arg;
 
-						cbd.cb   = opt.cb;
+						cbd.cb = opt.cb;
 						cbd.type = opt.type;
 						cbd.data = (CliData) {0};
 
@@ -241,14 +254,20 @@ bool cli_parse(Cli cli, int argc, char** argv)
 
 					optName = NULL;
 				}
-				else if (!optName) { log_warning(stdout, "Ignoring unknown option -%c", arg[j]); }
+				else if (!optName) {
+					log_warning(stdout, "Ignoring unknown option -%c", arg[j]);
+				}
 			}
 		}
 
-		else { log_warning(stdout, "Ignoring unknown option %s", arg); }
+		else {
+			log_warning(stdout, "Ignoring unknown option %s", arg);
+		}
 	}
 
-	if (argType) { log_warning(stdout, "Ignoring incomplete option %s", optName); }
+	if (argType) {
+		log_warning(stdout, "Ignoring incomplete option %s", optName);
+	}
 
 	size_t cbc = dyqueue_size(callbacks);
 
@@ -260,7 +279,6 @@ bool cli_parse(Cli cli, int argc, char** argv)
 	}
 
 	dyqueue_destroy(callbacks);
-
 	return true;
 }
 
@@ -269,16 +287,16 @@ bool cli_add(Cli cli, char opt, const char* name, CliDatatype type, CliCallback 
 	CliOption newopt = {0};
 
 	size_t len = strlen(name);
-	if EXPECT_FALSE (len > CLI_MAX_OPTION_LENGTH) return false;
+	if EXPECT_FALSE (len > CLI_MAX_OPTION_LENGTH) { return false; }
 
 	strncpy(newopt.fullName, name, CLI_MAX_OPTION_LENGTH);
 
 	newopt.shortName = opt;
-	newopt.cb        = cb;
-	newopt.type      = type;
+	newopt.cb = cb;
+	newopt.type = type;
 
 	void* pres = dyarray_append(cli->opts, &newopt);
-	if EXPECT_FALSE (!pres) return false;
+	if EXPECT_FALSE (!pres) { return false; }
 
 	return true;
 }

@@ -21,24 +21,24 @@
 
 typedef struct DyQueue_T
 {
-	size_t size;  // No. bytes per element
-	size_t count; // No. elements currently in queue
-	void** head;  // Head node
-	void** tail;  // Tail node
+	size_t size; // Number of bytes per element
+	size_t count; // Number of elements currently in queue
+	void** head; // Head node
+	void** tail; // Tail node
 } DyQueue_T;
 
 
 void dyqueue_destroy(DyQueue queue)
 {
-	if EXPECT_FALSE (!queue) return;
+	if EXPECT_FALSE (!queue) { return; }
 
 	void** node = queue->head;
-	void*  next = NULL;
+	void* next = NULL;
 
 	while (node) {
 		next = *node;
 		free(node);
-		node = (void**) next;
+		node = next;
 	}
 
 	free(queue);
@@ -48,13 +48,14 @@ DyQueue dyqueue_create(size_t size)
 {
 	ASSUME(size != 0);
 
-	DyQueue queue = (DyQueue) malloc(sizeof(DyQueue_T));
-	if EXPECT_FALSE (!queue) { MALLOC_FAILURE(queue, sizeof(DyQueue_T)); return NULL; }
+	size_t allocSize = sizeof(DyQueue_T);
+	DyQueue queue = malloc(allocSize);
+	if EXPECT_FALSE (!queue) { MALLOC_FAILURE(queue, allocSize); return NULL; }
 
-	queue->size  = size;
+	queue->size = size;
 	queue->count = 0;
-	queue->head  = NULL;
-	queue->tail  = NULL;
+	queue->head = NULL;
+	queue->tail = NULL;
 
 	return queue;
 }
@@ -68,24 +69,30 @@ void* dyqueue_enqueue(DyQueue queue, const void* value)
 {
 	ASSUME(queue->size != 0);
 
-	size_t size  = queue->size;
+	size_t size = queue->size;
 	size_t count = queue->count;
-	void** tail  = queue->tail;
+	void** tail = queue->tail;
 
-	void** node = (void**) malloc(sizeof(void*) + size);
-	if EXPECT_FALSE (!node) { MALLOC_FAILURE(node, sizeof(void*) + size); return NULL; }
+	size_t allocSize = sizeof(void*) + size;
+	void** node = malloc(allocSize);
+	if EXPECT_FALSE (!node) { MALLOC_FAILURE(node, allocSize); return NULL; }
 
 	*node = NULL;
 
-	memcpy((char*) node + sizeof(void*), value, size);
+	void* element = (char*) node + sizeof(void*);
+	memcpy(element, value, size);
 
-	if (count) { *tail       = node; }
-	else       { queue->head = node; }
+	if (count) {
+		*tail = node;
+	}
+	else {
+		queue->head = node;
+	}
 
 	queue->count = count + 1;
-	queue->tail  = node;
+	queue->tail = node;
 
-	return (char*) node + sizeof(void*);
+	return element;
 }
 
 void dyqueue_dequeue(DyQueue queue, void* restrict value)
@@ -95,18 +102,20 @@ void dyqueue_dequeue(DyQueue queue, void* restrict value)
 	ASSUME(queue->head != NULL);
 	ASSUME(queue->tail != NULL);
 
-	size_t size  = queue->size;
+	size_t size = queue->size;
 	size_t count = queue->count;
-	void** head  = queue->head;
+	void** head = queue->head;
 
-	void** node = (void**) *head;
+	void** node = *head;
+	void* element = (char*) head + sizeof(void*);
 
-	memcpy(value, (char*) head + sizeof(void*), size);
-
+	memcpy(value, element, size);
 	free(head);
 
-	if (count == 1) { queue->tail = node; }
+	if (count == 1) {
+		queue->tail = node;
+	}
 
 	queue->count = count - 1;
-	queue->head  = node;
+	queue->head = node;
 }

@@ -239,7 +239,7 @@ static bool capture_pipelines_option_callback(void* data, void* arg)
 
 static bool iter_size_option_callback(void* data, void* arg)
 {
-	ProgramConfig* config  = (ProgramConfig*) data;
+	ProgramConfig* config = (ProgramConfig*) data;
 	unsigned long iterSize = *(unsigned long*) arg;
 
 	if (iterSize != 128 && iterSize != 256) {
@@ -248,24 +248,22 @@ static bool iter_size_option_callback(void* data, void* arg)
 	}
 
 	config->iterSize = iterSize;
-
 	return true;
 }
 
 static bool max_loops_option_callback(void* data, void* arg)
 {
-	ProgramConfig*     config   = (ProgramConfig*) data;
+	ProgramConfig* config = (ProgramConfig*) data;
 	unsigned long long maxLoops = *(unsigned long long*) arg;
 
 	config->maxLoops = maxLoops;
-
 	return true;
 }
 
 static bool max_memory_option_callback(void* data, void* arg)
 {
-	ProgramConfig* config    = (ProgramConfig*) data;
-	float          maxMemory = *(float*) arg;
+	ProgramConfig* config = (ProgramConfig*) data;
+	float maxMemory = *(float*) arg;
 
 	if (maxMemory <= 0 || maxMemory > 1) {
 		log_warning(stdout, "Ignoring invalid --max-memory argument %f", (double) maxMemory);
@@ -273,14 +271,14 @@ static bool max_memory_option_callback(void* data, void* arg)
 	}
 
 	config->maxMemory = maxMemory;
-
 	return true;
 }
 
 static bool init_config(int argc, char** argv)
 {
-	Cli cli = cli_create(&g_config, 20);
-	if EXPECT_FALSE (!cli) return false;
+	size_t optCount = 20;
+	Cli cli = cli_create(&g_config, optCount);
+	if EXPECT_FALSE (!cli) { return false; }
 
 	cli_add(cli, 'V', "version", CLI_DATATYPE_NONE, version_option_callback);
 	cli_add(cli, 'h', "help",    CLI_DATATYPE_NONE, help_option_callback);
@@ -313,41 +311,55 @@ static bool init_config(int argc, char** argv)
 	if (!bres) { cli_destroy(cli); return false; }
 
 	cli_destroy(cli);
-
 	return true;
 }
 
-
 static bool init_env(void)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
+	DWORD dwMode;
+
 	HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-	DWORD  dwMode;
+	WINBOOL wbRes = GetConsoleMode(hOutput, &dwMode);
+	if (!wbRes) { return false; }
 
-	WINBOOL wbres = GetConsoleMode(hOutput, &dwMode);
-	if (!wbres) return false;
+	// Enable ANSI escape codes (for pretty coloured output)
+	dwMode |= ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+	wbRes = SetConsoleMode(hOutput, dwMode);
+	if (!wbRes) { return false; }
 
-	// Enable ANSI escape codes
-	dwMode |= ENABLE_PROCESSED_OUTPUT;
-	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+	// Prevent system from sleeping, but allow display to sleep
+	EXECUTION_STATE esFlags = ES_CONTINUOUS | ES_SYSTEM_REQUIRED;
+	SetThreadExecutionState(esFlags);
+#elif defined(__APPLE__)
+	CFAllocatorRef allocator = NULL;
+	const char* string = PROGRAM_NAME;
+	CFStringEncoding encoding = kCFStringEncodingUTF8; // Hoping UTF-8 is the implementation's encoding for C strings
 
-	wbres = SetConsoleMode(hOutput, dwMode);
-	if (!wbres) return false;
+	CFStringRef name = CFStringCreateWithCString(allocator, string, encoding);
+	if (!name) { return false; }
+
+	// Prevent system from sleeping, but allow display to sleep
+	CFStringRef type = kIOPMAssertPreventUserIdleSystemSleep;
+	IOPMAssertionLevel level = kIOPMAssertionLevelOn;
+	IOPMAssertionID id;
+
+	IOReturn iores = IOPMAssertionCreateWithName(type, level, name, &id);
+	if (iores != kIOReturnSuccess) { return false; }
 #endif
 
 	return true;
 }
-
 
 int main(int argc, char** argv)
 {
 	Gpu gpu = {0};
 
 	bool bres = init_env();
-	if (!bres) return EXIT_FAILURE;
+	if (!bres) { return EXIT_FAILURE; }
 
 	bres = init_config(argc, argv);
-	if (!bres) return EXIT_SUCCESS;
+	if (!bres) { return EXIT_SUCCESS; }
 
 	CHECK_RESULT(create_instance, &gpu);
 	CHECK_RESULT(select_device, &gpu);
@@ -360,6 +372,5 @@ int main(int argc, char** argv)
 	CHECK_RESULT(submit_commands, &gpu);
 
 	destroy_gpu(&gpu);
-
 	return EXIT_SUCCESS;
 }

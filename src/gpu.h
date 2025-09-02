@@ -25,7 +25,7 @@ typedef struct Gpu
 	VkDebugUtilsMessengerEXT debugUtilsMessenger;
 
 	VkPhysicalDevice physicalDevice;
-	VkDevice         device;
+	VkDevice device;
 
 	VkQueue transferQueue;
 	VkQueue computeQueue;
@@ -36,14 +36,14 @@ typedef struct Gpu
 	VkDeviceMemory* restrict hostVisibleDeviceMemories; // Count = buffersPerHeap
 	VkDeviceMemory* restrict deviceLocalDeviceMemories; // Count = buffersPerHeap
 
-	VkDescriptorSetLayout     descriptorSetLayout;
-	VkDescriptorPool          descriptorPool;
+	VkDescriptorSetLayout descriptorSetLayout;
+	VkDescriptorPool descriptorPool;
 	VkDescriptorSet* restrict descriptorSets; // Count = inoutsPerHeap
 
-	VkShaderModule   shaderModule;
-	VkPipelineCache  pipelineCache;
+	VkShaderModule shaderModule;
+	VkPipelineCache pipelineCache;
 	VkPipelineLayout pipelineLayout;
-	VkPipeline       pipeline;
+	VkPipeline pipeline;
 
 	VkQueryPool queryPool;
 
@@ -51,12 +51,12 @@ typedef struct Gpu
 	VkCommandPool computeCommandPool;
 
 	VkCommandBuffer* restrict transferCommandBuffers; // Count = inoutsPerHeap
-	VkCommandBuffer* restrict computeCommandBuffers;  // Count = inoutsPerHeap
+	VkCommandBuffer* restrict computeCommandBuffers; // Count = inoutsPerHeap
 
 	VkSemaphore* restrict semaphores; // Count = inoutsPerHeap
 
-	StartValue** restrict mappedInBuffers;  // Count = inoutsPerHeap, valuesPerInout
-	StopTime**   restrict mappedOutBuffers; // Count = inoutsPerHeap, valuesPerInout
+	StartValue** restrict mappedInBuffers; // Count = inoutsPerHeap, valuesPerInout
+	StopTime** restrict mappedOutBuffers; // Count = inoutsPerHeap, valuesPerInout
 
 	VkDeviceSize bytesPerIn;
 	VkDeviceSize bytesPerOut;
@@ -109,17 +109,19 @@ typedef struct Gpu
 
 typedef struct Position
 {
-	/* Suppose the current longest total stopping time is T. Then val-a-mod-m-off[k] gives the least starting value x
-	 * with total stopping time t such that (1) x ≡ a (mod m) and (2) t + k = T. */
+	/* 
+	 * Suppose the current longest total stopping time is T. Then val-a-mod-m-off[k] gives the least starting value x
+	 * with total stopping time t such that (1) x ≡ a (mod m) and (2) t + k = T.
+	 */
 	StartValue val0mod1off[3];
 	StartValue val1mod6off[3];
 
 	StartValue curStartValue; // First starting value being checked in the current dispatch.
-	StopTime   bestStopTime;  // Current longest total stopping time.
+	StopTime bestStopTime; // Current longest total stopping time.
 } Position;
 
 
-// If the return type is bool, then that function returns true on success, and false elsewise
+// If the return type is bool, then the function returns true on success and false elsewise
 
 bool create_instance(Gpu* restrict gpu) NONNULL_ARGS_ALL;
 bool select_device(Gpu* restrict gpu) NONNULL_ARGS_ALL;
@@ -131,9 +133,6 @@ bool create_pipeline(Gpu* restrict gpu) NONNULL_ARGS_ALL;
 bool create_commands(Gpu* restrict gpu) NONNULL_ARGS_ALL;
 bool submit_commands(Gpu* restrict gpu) NONNULL_ARGS_ALL;
 bool destroy_gpu(Gpu* restrict gpu) NONNULL_ARGS_ALL;
-
-bool retrieve_queue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* queue, const char* name)
-	NONNULL_ARGS(1, 4) NULTSTR_ARG(5);
 
 bool create_command_handles(
 	VkDevice device,

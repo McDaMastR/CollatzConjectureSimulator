@@ -61,7 +61,7 @@ The general environment and system requirements that must be met for Collatz Con
 correctly are listed below. The full requirements of the GPU are given in
 [device_requirements.md](device_requirements.md).
 
-- [CMake](https://cmake.org) 3.23.
+- [CMake](https://cmake.org) 3.24.
 - [pthreads](https://en.wikipedia.org/wiki/Pthreads).
 - [glslang](https://github.com/KhronosGroup/glslang).
 - [SPIR-V Tools](https://github.com/KhronosGroup/SPIRV-Tools).
@@ -120,6 +120,16 @@ of options, use the `-h` or `--help` option.
 In most cases, the executable will initiate the program's main loop. If during this process the `Enter` or `Return` keys
 are pressed, the program will break from the main loop and begin to exit. Each iteration of the main loop will output
 information regarding the computations performed, most prominently including benchmarking data for various subprocesses.
+
+### Common Problems
+
+If running the program results in a `VK_ERROR_DEVICE_LOST` error message, it may be due to the compute shaders taking
+too long to complete. On some operating systems and graphics drivers, if the GPU spends too much time processing a
+single request, the operation can timeout to prevent the GPU from freezing. In this case, the error can be fixed by
+running the program with a lower proportion of accessible GPU memory, resulting in less computation time per compute
+dispatch. This is done by adding the `--max-memory` option, followed by the proportion of available GPU memory that will
+be accessible to the program. For example, `--max-memory 0.2` means the program will use at most 20% of the available
+GPU memory.
 
 ## Inout-buffers
 

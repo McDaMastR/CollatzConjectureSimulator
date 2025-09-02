@@ -21,57 +21,46 @@
 
 CallbackData g_callbackData = {.func = "", .file = "", .line = 0};
 
-
 static uint64_t g_debugCallbackCount = 0;
-
-static uint64_t g_allocCount         = 0;
-static uint64_t g_reallocCount       = 0;
-static uint64_t g_freeCount          = 0;
+static uint64_t g_allocCount = 0;
+static uint64_t g_reallocCount = 0;
+static uint64_t g_freeCount = 0;
 static uint64_t g_internalAllocCount = 0;
-static uint64_t g_internalFreeCount  = 0;
-
+static uint64_t g_internalFreeCount = 0;
 static size_t g_totalAllocSize = 0;
 
 
 bool init_debug_logfile(void)
 {
-	double      programTime = program_time();
-	const char* sCurrTime   = stime();
+	double programTime = program_time();
+	const char* sCurrTime = stime();
 
-	FILE* file = fopen(DEBUG_LOG_NAME, "w");
-	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, DEBUG_LOG_NAME, "w"); return false; }
-
-	fprintf(
-		file,
+	bool bres = write_text(
+		DEBUG_LOG_NAME,
 		"VULKAN DEBUG CALLBACK LOGFILE\n"
 		"PROGRAM: %s %" PRIu32 ".%" PRIu32 ".%" PRIu32 " (%s)\n"
 		"CURRENT LOCAL TIME: %s"
 		"TIME SINCE LAUNCH: %.3fms\n\n",
 		PROGRAM_NAME, PROGRAM_VER_MAJOR, PROGRAM_VER_MINOR, PROGRAM_VER_PATCH, PROGRAM_EXE, sCurrTime, programTime);
 
-	fclose(file);
-
+	if EXPECT_FALSE (!bres) { return false; }
 	return true;
 }
 
 bool init_alloc_logfile(void)
 {
-	double      programTime = program_time();
-	const char* sCurrTime   = stime();
+	double programTime = program_time();
+	const char* sCurrTime = stime();
 
-	FILE* file = fopen(ALLOC_LOG_NAME, "w");
-	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "w"); return false; }
-
-	fprintf(
-		file,
+	bool bres = write_text(
+		ALLOC_LOG_NAME,
 		"VULKAN ALLOCATION CALLBACK LOGFILE\n"
 		"PROGRAM: %s %" PRIu32 ".%" PRIu32 ".%" PRIu32 " (%s)\n"
 		"CURRENT LOCAL TIME: %s"
 		"TIME SINCE LAUNCH: %.3fms\n\n",
 		PROGRAM_NAME, PROGRAM_VER_MAJOR, PROGRAM_VER_MINOR, PROGRAM_VER_PATCH, PROGRAM_EXE, sCurrTime, programTime);
 
-	fclose(file);
-
+	if EXPECT_FALSE (!bres) { return false; }
 	return true;
 }
 
@@ -91,11 +80,12 @@ static bool log_colour(
 	va_list args)
 {
 	ColourLevel colourLevel = g_config.colourLevel;
-
 	bool tty = fisatty(stream);
 
-	/* Different methods of printing are used depending on whether the stream is a TTY,
-	   according to their benchmarked speed in each case. */
+	/* 
+	 * Different methods of printing are used depending on whether the stream is a TTY, according to their benchmarked
+	 * speed in each case.
+	 */
 
 	if (colourLevel == COLOUR_LEVEL_ALL && !tty) {
 		fputs(sgr1, stream);
@@ -107,13 +97,13 @@ static bool log_colour(
 	else if ((colourLevel == COLOUR_LEVEL_ALL || colourLevel == COLOUR_LEVEL_TTY) && tty) {
 		size_t lenSgr1 = strlen(sgr1);
 		size_t lenSgr2 = strlen(sgr2);
-		size_t lenPre  = strlen(prefix);
+		size_t lenPre = strlen(prefix);
 		size_t lenPost = strlen(postfix);
-		size_t lenFmt  = strlen(fmt);
+		size_t lenFmt = strlen(fmt);
 
 		size_t size = lenSgr1 + lenPre + lenFmt + lenPost + lenSgr2 + 1;
 
-		char* newFmt = (char*) malloc(size);
+		char* newFmt = malloc(size);
 		if EXPECT_FALSE (!newFmt) { MALLOC_FAILURE(newFmt, size); return false; }
 
 		strcpy(newFmt, sgr1);
@@ -123,7 +113,6 @@ static bool log_colour(
 		strcpy(newFmt + lenSgr1 + lenPre + lenFmt + lenPost, sgr2);
 
 		vfprintf(stream, newFmt, args);
-
 		free(newFmt);
 	}
 	else if (!tty) {
@@ -132,13 +121,13 @@ static bool log_colour(
 		fputs(postfix, stream);
 	}
 	else {
-		size_t lenPre  = strlen(prefix);
+		size_t lenPre = strlen(prefix);
 		size_t lenPost = strlen(postfix);
-		size_t lenFmt  = strlen(fmt);
+		size_t lenFmt = strlen(fmt);
 
 		size_t size = lenPre + lenFmt + lenPost + 1;
 
-		char* newFmt = (char*) malloc(size);
+		char* newFmt = malloc(size);
 		if EXPECT_FALSE (!newFmt) { MALLOC_FAILURE(newFmt, size); return false; }
 
 		strcpy(newFmt, prefix);
@@ -146,7 +135,6 @@ static bool log_colour(
 		strcpy(newFmt + lenPre + lenFmt, postfix);
 
 		vfprintf(stream, newFmt, args);
-
 		free(newFmt);
 	}
 
@@ -165,7 +153,6 @@ bool log_debug(FILE* stream, const char* format, ...)
 	bool bres = log_colour(stream, format, SGR_FG_GREEN, SGR_RESET, "Debug: ", "\n", args);
 
 	va_end(args);
-
 	return bres;
 }
 
@@ -177,7 +164,6 @@ bool log_warning(FILE* stream, const char* format, ...)
 	bool bres = log_colour(stream, format, SGR_FG_YELLOW, SGR_RESET, "Warning: ", "\n", args);
 
 	va_end(args);
-
 	return bres;
 }
 
@@ -189,7 +175,6 @@ bool log_error(FILE* stream, const char* format, ...)
 	bool bres = log_colour(stream, format, SGR_FG_RED, SGR_RESET, "Error: ", "\n", args);
 
 	va_end(args);
-
 	return bres;
 }
 
@@ -201,7 +186,6 @@ bool log_critical(FILE* stream, const char* format, ...)
 	bool bres = log_colour(stream, format, SGR_FG_BLACK SGR_BG_RED, SGR_RESET, "CRITICAL: ", "\n", args);
 
 	va_end(args);
-
 	return bres;
 }
 
@@ -217,24 +201,26 @@ static void log_debug_callback(
 	const char* file,
 	uint64_t line)
 {
-	const char* message         = pCallbackData->pMessage;
-	const char* messageIdName   = pCallbackData->pMessageIdName ?: "";
-	int32_t     messageIdNumber = pCallbackData->messageIdNumber;
+	const char* message = pCallbackData->pMessage;
+	const char* messageIdName = pCallbackData->pMessageIdName ?: "";
+	int32_t messageIdNumber = pCallbackData->messageIdNumber;
 
-	uint32_t queueLabelCount  = pCallbackData->queueLabelCount;
+	uint32_t queueLabelCount = pCallbackData->queueLabelCount;
 	uint32_t cmdBufLabelCount = pCallbackData->cmdBufLabelCount;
-	uint32_t objectCount      = pCallbackData->objectCount;
+	uint32_t objectCount = pCallbackData->objectCount;
 
 	const char* sMessageSeverity = string_VkDebugUtilsMessageSeverityFlagBitsEXT(messageSeverity);
 
 	fprintf(stream, "Debug callback %" PRIu64 " (%.3fms)\n", callbackCount, time);
 
-	if (line) { fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
+	if (line) {
+		fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line);
+	}
 
 	fprintf(stream, "Severity: %s\nTypes:   ", sMessageSeverity);
 
 	for (uint32_t i = 0; i < sizeof(messageTypes) * CHAR_BIT; i++) {
-		VkDebugUtilsMessageTypeFlagBitsEXT messageType = messageTypes & ((uint32_t) 1 << i);
+		VkDebugUtilsMessageTypeFlagBitsEXT messageType = messageTypes & (UINT32_C(1) << i);
 
 		if (messageType) {
 			const char* sMessageType = string_VkDebugUtilsMessageTypeFlagBitsEXT(messageType);
@@ -281,9 +267,9 @@ static void log_debug_callback(
 		fprintf(stream, "Objects (%" PRIu32 "):\n", objectCount);
 
 		for (uint32_t i = 0; i < objectCount; i++) {
-			const char*  objectName   = pCallbackData->pObjects[i].pObjectName ?: "";
-			VkObjectType objectType   = pCallbackData->pObjects[i].objectType;
-			uint64_t     objectHandle = pCallbackData->pObjects[i].objectHandle;
+			const char* objectName = pCallbackData->pObjects[i].pObjectName ?: "";
+			VkObjectType objectType = pCallbackData->pObjects[i].objectType;
+			uint64_t objectHandle = pCallbackData->pObjects[i].objectHandle;
 
 			const char* sObjectType = string_VkObjectType(objectType);
 
@@ -301,7 +287,6 @@ VkBool32 debug_callback(
 	void* pUserData)
 {
 	double time = program_time();
-
 	CallbackData data = *(CallbackData*) pUserData;
 
 	g_debugCallbackCount++;
@@ -325,7 +310,6 @@ VkBool32 debug_callback(
 		data.line);
 
 	fclose(file);
-
 	return VK_FALSE;
 }
 
@@ -345,25 +329,26 @@ static void log_allocation_callback(
 {
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 
-	log_debug(stream, "Allocation callback %" PRIu64 " (%.3fms)\n", allocationCount, time);
+	fprintf(stream, "Allocation callback %" PRIu64 " (%.3fms)\n", allocationCount, time);
 
-	if (line) { log_debug(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
+	if (line) {
+		fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line);
+	}
 
-	log_debug(
+	fprintf(
 		stream,
 		"Memory usage: %zu B (%.2f KiB, %.2f MiB)\n"
 		"Size:      %zu\n"
 		"Alignment: %zu\n"
 		"Scope:     %s\n"
 		"Address:   0x%016" PRIxPTR "\n\n",
-		totalSize, (double) totalSize / 1024, (double) totalSize / 1048576,
+		totalSize, (double) totalSize / (1 << 10), (double) totalSize / (1 << 20),
 		size, alignment, sAllocationScope, (uintptr_t) memory);
 }
 
 void* allocation_callback(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 {
 	double time = program_time();
-
 	CallbackData data = *(CallbackData*) pUserData;
 
 	void* memory = size ? aligned_malloc(size, alignment) : NULL;
@@ -379,7 +364,6 @@ void* allocation_callback(void* pUserData, size_t size, size_t alignment, VkSyst
 		memory);
 
 	fclose(file);
-
 	return memory;
 }
 
@@ -400,11 +384,13 @@ static void log_reallocation_callback(
 {
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 
-	log_debug(stream, "Reallocation callback %" PRIu64 " (%.3fms)\n", reallocationCount, time);
+	fprintf(stream, "Reallocation callback %" PRIu64 " (%.3fms)\n", reallocationCount, time);
 
-	if (line) { log_debug(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
+	if (line) {
+		fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line);
+	}
 
-	log_debug(
+	fprintf(
 		stream,
 		"Memory usage: %zu B (%.2f KiB, %.2f MiB)\n"
 		"Original size:     %zu\n"
@@ -413,7 +399,7 @@ static void log_reallocation_callback(
 		"Scope:             %s\n"
 		"Original address:  0x%016" PRIxPTR "\n"
 		"Allocated address: 0x%016" PRIxPTR "\n\n",
-		totalSize, (double) totalSize / 1024, (double) totalSize / 1048576,
+		totalSize, (double) totalSize / (1 << 10), (double) totalSize / (1 << 20),
 		originalSize, size, alignment, sAllocationScope, (uintptr_t) originalAddr, (uintptr_t) memory);
 }
 
@@ -421,19 +407,21 @@ void* reallocation_callback(
 	void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 {
 	double time = program_time();
-
 	CallbackData data = *(CallbackData*) pUserData;
 
-	size_t originalSize;
-	void*  memory;
+	size_t originalSize = 0;
+	void* memory = NULL;
 
-	if (pOriginal) {
+	if (pOriginal && size) {
 		originalSize = aligned_size(pOriginal);
-		memory       = size ? aligned_realloc(pOriginal, size, alignment) : aligned_free(pOriginal);
+		memory = aligned_realloc(pOriginal, size, alignment);
 	}
-	else {
-		originalSize = 0;
-		memory       = size ? aligned_malloc(size, alignment) : NULL;
+	else if (pOriginal) {
+		originalSize = aligned_size(pOriginal);
+		aligned_free(pOriginal);
+	}
+	else if (size) {
+		memory = aligned_malloc(size, alignment);
 	}
 
 	g_reallocCount++;
@@ -448,7 +436,6 @@ void* reallocation_callback(
 		allocationScope, pOriginal, memory);
 
 	fclose(file);
-
 	return memory;
 }
 
@@ -463,31 +450,31 @@ static void log_free_callback(
 	size_t size,
 	const void* memory)
 {
-	log_debug(stream, "Free callback %" PRIu64 " (%.3fms)\n", freeCount, time);
+	fprintf(stream, "Free callback %" PRIu64 " (%.3fms)\n", freeCount, time);
 
-	if (line) { log_debug(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
+	if (line) {
+		fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line);
+	}
 
-	log_debug(
+	fprintf(
 		stream,
 		"Memory usage: %zu B (%.2f KiB, %.2f MiB)\n"
 		"Size:    %zu\n"
 		"Address: 0x%016" PRIxPTR "\n\n",
-		totalSize, (double) totalSize / 1024, (double) totalSize / 1048576, size, (uintptr_t) memory);
+		totalSize, (double) totalSize / (1 << 10), (double) totalSize / (1 << 20), size, (uintptr_t) memory);
 }
 
 void free_callback(void* pUserData, void* pMemory)
 {
 	double time = program_time();
-
 	CallbackData data = *(CallbackData*) pUserData;
 
-	size_t size;
+	size_t size = 0;
 
 	if (pMemory) {
 		size = aligned_size(pMemory);
 		aligned_free(pMemory);
 	}
-	else { size = 0; }
 
 	g_freeCount++;
 	g_totalAllocSize -= size;
@@ -496,7 +483,6 @@ void free_callback(void* pUserData, void* pMemory)
 	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return; }
 
 	log_free_callback(file, time, g_freeCount, data.func, data.file, data.line, g_totalAllocSize, size, pMemory);
-
 	fclose(file);
 }
 
@@ -511,14 +497,16 @@ static void log_internal_allocation_callback(
 	VkInternalAllocationType allocationType,
 	VkSystemAllocationScope allocationScope)
 {
-	const char* sAllocationType  = string_VkInternalAllocationType(allocationType);
+	const char* sAllocationType = string_VkInternalAllocationType(allocationType);
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 
-	log_debug(stream, "Internal allocation callback %" PRIu64 " (%.3fms)\n", internalAllocationCount, time);
+	fprintf(stream, "Internal allocation callback %" PRIu64 " (%.3fms)\n", internalAllocationCount, time);
 
-	if (line) { log_debug(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
+	if (line) {
+		fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line);
+	}
 
-	log_debug(
+	fprintf(
 		stream,
 		"Size:  %zu\n"
 		"Type:  %s\n"
@@ -530,7 +518,6 @@ void internal_allocation_callback(
 	void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope)
 {
 	double time = program_time();
-
 	CallbackData data = *(CallbackData*) pUserData;
 
 	g_internalAllocCount++;
@@ -555,14 +542,16 @@ static void log_internal_free_callback(
 	VkInternalAllocationType allocationType,
 	VkSystemAllocationScope allocationScope)
 {
-	const char* sAllocationType  = string_VkInternalAllocationType(allocationType);
+	const char* sAllocationType = string_VkInternalAllocationType(allocationType);
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
 
-	log_debug(stream, "Internal free callback %" PRIu64 " (%.3fms)\n", internalFreeCount, time);
+	fprintf(stream, "Internal free callback %" PRIu64 " (%.3fms)\n", internalFreeCount, time);
 
-	if (line) { log_debug(stream, "%s (%s, %" PRIu64 ")\n", func, file, line); }
+	if (line) {
+		fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line);
+	}
 
-	log_debug(
+	fprintf(
 		stream,
 		"Size:  %zu\n"
 		"Type:  %s\n"
@@ -574,7 +563,6 @@ void internal_free_callback(
 	void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope)
 {
 	double time = program_time();
-
 	CallbackData data = *(CallbackData*) pUserData;
 
 	g_internalFreeCount++;
@@ -765,23 +753,9 @@ void log_pjoin_failure(int line, int res)
 		line, time, res);
 }
 
-void log_pkill_failure(int line, int res, int sig)
-{
-	double time = program_time();
-
-	log_error(
-		stderr,
-		"Thread failure at line %d (%.3fms)\n"
-		"Failed function call 'pthread_kill' with %d\n"
-		"Arguments:\n"
-		"\tsignal = %d\n",
-		line, time, res, sig);
-}
-
 void log_vkinit_failure(int line, VkResult res)
 {
 	double time = program_time();
-
 	const char* sRes = string_VkResult(res);
 
 	log_error(
@@ -796,9 +770,9 @@ void log_vkvers_failure(int line, uint32_t res)
 	double time = program_time();
 
 	uint32_t variant = VK_API_VERSION_VARIANT(res);
-	uint32_t major   = VK_API_VERSION_MAJOR(res);
-	uint32_t minor   = VK_API_VERSION_MINOR(res);
-	uint32_t patch   = VK_API_VERSION_PATCH(res);
+	uint32_t major = VK_API_VERSION_MAJOR(res);
+	uint32_t minor = VK_API_VERSION_MINOR(res);
+	uint32_t patch = VK_API_VERSION_PATCH(res);
 
 	log_error(
 		stderr,
@@ -810,7 +784,6 @@ void log_vkvers_failure(int line, uint32_t res)
 void log_vulkan_failure(int line, VkResult res, const char* func)
 {
 	double time = program_time();
-
 	const char* sRes = string_VkResult(res);
 
 	log_error(

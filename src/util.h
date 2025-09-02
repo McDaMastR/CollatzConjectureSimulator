@@ -22,7 +22,7 @@
 
 bool fisatty(FILE* stream) USE_RET;
 
-char*  stime(void) USE_RET;
+char* stime(void) USE_RET;
 double program_time(void) USE_RET;
 
 Endianness get_endianness(void) CONST_FUNC USE_RET;
@@ -53,7 +53,7 @@ bool write_text(const char* filename, const char* format, ...)
 
 void* aligned_malloc(size_t size, size_t alignment) MALLOC_FUNC ALLOC_ARG(1) ALIGN_ARG(2) USE_RET;
 void* aligned_realloc(void* memory, size_t size, size_t alignment) NONNULL_ARGS_ALL ALLOC_ARG(2) ALIGN_ARG(3) USE_RET;
-void* aligned_free(void* memory) NONNULL_ARGS_ALL;
+void aligned_free(void* memory) NONNULL_ARGS_ALL;
 
 size_t aligned_size(const void* memory) NONNULL_ARGS_ALL USE_RET;
 

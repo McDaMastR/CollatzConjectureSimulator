@@ -56,7 +56,7 @@
 #endif
 
 #if has_builtin(expect)
-	#define EXPECT_TRUE(x)  ( __builtin_expect ((bool) (x), true)  )
+	#define EXPECT_TRUE(x)  ( __builtin_expect ((bool) (x), true) )
 	#define EXPECT_FALSE(x) ( __builtin_expect ((bool) (x), false) )
 #else
 	#define EXPECT_TRUE(x)  (x)
@@ -102,10 +102,10 @@
 #if has_attribute(format)
 	#ifdef __clang__
 		#define PRINTF_FUNC(fmt, args) __attribute__ (( format (printf, fmt, args) ))
-		#define SCANF_FUNC(fmt, args)  __attribute__ (( format (scanf,  fmt, args) ))
+		#define SCANF_FUNC(fmt, args)  __attribute__ (( format (scanf, fmt, args) ))
 	#else
 		#define PRINTF_FUNC(fmt, args) __attribute__ (( format (gnu_printf, fmt, args) ))
-		#define SCANF_FUNC(fmt, args)  __attribute__ (( format (gnu_scanf,  fmt, args) ))
+		#define SCANF_FUNC(fmt, args)  __attribute__ (( format (gnu_scanf, fmt, args) ))
 	#endif
 #else
 	#define PRINTF_FUNC(fmt, args)
@@ -147,8 +147,8 @@
 #endif
 
 #if has_attribute(access)
-	#define NO_ACCESS(arg) __attribute__ (( access (none,       arg) ))
-	#define RE_ACCESS(arg) __attribute__ (( access (read_only,  arg) ))
+	#define NO_ACCESS(arg) __attribute__ (( access (none, arg) ))
+	#define RE_ACCESS(arg) __attribute__ (( access (read_only, arg) ))
 	#define WR_ACCESS(arg) __attribute__ (( access (write_only, arg) ))
 	#define RW_ACCESS(arg) __attribute__ (( access (read_write, arg) ))
 #else
@@ -226,7 +226,7 @@
 
 #define ARR_SIZE(a) ( sizeof(a) / sizeof(*(a)) )
 
-#define INT128_UPPER(x) ( (uint64_t) ((x) >> 64)   )
+#define INT128_UPPER(x) ( (uint64_t) ((x) >> 64) )
 #define INT128_LOWER(x) ( (uint64_t) ((x) & ~0ULL) )
 
 #define INT128(upper, lower) ( (StartValue) (upper) << 64 | (StartValue) (lower) )
@@ -262,9 +262,9 @@ typedef struct ProgramConfig
 	OutputLevel outputLevel;
 	ColourLevel colourLevel;
 
-	unsigned long      iterSize;
+	unsigned long iterSize;
 	unsigned long long maxLoops;
-	float              maxMemory;
+	float maxMemory;
 
 	bool preferInt16;
 	bool preferInt64;
@@ -308,7 +308,7 @@ extern const uint32_t PROGRAM_VER_PATCH;
 
 extern const double MS_PER_CLOCK;
 
-extern const VkAllocationCallbacks  g_allocationCallbacks;
+extern const VkAllocationCallbacks g_allocationCallbacks;
 extern const VkAllocationCallbacks* g_allocator;
 
 extern ProgramConfig g_config;

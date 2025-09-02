@@ -24,7 +24,7 @@ typedef struct CallbackData
 {
 	const char* func;
 	const char* file;
-	uint64_t    line;
+	uint64_t line;
 } CallbackData;
 
 
@@ -69,7 +69,6 @@ void log_fprintf_failure(int line, int res, FILE* file, const char* fmt)
 void log_pcreate_failure(int line, int res) COLD_FUNC;
 void log_pcancel_failure(int line, int res) COLD_FUNC;
 void log_pjoin_failure(int line, int res) COLD_FUNC;
-void log_pkill_failure(int line, int res, int sig) COLD_FUNC;
 
 void log_vkinit_failure(int line, VkResult res) COLD_FUNC;
 void log_vkvers_failure(int line, uint32_t res) COLD_FUNC;
@@ -88,7 +87,7 @@ VKAPI_ATTR void* VKAPI_CALL allocation_callback(
 	void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
 VKAPI_ATTR void* VKAPI_CALL reallocation_callback(
 	void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
-VKAPI_ATTR void  VKAPI_CALL free_callback(void* pUserData, void* pMemory);
+VKAPI_ATTR void VKAPI_CALL free_callback(void* pUserData, void* pMemory);
 
 VKAPI_ATTR void VKAPI_CALL internal_allocation_callback(
 	void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope);
@@ -116,10 +115,9 @@ VKAPI_ATTR void VKAPI_CALL internal_free_callback(
 #define FSCANF_FAILURE(res, file, fmt)  log_fscanf_failure(__LINE__, (int) (res), (FILE*) (file), (const char*) (fmt))
 #define FPRINTF_FAILURE(res, file, fmt) log_fprintf_failure(__LINE__, (int) (res), (FILE*) (file), (const char*) (fmt))
 
-#define PCREATE_FAILURE(res)    log_pcreate_failure(__LINE__, (int) (res))
-#define PCANCEL_FAILURE(res)    log_pcancel_failure(__LINE__, (int) (res))
-#define PJOIN_FAILURE(res)      log_pjoin_failure(__LINE__, (int) (res))
-#define PKILL_FAILURE(res, sig) log_pkill_failure(__LINE__, (int) (res), (int) (sig))
+#define PCREATE_FAILURE(res) log_pcreate_failure(__LINE__, (int) (res))
+#define PCANCEL_FAILURE(res) log_pcancel_failure(__LINE__, (int) (res))
+#define PJOIN_FAILURE(res)   log_pjoin_failure(__LINE__, (int) (res))
 
 #define VKINIT_FAILURE(res)  log_vkinit_failure(__LINE__, (VkResult) (res))
 #define VKVERS_FAILURE(res)  log_vkvers_failure(__LINE__, (uint32_t) (res))

@@ -3,20 +3,20 @@ add_executable(cltz)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
-option(EXCESS_WARNINGS "Whether to compile the program with potentially excessive warnings"   OFF)
+option(EXCESS_WARNINGS "Whether to compile the program with potentially excessive warnings" OFF)
 option(STATIC_ANALYSIS "Whether to perform static analysis on the program during compilation" OFF)
 
 set(USING_EXCESS_WARNINGS "$<BOOL:${EXCESS_WARNINGS}>")
 set(USING_STATIC_ANALYSIS "$<BOOL:${STATIC_ANALYSIS}>")
 
+set(USING_APPLE "$<BOOL:${APPLE}>")
 set(USING_MINGW "$<BOOL:${MINGW}>")
 
 set(COMPILE_WARNINGS_GNU
 	-Wall                     -Wextra
 	-Walloc-zero              -Walloca
-	-Warith-conversion        -Warray-bounds=2
-	-Wattribute-alias=2       -Wbad-function-cast
-	-Wbidi-chars=any,ucn      -Wc++-compat
+	-Warray-bounds=2          -Wattribute-alias=2
+	-Wbad-function-cast       -Wbidi-chars=any,ucn
 	-Wc11-c23-compat          -Wcast-align=strict
 	-Wcast-qual               -Wconversion
 	-Wdate-time               -Wdisabled-optimization
@@ -76,19 +76,19 @@ target_compile_definitions(cltz
 
 		"$<$<NOT:$<CONFIG:DEBUG>>:NDEBUG=1>"
 
-		#"$<$<AND:${USING_EXCESS_WARNINGS},${USING_MINGW}>:__MINGW_MSVC_COMPAT_WARNINGS=1>"
+		"$<$<AND:${USING_EXCESS_WARNINGS},${USING_MINGW}>:__MINGW_MSVC_COMPAT_WARNINGS=1>"
 		"$<$<OR:$<C_COMPILER_ID:MSVC>,${USING_MINGW}>:_CRT_SECURE_NO_WARNINGS=1>"
 )
 
 target_compile_options(cltz
 	PRIVATE
-		"$<$<AND:$<C_COMPILER_ID:GNU,Clang>,$<CONFIG:DEBUG>>:-Og;-g>"
-		"$<$<AND:$<C_COMPILER_ID:GNU,Clang>,$<CONFIG:RELEASE>>:-O3>"
-		"$<$<AND:$<C_COMPILER_ID:GNU,Clang>,$<CONFIG:MINSIZEREL>>:-Os>"
-		"$<$<AND:$<C_COMPILER_ID:GNU,Clang>,$<CONFIG:RELWITHDEBINFO>>:-O2;-g>"
+		"$<$<AND:$<C_COMPILER_ID:GNU,Clang,AppleClang>,$<CONFIG:DEBUG>>:-Og;-g>"
+		"$<$<AND:$<C_COMPILER_ID:GNU,Clang,AppleClang>,$<CONFIG:RELEASE>>:-O3>"
+		"$<$<AND:$<C_COMPILER_ID:GNU,Clang,AppleClang>,$<CONFIG:MINSIZEREL>>:-Os>"
+		"$<$<AND:$<C_COMPILER_ID:GNU,Clang,AppleClang>,$<CONFIG:RELWITHDEBINFO>>:-O2;-g>"
 
 		"$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:GNU>>:${COMPILE_WARNINGS_GNU}>"
-		"$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:Clang>>:${COMPILE_WARNINGS_CLANG}>"
+		"$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:Clang,AppleClang>>:${COMPILE_WARNINGS_CLANG}>"
 		"$<$<AND:${USING_STATIC_ANALYSIS},$<C_COMPILER_ID:GNU>>:-fanalyzer>"
 )
 
@@ -97,6 +97,8 @@ target_link_libraries(cltz
 		volk::volk
 		Vulkan::UtilityHeaders
 		Threads::Threads
+
+		"$<${USING_APPLE}:$<LINK_LIBRARY:FRAMEWORK,CoreFoundation;IOKit>>"
 )
 
 target_precompile_headers(cltz
@@ -120,7 +122,8 @@ target_precompile_headers(cltz
 		<stdio.h>
 		<stdlib.h>
 
-		"$<$<OR:$<C_COMPILER_ID:GNU,Clang>,${USING_MINGW}>:<unistd.h$<ANGLE-R>>"
+		"$<${USING_APPLE}:<IOKit/pwr_mgt/IOPMLib.h$<ANGLE-R>>"
+		"$<$<OR:$<C_COMPILER_ID:GNU,Clang,AppleClang>,${USING_MINGW}>:<unistd.h$<ANGLE-R>>"
 		"$<$<OR:$<C_COMPILER_ID:MSVC>,${USING_MINGW}>:<intrin.h$<ANGLE-R>;<windows.h$<ANGLE-R>>"
 )
 

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2024 Seth McDonald
+ * Copyright (C) 2024-2025 Seth McDonald
  * 
  * This file is part of Collatz Conjecture Simulator.
  * 
@@ -377,7 +377,7 @@ void down_le(inout u64vec2 n, inout COUNT_TYPE count)
 	u64vec2 left, right;
 
 	// findLSB (GLSL) => FindILsb (SPIR-V)
-	// SPIR-V Extended Instructions for GLSL (ver 1.00, rev 14):
+	// SPIR-V Extended Instructions for GLSL (version 1.00, revision 16):
 	// "[FindILsb] is currently limited to 32-bit width components."
 	uint x = uint(n.x);
 	lowp uint factors = findLSB(x) & 31U;
