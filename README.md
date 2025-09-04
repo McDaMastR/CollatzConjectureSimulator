@@ -124,12 +124,17 @@ information regarding the computations performed, most prominently including ben
 ### Common Problems
 
 If running the program results in a `VK_ERROR_DEVICE_LOST` error message, it may be due to the compute shaders taking
-too long to complete. On some operating systems and graphics drivers, if the GPU spends too much time processing a
-single request, the operation can timeout to prevent the GPU from freezing. In this case, the error can be fixed by
-running the program with a lower proportion of accessible GPU memory, resulting in less computation time per compute
-dispatch. This is done by adding the `--max-memory` option, followed by the proportion of available GPU memory that will
-be accessible to the program. For example, `--max-memory 0.2` means the program will use at most 20% of the available
-GPU memory.
+too long to execute. On many operating systems and graphics drivers, if the GPU spends too much time processing a single
+request, the operation can timeout to prevent the GPU from freezing. Such a scenario is explicitly mentioned in the
+Vulkan specification (version 1.4.326, section 5.2.3 _Lost Device_).
+
+> Typical reasons for device loss will include things like execution timing out (to prevent denial of service), power
+> management events, platform resource management, implementation errors.
+
+In this case, the error can be fixed by running the program with a lower proportion of accessible GPU memory, resulting
+in less computation time per compute dispatch. This is done by adding the `--max-memory` option, followed by the
+proportion of available GPU memory that will be accessible to the program. For example, `--max-memory 0.2` means the
+program will use at most 20% of the available GPU memory.
 
 ## Inout-buffers
 

@@ -95,6 +95,11 @@ typedef struct Gpu
 	bool hostNonCoherent;
 	bool using16BitStorage;
 	bool usingMaintenance4;
+	bool usingMaintenance5;
+	bool usingMaintenance6;
+	bool usingMaintenance7;
+	bool usingMaintenance8;
+	bool usingMaintenance9;
 	bool usingMemoryBudget;
 	bool usingMemoryPriority;
 	bool usingPipelineCreationCacheControl;

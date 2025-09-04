@@ -197,7 +197,7 @@ bool create_instance(Gpu* restrict gpu)
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pApplicationName = PROGRAM_NAME;
 	appInfo.applicationVersion = PROGRAM_VERSION;
-	appInfo.apiVersion = VK_API_VERSION_1_3;
+	appInfo.apiVersion = VK_API_VERSION_1_4;
 
 	uint32_t enabledLayerCount = (uint32_t) dyarray_size(enabledLayers);
 	const char** enabledLayerNames = dyarray_raw(enabledLayers);
@@ -379,6 +379,11 @@ bool select_device(Gpu* restrict gpu)
 
 	bool using16BitStorage = false;
 	bool usingMaintenance4 = false;
+	bool usingMaintenance5 = false;
+	bool usingMaintenance6 = false;
+	bool usingMaintenance7 = false;
+	bool usingMaintenance8 = false;
+	bool usingMaintenance9 = false;
 	bool usingMemoryBudget = false;
 	bool usingMemoryPriority = false;
 	bool usingPipelineCreationCacheControl = false;
@@ -465,6 +470,11 @@ bool select_device(Gpu* restrict gpu)
 		}
 
 		bool hasMaintenance4 = false;
+		bool hasMaintenance5 = false;
+		bool hasMaintenance6 = false;
+		bool hasMaintenance7 = false;
+		bool hasMaintenance8 = false;
+		bool hasMaintenance9 = false;
 		bool hasPipelineExecutableProperties = false;
 		bool hasPortabilitySubset = false;
 		bool hasSpirv14 = false;
@@ -478,7 +488,12 @@ bool select_device(Gpu* restrict gpu)
 		for (uint32_t j = 0; j < extCount; j++) {
 			const char* extName = extsProps[i][j].extensionName;
 
-			if (!strcmp(extName, VK_KHR_MAINTENANCE_4_EXTENSION_NAME)) { hasMaintenance4 = true; }
+			if (!strcmp(extName, VK_KHR_MAINTENANCE_4_EXTENSION_NAME))      { hasMaintenance4 = true; }
+			else if (!strcmp(extName, VK_KHR_MAINTENANCE_5_EXTENSION_NAME)) { hasMaintenance5 = true; }
+			else if (!strcmp(extName, VK_KHR_MAINTENANCE_6_EXTENSION_NAME)) { hasMaintenance6 = true; }
+			else if (!strcmp(extName, VK_KHR_MAINTENANCE_7_EXTENSION_NAME)) { hasMaintenance7 = true; }
+			else if (!strcmp(extName, VK_KHR_MAINTENANCE_8_EXTENSION_NAME)) { hasMaintenance8 = true; }
+			else if (!strcmp(extName, VK_KHR_MAINTENANCE_9_EXTENSION_NAME)) { hasMaintenance9 = true; }
 			else if (!strcmp(extName, VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME)) {
 				hasPipelineExecutableProperties = true; }
 			else if (!strcmp(extName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) { hasPortabilitySubset = true; }
@@ -521,6 +536,11 @@ bool select_device(Gpu* restrict gpu)
 		if (hasDedicatedCompute)  { currScore += 100; }
 
 		if (hasMaintenance4)                 { currScore += 10; }
+		if (hasMaintenance5)                 { currScore += 10; }
+		if (hasMaintenance6)                 { currScore += 10; }
+		if (hasMaintenance7)                 { currScore += 10; }
+		if (hasMaintenance8)                 { currScore += 10; }
+		if (hasMaintenance9)                 { currScore += 10; }
 		if (hasMemoryBudget)                 { currScore += 10; }
 		if (hasMemoryPriority)               { currScore += 10; }
 		if (hasPipelineCreationCacheControl) { currScore += 10; }
@@ -536,6 +556,11 @@ bool select_device(Gpu* restrict gpu)
 
 			using16BitStorage = hasStorageBuffer16BitAccess;
 			usingMaintenance4 = hasMaintenance4;
+			usingMaintenance5 = hasMaintenance5;
+			usingMaintenance6 = hasMaintenance6;
+			usingMaintenance7 = hasMaintenance7;
+			usingMaintenance8 = hasMaintenance8;
+			usingMaintenance9 = hasMaintenance9;
 			usingMemoryBudget = hasMemoryBudget;
 			usingMemoryPriority = hasMemoryPriority;
 			usingPipelineCreationCacheControl = hasPipelineCreationCacheControl;
@@ -589,9 +614,8 @@ bool select_device(Gpu* restrict gpu)
 	uint32_t computeQfIndex = 0;
 
 	bool hasDedicatedTransfer = false;
-	bool hasTransfer = false;
-
 	bool hasDedicatedCompute = false;
+	bool hasTransfer = false;
 	bool hasCompute = false;
 
 	for (uint32_t i = 0; i < qfCount; i++) {
@@ -643,6 +667,11 @@ bool select_device(Gpu* restrict gpu)
 
 	gpu->using16BitStorage = using16BitStorage;
 	gpu->usingMaintenance4 = usingMaintenance4;
+	gpu->usingMaintenance5 = usingMaintenance5;
+	gpu->usingMaintenance6 = usingMaintenance6;
+	gpu->usingMaintenance7 = usingMaintenance7;
+	gpu->usingMaintenance8 = usingMaintenance8;
+	gpu->usingMaintenance9 = usingMaintenance9;
 	gpu->usingMemoryBudget = usingMemoryBudget;
 	gpu->usingMemoryPriority = usingMemoryPriority;
 	gpu->usingPipelineCreationCacheControl = usingPipelineCreationCacheControl;
@@ -689,6 +718,11 @@ bool select_device(Gpu* restrict gpu)
 				"\tTransfer QF index:                 %" PRIu32 "\n"
 				"\tCompute QF index:                  %" PRIu32 "\n"
 				"\tmaintenance4                       %d\n"
+				"\tmaintenance5                       %d\n"
+				"\tmaintenance6                       %d\n"
+				"\tmaintenance7                       %d\n"
+				"\tmaintenance8                       %d\n"
+				"\tmaintenance9                       %d\n"
 				"\tmemoryPriority:                    %d\n"
 				"\tpipelineCreationCacheControl:      %d\n"
 				"\tpipelineExecutableProperties:      %d\n"
@@ -696,9 +730,9 @@ bool select_device(Gpu* restrict gpu)
 				"\tshaderInt64:                       %d\n"
 				"\tstorageBuffer16BitAccess:          %d\n"
 				"\tsubgroupSizeControl:               %d\n\n",
-				deviceName, bestScore, vkVerMajor, vkVerMinor, spvVerMajor, spvVerMinor,
-				transferQfIndex, computeQfIndex,
-				usingMaintenance4, usingMemoryPriority, usingPipelineCreationCacheControl,
+				deviceName, bestScore, vkVerMajor, vkVerMinor, spvVerMajor, spvVerMinor, transferQfIndex,
+				computeQfIndex, usingMaintenance4, usingMaintenance5, usingMaintenance6, usingMaintenance7,
+				usingMaintenance8, usingMaintenance9, usingMemoryPriority, usingPipelineCreationCacheControl,
 				usingPipelineExecutableProperties, usingShaderInt16, usingShaderInt64, using16BitStorage,
 				usingSubgroupSizeControl);
 
@@ -731,7 +765,7 @@ bool create_device(Gpu* restrict gpu)
 	if EXPECT_FALSE (!dyMem) { return false; }
 
 	elmSize = sizeof(const char*);
-	elmCount = 11;
+	elmCount = 19;
 
 	DyArray enabledExts = dyarray_create(elmSize, elmCount);
 	if EXPECT_FALSE (!enabledExts) { free_recursive(dyMem); return false; }
@@ -741,22 +775,54 @@ bool create_device(Gpu* restrict gpu)
 
 	dyarray_append(dyMem, &dyData);
 
+	// Required extensions
 	dyarray_append_str(enabledExts, VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 	dyarray_append_str(enabledExts, VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
 
-	if (gpu->usingMaintenance4)        { dyarray_append_str(enabledExts, VK_KHR_MAINTENANCE_4_EXTENSION_NAME); }
-	if (gpu->usingPortabilitySubset)   { dyarray_append_str(enabledExts, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME); }
-	if (gpu->usingMemoryBudget)        { dyarray_append_str(enabledExts, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME); }
-	if (gpu->usingMemoryPriority)      { dyarray_append_str(enabledExts, VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME); }
-	if (gpu->usingSubgroupSizeControl) { dyarray_append_str(enabledExts, VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME); }
+	// Optional KHR extensions
+	if (gpu->usingMaintenance4) {
+		dyarray_append_str(enabledExts, VK_KHR_MAINTENANCE_4_EXTENSION_NAME);
+	}
+	if (gpu->usingMaintenance5) {
+		dyarray_append_str(enabledExts, VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME);
+		dyarray_append_str(enabledExts, VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME);
+		dyarray_append_str(enabledExts, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+		dyarray_append_str(enabledExts, VK_KHR_MAINTENANCE_5_EXTENSION_NAME);
+	}
+	if (gpu->usingMaintenance6) {
+		dyarray_append_str(enabledExts, VK_KHR_MAINTENANCE_6_EXTENSION_NAME);
+	}
+	if (gpu->usingMaintenance7) {
+		dyarray_append_str(enabledExts, VK_KHR_MAINTENANCE_7_EXTENSION_NAME);
+	}
+	if (gpu->usingMaintenance8) {
+		dyarray_append_str(enabledExts, VK_KHR_MAINTENANCE_8_EXTENSION_NAME);
+	}
+	if (gpu->usingMaintenance9) {
+		dyarray_append_str(enabledExts, VK_KHR_MAINTENANCE_9_EXTENSION_NAME);
+	}
 	if (gpu->usingPipelineExecutableProperties) {
-		dyarray_append_str(enabledExts, VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME); }
-	if (gpu->usingPipelineCreationCacheControl) {
-		dyarray_append_str(enabledExts, VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME); }
-
+		dyarray_append_str(enabledExts, VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME);
+	}
+	if (gpu->usingPortabilitySubset) {
+		dyarray_append_str(enabledExts, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+	}
 	if (spvVerMinor >= 4) {
 		dyarray_append_str(enabledExts, VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
 		dyarray_append_str(enabledExts, VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+	}
+	// Optional EXT extensions
+	if (gpu->usingMemoryBudget) {
+		dyarray_append_str(enabledExts, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
+	}
+	if (gpu->usingMemoryPriority) {
+		dyarray_append_str(enabledExts, VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME);
+	}
+	if (gpu->usingPipelineCreationCacheControl) {
+		dyarray_append_str(enabledExts, VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME);
+	}
+	if (gpu->usingSubgroupSizeControl) {
+		dyarray_append_str(enabledExts, VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME);
 	}
 
 	VkPhysicalDeviceFeatures2 devFeats = {0};
@@ -768,22 +834,33 @@ bool create_device(Gpu* restrict gpu)
 	dev16BitStorageFeats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES;
 	dev16BitStorageFeats.storageBuffer16BitAccess = VK_TRUE;
 
+	VkPhysicalDeviceDynamicRenderingFeatures devDynamicRenderingFeats = {0};
+	devDynamicRenderingFeats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
+	devDynamicRenderingFeats.dynamicRendering = VK_TRUE;
+
 	VkPhysicalDeviceMaintenance4Features devMaintenance4Feats = {0};
 	devMaintenance4Feats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_FEATURES;
 	devMaintenance4Feats.maintenance4 = VK_TRUE;
 
-	VkPhysicalDevicePipelineExecutablePropertiesFeaturesKHR devPipelineExecutablePropertiesFeats = {0};
-	devPipelineExecutablePropertiesFeats.sType =
-		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_EXECUTABLE_PROPERTIES_FEATURES_KHR;
-	devPipelineExecutablePropertiesFeats.pipelineExecutableInfo = VK_TRUE;
+	VkPhysicalDeviceMaintenance5Features devMaintenance5Feats = {0};
+	devMaintenance5Feats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_5_FEATURES;
+	devMaintenance5Feats.maintenance5 = VK_TRUE;
 
-	VkPhysicalDeviceSynchronization2Features devSynchronization2Feats = {0};
-	devSynchronization2Feats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
-	devSynchronization2Feats.synchronization2 = VK_TRUE;
+	VkPhysicalDeviceMaintenance6Features devMaintenance6Feats = {0};
+	devMaintenance6Feats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_6_FEATURES;
+	devMaintenance6Feats.maintenance6 = VK_TRUE;
 
-	VkPhysicalDeviceTimelineSemaphoreFeatures devTimelineSemaphoreFeats = {0};
-	devTimelineSemaphoreFeats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
-	devTimelineSemaphoreFeats.timelineSemaphore = VK_TRUE;
+	VkPhysicalDeviceMaintenance7FeaturesKHR devMaintenance7Feats = {0};
+	devMaintenance7Feats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_7_FEATURES_KHR;
+	devMaintenance7Feats.maintenance7 = VK_TRUE;
+
+	VkPhysicalDeviceMaintenance8FeaturesKHR devMaintenance8Feats = {0};
+	devMaintenance8Feats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_8_FEATURES_KHR;
+	devMaintenance8Feats.maintenance8 = VK_TRUE;
+
+	VkPhysicalDeviceMaintenance9FeaturesKHR devMaintenance9Feats = {0};
+	devMaintenance9Feats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_9_FEATURES_KHR;
+	devMaintenance9Feats.maintenance9 = VK_TRUE;
 
 	VkPhysicalDeviceMemoryPriorityFeaturesEXT devMemoryPriorityFeats = {0};
 	devMemoryPriorityFeats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT;
@@ -794,21 +871,62 @@ bool create_device(Gpu* restrict gpu)
 		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_CREATION_CACHE_CONTROL_FEATURES;
 	devPipelineCreationCacheControlFeats.pipelineCreationCacheControl = VK_TRUE;
 
+	VkPhysicalDevicePipelineExecutablePropertiesFeaturesKHR devPipelineExecutablePropertiesFeats = {0};
+	devPipelineExecutablePropertiesFeats.sType =
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_EXECUTABLE_PROPERTIES_FEATURES_KHR;
+	devPipelineExecutablePropertiesFeats.pipelineExecutableInfo = VK_TRUE;
+
 	VkPhysicalDeviceSubgroupSizeControlFeatures devSubgroupSizeControlFeats = {0};
 	devSubgroupSizeControlFeats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES;
 	devSubgroupSizeControlFeats.subgroupSizeControl = VK_TRUE;
+
+	VkPhysicalDeviceSynchronization2Features devSynchronization2Feats = {0};
+	devSynchronization2Feats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
+	devSynchronization2Feats.synchronization2 = VK_TRUE;
+
+	VkPhysicalDeviceTimelineSemaphoreFeatures devTimelineSemaphoreFeats = {0};
+	devTimelineSemaphoreFeats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
+	devTimelineSemaphoreFeats.timelineSemaphore = VK_TRUE;
 
 	void** next = &devFeats.pNext;
 
 	PNEXT_ADD(next, devSynchronization2Feats);
 	PNEXT_ADD(next, devTimelineSemaphoreFeats);
 
-	if (gpu->using16BitStorage)                 { PNEXT_ADD(next, dev16BitStorageFeats); }
-	if (gpu->usingMaintenance4)                 { PNEXT_ADD(next, devMaintenance4Feats); }
-	if (gpu->usingMemoryPriority)               { PNEXT_ADD(next, devMemoryPriorityFeats); }
-	if (gpu->usingPipelineCreationCacheControl) { PNEXT_ADD(next, devPipelineCreationCacheControlFeats); }
-	if (gpu->usingPipelineExecutableProperties) { PNEXT_ADD(next, devPipelineExecutablePropertiesFeats); }
-	if (gpu->usingSubgroupSizeControl)          { PNEXT_ADD(next, devSubgroupSizeControlFeats); }
+	if (gpu->using16BitStorage) {
+		PNEXT_ADD(next, dev16BitStorageFeats);
+	}
+	if (gpu->usingMaintenance4) {
+		PNEXT_ADD(next, devMaintenance4Feats);
+	}
+	if (gpu->usingMaintenance5) {
+		PNEXT_ADD(next, devDynamicRenderingFeats);
+		PNEXT_ADD(next, devMaintenance5Feats);
+	}
+	if (gpu->usingMaintenance6) {
+		PNEXT_ADD(next, devMaintenance6Feats);
+	}
+	if (gpu->usingMaintenance7) {
+		PNEXT_ADD(next, devMaintenance7Feats);
+	}
+	if (gpu->usingMaintenance8) {
+		PNEXT_ADD(next, devMaintenance8Feats);
+	}
+	if (gpu->usingMaintenance9) {
+		PNEXT_ADD(next, devMaintenance9Feats);
+	}
+	if (gpu->usingMemoryPriority) {
+		PNEXT_ADD(next, devMemoryPriorityFeats);
+	}
+	if (gpu->usingPipelineCreationCacheControl) {
+		PNEXT_ADD(next, devPipelineCreationCacheControlFeats);
+	}
+	if (gpu->usingPipelineExecutableProperties) {
+		PNEXT_ADD(next, devPipelineExecutablePropertiesFeats);
+	}
+	if (gpu->usingSubgroupSizeControl) {
+		PNEXT_ADD(next, devSubgroupSizeControlFeats);
+	}
 
 	float computeQueuePriority = 1;
 	float transferQueuePriority = 0;
@@ -846,8 +964,8 @@ bool create_device(Gpu* restrict gpu)
 	VkDevice device;
 	VK_CALL_RES(vkCreateDevice, physicalDevice, &deviceCreateInfo, g_allocator, &device);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
 	gpu->device = device;
+
 	volkLoadDevice(device);
 
 	VkDeviceQueueInfo2 transferQueueInfo = {0};
@@ -1266,13 +1384,11 @@ bool create_buffers(Gpu* restrict gpu)
 		VkBuffer hvBuffer;
 		VK_CALL_RES(vkCreateBuffer, device, &hvBufferCreateInfo, g_allocator, &hvBuffer);
 		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
 		hvBuffers[i] = hvBuffer;
 
 		VkBuffer dlBuffer;
 		VK_CALL_RES(vkCreateBuffer, device, &dlBufferCreateInfo, g_allocator, &dlBuffer);
 		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
 		dlBuffers[i] = dlBuffer;
 	}
 
@@ -1308,13 +1424,11 @@ bool create_buffers(Gpu* restrict gpu)
 		VkDeviceMemory hvMemory;
 		VK_CALL_RES(vkAllocateMemory, device, &hvAllocateInfos[i], g_allocator, &hvMemory);
 		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
 		hvMemories[i] = hvMemory;
 
 		VkDeviceMemory dlMemory;
 		VK_CALL_RES(vkAllocateMemory, device, &dlAllocateInfos[i], g_allocator, &dlMemory);
 		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
 		dlMemories[i] = dlMemory;
 	}
 
@@ -1353,7 +1467,6 @@ bool create_buffers(Gpu* restrict gpu)
 #ifndef NDEBUG
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
 		char objectName[37];
-
 		sprintf(objectName, "Host visible (%" PRIu32 "/%" PRIu32 ")", i + 1, buffersPerHeap);
 
 		set_debug_name(device, VK_OBJECT_TYPE_BUFFER, (uint64_t) hvBuffers[i], objectName);
@@ -1433,7 +1546,6 @@ bool create_descriptors(Gpu* restrict gpu)
 	VkDescriptorSetLayout descSetLayout;
 	VK_CALL_RES(vkCreateDescriptorSetLayout, device, &descSetLayoutCreateInfo, g_allocator, &descSetLayout);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
 	gpu->descriptorSetLayout = descSetLayout;
 
 	VkDescriptorPoolSize descPoolSizes[1];
@@ -1449,7 +1561,6 @@ bool create_descriptors(Gpu* restrict gpu)
 	VkDescriptorPool descPool;
 	VK_CALL_RES(vkCreateDescriptorPool, device, &descPoolCreateInfo, g_allocator, &descPool);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
 	gpu->descriptorPool = descPool;
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
@@ -1495,7 +1606,6 @@ bool create_descriptors(Gpu* restrict gpu)
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
 			char objectName[58];
-
 			sprintf(
 				objectName,
 				"Inout %" PRIu32 "/%" PRIu32 ", Buffer %" PRIu32 "/%" PRIu32,
@@ -1591,11 +1701,13 @@ bool create_pipeline(Gpu* restrict gpu)
 	moduleCreateInfo.codeSize = shaderSize;
 	moduleCreateInfo.pCode = shaderCode;
 
-	VkShaderModule shaderModule;
-	VK_CALL_RES(vkCreateShaderModule, device, &moduleCreateInfo, g_allocator, &shaderModule);
-	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
+	VkShaderModule shaderModule = VK_NULL_HANDLE;
 
-	gpu->shaderModule = shaderModule;
+	if (!gpu->usingMaintenance5) {
+		VK_CALL_RES(vkCreateShaderModule, device, &moduleCreateInfo, g_allocator, &shaderModule);
+		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
+		gpu->shaderModule = shaderModule;
+	}
 
 	VkPipelineCacheCreateInfo cacheCreateInfo = {0};
 	cacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
@@ -1607,7 +1719,6 @@ bool create_pipeline(Gpu* restrict gpu)
 	VkPipelineCache pipelineCache;
 	VK_CALL_RES(vkCreatePipelineCache, device, &cacheCreateInfo, g_allocator, &pipelineCache);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
 	gpu->pipelineCache = pipelineCache;
 
 	VkPipelineLayoutCreateInfo layoutCreateInfo = {0};
@@ -1618,11 +1729,7 @@ bool create_pipeline(Gpu* restrict gpu)
 	VkPipelineLayout pipelineLayout;
 	VK_CALL_RES(vkCreatePipelineLayout, device, &layoutCreateInfo, g_allocator, &pipelineLayout);
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
 	gpu->pipelineLayout = pipelineLayout;
-
-	VK_CALL(vkDestroyDescriptorSetLayout, device, descSetLayout, g_allocator);
-	gpu->descriptorSetLayout = VK_NULL_HANDLE;
 
 	uint32_t specialisationData[1];
 	specialisationData[0] = workgroupSize;
@@ -1640,6 +1747,7 @@ bool create_pipeline(Gpu* restrict gpu)
 
 	VkPipelineShaderStageCreateInfo stageCreateInfo = {0};
 	stageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	stageCreateInfo.pNext = gpu->usingMaintenance5 ? &moduleCreateInfo : NULL;
 	stageCreateInfo.flags =
 		gpu->usingSubgroupSizeControl ? VK_PIPELINE_SHADER_STAGE_CREATE_ALLOW_VARYING_SUBGROUP_SIZE_BIT_EXT : 0;
 	stageCreateInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
@@ -1663,14 +1771,8 @@ bool create_pipeline(Gpu* restrict gpu)
 	if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
 	gpu->pipeline = pipeline;
 
-	VK_CALL(vkDestroyShaderModule, device, shaderModule, g_allocator);
-	gpu->shaderModule = VK_NULL_HANDLE;
-
 	bres = save_pipeline_cache(device, pipelineCache, PIPELINE_CACHE_NAME);
 	if EXPECT_FALSE (!bres) { free_recursive(dyMem); return false; }
-
-	VK_CALL(vkDestroyPipelineCache, device, pipelineCache, g_allocator);
-	gpu->pipelineCache = VK_NULL_HANDLE;
 
 	if (transferQfTimestampValidBits || computeQfTimestampValidBits) {
 		VkQueryPoolCreateInfo queryPoolCreateInfo = {0};
@@ -1681,13 +1783,23 @@ bool create_pipeline(Gpu* restrict gpu)
 		VkQueryPool queryPool;
 		VK_CALL_RES(vkCreateQueryPool, device, &queryPoolCreateInfo, g_allocator, &queryPool);
 		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
 		gpu->queryPool = queryPool;
 	}
 
 	if (gpu->usingPipelineExecutableProperties) {
 		bres = capture_pipeline(device, pipeline);
 		if EXPECT_FALSE (!bres) { free_recursive(dyMem); return false; }
+	}
+
+	VK_CALL(vkDestroyDescriptorSetLayout, device, descSetLayout, g_allocator);
+	gpu->descriptorSetLayout = VK_NULL_HANDLE;
+
+	VK_CALL(vkDestroyPipelineCache, device, pipelineCache, g_allocator);
+	gpu->pipelineCache = VK_NULL_HANDLE;
+
+	if (!gpu->usingMaintenance5) {
+		VK_CALL(vkDestroyShaderModule, device, shaderModule, g_allocator);
+		gpu->shaderModule = VK_NULL_HANDLE;
 	}
 
 	free_recursive(dyMem);
@@ -1714,6 +1826,7 @@ static bool record_transfer_cmdbuffer(
 	if EXPECT_FALSE (vkres) { return false; }
 
 	if (timestampValidBits) {
+		// TODO Remove (vkCmdResetQueryPool not guaranteed to work on dedicated transfer queue families)
 		uint32_t queryCount = 2;
 		VK_CALL(vkCmdResetQueryPool, cmdBuffer, queryPool, firstQuery, queryCount);
 
@@ -1781,7 +1894,7 @@ static bool record_compute_cmdbuffer(
 	uint32_t firstDescSet = 0;
 	uint32_t descSetCount = 1;
 	uint32_t dynOffsetCount = 0;
-	const uint32_t* dynOffsets = NULL;
+	uint32_t* dynOffsets = NULL;
 
 	VK_CALL(vkCmdBindDescriptorSets,
 		cmdBuffer, bindPoint, layout, firstDescSet, descSetCount, descSet, dynOffsetCount, dynOffsets);
@@ -1988,11 +2101,6 @@ bool create_commands(Gpu* restrict gpu)
 		}
 	}
 
-	if (gpu->usingMaintenance4) {
-		VK_CALL(vkDestroyPipelineLayout, device, pipelineLayout, g_allocator);
-		gpu->pipelineLayout = VK_NULL_HANDLE;
-	}
-
 	VkSemaphoreTypeCreateInfo semaphoreTypeCreateInfo = {0};
 	semaphoreTypeCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
 	semaphoreTypeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
@@ -2006,7 +2114,6 @@ bool create_commands(Gpu* restrict gpu)
 		VkSemaphore semaphore;
 		VK_CALL_RES(vkCreateSemaphore, device, &semaphoreCreateInfo, g_allocator, &semaphore);
 		if EXPECT_FALSE (vkres) { free_recursive(dyMem); return false; }
-
 		semaphores[i] = semaphore;
 	}
 
@@ -2033,6 +2140,11 @@ bool create_commands(Gpu* restrict gpu)
 		}
 	}
 #endif
+
+	if (gpu->usingMaintenance4) {
+		VK_CALL(vkDestroyPipelineLayout, device, pipelineLayout, g_allocator);
+		gpu->pipelineLayout = VK_NULL_HANDLE;
+	}
 
 	free_recursive(dyMem);
 	return true;
@@ -2647,9 +2759,9 @@ bool destroy_gpu(Gpu* restrict gpu)
 		VK_CALL(vkDestroyInstance, instance, g_allocator);
 	}
 
-	free(gpu->dynamicMemory);
 	volkFinalize();
 
+	free(gpu->dynamicMemory);
 	return true;
 }
 
@@ -2662,7 +2774,6 @@ bool create_command_handles(
 	VkCommandBuffer* commandBuffers)
 {
 	(void) name;
-
 	VkResult vkres;
 
 	VkCommandPoolCreateInfo createInfo = {0};
@@ -2672,7 +2783,6 @@ bool create_command_handles(
 	VkCommandPool newCommandPool;
 	VK_CALL_RES(vkCreateCommandPool, device, &createInfo, g_allocator, &newCommandPool);
 	if EXPECT_FALSE (vkres) { return false; }
-
 	*commandPool = newCommandPool;
 
 #ifndef NDEBUG
@@ -2803,7 +2913,6 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 	for (uint32_t i = 0; i < executableCount; i++) {
 		VkShaderStageFlags stages = pipelineExecutablesProperties[i].stages;
 		uint32_t statisticCount = statisticCounts[i];
-
 		char str[21];
 
 		dystring_append(message, "\n");
@@ -2815,7 +2924,6 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 
 			if (stage) {
 				const char* sStage = string_VkShaderStageFlagBits(stage);
-
 				dystring_append(message, sStage);
 				dystring_append(message, " ");
 			}
