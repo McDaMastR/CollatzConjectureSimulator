@@ -2,4 +2,9 @@
 .vscode
 bin
 build
-tests
+doc
+test
+
+# Files
+.DS_Store
+Doxyfile

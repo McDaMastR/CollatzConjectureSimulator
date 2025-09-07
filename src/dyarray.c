@@ -78,7 +78,6 @@ DyArray dyarray_create(size_t size, size_t count)
 		allocSize = count * size;
 		void* raw = malloc(allocSize);
 		if EXPECT_FALSE (!raw) { MALLOC_FAILURE(raw, allocSize); free(array); return NULL; }
-
 		array->raw = raw;
 	}
 
@@ -157,7 +156,6 @@ void* dyarray_append(DyArray array, const void* restrict value)
 	if (count == capacity) {
 		void* newRaw = dyarray_stretch(array);
 		if EXPECT_FALSE (!newRaw) { return NULL; }
-
 		raw = newRaw;
 	}
 
@@ -180,7 +178,6 @@ void* dyarray_prepend(DyArray array, const void* restrict value)
 	if (count == capacity) {
 		void* newRaw = dyarray_stretch(array);
 		if EXPECT_FALSE (!newRaw) { return NULL; }
-
 		raw = newRaw;
 	}
 
@@ -195,7 +192,7 @@ void* dyarray_prepend(DyArray array, const void* restrict value)
 	return element;
 }
 
-void* dyarray_insert(DyArray array, const void* restrict value, size_t index)
+void* dyarray_add(DyArray array, const void* restrict value, size_t index)
 {
 	ASSUME(array->size != 0);
 
@@ -207,7 +204,6 @@ void* dyarray_insert(DyArray array, const void* restrict value, size_t index)
 	if (count == capacity) {
 		void* newRaw = dyarray_stretch(array);
 		if EXPECT_FALSE (!newRaw) { return NULL; }
-
 		raw = newRaw;
 	}
 

@@ -21,7 +21,7 @@
 
 typedef struct DyString_T
 {
-	size_t length; // Number of characters currently in string
+	size_t length; // Number of characters currently in string, including null terminator
 	size_t capacity; // Number of characters that could fit in allocated memory
 	char* raw; // Raw string
 } DyString_T;
@@ -68,10 +68,6 @@ void dystring_destroy(DyString string)
 
 DyString dystring_create(size_t count)
 {
-	if (!count) {
-		count = 1;
-	}
-
 	size_t allocSize = sizeof(DyString_T);
 	DyString string = malloc(allocSize);
 	if EXPECT_FALSE (!string) { MALLOC_FAILURE(string, allocSize); return NULL; }
@@ -113,7 +109,6 @@ char* dystring_append(DyString string, const char* restrict substring)
 	if (newLength > capacity) {
 		char* newRaw = dystring_stretch(string, newLength);
 		if EXPECT_FALSE (!newRaw) { return NULL; }
-
 		raw = newRaw;
 	}
 
@@ -140,7 +135,6 @@ char* dystring_prepend(DyString string, const char* restrict substring)
 	if (newLength > capacity) {
 		char* newRaw = dystring_stretch(string, newLength);
 		if EXPECT_FALSE (!newRaw) { return NULL; }
-
 		raw = newRaw;
 	}
 
@@ -155,7 +149,7 @@ char* dystring_prepend(DyString string, const char* restrict substring)
 	return subRaw;
 }
 
-char* dystring_insert(DyString string, const char* restrict substring, size_t index)
+char* dystring_add(DyString string, const char* restrict substring, size_t index)
 {
 	ASSUME(string->length != 0);
 	ASSUME(string->capacity != 0);
@@ -171,7 +165,6 @@ char* dystring_insert(DyString string, const char* restrict substring, size_t in
 	if (newLength > capacity) {
 		char* newRaw = dystring_stretch(string, newLength);
 		if EXPECT_FALSE (!newRaw) { return NULL; }
-
 		raw = newRaw;
 	}
 

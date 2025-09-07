@@ -133,7 +133,9 @@ target_sources(cltz
 		defs.c
 		debug.c
 		dyarray.c
+		dymemory.c
 		dyqueue.c
+		dyrecord.c
 		dystring.c
 		gpu.c
 		main.c
@@ -143,7 +145,9 @@ target_sources(cltz
 		defs.h
 		debug.h
 		dyarray.h
+		dymemory.h
 		dyqueue.h
+		dyrecord.h
 		dystring.h
 		gpu.h
 		util.h

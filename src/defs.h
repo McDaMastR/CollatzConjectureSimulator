@@ -224,14 +224,19 @@
 
 #define NEWLINE() putchar('\n')
 
-#define ARR_SIZE(a) ( sizeof(a) / sizeof(*(a)) )
+#define ARRAY_SIZE(a) ( sizeof(a) / sizeof(*(a)) )
 
 #define INT128_UPPER(x) ( (uint64_t) ((x) >> 64) )
 #define INT128_LOWER(x) ( (uint64_t) ((x) & ~0ULL) )
 
 #define INT128(upper, lower) ( (StartValue) (upper) << 64 | (StartValue) (lower) )
 
-#define PNEXT_ADD(p, s) do { *(p) = &(s); (p) = &(s).pNext; } while (0)
+#define PNEXT_ADD(p, s)   \
+	do {                  \
+		*(p) = &(s);      \
+		(p) = &(s).pNext; \
+	}                     \
+	while (0)
 
 
 // Datatypes

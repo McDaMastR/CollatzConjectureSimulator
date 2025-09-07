@@ -22,7 +22,7 @@
 
 bool fisatty(FILE* stream) USE_RET;
 
-char* stime(void) USE_RET;
+char* stime(void) NONNULL_RET USE_RET;
 double program_time(void) USE_RET;
 
 Endianness get_endianness(void) CONST_FUNC USE_RET;

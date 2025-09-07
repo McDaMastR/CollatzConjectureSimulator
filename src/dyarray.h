@@ -27,133 +27,181 @@ typedef struct DyArray_T* DyArray;
 
 
 /**
+ * @memberof DyArray_T
+ * 
  * @brief Destroys a DyArray object.
  * 
- * This function destroys a dynamic array and frees all memory associated with it.
- * 
- * If @p array is NULL, the function does nothing.
+ * Destroys @p array and frees all associated memory. If @p array is null, nothing happens.
  * 
  * @param[in,out] array The dynamic array.
  */
 void dyarray_destroy(DyArray array);
 
 /**
+ * @memberof DyArray_T
+ * 
  * @brief Creates a new DyArray object.
  * 
- * This function allocates memory and creates a new dynamic array. The array has no elements, and any reserved memory is
- * not initialised. On failure, returns NULL.
+ * Creates an empty dynamic array. If @p count is nonzero, memory is preallocated for @p count elements. Any
+ * preallocated memory is not initialised.
  * 
- * @param[in] size The number of bytes per element. Must be greater than 0.
- * @param[in] count The number of elements to reserve memory for.
+ * @param[in] size The number of bytes per element.
+ * @param[in] count The number of elements to preallocate memory for.
  * 
- * @return The new dynamic array, or NULL.
+ * @return The new dynamic array, or null on failure.
+ * 
+ * @pre @p size is nonzero.
  */
 DyArray dyarray_create(size_t size, size_t count) FREE_FUNC(dyarray_destroy, 1) USE_RET;
 
 
 /**
+ * @memberof DyArray_T
+ * 
  * @brief Retrieves the size of a DyArray object.
  * 
- * This function retrieves the number of elements in a dynamic array.
+ * Retrieves the number of elements in @p array.
  * 
- * @param[in] array The dynamic array. Must not be NULL.
+ * @param[in] array The dynamic array.
  * 
- * @return The number of elements in the dynamic array.
+ * @return The number of elements in @p array.
+ * 
+ * @pre @p array is nonnull.
  */
 size_t dyarray_size(DyArray array) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
 
 /**
+ * @memberof DyArray_T
+ * 
  * @brief Retrieves the raw array of a DyArray object.
  * 
- * This function retrieves the underlying raw array of a dynamic array.
+ * Retrieves the underlying raw array of @p array.
  * 
- * @param[in] array The dynamic array. Must not be NULL.
+ * @param[in] array The dynamic array.
  * 
- * @return The raw array.
+ * @return The raw array of @p array.
+ * 
+ * @pre @p array is nonnull.
  */
 void* dyarray_raw(DyArray array) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
 
 
 /**
- * @brief Retrieves an element from a DyArray object.
+ * @memberof DyArray_T
  * 
- * This function copies the value of an element in a dynamic array into @p value.
+ * @brief Retrieves an element in a DyArray object.
  * 
- * @param[in] array The non-empty dynamic array. Must not be NULL.
- * @param[out] value A pointer to the memory to copy the retrieved value into. Must not be NULL.
- * @param[in] index The index of the element to retrieve. Must be less than the size of @p array.
+ * Copies the element in @p array at the zero-based position @p index into the memory pointed to by @p value.
+ * 
+ * @param[in] array The dynamic array.
+ * @param[out] value The memory to write the element to.
+ * @param[in] index The index of the element.
+ * 
+ * @pre @p array is nonnull and nonempty.
+ * @pre @p value is nonnull and does not overlap in memory with @p array.
+ * @pre @p index is less than the size of @p array.
  */
-void dyarray_get(DyArray array, void* restrict value, size_t index) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
+void dyarray_get(DyArray array, void* value, size_t index) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
 
 /**
- * @brief Sets an element from a DyArray object.
+ * @memberof DyArray_T
  * 
- * This function copies the value of @p value into an element in a dynamic array.
+ * @brief Sets an element in a DyArray object.
  * 
- * @param[in,out] array The non-empty dynamic array. Must not be NULL.
- * @param[in] value A pointer to the value to set the element to. Must not be NULL.
- * @param[in] index The index of the element to set. Must be less than the size of @p array.
+ * Copies the value pointed to by @p value into the element in @p array at the zero-based position @p index.
+ * 
+ * @param[in,out] array The dynamic array.
+ * @param[in] value The value to set the element to.
+ * @param[in] index The index of the element.
+ * 
+ * @pre @p array is nonnull and nonempty.
+ * @pre @p value is nonnull and does not overlap in memory with @p array.
+ * @pre @p index is less than the size of @p array.
  */
-void dyarray_set(DyArray array, const void* restrict value, size_t index) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
+void dyarray_set(DyArray array, const void* value, size_t index) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
 
 /**
- * @brief Retrieves the last element from a DyArray object.
+ * @memberof DyArray_T
  * 
- * This function copies the value of the last element in a dynamic array into @p value.
+ * @brief Retrieves the last element in a DyArray object.
  * 
- * @param[in] array The non-empty dynamic array. Must not be NULL.
- * @param[out] value A pointer to the memory to copy the retrieved value into. Must not be NULL.
+ * Copies the last element in @p array into the memory pointed to by @p value.
+ * 
+ * @param[in] array The dynamic array.
+ * @param[out] value The memory to write the element to.
+ * 
+ * @pre @p array is nonnull and nonempty.
+ * @pre @p value is nonnull and does not overlap in memory with @p array.
  */
-void dyarray_last(DyArray array, void* restrict value) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
+void dyarray_last(DyArray array, void* value) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
 
 /**
- * @brief Retrieves the first element from a DyArray object.
+ * @memberof DyArray_T
  * 
- * This function copies the value of the first element in a dynamic array into @p value.
+ * @brief Retrieves the first element in a DyArray object.
  * 
- * @param[in] array The non-empty dynamic array. Must not be NULL.
- * @param[out] value A pointer to the memory to copy the retrieved value into. Must not be NULL.
+ * Copies the first element in @p array into the memory pointed to by @p value.
+ * 
+ * @param[in] array The dynamic array.
+ * @param[out] value The memory to write the element to.
+ * 
+ * @pre @p array is nonnull and nonempty.
+ * @pre @p value is nonnull and does not overlap in memory with @p array.
  */
-void dyarray_first(DyArray array, void* restrict value) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
+void dyarray_first(DyArray array, void* value) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
 
 
 /**
+ * @memberof DyArray_T
+ * 
  * @brief Appends an element to a DyArray object.
  * 
- * This function adds a new element onto the end of a dynamic array. The new element is initialised as a copy of
- * @p value. On failure, returns NULL.
+ * Adds a new element to the end of @p array. The element is initialised as a copy of the value pointed to by @p value.
  * 
- * @param[in,out] array The dynamic array. Must not be NULL.
- * @param[in] value A pointer to the initialising value. Must not be NULL.
+ * @param[in,out] array The dynamic array.
+ * @param[in] value The initialising value.
  * 
- * @return A pointer to the new element, or NULL.
+ * @return A pointer to the new element in @p array, or null on failure.
+ * 
+ * @pre @p array is nonnull.
+ * @pre @p value is nonnull and does not overlap in memory with @p array.
  */
-void* dyarray_append(DyArray array, const void* restrict value) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
+void* dyarray_append(DyArray array, const void* value) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
 
 /**
+ * @memberof DyArray_T
+ * 
  * @brief Prepends an element to a DyArray object.
  * 
- * This function adds a new element onto the start of a dynamic array. The new element is initialised as a copy of
- * @p value. On failure, returns NULL.
+ * Adds a new element to the start of @p array. The element is initialised as a copy of the value pointed to by
+ * @p value.
  * 
- * @param[in,out] array The dynamic array. Must not be NULL.
- * @param[in] value A pointer to the initialising value. Must not be NULL.
+ * @param[in,out] array The dynamic array.
+ * @param[in] value The initialising value.
  * 
- * @return A pointer to the new element, or NULL.
+ * @return A pointer to the new element in @p array, or null on failure.
+ * 
+ * @pre @p array is nonnull.
+ * @pre @p value is nonnull and does not overlap in memory with @p array.
  */
-void* dyarray_prepend(DyArray array, const void* restrict value) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
+void* dyarray_prepend(DyArray array, const void* value) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
 
 /**
- * @brief Inserts an element into a DyArray object.
+ * @memberof DyArray_T
  * 
- * This function adds a new element to a dynamic array at the specified index. The new element is initialised as a copy
- * of @p value. On failure, returns NULL.
+ * @brief Adds an element to a DyArray object.
  * 
- * @param[in,out] array The dynamic array. Must not be NULL.
- * @param[in] value A pointer to the initialising value. Must not be NULL.
- * @param[in] index The index of the new element. Must be less than or equal to the size of @p array.
+ * Adds a new element to @p array at the zero-based position @p index. The element is initialised as a copy of the value
+ * pointed to by @p value.
  * 
- * @return A pointer to the new element, or NULL.
+ * @param[in,out] array The dynamic array.
+ * @param[in] value The initialising value.
+ * @param[in] index The index of the element.
+ * 
+ * @return A pointer to the new element in @p array, or null on failure.
+ * 
+ * @pre @p array is nonnull.
+ * @pre @p value is nonnull and does not overlap in memory with @p array.
+ * @pre @p index is less than or equal to the size of @p array.
  */
-void* dyarray_insert(DyArray array, const void* restrict value, size_t index)
-	NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
+void* dyarray_add(DyArray array, const void* value, size_t index) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);

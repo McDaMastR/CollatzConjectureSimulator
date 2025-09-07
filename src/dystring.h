@@ -27,91 +27,116 @@ typedef struct DyString_T* DyString;
 
 
 /**
+ * @memberof DyString_T
+ * 
  * @brief Destroys a DyString object.
  * 
- * This function destroys a dynamic string and frees all memory associated with it.
- * 
- * If @p string is NULL, the function does nothing.
+ * Destroys @p string and frees all associated memory. If @p string is null, nothing happens.
  * 
  * @param[in,out] string The dynamic string.
  */
 void dystring_destroy(DyString string);
 
 /**
+ * @memberof DyString_T
+ * 
  * @brief Creates a new DyString object.
  * 
- * This function allocates memory and creates a new dynamic string. The string is empty, and all reserved memory is
- * initialised with the null character. On failure, returns NULL.
+ * Creates a dynamic string containing only the null terminator. Memory is preallocated for @p count characters,
+ * including the null terminator. All preallocated memory is zero initialised.
  * 
- * @param[in] count The number of characters to reserve memory for.
+ * @param[in] count The number of characters to preallocate memory for.
  * 
- * @return The new dynamic string, or NULL.
+ * @return The new dynamic string, or null on failure.
+ * 
+ * @pre @p count is nonzero.
  */
 DyString dystring_create(size_t count) FREE_FUNC(dystring_destroy, 1) USE_RET;
 
 
 /**
+ * @memberof DyString_T
+ * 
  * @brief Retrieves the length of a DyString object.
  * 
- * This function retrieves the number of characters in a dynamic string, including the null terminator.
+ * Retrieves the number of characters in @p string, including the null terminator.
  * 
- * @param[in] string The dynamic string. Must not be NULL.
+ * @param[in] string The dynamic string.
  * 
- * @return The number of characters in the dynamic string.
+ * @return The number of characters in @p string.
+ * 
+ * @pre @p string is nonnull.
  */
 size_t dystring_length(DyString string) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
 
 /**
+ * @memberof DyString_T
+ * 
  * @brief Retrieves the raw string of a DyString object.
  * 
- * This function retrieves the underlying raw string of a dynamic string.
+ * Retrieves the underlying raw string of @p string.
  * 
- * @param[in] string The dynamic string. Must not be NULL.
+ * @param[in] string The dynamic string.
  * 
- * @return The raw string.
+ * @return The raw string of @p string.
+ * 
+ * @pre @p string is nonnull.
  */
-char* dystring_raw(DyString string) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
+char* dystring_raw(DyString string) NONNULL_ARGS_ALL RE_ACCESS(1) NONNULL_RET USE_RET;
 
 
 /**
- * @brief Appends a substring to a DyString object.
+ * @memberof DyString_T
  * 
- * This function adds a substring onto the end of a dynamic string. The substring is copied from @p substring. On
- * failure, returns NULL.
+ * @brief Appends a string to a DyString object.
  * 
- * @param[in,out] string The dynamic string. Must not be NULL.
- * @param[in] substring The null-terminated substring to append. Must not be NULL.
+ * Lengthens @p string and copies the string pointed to by @p substring into the lengthened end of @p string.
  * 
- * @return A pointer to the added substring, or NULL.
+ * @param[in,out] string The dynamic string.
+ * @param[in] substring The string to copy from.
+ * 
+ * @return A pointer to the added substring in @p string, or null on failure.
+ * 
+ * @pre @p string is nonnull.
+ * @pre @p substring is nonnull, null-terminated, and does not overlap in memory with @p string.
  */
-char* dystring_append(DyString string, const char* restrict substring)
-	NONNULL_ARGS_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
+char* dystring_append(DyString string, const char* substring) NONNULL_ARGS_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
 
 /**
+ * @memberof DyString_T
+ * 
  * @brief Prepends a substring to a DyString object.
  * 
- * This function adds a substring onto the start of a dynamic string. The substring is copied from @p substring. On
- * failure, returns NULL.
+ * Lengthens @p string and copies the string pointed to by @p substring into the lengthened start of @p string.
  * 
- * @param[in,out] string The dynamic string. Must not be NULL.
- * @param[in] substring The null-terminated substring to prepend. Must not be NULL.
+ * @param[in,out] string The dynamic string.
+ * @param[in] substring The string to copy from.
  * 
- * @return A pointer to the added substring, or NULL.
+ * @return A pointer to the added substring in @p string, or null on failure.
+ * 
+ * @pre @p string is nonnull.
+ * @pre @p substring is nonnull, null-terminated, and does not overlap in memory with @p string.
  */
-char* dystring_prepend(DyString string, const char* restrict substring)
+char* dystring_prepend(DyString string, const char* substring)
 	NONNULL_ARGS_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
 
 /**
- * @brief Inserts a substring into a DyString object.
+ * @memberof DyString_T
  * 
- * This function adds a substring to a dynamic string at the specified index. The substring is copied from @p substring.
- * On failure, returns NULL.
+ * @brief Adds a substring into a DyString object.
  * 
- * @param[in,out] string The dynamic string. Must not be NULL.
- * @param[in] substring The null-terminated substring to insert. Must not be NULL.
- * @param[in] index The index at which to insert the substring. Must be less than the length of @p string.
+ * Lengthens @p string and copies the string pointed to by @p substring into the lengthened part of @p string at the
+ * zero-based position @p index.
  * 
- * @return A pointer to the added substring, or NULL.
+ * @param[in,out] string The dynamic string.
+ * @param[in] substring The string to copy from.
+ * @param[in] index The index to lengthen at.
+ * 
+ * @return A pointer to the added substring in @p string, or null on failure.
+ * 
+ * @pre @p string is nonnull.
+ * @pre @p substring is nonnull, null-terminated, and does not overlap in memory with @p string.
+ * @pre @p index is less than the length of @p string.
  */
-char* dystring_insert(DyString string, const char* restrict substring, size_t index)
+char* dystring_add(DyString string, const char* substring, size_t index)
 	NONNULL_ARGS_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);

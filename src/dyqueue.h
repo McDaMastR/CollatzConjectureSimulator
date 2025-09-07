@@ -27,60 +27,77 @@ typedef struct DyQueue_T* DyQueue;
 
 
 /**
+ * @memberof DyQueue_T
+ * 
  * @brief Destroys a DyQueue object.
  * 
- * This function destroys a dynamic queue and frees all memory associated with it.
+ * Destroys @p queue and frees all associated memory. If @p queue is null, nothing happens.
  * 
- * If @p queue is NULL, the function does nothing.
- * 
- * @param[in,out] queue The dynamic queue to destroy.
+ * @param[in,out] queue The dynamic queue.
  */
 void dyqueue_destroy(DyQueue queue);
 
 /**
+ * @memberof DyQueue_T
+ * 
  * @brief Creates a new DyQueue object.
  * 
- * This function allocates memory and creates a new dynamic queue. The queue has no elements. On failure, returns NULL.
+ * Creates an empty dynamic queue.
  * 
- * @param[in] size The number of bytes per element. Must be greater than 0.
+ * @param[in] size The number of bytes per element.
  * 
- * @return The new dynamic queue, or NULL.
+ * @return The new dynamic queue, or null on failure.
+ * 
+ * @pre @p size is nonzero.
  */
 DyQueue dyqueue_create(size_t size) FREE_FUNC(dyqueue_destroy, 1) USE_RET;
 
 
 /**
+ * @memberof DyQueue_T
+ * 
  * @brief Retrieves the size of a DyQueue object.
  * 
- * This function retrieves the number of elements in a dynamic queue.
+ * Retrieves the number of elements in @p queue.
  * 
- * @param[in] queue The dynamic queue. Must not be NULL.
+ * @param[in] queue The dynamic queue.
  * 
- * @return The number of elements in the dynamic queue.
+ * @return The number of elements in @p queue.
+ * 
+ * @pre @p queue is nonnull.
  */
 size_t dyqueue_size(DyQueue queue) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
 
 
 /**
+ * @memberof DyQueue_T
+ * 
  * @brief Adds an element to a DyQueue object.
  * 
- * This function enqueues an element onto the back of a dynamic queue. The element is initialised as a copy of @p value.
- * On failure, returns NULL.
- * 
- * @param[in,out] queue The dynamic queue. Must not be NULL.
- * @param[in] value A pointer to the initialising value. Must not be NULL.
- * 
- * @return A pointer to the new element, or NULL.
- */
-void* dyqueue_enqueue(DyQueue queue, const void* value) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
-
-/**
- * @brief Removes an element from a DyQueue object.
- * 
- * This function dequeues an element from the front of a dynamic queue. The value of the element is copied into
+ * Enqueues an element to the back of @p queue. The element is initialised as a copy of the value pointed to by
  * @p value.
  * 
- * @param[in,out] queue The non-empty dynamic queue. Must not be NULL.
- * @param[out] value A pointer to the memory to copy the element's value into. Must not be NULL.
+ * @param[in,out] queue The dynamic queue.
+ * @param[in] value The initialising value.
+ * 
+ * @return true, or false on failure.
+ * 
+ * @pre @p queue is nonnull.
+ * @pre @p value is nonnull.
  */
-void dyqueue_dequeue(DyQueue queue, void* restrict value) NONNULL_ARGS_ALL RW_ACCESS(1) WR_ACCESS(2);
+bool dyqueue_enqueue(DyQueue queue, const void* value) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
+
+/**
+ * @memberof DyQueue_T
+ * 
+ * @brief Removes an element from a DyQueue object.
+ * 
+ * Dequeues an element from the front of @p queue. The element is copied into the memory pointed to by @p value.
+ * 
+ * @param[in,out] queue The dynamic queue.
+ * @param[out] value The memory to write the element to.
+ * 
+ * @pre @p queue is nonnull and nonempty.
+ * @pre @p value is nonnull and does not overlap in memory with @p queue.
+ */
+void dyqueue_dequeue(DyQueue queue, void* value) NONNULL_ARGS_ALL RW_ACCESS(1) WR_ACCESS(2);

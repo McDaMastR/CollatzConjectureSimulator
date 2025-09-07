@@ -131,13 +131,13 @@ bool get_buffer_requirements_noext(
 {
 	VkResult vkres;
 
-	VkBufferCreateInfo createInfo = {0};
-	createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	createInfo.size = size;
-	createInfo.usage = usage;
+	VkBufferCreateInfo bufferInfo = {0};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = size;
+	bufferInfo.usage = usage;
 
 	VkBuffer buffer;
-	VK_CALL_RES(vkCreateBuffer, device, &createInfo, g_allocator, &buffer);
+	VK_CALL_RES(vkCreateBuffer, device, &bufferInfo, g_allocator, &buffer);
 	if EXPECT_FALSE (vkres) { return false; }
 
 	VkBufferMemoryRequirementsInfo2 requirementsInfo = {0};
@@ -157,14 +157,14 @@ bool get_buffer_requirements_noext(
 bool get_buffer_requirements_main4(
 	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* requirements)
 {
-	VkBufferCreateInfo createInfo = {0};
-	createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	createInfo.size = size;
-	createInfo.usage = usage;
+	VkBufferCreateInfo bufferInfo = {0};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = size;
+	bufferInfo.usage = usage;
 
 	VkDeviceBufferMemoryRequirements requirementsInfo = {0};
 	requirementsInfo.sType = VK_STRUCTURE_TYPE_DEVICE_BUFFER_MEMORY_REQUIREMENTS;
-	requirementsInfo.pCreateInfo = &createInfo;
+	requirementsInfo.pCreateInfo = &bufferInfo;
 
 	VkMemoryRequirements2 memoryRequirements = {0};
 	memoryRequirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;

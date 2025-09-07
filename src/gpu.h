@@ -22,13 +22,13 @@
 
 typedef struct Gpu
 {
-	VkDebugUtilsMessengerEXT debugUtilsMessenger;
+	VkDebugUtilsMessengerEXT debugMessenger;
 
 	VkPhysicalDevice physicalDevice;
 	VkDevice device;
 
-	VkQueue transferQueue;
 	VkQueue computeQueue;
+	VkQueue transferQueue;
 
 	VkBuffer* restrict hostVisibleBuffers; // Count = buffersPerHeap
 	VkBuffer* restrict deviceLocalBuffers; // Count = buffersPerHeap
@@ -47,11 +47,11 @@ typedef struct Gpu
 
 	VkQueryPool queryPool;
 
-	VkCommandPool transferCommandPool;
 	VkCommandPool computeCommandPool;
+	VkCommandPool transferCommandPool;
 
-	VkCommandBuffer* restrict transferCommandBuffers; // Count = inoutsPerHeap
 	VkCommandBuffer* restrict computeCommandBuffers; // Count = inoutsPerHeap
+	VkCommandBuffer* restrict transferCommandBuffers; // Count = inoutsPerHeap
 
 	VkSemaphore* restrict semaphores; // Count = inoutsPerHeap
 
@@ -80,10 +80,12 @@ typedef struct Gpu
 	uint32_t hostVisibleTypeIndex;
 	uint32_t deviceLocalTypeIndex;
 
-	uint32_t transferQueueFamilyIndex;
 	uint32_t computeQueueFamilyIndex;
-	uint32_t transferQueueFamilyTimestampValidBits;
+	uint32_t transferQueueFamilyIndex;
+	uint32_t computeQueueIndex;
+	uint32_t transferQueueIndex;
 	uint32_t computeQueueFamilyTimestampValidBits;
+	uint32_t transferQueueFamilyTimestampValidBits;
 
 	uint32_t vkVerMajor;
 	uint32_t vkVerMinor;
@@ -142,10 +144,10 @@ bool destroy_gpu(Gpu* restrict gpu) NONNULL_ARGS_ALL;
 bool create_command_handles(
 	VkDevice device,
 	uint32_t queueFamilyIndex,
-	VkCommandPool* commandPool,
+	VkCommandPool* cmdPool,
 	const char* name,
-	uint32_t commandBufferCount,
-	VkCommandBuffer* commandBuffers) NONNULL_ARGS(1, 3, 6) NULTSTR_ARG(4);
+	uint32_t cmdBufferCount,
+	VkCommandBuffer* cmdBuffers) NONNULL_ARGS(1, 3, 6) NULTSTR_ARG(4);
 
 bool capture_pipeline(VkDevice device, VkPipeline pipeline);
 
