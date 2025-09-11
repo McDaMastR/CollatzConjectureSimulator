@@ -42,17 +42,6 @@ const uint32_t PROGRAM_VER_PATCH = CLTZ_VERSION_PATCH;
 
 const double MS_PER_CLOCK = 1000. / CLOCKS_PER_SEC;
 
-const VkAllocationCallbacks* g_allocator = NULL;
-
-const VkAllocationCallbacks g_allocationCallbacks = {
-	.pUserData = &g_callbackData,
-	.pfnAllocation = allocation_callback,
-	.pfnReallocation = reallocation_callback,
-	.pfnFree = free_callback,
-	.pfnInternalAllocation = internal_allocation_callback,
-	.pfnInternalFree = internal_free_callback
-};
-
 ProgramConfig g_config = {
 	.outputLevel = OUTPUT_LEVEL_DEFAULT,
 	.colourLevel = COLOUR_LEVEL_TTY,

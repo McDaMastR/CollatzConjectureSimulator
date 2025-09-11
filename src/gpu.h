@@ -17,12 +17,18 @@
 
 #pragma once
 
-#include "dyarray.h"
+#include "dymemory.h"
 
+
+typedef unsigned __int128 StartValue;
+typedef uint16_t StopTime;
 
 typedef struct Gpu
 {
+	DyRecord allocRecord;
+
 	VkDebugUtilsMessengerEXT debugMessenger;
+	VkAllocationCallbacks* allocator;
 
 	VkPhysicalDevice physicalDevice;
 	VkDevice device;
@@ -80,12 +86,12 @@ typedef struct Gpu
 	uint32_t hostVisibleTypeIndex;
 	uint32_t deviceLocalTypeIndex;
 
-	uint32_t computeQueueFamilyIndex;
-	uint32_t transferQueueFamilyIndex;
+	uint32_t computeFamilyIndex;
+	uint32_t transferFamilyIndex;
 	uint32_t computeQueueIndex;
 	uint32_t transferQueueIndex;
-	uint32_t computeQueueFamilyTimestampValidBits;
-	uint32_t transferQueueFamilyTimestampValidBits;
+	uint32_t computeFamilyTimestampValidBits;
+	uint32_t transferFamilyTimestampValidBits;
 
 	uint32_t vkVerMajor;
 	uint32_t vkVerMinor;
@@ -110,8 +116,6 @@ typedef struct Gpu
 	bool usingShaderInt16;
 	bool usingShaderInt64;
 	bool usingSubgroupSizeControl;
-
-	void* dynamicMemory;
 } Gpu;
 
 typedef struct Position
@@ -140,14 +144,6 @@ bool create_pipeline(Gpu* restrict gpu) NONNULL_ARGS_ALL;
 bool create_commands(Gpu* restrict gpu) NONNULL_ARGS_ALL;
 bool submit_commands(Gpu* restrict gpu) NONNULL_ARGS_ALL;
 bool destroy_gpu(Gpu* restrict gpu) NONNULL_ARGS_ALL;
-
-bool create_command_handles(
-	VkDevice device,
-	uint32_t queueFamilyIndex,
-	VkCommandPool* cmdPool,
-	const char* name,
-	uint32_t cmdBufferCount,
-	VkCommandBuffer* cmdBuffers) NONNULL_ARGS(1, 3, 6) NULTSTR_ARG(4);
 
 bool capture_pipeline(VkDevice device, VkPipeline pipeline);
 

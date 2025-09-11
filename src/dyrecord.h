@@ -21,43 +21,55 @@
 
 
 /**
+ * @struct DyRecord
+ * 
  * @brief A dynamically sized record of dynamic memory allocations.
  */
 typedef struct DyRecord_T* DyRecord;
 
 /**
- * @brief A function pointer to a dynamic record free callback.
+ * @relates DyRecord
+ * 
+ * @brief A memory freeing callback.
+ * 
+ * A user-defined function which frees the allocated memory pointed to by @p memory.
+ * 
+ * @param[in,out] memory The dynamically allocated memory.
  */
-typedef void (*FreeCallback)(void*);
+typedef void (*FreeCallback)(void* memory);
 
 
 /**
- * @memberof DyRecord_T
+ * @memberof DyRecord
  * 
- * @brief Destroys a DyRecord object.
+ * @brief Destroys a dynamic record.
  * 
  * Destroys @p record and frees all recorded allocations in a LIFO fashion. If @p record is null, nothing happens.
  * 
  * @param[in,out] record The dynamic record.
+ * 
+ * @warning Once @p record has been destroyed, any further usage of @p record will result in undefined behaviour.
  */
 void dyrecord_destroy(DyRecord record);
 
 /**
- * @memberof DyRecord_T
+ * @memberof DyRecord
  * 
- * @brief Creates a new DyRecord object.
+ * @brief Creates a new dynamic record.
  * 
  * Creates an empty dynamic record.
  * 
  * @return The new dynamic record, or null on failure.
+ * 
+ * @note Failing to destroy the returned dynamic record will result in a memory leak.
  */
 DyRecord dyrecord_create(void) FREE_FUNC(dyrecord_destroy, 1) USE_RET;
 
 
 /**
- * @memberof DyRecord_T
+ * @memberof DyRecord
  * 
- * @brief Retrieves the size of a DyRecord object.
+ * @brief Retrieves the size of a dynamic record.
  * 
  * Retrieves the number of recorded allocations in @p record.
  * 
@@ -71,17 +83,18 @@ size_t dyrecord_size(DyRecord record) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
 
 
 /**
- * @memberof DyRecord_T
+ * @memberof DyRecord
  * 
- * @brief Adds an allocation to a DyRecord object.
+ * @brief Adds an allocation to a dynamic record.
  * 
- * Records a new dynamic memory allocation to @p record.
+ * Records the dynamic memory allocation pointed to by @p memory to @p record.
  * 
  * @param[in,out] record The dynamic record.
  * @param[in] memory The allocated memory.
  * @param[in] callback The free function for the allocation.
  * 
- * @return true, or false on failure.
+ * @retval true on success.
+ * @retval false on failure.
  * 
  * @pre @p record is nonnull.
  * @pre @p memory is nonnull and does not overlap in memory with @p record.
@@ -90,9 +103,9 @@ size_t dyrecord_size(DyRecord record) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
 bool dyrecord_add(DyRecord record, void* memory, FreeCallback callback) NONNULL_ARGS_ALL RW_ACCESS(1) NO_ACCESS(2);
 
 /**
- * @memberof DyRecord_T
+ * @memberof DyRecord
  * 
- * @brief Allocates and adds memory to a DyRecord object.
+ * @brief Allocates and adds memory to a dynamic record.
  * 
  * Dynamically allocates memory via @c malloc. The allocation is recorded to @p record.
  * 
@@ -106,9 +119,9 @@ bool dyrecord_add(DyRecord record, void* memory, FreeCallback callback) NONNULL_
 void* dyrecord_malloc(DyRecord record, size_t size) MALLOC_FUNC NONNULL_ARGS_ALL ALLOC_ARG(2) RW_ACCESS(1) USE_RET;
 
 /**
- * @memberof DyRecord_T
+ * @memberof DyRecord
  * 
- * @brief Allocates and adds zero initialised memory to a DyRecord object.
+ * @brief Allocates and adds zero initialised memory to a dynamic record.
  * 
  * Dynamically allocates memory via @c calloc. The allocation is recorded to @p record.
  * 
@@ -124,9 +137,9 @@ void* dyrecord_calloc(DyRecord record, size_t count, size_t size)
 	MALLOC_FUNC NONNULL_ARGS_ALL ALLOC_ARGS(2, 3) RW_ACCESS(1) USE_RET;
 
 /**
- * @memberof DyRecord_T
+ * @memberof DyRecord
  * 
- * @brief Frees allocations recorded in a DyRecord object.
+ * @brief Frees allocations recorded in a dynamic record.
  * 
  * Frees all recorded allocations in @p record in a LIFO fashion. The recorded allocations are removed from @p record.
  * If @p record is empty, nothing happens.

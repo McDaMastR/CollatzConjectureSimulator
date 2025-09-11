@@ -21,26 +21,30 @@
 
 
 /**
+ * @struct DyString
+ * 
  * @brief A dynamically sized null-terminated byte string.
  */
 typedef struct DyString_T* DyString;
 
 
 /**
- * @memberof DyString_T
+ * @memberof DyString
  * 
- * @brief Destroys a DyString object.
+ * @brief Destroys a dynamic string.
  * 
  * Destroys @p string and frees all associated memory. If @p string is null, nothing happens.
  * 
  * @param[in,out] string The dynamic string.
+ * 
+ * @warning Once @p string has been destroyed, any further usage of @p string will result in undefined behaviour.
  */
 void dystring_destroy(DyString string);
 
 /**
- * @memberof DyString_T
+ * @memberof DyString
  * 
- * @brief Creates a new DyString object.
+ * @brief Creates a new dynamic string.
  * 
  * Creates a dynamic string containing only the null terminator. Memory is preallocated for @p count characters,
  * including the null terminator. All preallocated memory is zero initialised.
@@ -50,14 +54,16 @@ void dystring_destroy(DyString string);
  * @return The new dynamic string, or null on failure.
  * 
  * @pre @p count is nonzero.
+ * 
+ * @note Failing to destroy the returned dynamic string will result in a memory leak.
  */
 DyString dystring_create(size_t count) FREE_FUNC(dystring_destroy, 1) USE_RET;
 
 
 /**
- * @memberof DyString_T
+ * @memberof DyString
  * 
- * @brief Retrieves the length of a DyString object.
+ * @brief Retrieves the length of a dynamic string.
  * 
  * Retrieves the number of characters in @p string, including the null terminator.
  * 
@@ -66,13 +72,15 @@ DyString dystring_create(size_t count) FREE_FUNC(dystring_destroy, 1) USE_RET;
  * @return The number of characters in @p string.
  * 
  * @pre @p string is nonnull.
+ * 
+ * @invariant The length is nonzero.
  */
 size_t dystring_length(DyString string) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
 
 /**
- * @memberof DyString_T
+ * @memberof DyString
  * 
- * @brief Retrieves the raw string of a DyString object.
+ * @brief Retrieves the raw string of a dynamic string.
  * 
  * Retrieves the underlying raw string of @p string.
  * 
@@ -81,14 +89,18 @@ size_t dystring_length(DyString string) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
  * @return The raw string of @p string.
  * 
  * @pre @p string is nonnull.
+ * 
+ * @invariant The raw string is nonnull.
+ * 
+ * @note Adding a substring to @p string may result in the raw string changing memory location.
  */
 char* dystring_raw(DyString string) NONNULL_ARGS_ALL RE_ACCESS(1) NONNULL_RET USE_RET;
 
 
 /**
- * @memberof DyString_T
+ * @memberof DyString
  * 
- * @brief Appends a string to a DyString object.
+ * @brief Appends a string to a dynamic string.
  * 
  * Lengthens @p string and copies the string pointed to by @p substring into the lengthened end of @p string.
  * 
@@ -103,9 +115,9 @@ char* dystring_raw(DyString string) NONNULL_ARGS_ALL RE_ACCESS(1) NONNULL_RET US
 char* dystring_append(DyString string, const char* substring) NONNULL_ARGS_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
 
 /**
- * @memberof DyString_T
+ * @memberof DyString
  * 
- * @brief Prepends a substring to a DyString object.
+ * @brief Prepends a substring to a dynamic string.
  * 
  * Lengthens @p string and copies the string pointed to by @p substring into the lengthened start of @p string.
  * 
@@ -121,9 +133,9 @@ char* dystring_prepend(DyString string, const char* substring)
 	NONNULL_ARGS_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
 
 /**
- * @memberof DyString_T
+ * @memberof DyString
  * 
- * @brief Adds a substring into a DyString object.
+ * @brief Adds a substring to a dynamic string.
  * 
  * Lengthens @p string and copies the string pointed to by @p substring into the lengthened part of @p string at the
  * zero-based position @p index.

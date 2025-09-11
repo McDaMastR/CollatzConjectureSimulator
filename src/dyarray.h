@@ -21,26 +21,30 @@
 
 
 /**
+ * @struct DyArray
+ * 
  * @brief A dynamically sized array.
  */
 typedef struct DyArray_T* DyArray;
 
 
 /**
- * @memberof DyArray_T
+ * @memberof DyArray
  * 
- * @brief Destroys a DyArray object.
+ * @brief Destroys a dynamic array.
  * 
  * Destroys @p array and frees all associated memory. If @p array is null, nothing happens.
  * 
  * @param[in,out] array The dynamic array.
+ * 
+ * @warning Once @p array has been destroyed, any further usage of @p array will result in undefined behaviour.
  */
 void dyarray_destroy(DyArray array);
 
 /**
- * @memberof DyArray_T
+ * @memberof DyArray
  * 
- * @brief Creates a new DyArray object.
+ * @brief Creates a new dynamic array.
  * 
  * Creates an empty dynamic array. If @p count is nonzero, memory is preallocated for @p count elements. Any
  * preallocated memory is not initialised.
@@ -51,14 +55,16 @@ void dyarray_destroy(DyArray array);
  * @return The new dynamic array, or null on failure.
  * 
  * @pre @p size is nonzero.
+ * 
+ * @note Failing to destroy the returned dynamic array will result in a memory leak.
  */
 DyArray dyarray_create(size_t size, size_t count) FREE_FUNC(dyarray_destroy, 1) USE_RET;
 
 
 /**
- * @memberof DyArray_T
+ * @memberof DyArray
  * 
- * @brief Retrieves the size of a DyArray object.
+ * @brief Retrieves the size of a dynamic array.
  * 
  * Retrieves the number of elements in @p array.
  * 
@@ -71,9 +77,9 @@ DyArray dyarray_create(size_t size, size_t count) FREE_FUNC(dyarray_destroy, 1) 
 size_t dyarray_size(DyArray array) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
 
 /**
- * @memberof DyArray_T
+ * @memberof DyArray
  * 
- * @brief Retrieves the raw array of a DyArray object.
+ * @brief Retrieves the raw array of a dynamic array.
  * 
  * Retrieves the underlying raw array of @p array.
  * 
@@ -82,14 +88,16 @@ size_t dyarray_size(DyArray array) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
  * @return The raw array of @p array.
  * 
  * @pre @p array is nonnull.
+ * 
+ * @note Adding an element to @p array may result in the raw array changing memory location.
  */
 void* dyarray_raw(DyArray array) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
 
 
 /**
- * @memberof DyArray_T
+ * @memberof DyArray
  * 
- * @brief Retrieves an element in a DyArray object.
+ * @brief Retrieves an element in a dynamic array.
  * 
  * Copies the element in @p array at the zero-based position @p index into the memory pointed to by @p value.
  * 
@@ -104,9 +112,9 @@ void* dyarray_raw(DyArray array) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
 void dyarray_get(DyArray array, void* value, size_t index) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
 
 /**
- * @memberof DyArray_T
+ * @memberof DyArray
  * 
- * @brief Sets an element in a DyArray object.
+ * @brief Sets an element in a dynamic array.
  * 
  * Copies the value pointed to by @p value into the element in @p array at the zero-based position @p index.
  * 
@@ -121,9 +129,9 @@ void dyarray_get(DyArray array, void* value, size_t index) NONNULL_ARGS_ALL RE_A
 void dyarray_set(DyArray array, const void* value, size_t index) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
 
 /**
- * @memberof DyArray_T
+ * @memberof DyArray
  * 
- * @brief Retrieves the last element in a DyArray object.
+ * @brief Retrieves the last element in a dynamic array.
  * 
  * Copies the last element in @p array into the memory pointed to by @p value.
  * 
@@ -136,9 +144,9 @@ void dyarray_set(DyArray array, const void* value, size_t index) NONNULL_ARGS_AL
 void dyarray_last(DyArray array, void* value) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
 
 /**
- * @memberof DyArray_T
+ * @memberof DyArray
  * 
- * @brief Retrieves the first element in a DyArray object.
+ * @brief Retrieves the first element in a dynamic array.
  * 
  * Copies the first element in @p array into the memory pointed to by @p value.
  * 
@@ -152,9 +160,9 @@ void dyarray_first(DyArray array, void* value) NONNULL_ARGS_ALL RE_ACCESS(1) WR_
 
 
 /**
- * @memberof DyArray_T
+ * @memberof DyArray
  * 
- * @brief Appends an element to a DyArray object.
+ * @brief Appends an element to a dynamic array.
  * 
  * Adds a new element to the end of @p array. The element is initialised as a copy of the value pointed to by @p value.
  * 
@@ -169,9 +177,9 @@ void dyarray_first(DyArray array, void* value) NONNULL_ARGS_ALL RE_ACCESS(1) WR_
 void* dyarray_append(DyArray array, const void* value) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
 
 /**
- * @memberof DyArray_T
+ * @memberof DyArray
  * 
- * @brief Prepends an element to a DyArray object.
+ * @brief Prepends an element to a dynamic array.
  * 
  * Adds a new element to the start of @p array. The element is initialised as a copy of the value pointed to by
  * @p value.
@@ -187,9 +195,9 @@ void* dyarray_append(DyArray array, const void* value) NONNULL_ARGS_ALL RW_ACCES
 void* dyarray_prepend(DyArray array, const void* value) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
 
 /**
- * @memberof DyArray_T
+ * @memberof DyArray
  * 
- * @brief Adds an element to a DyArray object.
+ * @brief Adds an element to a dynamic array.
  * 
  * Adds a new element to @p array at the zero-based position @p index. The element is initialised as a copy of the value
  * pointed to by @p value.

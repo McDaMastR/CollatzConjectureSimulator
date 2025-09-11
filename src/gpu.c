@@ -17,7 +17,6 @@
 
 #include "gpu.h"
 #include "debug.h"
-#include "dymemory.h"
 #include "util.h"
 
 
@@ -26,30 +25,44 @@ bool create_instance(Gpu* restrict gpu)
 	VkResult vkres;
 	bool bres;
 
-	/*
-	 * Any memory dynamically allocated in this function is recorded to this object, and is all freed by destroying this
-	 * object before the function returns.
-	 */
-	DyRecord allocRecord = dyrecord_create();
-	if EXPECT_FALSE (!allocRecord) { return false; }
+	DyRecord localRecord = dyrecord_create();
+	if EXPECT_FALSE (!localRecord) { return false; }
 
+	DyRecord gpuRecord = dyrecord_create();
+	if EXPECT_FALSE (!gpuRecord) { dyrecord_destroy(localRecord); return false; }
+	gpu->allocRecord = gpuRecord;
+
+	// Load global-level Vulkan functions via volk
 	vkres = volkInitialize();
-	if EXPECT_FALSE (vkres) { VKINIT_FAILURE(vkres); dyrecord_destroy(allocRecord); return false; }
+	if EXPECT_FALSE (vkres) { VKINIT_FAILURE(vkres); dyrecord_destroy(localRecord); return false; }
 
 	uint32_t instanceApiVersion = volkGetInstanceVersion();
 	if EXPECT_FALSE (instanceApiVersion == VK_API_VERSION_1_0) {
-		VKVERS_FAILURE(instanceApiVersion); dyrecord_destroy(allocRecord); return false; }
+		VKVERS_FAILURE(instanceApiVersion); dyrecord_destroy(localRecord); return false; }
+
+	// Specify allocator for Vulkan to use
+	VkAllocationCallbacks* allocator = NULL;
 
 	if (g_config.logAllocations) {
-		g_allocator = &g_allocationCallbacks;
+		size_t allocSize = sizeof(VkAllocationCallbacks);
+		allocator = dyrecord_malloc(gpuRecord, allocSize);
+		if EXPECT_FALSE (!allocator) {dyrecord_destroy(localRecord); return false; }
+		gpu->allocator = allocator;
+
+		allocator->pUserData = &g_callbackData;
+		allocator->pfnAllocation = allocation_callback;
+		allocator->pfnReallocation = reallocation_callback;
+		allocator->pfnFree = free_callback;
+		allocator->pfnInternalAllocation = internal_allocation_callback;
+		allocator->pfnInternalFree = internal_free_callback;
 
 		bres = init_alloc_logfile();
-		if EXPECT_FALSE (!bres) { dyrecord_destroy(allocRecord); return false; }
+		if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
 	}
 
 #ifndef NDEBUG
 	bres = init_debug_logfile();
-	if EXPECT_FALSE (!bres) { dyrecord_destroy(allocRecord); return false; }
+	if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
 #endif
 
 	VkDebugUtilsMessengerCreateInfoEXT debugMessengerInfo = {0};
@@ -66,43 +79,47 @@ bool create_instance(Gpu* restrict gpu)
 	debugMessengerInfo.pfnUserCallback = debug_callback;
 	debugMessengerInfo.pUserData = &g_callbackData;
 
+	// Get instance layers
 	uint32_t layerCount;
-	VK_CALL_RES(vkEnumerateInstanceLayerProperties, &layerCount, NULL);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
-
-	uint32_t extensionCount;
-	VK_CALL_RES(vkEnumerateInstanceExtensionProperties, NULL, &extensionCount, NULL);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+	VK_CALLR(vkEnumerateInstanceLayerProperties, &layerCount, NULL);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	VkLayerProperties* layersProps = NULL;
-	VkExtensionProperties* extensionsProps = NULL;
 
 	if (layerCount) {
 		size_t allocSize = layerCount * sizeof(VkLayerProperties);
-		layersProps = dyrecord_malloc(allocRecord, allocSize);
-		if EXPECT_FALSE (!layersProps) { dyrecord_destroy(allocRecord); return false; }
+		layersProps = dyrecord_malloc(localRecord, allocSize);
+		if EXPECT_FALSE (!layersProps) { dyrecord_destroy(localRecord); return false; }
 
-		VK_CALL_RES(vkEnumerateInstanceLayerProperties, &layerCount, layersProps);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+		VK_CALLR(vkEnumerateInstanceLayerProperties, &layerCount, layersProps);
+		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 	}
+
+	// Get instance extensions
+	uint32_t extensionCount;
+	VK_CALLR(vkEnumerateInstanceExtensionProperties, NULL, &extensionCount, NULL);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+
+	VkExtensionProperties* extensionsProps = NULL;
 
 	if (extensionCount) {
 		size_t allocSize = extensionCount * sizeof(VkExtensionProperties);
-		extensionsProps = dyrecord_malloc(allocRecord, allocSize);
-		if EXPECT_FALSE (!extensionsProps) { dyrecord_destroy(allocRecord); return false; }
+		extensionsProps = dyrecord_malloc(localRecord, allocSize);
+		if EXPECT_FALSE (!extensionsProps) { dyrecord_destroy(localRecord); return false; }
 
-		VK_CALL_RES(vkEnumerateInstanceExtensionProperties, NULL, &extensionCount, extensionsProps);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+		VK_CALLR(vkEnumerateInstanceExtensionProperties, NULL, &extensionCount, extensionsProps);
+		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 	}
 
+	// Select layers
 	size_t elmSize = sizeof(const char*);
 	size_t elmCount = 4;
 
 	DyArray enabledLayers = dyarray_create(elmSize, elmCount);
-	if EXPECT_FALSE (!enabledLayers) { dyrecord_destroy(allocRecord); return false; }
+	if EXPECT_FALSE (!enabledLayers) { dyrecord_destroy(localRecord); return false; }
 
-	bres = dyrecord_add(allocRecord, enabledLayers, dyarray_destroy_stub);
-	if EXPECT_FALSE (!bres) { dyarray_destroy(enabledLayers); dyrecord_destroy(allocRecord); return false; }
+	bres = dyrecord_add(localRecord, enabledLayers, dyarray_destroy_stub);
+	if EXPECT_FALSE (!bres) { dyarray_destroy(enabledLayers); dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < layerCount; i++) {
 		const char* layerName = layersProps[i].layerName;
@@ -118,6 +135,7 @@ bool create_instance(Gpu* restrict gpu)
 		}
 	}
 
+	// Select extensions
 	const void* nextChain = NULL;
 	const void** next = &nextChain;
 
@@ -128,10 +146,10 @@ bool create_instance(Gpu* restrict gpu)
 	elmCount = 2;
 
 	DyArray enabledExtensions = dyarray_create(elmSize, elmCount);
-	if EXPECT_FALSE (!enabledExtensions) { dyrecord_destroy(allocRecord); return false; }
+	if EXPECT_FALSE (!enabledExtensions) { dyrecord_destroy(localRecord); return false; }
 
-	bres = dyrecord_add(allocRecord, enabledExtensions, dyarray_destroy_stub);
-	if EXPECT_FALSE (!bres) { dyarray_destroy(enabledExtensions); dyrecord_destroy(allocRecord); return false; }
+	bres = dyrecord_add(localRecord, enabledExtensions, dyarray_destroy_stub);
+	if EXPECT_FALSE (!bres) { dyarray_destroy(enabledExtensions); dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < extensionCount; i++) {
 		const char* extensionName = extensionsProps[i].extensionName;
@@ -151,6 +169,7 @@ bool create_instance(Gpu* restrict gpu)
 #endif
 	}
 
+	// Create instance
 	VkApplicationInfo appInfo = {0};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pApplicationName = PROGRAM_NAME;
@@ -188,134 +207,152 @@ bool create_instance(Gpu* restrict gpu)
 	}
 
 	VkInstance instance;
-	VK_CALL_RES(vkCreateInstance, &instanceInfo, g_allocator, &instance);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+	VK_CALLR(vkCreateInstance, &instanceInfo, allocator, &instance);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	volkLoadInstanceOnly(instance);
 
 	if (usingDebugUtils) {
 		VkDebugUtilsMessengerEXT messenger;
-		VK_CALL_RES(vkCreateDebugUtilsMessengerEXT, instance, &debugMessengerInfo, g_allocator, &messenger);
+		VK_CALLR(vkCreateDebugUtilsMessengerEXT, instance, &debugMessengerInfo, allocator, &messenger);
 
 		if (vkres == VK_SUCCESS) {
 			gpu->debugMessenger = messenger;
 		}
 	}
 
-	dyrecord_destroy(allocRecord);
+	dyrecord_destroy(localRecord);
 	return true;
 }
 
 bool select_device(Gpu* restrict gpu)
 {
 	VkResult vkres;
+	size_t allocCount;
+	size_t allocSize;
 
 	VkInstance instance = volkGetLoadedInstance();
 	if EXPECT_FALSE (!instance) { return false; }
 
-	DyRecord allocRecord = dyrecord_create();
-	if EXPECT_FALSE (!allocRecord) { return false; }
+	DyRecord localRecord = dyrecord_create();
+	if EXPECT_FALSE (!localRecord) { return false; }
 
+	// Get physical devices
 	uint32_t deviceCount;
-	VK_CALL_RES(vkEnumeratePhysicalDevices, instance, &deviceCount, NULL);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+	VK_CALLR(vkEnumeratePhysicalDevices, instance, &deviceCount, NULL);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	if EXPECT_FALSE (!deviceCount) {
 		log_critical(stderr, "No physical devices are accessible to the Vulkan instance");
-		dyrecord_destroy(allocRecord);
+		dyrecord_destroy(localRecord);
 		return false;
 	}
 
-	size_t allocCount = deviceCount;
-	size_t allocSize =
-		sizeof(VkPhysicalDevice) +
-		sizeof(VkQueueFamilyProperties2*) +
-		sizeof(VkExtensionProperties*) +
-		sizeof(VkPhysicalDeviceMemoryProperties2) +
-		sizeof(VkPhysicalDeviceProperties2) +
-		sizeof(VkPhysicalDeviceFeatures2) +
-		sizeof(VkPhysicalDevice16BitStorageFeatures) +
-		sizeof(uint32_t) * 2;
+	allocSize = deviceCount * sizeof(VkPhysicalDevice);
+	VkPhysicalDevice* devices = dyrecord_malloc(localRecord, allocSize);
+	if EXPECT_FALSE (!devices) { dyrecord_destroy(localRecord); return false; }
 
-	void* p = dyrecord_calloc(allocRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!p) { dyrecord_destroy(allocRecord); return false; }
+	VK_CALLR(vkEnumeratePhysicalDevices, instance, &deviceCount, devices);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
-	VkPhysicalDevice* devices = p;
+	// Get extensions of each device
+	allocSize = deviceCount * sizeof(uint32_t);
+	uint32_t* extensionCounts = dyrecord_malloc(localRecord, allocSize);
+	if EXPECT_FALSE (!extensionCounts) { dyrecord_destroy(localRecord); return false; }
 
-	VkQueueFamilyProperties2** queueFamiliesProps = (VkQueueFamilyProperties2**) (devices + deviceCount);
-	VkExtensionProperties** extensionsProps = (VkExtensionProperties**) (queueFamiliesProps + deviceCount);
-
-	VkPhysicalDeviceMemoryProperties2* devicesMemoryProps = (VkPhysicalDeviceMemoryProperties2*) (
-		extensionsProps + deviceCount);
-	VkPhysicalDeviceProperties2* devicesProps = (VkPhysicalDeviceProperties2*) (devicesMemoryProps + deviceCount);
-
-	VkPhysicalDeviceFeatures2* devicesFeats = (VkPhysicalDeviceFeatures2*) (devicesProps + deviceCount);
-	VkPhysicalDevice16BitStorageFeatures* devices16BitStorageFeats = (VkPhysicalDevice16BitStorageFeatures*) (
-		devicesFeats + deviceCount);
-
-	uint32_t* extensionCounts = (uint32_t*) (devices16BitStorageFeats + deviceCount);
-	uint32_t* queueFamilyCounts = (uint32_t*) (extensionCounts + deviceCount);
-
-	size_t queueFamilyTotal = 0;
-	size_t extensionTotal = 0;
-
-	VK_CALL_RES(vkEnumeratePhysicalDevices, instance, &deviceCount, devices);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+	allocSize = deviceCount * sizeof(VkExtensionProperties*);
+	VkExtensionProperties** devicesExtensionsProperties = dyrecord_malloc(localRecord, allocSize);
+	if EXPECT_FALSE (!devicesExtensionsProperties) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < deviceCount; i++) {
 		VkPhysicalDevice device = devices[i];
+		VK_CALLR(vkEnumerateDeviceExtensionProperties, device, NULL, &extensionCounts[i], NULL);
+		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
-		VK_CALL(vkGetPhysicalDeviceQueueFamilyProperties2, device, &queueFamilyCounts[i], NULL);
+		allocCount = extensionCounts[i];
+		allocSize = sizeof(VkExtensionProperties);
 
-		VK_CALL_RES(vkEnumerateDeviceExtensionProperties, device, NULL, &extensionCounts[i], NULL);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+		devicesExtensionsProperties[i] = dyrecord_calloc(localRecord, allocCount, allocSize);
+		if EXPECT_FALSE (!devicesExtensionsProperties[i]) { dyrecord_destroy(localRecord); return false; }
 
-		queueFamilyTotal += queueFamilyCounts[i];
-		extensionTotal += extensionCounts[i];
+		VK_CALLR(vkEnumerateDeviceExtensionProperties,
+			device, NULL, &extensionCounts[i], devicesExtensionsProperties[i]);
+
+		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 	}
 
-	allocCount = queueFamilyTotal;
-	allocSize = sizeof(VkQueueFamilyProperties2);
+	// Get queue familes of each device
+	allocSize = deviceCount * sizeof(uint32_t);
+	uint32_t* familyCounts = dyrecord_malloc(localRecord, allocSize);
+	if EXPECT_FALSE (!familyCounts) { dyrecord_destroy(localRecord); return false; }
 
-	queueFamiliesProps[0] = dyrecord_calloc(allocRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!queueFamiliesProps[0]) { dyrecord_destroy(allocRecord); return false; }
-
-	allocCount = extensionTotal;
-	allocSize = sizeof(VkExtensionProperties);
-
-	extensionsProps[0] = dyrecord_calloc(allocRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!extensionsProps[0]) { dyrecord_destroy(allocRecord); return false; }
-
-	for (uint32_t i = 1; i < deviceCount; i++) {
-		queueFamiliesProps[i] = queueFamiliesProps[i - 1] + queueFamilyCounts[i - 1];
-		extensionsProps[i] = extensionsProps[i - 1] + extensionCounts[i - 1];
-	}
+	allocSize = deviceCount * sizeof(VkQueueFamilyProperties2*);
+	VkQueueFamilyProperties2** devicesFamiliesProperties = dyrecord_malloc(localRecord, allocSize);
+	if EXPECT_FALSE (!devicesFamiliesProperties) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < deviceCount; i++) {
 		VkPhysicalDevice device = devices[i];
-		uint32_t queueFamilyCount = queueFamilyCounts[i];
+		VK_CALL(vkGetPhysicalDeviceQueueFamilyProperties2, device, &familyCounts[i], NULL);
 
-		VK_CALL_RES(vkEnumerateDeviceExtensionProperties, device, NULL, &extensionCounts[i], extensionsProps[i]);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+		allocCount = familyCounts[i];
+		allocSize = sizeof(VkQueueFamilyProperties2);
 
-		for (uint32_t j = 0; j < queueFamilyCount; j++) {
-			queueFamiliesProps[i][j].sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2;
+		devicesFamiliesProperties[i] = dyrecord_calloc(localRecord, allocCount, allocSize);
+		if EXPECT_FALSE (!devicesFamiliesProperties[i]) { dyrecord_destroy(localRecord); return false; }
+
+		for (uint32_t j = 0; j < familyCounts[i]; j++) {
+			devicesFamiliesProperties[i][j].sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2;
 		}
 
-		VK_CALL(vkGetPhysicalDeviceQueueFamilyProperties2, device, &queueFamilyCounts[i], queueFamiliesProps[i]);
+		VK_CALL(vkGetPhysicalDeviceQueueFamilyProperties2, device, &familyCounts[i], devicesFamiliesProperties[i]);
+	}
 
-		devicesMemoryProps[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
-		VK_CALL(vkGetPhysicalDeviceMemoryProperties2, device, &devicesMemoryProps[i]);
+	// Get memory properties of each device
+	allocCount = deviceCount;
+	allocSize = sizeof(VkPhysicalDeviceMemoryProperties2);
 
-		devicesProps[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-		VK_CALL(vkGetPhysicalDeviceProperties2, device, &devicesProps[i]);
+	VkPhysicalDeviceMemoryProperties2* devicesMemoryProperties = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!devicesMemoryProperties) { dyrecord_destroy(localRecord); return false; }
 
-		devices16BitStorageFeats[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES;
+	for (uint32_t i = 0; i < deviceCount; i++) {
+		devicesMemoryProperties[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
+		VK_CALL(vkGetPhysicalDeviceMemoryProperties2, devices[i], &devicesMemoryProperties[i]);
+	}
 
-		devicesFeats[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-		devicesFeats[i].pNext = &devices16BitStorageFeats[i];
+	// Get properties of each device
+	allocCount = deviceCount;
+	allocSize = sizeof(VkPhysicalDeviceProperties2);
 
-		VK_CALL(vkGetPhysicalDeviceFeatures2, device, &devicesFeats[i]);
+	VkPhysicalDeviceProperties2* devicesProperties = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!devicesProperties) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0; i < deviceCount; i++) {
+		devicesProperties[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+		VK_CALL(vkGetPhysicalDeviceProperties2, devices[i], &devicesProperties[i]);
+	}
+
+	// Get features of each device
+	allocCount = deviceCount;
+	allocSize = sizeof(VkPhysicalDeviceFeatures2);
+
+	VkPhysicalDeviceFeatures2* devicesFeatures = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!devicesFeatures) { dyrecord_destroy(localRecord); return false; }
+
+	allocCount = deviceCount;
+	allocSize = sizeof(VkPhysicalDevice16BitStorageFeatures);
+
+	VkPhysicalDevice16BitStorageFeatures* devices16BitStorageFeatures = dyrecord_calloc(
+		localRecord, allocCount, allocSize);
+
+	if EXPECT_FALSE (!devices16BitStorageFeatures) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0; i < deviceCount; i++) {
+		devices16BitStorageFeatures[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES;
+
+		devicesFeatures[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+		devicesFeatures[i].pNext = &devices16BitStorageFeatures[i];
+
+		VK_CALL(vkGetPhysicalDeviceFeatures2, devices[i], &devicesFeatures[i]);
 	}
 
 	uint32_t deviceIndex = UINT32_MAX;
@@ -348,25 +385,28 @@ bool select_device(Gpu* restrict gpu)
 	 */
 	for (uint32_t i = 0; i < deviceCount; i++) {
 		uint32_t extensionCount = extensionCounts[i];
-		uint32_t queueFamilyCount = queueFamilyCounts[i];
-		uint32_t memoryTypeCount = devicesMemoryProps[i].memoryProperties.memoryTypeCount;
+		uint32_t familyCount = familyCounts[i];
+		uint32_t memoryTypeCount = devicesMemoryProperties[i].memoryProperties.memoryTypeCount;
 
-		bool hasVulkan11 = devicesProps[i].properties.apiVersion >= VK_API_VERSION_1_1;
-		bool hasVulkan12 = devicesProps[i].properties.apiVersion >= VK_API_VERSION_1_2;
-		bool hasVulkan13 = devicesProps[i].properties.apiVersion >= VK_API_VERSION_1_3;
-		bool hasVulkan14 = devicesProps[i].properties.apiVersion >= VK_API_VERSION_1_4;
+		// Check properties
+		bool hasVulkan11 = devicesProperties[i].properties.apiVersion >= VK_API_VERSION_1_1;
+		bool hasVulkan12 = devicesProperties[i].properties.apiVersion >= VK_API_VERSION_1_2;
+		bool hasVulkan13 = devicesProperties[i].properties.apiVersion >= VK_API_VERSION_1_3;
+		bool hasVulkan14 = devicesProperties[i].properties.apiVersion >= VK_API_VERSION_1_4;
 
-		bool hasShaderInt16 = devicesFeats[i].features.shaderInt16;
-		bool hasShaderInt64 = devicesFeats[i].features.shaderInt64;
+		// Check features
+		bool hasShaderInt16 = devicesFeatures[i].features.shaderInt16;
+		bool hasShaderInt64 = devicesFeatures[i].features.shaderInt64;
 
-		bool hasStorageBuffer16BitAccess = devices16BitStorageFeats[i].storageBuffer16BitAccess;
+		bool hasStorageBuffer16BitAccess = devices16BitStorageFeatures[i].storageBuffer16BitAccess;
 
+		// Check queue families' properties
 		bool hasCompute = false;
 		bool hasDedicatedCompute = false;
 		bool hasDedicatedTransfer = false;
 
-		for (uint32_t j = 0; j < queueFamilyCount; j++) {
-			VkQueueFlags queueFlags = queueFamiliesProps[i][j].queueFamilyProperties.queueFlags;
+		for (uint32_t j = 0; j < familyCount; j++) {
+			VkQueueFlags queueFlags = devicesFamiliesProperties[i][j].queueFamilyProperties.queueFlags;
 
 			bool isCompute = queueFlags & VK_QUEUE_COMPUTE_BIT;
 			bool isGraphics = queueFlags & VK_QUEUE_GRAPHICS_BIT;
@@ -379,6 +419,7 @@ bool select_device(Gpu* restrict gpu)
 			if (isDedicatedTransfer) { hasDedicatedTransfer = true; }
 		}
 
+		// Check memory properties
 		bool hasDeviceNonHost = false;
 		bool hasDeviceLocal = false;
 
@@ -388,7 +429,7 @@ bool select_device(Gpu* restrict gpu)
 		bool hasHostVisible = false;
 
 		for (uint32_t j = 0; j < memoryTypeCount; j++) {
-			VkMemoryPropertyFlags propFlags = devicesMemoryProps[i].memoryProperties.memoryTypes[j].propertyFlags;
+			VkMemoryPropertyFlags propFlags = devicesMemoryProperties[i].memoryProperties.memoryTypes[j].propertyFlags;
 
 			bool isDeviceLocal = propFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 			bool isHostVisible = propFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
@@ -415,6 +456,7 @@ bool select_device(Gpu* restrict gpu)
 			}
 		}
 
+		// Check extensions
 		bool hasMaintenance4 = false;
 		bool hasMaintenance5 = false;
 		bool hasMaintenance6 = false;
@@ -432,7 +474,7 @@ bool select_device(Gpu* restrict gpu)
 		bool hasSubgroupSizeControl = false;
 
 		for (uint32_t j = 0; j < extensionCount; j++) {
-			const char* extensionName = extensionsProps[i][j].extensionName;
+			const char* extensionName = devicesExtensionsProperties[i][j].extensionName;
 
 			if (!strcmp(extensionName, VK_KHR_MAINTENANCE_4_EXTENSION_NAME))      { hasMaintenance4 = true; }
 			else if (!strcmp(extensionName, VK_KHR_MAINTENANCE_5_EXTENSION_NAME)) { hasMaintenance5 = true; }
@@ -454,6 +496,7 @@ bool select_device(Gpu* restrict gpu)
 				hasSubgroupSizeControl = true; }
 		}
 
+		// Score device
 		uint32_t currentScore = 1;
 
 		if (!hasVulkan11) { continue; }
@@ -529,13 +572,14 @@ bool select_device(Gpu* restrict gpu)
 			"No physical device meets program requirements; "
 			"see device_requirements.md for comprehensive physical device requirements");
 
-		dyrecord_destroy(allocRecord);
+		dyrecord_destroy(localRecord);
 		return false;
 	}
 
-	const char* deviceName = devicesProps[deviceIndex].properties.deviceName;
-	uint32_t queueFamilyCount = queueFamilyCounts[deviceIndex];
+	const char* deviceName = devicesProperties[deviceIndex].properties.deviceName;
+	uint32_t familyCount = familyCounts[deviceIndex];
 
+	// Determine Vulkan & SPIR-V versions
 	uint32_t vkVerMajor = 1;
 	uint32_t vkVerMinor = 1;
 	uint32_t spvVerMajor = 1;
@@ -557,8 +601,9 @@ bool select_device(Gpu* restrict gpu)
 		spvVerMinor = 4;
 	}
 
-	uint32_t computeQueueFamilyIndex = 0;
-	uint32_t transferQueueFamilyIndex = 0;
+	// Select queue families
+	uint32_t computeFamilyIndex = 0;
+	uint32_t transferFamilyIndex = 0;
 	uint32_t computeQueueIndex = 0;
 	uint32_t transferQueueIndex = 0;
 
@@ -568,8 +613,8 @@ bool select_device(Gpu* restrict gpu)
 	bool hasDedicatedTransfer = false;
 
 	// TODO implement algorithm to choose queue indices too
-	for (uint32_t i = 0; i < queueFamilyCount; i++) {
-		VkQueueFlags queueFlags = queueFamiliesProps[deviceIndex][i].queueFamilyProperties.queueFlags;
+	for (uint32_t i = 0; i < familyCount; i++) {
+		VkQueueFlags queueFlags = devicesFamiliesProperties[deviceIndex][i].queueFamilyProperties.queueFlags;
 
 		bool isCompute = queueFlags & VK_QUEUE_COMPUTE_BIT;
 		bool isGraphics = queueFlags & VK_QUEUE_GRAPHICS_BIT;
@@ -579,36 +624,37 @@ bool select_device(Gpu* restrict gpu)
 
 		if (isCompute) {
 			if (!hasDedicatedCompute && isDedicatedCompute) {
-				computeQueueFamilyIndex = i;
+				computeFamilyIndex = i;
 				hasDedicatedCompute = true;
 				hasCompute = true;
 			}
 			else if (!hasCompute) {
-				computeQueueFamilyIndex = i;
+				computeFamilyIndex = i;
 				hasCompute = true;
 			}
 		}
 
 		if (isTransfer) {
 			if (!hasDedicatedTransfer && isDedicatedTransfer) {
-				transferQueueFamilyIndex = i;
+				transferFamilyIndex = i;
 				hasDedicatedTransfer = true;
 				hasTransfer = true;
 			}
 			else if (!hasTransfer) {
-				transferQueueFamilyIndex = i;
+				transferFamilyIndex = i;
 				hasTransfer = true;
 			}
 		}
 	}
 
 	if (!hasTransfer) {
-		transferQueueFamilyIndex = computeQueueFamilyIndex;
+		transferFamilyIndex = computeFamilyIndex;
 	}
 
-	if (computeQueueFamilyIndex == transferQueueFamilyIndex) {
-		uint32_t queueFamilyIndex = computeQueueFamilyIndex;
-		uint32_t queueCount = queueFamiliesProps[deviceIndex][queueFamilyIndex].queueFamilyProperties.queueCount;
+	// TEMP remove when implemented algorithm for selecting queue indices
+	if (computeFamilyIndex == transferFamilyIndex) {
+		uint32_t familyIndex = computeFamilyIndex;
+		uint32_t queueCount = devicesFamiliesProperties[deviceIndex][familyIndex].queueFamilyProperties.queueCount;
 
 		if (queueCount > 1) {
 			computeQueueIndex = 0;
@@ -618,8 +664,8 @@ bool select_device(Gpu* restrict gpu)
 
 	gpu->physicalDevice = devices[deviceIndex];
 
-	gpu->computeQueueFamilyIndex = computeQueueFamilyIndex;
-	gpu->transferQueueFamilyIndex = transferQueueFamilyIndex;
+	gpu->computeFamilyIndex = computeFamilyIndex;
+	gpu->transferFamilyIndex = transferFamilyIndex;
 	gpu->computeQueueIndex = computeQueueIndex;
 	gpu->transferQueueIndex = transferQueueIndex;
 
@@ -645,13 +691,16 @@ bool select_device(Gpu* restrict gpu)
 	gpu->usingSubgroupSizeControl = usingSubgroupSizeControl;
 
 	if (g_config.queryBenchmarks) {
-		gpu->computeQueueFamilyTimestampValidBits =
-			queueFamiliesProps[deviceIndex][computeQueueFamilyIndex].queueFamilyProperties.timestampValidBits;
-		gpu->transferQueueFamilyTimestampValidBits =
-			queueFamiliesProps[deviceIndex][transferQueueFamilyIndex].queueFamilyProperties.timestampValidBits;
-		gpu->timestampPeriod = devicesProps[deviceIndex].properties.limits.timestampPeriod;
+		gpu->computeFamilyTimestampValidBits =
+			devicesFamiliesProperties[deviceIndex][computeFamilyIndex].queueFamilyProperties.timestampValidBits;
+
+		gpu->transferFamilyTimestampValidBits =
+			devicesFamiliesProperties[deviceIndex][transferFamilyIndex].queueFamilyProperties.timestampValidBits;
+
+		gpu->timestampPeriod = devicesProperties[deviceIndex].properties.limits.timestampPeriod;
 	}
 
+	// Display info about selected device
 	switch (g_config.outputLevel) {
 		case OUTPUT_LEVEL_DEFAULT:
 			printf(
@@ -660,8 +709,7 @@ bool select_device(Gpu* restrict gpu)
 				"\tSPIR-V version:    %" PRIu32 ".%" PRIu32 "\n"
 				"\tCompute QF index:  %" PRIu32 "\n"
 				"\tTransfer QF index: %" PRIu32 "\n",
-				deviceName, vkVerMajor, vkVerMinor, spvVerMajor, spvVerMinor,
-				computeQueueFamilyIndex, transferQueueFamilyIndex);
+				deviceName, vkVerMajor, vkVerMinor, spvVerMajor, spvVerMinor, computeFamilyIndex, transferFamilyIndex);
 
 			if (g_config.preferInt16) {
 				printf("\tshaderInt16:       %d\n", usingShaderInt16);
@@ -697,7 +745,7 @@ bool select_device(Gpu* restrict gpu)
 				"\tstorageBuffer16BitAccess:          %d\n"
 				"\tsubgroupSizeControl:               %d\n\n",
 				deviceName, bestScore, vkVerMajor, vkVerMinor, spvVerMajor, spvVerMinor,
-				computeQueueFamilyIndex, transferQueueFamilyIndex, computeQueueIndex, transferQueueIndex,
+				computeFamilyIndex, transferFamilyIndex, computeQueueIndex, transferQueueIndex,
 				usingMaintenance4, usingMaintenance5, usingMaintenance6, usingMaintenance7, usingMaintenance8,
 				usingMaintenance9, usingMemoryPriority, usingPipelineCreationCacheControl,
 				usingPipelineExecutableProperties, usingShaderInt16, usingShaderInt64, using16BitStorage,
@@ -709,16 +757,18 @@ bool select_device(Gpu* restrict gpu)
 			break;
 	}
 
-	dyrecord_destroy(allocRecord);
+	dyrecord_destroy(localRecord);
 	return true;
 }
 
 bool create_device(Gpu* restrict gpu)
 {
+	const VkAllocationCallbacks* allocator = gpu->allocator;
+
 	VkPhysicalDevice physicalDevice = gpu->physicalDevice;
 
-	uint32_t computeQueueFamilyIndex = gpu->computeQueueFamilyIndex;
-	uint32_t transferQueueFamilyIndex = gpu->transferQueueFamilyIndex;
+	uint32_t computeFamilyIndex = gpu->computeFamilyIndex;
+	uint32_t transferFamilyIndex = gpu->transferFamilyIndex;
 	uint32_t computeQueueIndex = gpu->computeQueueIndex;
 	uint32_t transferQueueIndex = gpu->transferQueueIndex;
 
@@ -726,17 +776,17 @@ bool create_device(Gpu* restrict gpu)
 	
 	VkResult vkres;
 
-	DyRecord allocRecord = dyrecord_create();
-	if EXPECT_FALSE (!allocRecord) { return false; }
+	DyRecord localRecord = dyrecord_create();
+	if EXPECT_FALSE (!localRecord) { return false; }
 
 	size_t elmSize = sizeof(const char*);
 	size_t elmCount = 19;
 
 	DyArray enabledExtensions = dyarray_create(elmSize, elmCount);
-	if EXPECT_FALSE (!enabledExtensions) { dyrecord_destroy(allocRecord); return false; }
+	if EXPECT_FALSE (!enabledExtensions) { dyrecord_destroy(localRecord); return false; }
 
-	bool bres = dyrecord_add(allocRecord, enabledExtensions, dyarray_destroy_stub);
-	if EXPECT_FALSE (!bres) { dyarray_destroy(enabledExtensions); dyrecord_destroy(allocRecord); return false; }
+	bool bres = dyrecord_add(localRecord, enabledExtensions, dyarray_destroy_stub);
+	if EXPECT_FALSE (!bres) { dyarray_destroy(enabledExtensions); dyrecord_destroy(localRecord); return false; }
 
 	// Required extensions
 	const char* extensionName = VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME;
@@ -915,6 +965,7 @@ bool create_device(Gpu* restrict gpu)
 		PNEXT_ADD(next, deviceSubgroupSizeControlFeats);
 	}
 
+	// Create logical device
 	float computeQueuePriorities[2];
 	computeQueuePriorities[0] = 1;
 	computeQueuePriorities[1] = 0;
@@ -924,13 +975,13 @@ bool create_device(Gpu* restrict gpu)
 
 	VkDeviceQueueCreateInfo queueCreateInfos[2] = {0};
 	queueCreateInfos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queueCreateInfos[0].queueFamilyIndex = computeQueueFamilyIndex;
+	queueCreateInfos[0].queueFamilyIndex = computeFamilyIndex;
 	queueCreateInfos[0].queueCount =
-		computeQueueFamilyIndex != transferQueueFamilyIndex || computeQueueIndex == transferQueueIndex ? 1 : 2;
+		computeFamilyIndex != transferFamilyIndex || computeQueueIndex == transferQueueIndex ? 1 : 2;
 	queueCreateInfos[0].pQueuePriorities = computeQueuePriorities;
 
 	queueCreateInfos[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queueCreateInfos[1].queueFamilyIndex = transferQueueFamilyIndex;
+	queueCreateInfos[1].queueFamilyIndex = transferFamilyIndex;
 	queueCreateInfos[1].queueCount = 1;
 	queueCreateInfos[1].pQueuePriorities = transferQueuePriorities;
 
@@ -940,7 +991,7 @@ bool create_device(Gpu* restrict gpu)
 	VkDeviceCreateInfo deviceInfo = {0};
 	deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	deviceInfo.pNext = &deviceFeats;
-	deviceInfo.queueCreateInfoCount = computeQueueFamilyIndex == transferQueueFamilyIndex ? 1 : 2;
+	deviceInfo.queueCreateInfoCount = computeFamilyIndex == transferFamilyIndex ? 1 : 2;
 	deviceInfo.pQueueCreateInfos = queueCreateInfos;
 	deviceInfo.enabledExtensionCount = enabledExtensionCount;
 	deviceInfo.ppEnabledExtensionNames = enabledExtensionNames;
@@ -954,27 +1005,28 @@ bool create_device(Gpu* restrict gpu)
 	}
 
 	VkDevice device;
-	VK_CALL_RES(vkCreateDevice, physicalDevice, &deviceInfo, g_allocator, &device);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+	VK_CALLR(vkCreateDevice, physicalDevice, &deviceInfo, allocator, &device);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->device = device;
 
 	volkLoadDevice(device);
 
+	// Get handles for compute & transfer queues
 	VkDeviceQueueInfo2 computeQueueInfo = {0};
 	computeQueueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2;
-	computeQueueInfo.queueFamilyIndex = computeQueueFamilyIndex;
+	computeQueueInfo.queueFamilyIndex = computeFamilyIndex;
 	computeQueueInfo.queueIndex = computeQueueIndex;
 
 	VK_CALL(vkGetDeviceQueue2, device, &computeQueueInfo, &gpu->computeQueue);
 
 	VkDeviceQueueInfo2 transferQueueInfo = {0};
 	transferQueueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2;
-	transferQueueInfo.queueFamilyIndex = transferQueueFamilyIndex;
+	transferQueueInfo.queueFamilyIndex = transferFamilyIndex;
 	transferQueueInfo.queueIndex = transferQueueIndex;
 
 	VK_CALL(vkGetDeviceQueue2, device, &transferQueueInfo, &gpu->transferQueue);
 
-	dyrecord_destroy(allocRecord);
+	dyrecord_destroy(localRecord);
 	return true;
 }
 
@@ -986,6 +1038,7 @@ bool manage_memory(Gpu* restrict gpu)
 	bool (*get_buffer_requirements)(VkDevice, VkDeviceSize, VkBufferUsageFlags, VkMemoryRequirements*) =
 		gpu->usingMaintenance4 ? get_buffer_requirements_main4 : get_buffer_requirements_noext;
 
+	// Get device properties
 	VkPhysicalDeviceMaintenance4Properties deviceMaintenance4Props = {0};
 	deviceMaintenance4Props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_PROPERTIES;
 
@@ -999,6 +1052,7 @@ bool manage_memory(Gpu* restrict gpu)
 
 	VK_CALL(vkGetPhysicalDeviceProperties2, physicalDevice, &deviceProps);
 
+	// Get memory properties
 	VkPhysicalDeviceMemoryBudgetPropertiesEXT deviceMemoryBudgetProps = {0};
 	deviceMemoryBudgetProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT;
 
@@ -1017,6 +1071,7 @@ bool manage_memory(Gpu* restrict gpu)
 	uint32_t maxWorkgroupSize = deviceProps.properties.limits.maxComputeWorkGroupSize[0];
 	uint32_t memoryTypeCount = deviceMemoryProps.memoryProperties.memoryTypeCount;
 
+	// Get memoryTypeBits for wanted host visible & device local buffers
 	VkBufferUsageFlags hostVisibleBufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 	VkMemoryRequirements hostVisibleMemoryRequirements;
 
@@ -1033,6 +1088,7 @@ bool manage_memory(Gpu* restrict gpu)
 	uint32_t deviceLocalMemoryTypeBits = deviceLocalMemoryRequirements.memoryTypeBits;
 	uint32_t hostVisibleMemoryTypeBits = hostVisibleMemoryRequirements.memoryTypeBits;
 
+	// Select memory heaps & types
 	uint32_t deviceLocalHeapIndex = 0;
 	uint32_t hostVisibleHeapIndex = 0;
 	uint32_t deviceLocalTypeIndex = 0;
@@ -1232,6 +1288,7 @@ bool manage_memory(Gpu* restrict gpu)
 
 	gpu->hostNonCoherent = hasHostNonCoherent;
 
+	// Display info on planned memory usage
 	switch (g_config.outputLevel) {
 		case OUTPUT_LEVEL_DEFAULT:
 			printf(
@@ -1271,46 +1328,14 @@ bool manage_memory(Gpu* restrict gpu)
 			break;
 	}
 
-	size_t allocCount = 1;
-	size_t allocSize =
-		inoutsPerHeap * sizeof(StartValue*) +
-		inoutsPerHeap * sizeof(StopTime*) +
-		buffersPerHeap * sizeof(VkBuffer) * 2 +
-		buffersPerHeap * sizeof(VkDeviceMemory) * 2 +
-		inoutsPerHeap * sizeof(VkDescriptorSet) +
-		inoutsPerHeap * sizeof(VkCommandBuffer) * 2 +
-		inoutsPerHeap * sizeof(VkSemaphore);
-
-	gpu->dynamicMemory = calloc(allocCount, allocSize);
-	if EXPECT_FALSE (!gpu->dynamicMemory) { CALLOC_FAILURE(gpu->dynamicMemory, allocCount, allocSize); return false; }
-
-	gpu->mappedInBuffers = gpu->dynamicMemory;
-	gpu->mappedOutBuffers = (StopTime**) (gpu->mappedInBuffers + inoutsPerHeap);
-
-	gpu->hostVisibleBuffers = (VkBuffer*) (gpu->mappedOutBuffers + inoutsPerHeap);
-	gpu->deviceLocalBuffers = (VkBuffer*) (gpu->hostVisibleBuffers + buffersPerHeap);
-
-	gpu->hostVisibleDeviceMemories = (VkDeviceMemory*) (gpu->deviceLocalBuffers + buffersPerHeap);
-	gpu->deviceLocalDeviceMemories = (VkDeviceMemory*) (gpu->hostVisibleDeviceMemories + buffersPerHeap);
-
-	gpu->descriptorSets = (VkDescriptorSet*) (gpu->deviceLocalDeviceMemories + buffersPerHeap);
-
-	gpu->computeCommandBuffers = (VkCommandBuffer*) (gpu->descriptorSets + inoutsPerHeap);
-	gpu->transferCommandBuffers = (VkCommandBuffer*) (gpu->computeCommandBuffers + inoutsPerHeap);
-
-	gpu->semaphores = (VkSemaphore*) (gpu->transferCommandBuffers + inoutsPerHeap);
-
 	return true;
 }
 
 bool create_buffers(Gpu* restrict gpu)
 {
-	VkBuffer* hostVisibleBuffers = gpu->hostVisibleBuffers;
-	VkBuffer* deviceLocalBuffers = gpu->deviceLocalBuffers;
-	VkDeviceMemory* hostVisibleMemories = gpu->hostVisibleDeviceMemories;
-	VkDeviceMemory* deviceLocalMemories = gpu->deviceLocalDeviceMemories;
-	StartValue** mappedInBuffers = gpu->mappedInBuffers;
-	StopTime** mappedOutBuffers = gpu->mappedOutBuffers;
+	DyRecord gpuRecord = gpu->allocRecord;
+
+	const VkAllocationCallbacks* allocator = gpu->allocator;
 
 	VkDevice device = gpu->device;
 
@@ -1321,40 +1346,44 @@ bool create_buffers(Gpu* restrict gpu)
 
 	uint32_t valuesPerInout = gpu->valuesPerInout;
 	uint32_t inoutsPerBuffer = gpu->inoutsPerBuffer;
+	uint32_t inoutsPerHeap = gpu->inoutsPerHeap;
 	uint32_t buffersPerHeap = gpu->buffersPerHeap;
 	uint32_t hostVisibleTypeIndex = gpu->hostVisibleTypeIndex;
 	uint32_t deviceLocalTypeIndex = gpu->deviceLocalTypeIndex;
 
 	VkResult vkres;
 
-	DyRecord allocRecord = dyrecord_create();
-	if EXPECT_FALSE (!allocRecord) { return false; }
+	DyRecord localRecord = dyrecord_create();
+	if EXPECT_FALSE (!localRecord) { return false; }
 
+	// Create host visible buffers
 	size_t allocCount = buffersPerHeap;
-	size_t allocSize =
-		sizeof(VkMemoryAllocateInfo) * 2 +
-		sizeof(VkMemoryDedicatedAllocateInfo) * 2 +
-		sizeof(VkBindBufferMemoryInfo) * 2;
+	size_t allocSize = sizeof(VkBuffer);
 
-	void* p = dyrecord_calloc(allocRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!p) { dyrecord_destroy(allocRecord); return false; }
-
-	VkMemoryAllocateInfo* hostVisibleAllocInfos = p;
-	VkMemoryAllocateInfo* deviceLocalAllocInfos = (VkMemoryAllocateInfo*) (hostVisibleAllocInfos + buffersPerHeap);
-
-	VkMemoryDedicatedAllocateInfo* hostVisibleDedicatedInfos = (VkMemoryDedicatedAllocateInfo*) (
-		deviceLocalAllocInfos + buffersPerHeap);
-	VkMemoryDedicatedAllocateInfo* deviceLocalDedicatedInfos = (VkMemoryDedicatedAllocateInfo*) (
-		hostVisibleDedicatedInfos + buffersPerHeap);
-
-	VkBindBufferMemoryInfo (*bindBufferMemoryInfos)[2] = (VkBindBufferMemoryInfo(*)[]) (
-		deviceLocalDedicatedInfos + buffersPerHeap);
+	VkBuffer* hostVisibleBuffers = dyrecord_calloc(gpuRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!hostVisibleBuffers) { dyrecord_destroy(localRecord); return false; }
+	gpu->hostVisibleBuffers = hostVisibleBuffers;
 
 	VkBufferCreateInfo hostVisibleBufferInfo = {0};
 	hostVisibleBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	hostVisibleBufferInfo.size = bytesPerBuffer;
 	hostVisibleBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 	hostVisibleBufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	for (uint32_t i = 0; i < buffersPerHeap; i++) {
+		VkBuffer hostVisibleBuffer;
+		VK_CALLR(vkCreateBuffer, device, &hostVisibleBufferInfo, allocator, &hostVisibleBuffer);
+		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		hostVisibleBuffers[i] = hostVisibleBuffer;
+	}
+
+	// Create device local buffers
+	allocCount = buffersPerHeap;
+	allocSize = sizeof(VkBuffer);
+
+	VkBuffer* deviceLocalBuffers = dyrecord_calloc(gpuRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!deviceLocalBuffers) { dyrecord_destroy(localRecord); return false; }
+	gpu->deviceLocalBuffers = deviceLocalBuffers;
 
 	VkBufferCreateInfo deviceLocalBufferInfo = {0};
 	deviceLocalBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -1364,56 +1393,78 @@ bool create_buffers(Gpu* restrict gpu)
 	deviceLocalBufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
-		VkBuffer hostVisibleBuffer;
-		VK_CALL_RES(vkCreateBuffer, device, &hostVisibleBufferInfo, g_allocator, &hostVisibleBuffer);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
-		hostVisibleBuffers[i] = hostVisibleBuffer;
-
 		VkBuffer deviceLocalBuffer;
-		VK_CALL_RES(vkCreateBuffer, device, &deviceLocalBufferInfo, g_allocator, &deviceLocalBuffer);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+		VK_CALLR(vkCreateBuffer, device, &deviceLocalBufferInfo, allocator, &deviceLocalBuffer);
+		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 		deviceLocalBuffers[i] = deviceLocalBuffer;
 	}
+
+	// Create host visible device memories
+	allocCount = buffersPerHeap;
+	allocSize = sizeof(VkDeviceMemory);
+
+	VkDeviceMemory* hostVisibleMemories = dyrecord_calloc(gpuRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!hostVisibleMemories) { dyrecord_destroy(localRecord); return false; }
+	gpu->hostVisibleDeviceMemories = hostVisibleMemories;
 
 	VkMemoryPriorityAllocateInfoEXT hostVisiblePriorityInfo = {0};
 	hostVisiblePriorityInfo.sType = VK_STRUCTURE_TYPE_MEMORY_PRIORITY_ALLOCATE_INFO_EXT;
 	hostVisiblePriorityInfo.priority = 0;
+
+	for (uint32_t i = 0; i < buffersPerHeap; i++) {
+		VkMemoryDedicatedAllocateInfo hostVisibleDedicatedInfo = {0};
+		hostVisibleDedicatedInfo.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO;
+		hostVisibleDedicatedInfo.pNext = gpu->usingMemoryPriority ? &hostVisiblePriorityInfo : NULL;
+		hostVisibleDedicatedInfo.buffer = hostVisibleBuffers[i];
+
+		VkMemoryAllocateInfo hostVisibleAllocInfo = {0};
+		hostVisibleAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		hostVisibleAllocInfo.pNext = &hostVisibleDedicatedInfo;
+		hostVisibleAllocInfo.allocationSize = bytesPerHostVisibleMemory;
+		hostVisibleAllocInfo.memoryTypeIndex = hostVisibleTypeIndex;
+
+		VkDeviceMemory hostVisibleMemory;
+		VK_CALLR(vkAllocateMemory, device, &hostVisibleAllocInfo, allocator, &hostVisibleMemory);
+		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		hostVisibleMemories[i] = hostVisibleMemory;
+	}
+
+	// Create device local device memories
+	allocCount = buffersPerHeap;
+	allocSize = sizeof(VkDeviceMemory);
+
+	VkDeviceMemory* deviceLocalMemories = dyrecord_calloc(gpuRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!deviceLocalMemories) { dyrecord_destroy(localRecord); return false; }
+	gpu->deviceLocalDeviceMemories = deviceLocalMemories;
 
 	VkMemoryPriorityAllocateInfoEXT deviceLocalPriorityInfo = {0};
 	deviceLocalPriorityInfo.sType = VK_STRUCTURE_TYPE_MEMORY_PRIORITY_ALLOCATE_INFO_EXT;
 	deviceLocalPriorityInfo.priority = 1;
 
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
-		hostVisibleDedicatedInfos[i].sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO;
-		hostVisibleDedicatedInfos[i].pNext = gpu->usingMemoryPriority ? &hostVisiblePriorityInfo : NULL;
-		hostVisibleDedicatedInfos[i].buffer = hostVisibleBuffers[i];
+		VkMemoryDedicatedAllocateInfo deviceLocalDedicatedInfo = {0};
+		deviceLocalDedicatedInfo.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO;
+		deviceLocalDedicatedInfo.pNext = gpu->usingMemoryPriority ? &deviceLocalPriorityInfo : NULL;
+		deviceLocalDedicatedInfo.buffer = deviceLocalBuffers[i];
 
-		deviceLocalDedicatedInfos[i].sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO;
-		deviceLocalDedicatedInfos[i].pNext = gpu->usingMemoryPriority ? &deviceLocalPriorityInfo : NULL;
-		deviceLocalDedicatedInfos[i].buffer = deviceLocalBuffers[i];
-
-		hostVisibleAllocInfos[i].sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		hostVisibleAllocInfos[i].pNext = &hostVisibleDedicatedInfos[i];
-		hostVisibleAllocInfos[i].allocationSize = bytesPerHostVisibleMemory;
-		hostVisibleAllocInfos[i].memoryTypeIndex = hostVisibleTypeIndex;
-
-		deviceLocalAllocInfos[i].sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		deviceLocalAllocInfos[i].pNext = &deviceLocalDedicatedInfos[i];
-		deviceLocalAllocInfos[i].allocationSize = bytesPerDeviceLocalMemory;
-		deviceLocalAllocInfos[i].memoryTypeIndex = deviceLocalTypeIndex;
-	}
-
-	for (uint32_t i = 0; i < buffersPerHeap; i++) {
-		VkDeviceMemory hostVisibleMemory;
-		VK_CALL_RES(vkAllocateMemory, device, &hostVisibleAllocInfos[i], g_allocator, &hostVisibleMemory);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
-		hostVisibleMemories[i] = hostVisibleMemory;
+		VkMemoryAllocateInfo deviceLocalAllocInfo = {0};
+		deviceLocalAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		deviceLocalAllocInfo.pNext = &deviceLocalDedicatedInfo;
+		deviceLocalAllocInfo.allocationSize = bytesPerDeviceLocalMemory;
+		deviceLocalAllocInfo.memoryTypeIndex = deviceLocalTypeIndex;
 
 		VkDeviceMemory deviceLocalMemory;
-		VK_CALL_RES(vkAllocateMemory, device, &deviceLocalAllocInfos[i], g_allocator, &deviceLocalMemory);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+		VK_CALLR(vkAllocateMemory, device, &deviceLocalAllocInfo, allocator, &deviceLocalMemory);
+		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 		deviceLocalMemories[i] = deviceLocalMemory;
 	}
+
+	// Bind buffers and device memories
+	allocCount = buffersPerHeap;
+	allocSize = sizeof(VkBindBufferMemoryInfo[2]);
+
+	VkBindBufferMemoryInfo (*bindBufferMemoryInfos)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!bindBufferMemoryInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
 		bindBufferMemoryInfos[i][0].sType = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO;
@@ -1428,18 +1479,27 @@ bool create_buffers(Gpu* restrict gpu)
 	uint32_t bindInfoCount = buffersPerHeap * ARRAY_SIZE(bindBufferMemoryInfos[0]);
 	VkBindBufferMemoryInfo* bindInfos = (VkBindBufferMemoryInfo*) bindBufferMemoryInfos;
 
-	VK_CALL_RES(vkBindBufferMemory2, device, bindInfoCount, bindInfos);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+	VK_CALLR(vkBindBufferMemory2, device, bindInfoCount, bindInfos);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+
+	// Map host visible device memories
+	allocSize = inoutsPerHeap * sizeof(StartValue*);
+	StartValue** mappedInBuffers = dyrecord_malloc(gpuRecord, allocSize);
+	if EXPECT_FALSE (!mappedInBuffers) { dyrecord_destroy(localRecord); return false; }
+	gpu->mappedInBuffers = mappedInBuffers;
+
+	allocSize = inoutsPerHeap * sizeof(StopTime*);
+	StopTime** mappedOutBuffers = dyrecord_malloc(gpuRecord, allocSize);
+	if EXPECT_FALSE (!mappedOutBuffers) { dyrecord_destroy(localRecord); return false; }
+	gpu->mappedOutBuffers = mappedOutBuffers;
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 		VkDeviceSize offset = 0;
 		VkMemoryMapFlags flags = 0;
 		void* mappedMemory;
 
-		VK_CALL_RES(vkMapMemory,
-			device, hostVisibleMemories[i], offset, bytesPerHostVisibleMemory, flags, &mappedMemory);
-
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+		VK_CALLR(vkMapMemory, device, hostVisibleMemories[i], offset, bytesPerHostVisibleMemory, flags, &mappedMemory);
+		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
 		mappedInBuffers[j] = mappedMemory;
 		mappedOutBuffers[j] = (StopTime*) (mappedInBuffers[j] + valuesPerInout);
@@ -1467,14 +1527,16 @@ bool create_buffers(Gpu* restrict gpu)
 	}
 #endif
 
-	dyrecord_destroy(allocRecord);
+	dyrecord_destroy(localRecord);
 	return true;
 }
 
 bool create_descriptors(Gpu* restrict gpu)
 {
+	DyRecord gpuRecord = gpu->allocRecord;
+
+	const VkAllocationCallbacks* allocator = gpu->allocator;
 	const VkBuffer* deviceLocalBuffers = gpu->deviceLocalBuffers;
-	VkDescriptorSet* descriptorSets = gpu->descriptorSets;
 
 	VkDevice device = gpu->device;
 
@@ -1487,24 +1549,13 @@ bool create_descriptors(Gpu* restrict gpu)
 	uint32_t buffersPerHeap = gpu->buffersPerHeap;
 
 	VkResult vkres;
+	size_t allocCount;
+	size_t allocSize;
 
-	DyRecord allocRecord = dyrecord_create();
-	if EXPECT_FALSE (!allocRecord) { return false; }
+	DyRecord localRecord = dyrecord_create();
+	if EXPECT_FALSE (!localRecord) { return false; }
 
-	size_t allocCount = inoutsPerHeap;
-	size_t allocSize =
-		sizeof(VkDescriptorSetLayout) +
-		sizeof(VkWriteDescriptorSet) +
-		sizeof(VkDescriptorBufferInfo) * 2;
-
-	void* p = dyrecord_calloc(allocRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!p) { dyrecord_destroy(allocRecord); return false; }
-
-	VkDescriptorSetLayout* descriptorSetLayouts = p;
-	VkWriteDescriptorSet* writeDescriptorSets = (VkWriteDescriptorSet*) (descriptorSetLayouts + inoutsPerHeap);
-	VkDescriptorBufferInfo (*descriptorBufferInfos)[2] = (VkDescriptorBufferInfo(*)[]) (
-		writeDescriptorSets + inoutsPerHeap);
-
+	// Create descriptor set layout (same layout for each set)
 	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[2] = {0};
 	descriptorSetLayoutBindings[0].binding = 0;
 	descriptorSetLayoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -1522,10 +1573,11 @@ bool create_descriptors(Gpu* restrict gpu)
 	descriptorSetLayoutInfo.pBindings = descriptorSetLayoutBindings;
 
 	VkDescriptorSetLayout descriptorSetLayout;
-	VK_CALL_RES(vkCreateDescriptorSetLayout, device, &descriptorSetLayoutInfo, g_allocator, &descriptorSetLayout);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+	VK_CALLR(vkCreateDescriptorSetLayout, device, &descriptorSetLayoutInfo, allocator, &descriptorSetLayout);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->descriptorSetLayout = descriptorSetLayout;
 
+	// Create descriptor pool (all sets allocated from same pool)
 	VkDescriptorPoolSize descriptorPoolSizes[1];
 	descriptorPoolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	descriptorPoolSizes[0].descriptorCount = inoutsPerHeap * 2;
@@ -1537,9 +1589,19 @@ bool create_descriptors(Gpu* restrict gpu)
 	descriptorPoolInfo.pPoolSizes = descriptorPoolSizes;
 
 	VkDescriptorPool descriptorPool;
-	VK_CALL_RES(vkCreateDescriptorPool, device, &descriptorPoolInfo, g_allocator, &descriptorPool);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+	VK_CALLR(vkCreateDescriptorPool, device, &descriptorPoolInfo, allocator, &descriptorPool);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->descriptorPool = descriptorPool;
+
+	// Allocate descriptor sets (one per inout-buffer)
+	allocSize = inoutsPerHeap * sizeof(VkDescriptorSet);
+	VkDescriptorSet* descriptorSets = dyrecord_malloc(gpuRecord, allocSize);
+	if EXPECT_FALSE (!descriptorSets) { dyrecord_destroy(localRecord); return false; }
+	gpu->descriptorSets = descriptorSets;
+
+	allocSize = inoutsPerHeap * sizeof(VkDescriptorSetLayout);
+	VkDescriptorSetLayout* descriptorSetLayouts = dyrecord_malloc(localRecord, allocSize);
+	if EXPECT_FALSE (!descriptorSetLayouts) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		descriptorSetLayouts[i] = descriptorSetLayout;
@@ -1551,35 +1613,49 @@ bool create_descriptors(Gpu* restrict gpu)
 	descriptorSetAllocInfo.descriptorSetCount = inoutsPerHeap;
 	descriptorSetAllocInfo.pSetLayouts = descriptorSetLayouts;
 
-	VK_CALL_RES(vkAllocateDescriptorSets, device, &descriptorSetAllocInfo, descriptorSets);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+	VK_CALLR(vkAllocateDescriptorSets, device, &descriptorSetAllocInfo, descriptorSets);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+
+	// Write to each descriptor set
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkWriteDescriptorSet);
+
+	VkWriteDescriptorSet* writeDescriptorSets = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!writeDescriptorSets) { dyrecord_destroy(localRecord); return false; }
+
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkDescriptorBufferInfo[2]);
+
+	VkDescriptorBufferInfo (*descriptorBufferInfos)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!descriptorBufferInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+			// Binding 0
 			descriptorBufferInfos[j][0].buffer = deviceLocalBuffers[i];
 			descriptorBufferInfos[j][0].offset = bytesPerInout * k;
 			descriptorBufferInfos[j][0].range = bytesPerIn;
 
+			// Binding 1
 			descriptorBufferInfos[j][1].buffer = deviceLocalBuffers[i];
 			descriptorBufferInfos[j][1].offset = bytesPerInout * k + bytesPerIn;
 			descriptorBufferInfos[j][1].range = bytesPerOut;
 
 			writeDescriptorSets[j].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			writeDescriptorSets[j].dstSet = descriptorSets[j];
-			writeDescriptorSets[j].dstBinding = 0;
-			writeDescriptorSets[j].dstArrayElement = 0;
+			writeDescriptorSets[j].dstBinding = 0; // Start from this binding in the descriptor set
+			writeDescriptorSets[j].dstArrayElement = 0; // Start from this descriptor in the binding
 			writeDescriptorSets[j].descriptorCount = ARRAY_SIZE(descriptorBufferInfos[j]);
 			writeDescriptorSets[j].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 			writeDescriptorSets[j].pBufferInfo = descriptorBufferInfos[j];
 		}
 	}
 
-	uint32_t writeDescriptorCount = inoutsPerHeap;
-	uint32_t copyDescriptorCount = 0;
+	uint32_t writeCount = inoutsPerHeap;
+	uint32_t copyCount = 0;
 	VkCopyDescriptorSet* copyDescriptorSets = NULL;
 
-	VK_CALL(vkUpdateDescriptorSets,
-		device, writeDescriptorCount, writeDescriptorSets, copyDescriptorCount, copyDescriptorSets);
+	VK_CALL(vkUpdateDescriptorSets, device, writeCount, writeDescriptorSets, copyCount, copyDescriptorSets);
 
 #ifndef NDEBUG
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
@@ -1595,29 +1671,30 @@ bool create_descriptors(Gpu* restrict gpu)
 	}
 #endif
 
-	dyrecord_destroy(allocRecord);
+	dyrecord_destroy(localRecord);
 	return true;
 }
 
 bool create_pipeline(Gpu* restrict gpu)
 {
-	VkDevice device = gpu->device;
+	const VkAllocationCallbacks* allocator = gpu->allocator;
 
+	VkDevice device = gpu->device;
 	VkDescriptorSetLayout descriptorSetLayout = gpu->descriptorSetLayout;
 
 	uint32_t inoutsPerHeap = gpu->inoutsPerHeap;
 	uint32_t workgroupSize = gpu->workgroupSize;
 
-	uint32_t computeQueueFamilyTimestampValidBits = gpu->computeQueueFamilyTimestampValidBits;
-	uint32_t transferQueueFamilyTimestampValidBits = gpu->transferQueueFamilyTimestampValidBits;
+	uint32_t computeFamilyTimestampValidBits = gpu->computeFamilyTimestampValidBits;
+	uint32_t transferFamilyTimestampValidBits = gpu->transferFamilyTimestampValidBits;
 
 	uint32_t spvVerMajor = gpu->spvVerMajor;
 	uint32_t spvVerMinor = gpu->spvVerMinor;
 
 	VkResult vkres;
 
-	DyRecord allocRecord = dyrecord_create();
-	if EXPECT_FALSE (!allocRecord) { return false; }
+	DyRecord localRecord = dyrecord_create();
+	if EXPECT_FALSE (!localRecord) { return false; }
 
 	char shaderName[52];
 	sprintf(
@@ -1645,32 +1722,32 @@ bool create_pipeline(Gpu* restrict gpu)
 
 	size_t shaderSize;
 	bool bres = file_size(shaderName, &shaderSize);
-	if EXPECT_FALSE (!bres) { dyrecord_destroy(allocRecord); return false; }
+	if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
 
 	if EXPECT_FALSE (!shaderSize) {
 		log_critical(stderr, "Selected shader '%s' not found", shaderName);
-		dyrecord_destroy(allocRecord);
+		dyrecord_destroy(localRecord);
 		return false;
 	}
 
-	uint32_t* shaderCode = dyrecord_malloc(allocRecord, shaderSize);
-	if EXPECT_FALSE (!shaderCode) { dyrecord_destroy(allocRecord); return false; }
+	uint32_t* shaderCode = dyrecord_malloc(localRecord, shaderSize);
+	if EXPECT_FALSE (!shaderCode) { dyrecord_destroy(localRecord); return false; }
 
 	bres = read_file(shaderName, shaderCode, shaderSize);
-	if EXPECT_FALSE (!bres) { dyrecord_destroy(allocRecord); return false; }
+	if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
 
 	size_t cacheSize;
 	bres = file_size(PIPELINE_CACHE_NAME, &cacheSize);
-	if EXPECT_FALSE (!bres) { dyrecord_destroy(allocRecord); return false; }
+	if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
 
 	void* cacheData = NULL;
 
 	if (cacheSize) {
-		cacheData = dyrecord_malloc(allocRecord, cacheSize);
-		if EXPECT_FALSE (!cacheData) { dyrecord_destroy(allocRecord); return false; }
+		cacheData = dyrecord_malloc(localRecord, cacheSize);
+		if EXPECT_FALSE (!cacheData) { dyrecord_destroy(localRecord); return false; }
 
 		bres = read_file(PIPELINE_CACHE_NAME, cacheData, cacheSize);
-		if EXPECT_FALSE (!bres) { dyrecord_destroy(allocRecord); return false; }
+		if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
 	}
 
 	VkShaderModuleCreateInfo shaderInfo = {0};
@@ -1681,8 +1758,8 @@ bool create_pipeline(Gpu* restrict gpu)
 	VkShaderModule shader = VK_NULL_HANDLE;
 
 	if (!gpu->usingMaintenance5) {
-		VK_CALL_RES(vkCreateShaderModule, device, &shaderInfo, g_allocator, &shader);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+		VK_CALLR(vkCreateShaderModule, device, &shaderInfo, allocator, &shader);
+		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 		gpu->shaderModule = shader;
 	}
 
@@ -1694,8 +1771,8 @@ bool create_pipeline(Gpu* restrict gpu)
 	cacheInfo.pInitialData = cacheData;
 
 	VkPipelineCache cache;
-	VK_CALL_RES(vkCreatePipelineCache, device, &cacheInfo, g_allocator, &cache);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+	VK_CALLR(vkCreatePipelineCache, device, &cacheInfo, allocator, &cache);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->pipelineCache = cache;
 
 	VkDescriptorSetLayout descriptorSetLayouts[1];
@@ -1707,8 +1784,8 @@ bool create_pipeline(Gpu* restrict gpu)
 	pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts;
 
 	VkPipelineLayout pipelineLayout;
-	VK_CALL_RES(vkCreatePipelineLayout, device, &pipelineLayoutInfo, g_allocator, &pipelineLayout);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+	VK_CALLR(vkCreatePipelineLayout, device, &pipelineLayoutInfo, allocator, &pipelineLayout);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->pipelineLayout = pipelineLayout;
 
 	uint32_t specialisationData[1];
@@ -1745,44 +1822,42 @@ bool create_pipeline(Gpu* restrict gpu)
 	pipelineInfos[0].layout = pipelineLayout;
 
 	VkPipeline pipeline;
-	VK_CALL_RES(vkCreateComputePipelines,
-		device, cache, ARRAY_SIZE(pipelineInfos), pipelineInfos, g_allocator, &pipeline);
-
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+	VK_CALLR(vkCreateComputePipelines, device, cache, ARRAY_SIZE(pipelineInfos), pipelineInfos, allocator, &pipeline);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->pipeline = pipeline;
 
 	bres = save_pipeline_cache(device, cache, PIPELINE_CACHE_NAME);
-	if EXPECT_FALSE (!bres) { dyrecord_destroy(allocRecord); return false; }
+	if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
 
-	if (computeQueueFamilyTimestampValidBits || transferQueueFamilyTimestampValidBits) {
+	if (computeFamilyTimestampValidBits || transferFamilyTimestampValidBits) {
 		VkQueryPoolCreateInfo queryPoolInfo = {0};
 		queryPoolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
 		queryPoolInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
 		queryPoolInfo.queryCount = inoutsPerHeap * 4;
 
 		VkQueryPool queryPool;
-		VK_CALL_RES(vkCreateQueryPool, device, &queryPoolInfo, g_allocator, &queryPool);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+		VK_CALLR(vkCreateQueryPool, device, &queryPoolInfo, allocator, &queryPool);
+		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 		gpu->queryPool = queryPool;
 	}
 
 	if (gpu->usingPipelineExecutableProperties) {
 		bres = capture_pipeline(device, pipeline);
-		if EXPECT_FALSE (!bres) { dyrecord_destroy(allocRecord); return false; }
+		if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
 	}
 
-	VK_CALL(vkDestroyDescriptorSetLayout, device, descriptorSetLayout, g_allocator);
+	VK_CALL(vkDestroyDescriptorSetLayout, device, descriptorSetLayout, allocator);
 	gpu->descriptorSetLayout = VK_NULL_HANDLE;
 
-	VK_CALL(vkDestroyPipelineCache, device, cache, g_allocator);
+	VK_CALL(vkDestroyPipelineCache, device, cache, allocator);
 	gpu->pipelineCache = VK_NULL_HANDLE;
 
 	if (!gpu->usingMaintenance5) {
-		VK_CALL(vkDestroyShaderModule, device, shader, g_allocator);
+		VK_CALL(vkDestroyShaderModule, device, shader, allocator);
 		gpu->shaderModule = VK_NULL_HANDLE;
 	}
 
-	dyrecord_destroy(allocRecord);
+	dyrecord_destroy(localRecord);
 	return true;
 }
 
@@ -1802,7 +1877,7 @@ static bool record_transfer_cmdbuffer(
 	VkCommandBufferBeginInfo beginInfo = {0};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-	VK_CALL_RES(vkBeginCommandBuffer, cmdBuffer, &beginInfo);
+	VK_CALLR(vkBeginCommandBuffer, cmdBuffer, &beginInfo);
 	if EXPECT_FALSE (vkres) { return false; }
 
 	if (timestampValidBits) {
@@ -1833,7 +1908,7 @@ static bool record_transfer_cmdbuffer(
 		VK_CALL(vkCmdWriteTimestamp2KHR, cmdBuffer, stage, queryPool, query);
 	}
 
-	VK_CALL_RES(vkEndCommandBuffer, cmdBuffer);
+	VK_CALLR(vkEndCommandBuffer, cmdBuffer);
 	if EXPECT_FALSE (vkres) { return false; }
 
 	return true;
@@ -1855,7 +1930,7 @@ static bool record_compute_cmdbuffer(
 	VkCommandBufferBeginInfo beginInfo = {0};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-	VK_CALL_RES(vkBeginCommandBuffer, cmdBuffer, &beginInfo);
+	VK_CALLR(vkBeginCommandBuffer, cmdBuffer, &beginInfo);
 	if EXPECT_FALSE (vkres) { return false; }
 
 	if (timestampValidBits) {
@@ -1898,7 +1973,7 @@ static bool record_compute_cmdbuffer(
 		VK_CALL(vkCmdWriteTimestamp2KHR, cmdBuffer, stage, queryPool, query);
 	}
 
-	VK_CALL_RES(vkEndCommandBuffer, cmdBuffer);
+	VK_CALLR(vkEndCommandBuffer, cmdBuffer);
 	if EXPECT_FALSE (vkres) { return false; }
 
 	return true;
@@ -1906,16 +1981,14 @@ static bool record_compute_cmdbuffer(
 
 bool create_commands(Gpu* restrict gpu)
 {
+	DyRecord gpuRecord = gpu->allocRecord;
+
+	const VkAllocationCallbacks* allocator = gpu->allocator;
 	const VkBuffer* hostVisibleBuffers = gpu->hostVisibleBuffers;
 	const VkBuffer* deviceLocalBuffers = gpu->deviceLocalBuffers;
 	const VkDescriptorSet* descriptorSets  = gpu->descriptorSets;
 
-	VkCommandBuffer* computeCmdBuffers = gpu->computeCommandBuffers;
-	VkCommandBuffer* transferCmdBuffers = gpu->transferCommandBuffers;
-	VkSemaphore* semaphores = gpu->semaphores;
-
 	VkDevice device = gpu->device;
-
 	VkPipelineLayout pipelineLayout = gpu->pipelineLayout;
 	VkPipeline pipeline = gpu->pipeline;
 	VkQueryPool queryPool = gpu->queryPool;
@@ -1929,64 +2002,102 @@ bool create_commands(Gpu* restrict gpu)
 	uint32_t buffersPerHeap = gpu->buffersPerHeap;
 	uint32_t workgroupCount = gpu->workgroupCount;
 
-	uint32_t computeQueueFamilyIndex = gpu->computeQueueFamilyIndex;
-	uint32_t transferQueueFamilyIndex = gpu->transferQueueFamilyIndex;
-	uint32_t computeQueueFamilyTimestampValidBits = gpu->computeQueueFamilyTimestampValidBits;
-	uint32_t transferQueueFamilyTimestampValidBits = gpu->transferQueueFamilyTimestampValidBits;
+	uint32_t computeFamilyIndex = gpu->computeFamilyIndex;
+	uint32_t transferFamilyIndex = gpu->transferFamilyIndex;
+	uint32_t computeFamilyTimestampValidBits = gpu->computeFamilyTimestampValidBits;
+	uint32_t transferFamilyTimestampValidBits = gpu->transferFamilyTimestampValidBits;
 
 	VkResult vkres;
 
-	DyRecord allocRecord = dyrecord_create();
-	if EXPECT_FALSE (!allocRecord) { return false; }
+	DyRecord localRecord = dyrecord_create();
+	if EXPECT_FALSE (!localRecord) { return false; }
 
-	size_t allocCount = 1;
-	size_t allocSize =
-		inoutsPerBuffer * sizeof(VkBufferCopy) * 2 +
-		inoutsPerHeap * sizeof(VkBufferMemoryBarrier2) * 5 +
-		inoutsPerHeap * sizeof(VkDependencyInfo) * 4;
+	// Create transfer command pool (all transfer command buffers allocated from same pool)
+	VkCommandPoolCreateInfo transferCmdPoolInfo = {0};
+	transferCmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	transferCmdPoolInfo.queueFamilyIndex = transferFamilyIndex;
 
-	void* p = dyrecord_calloc(allocRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!p) { dyrecord_destroy(allocRecord); return false; }
+	VkCommandPool transferCmdPool;
+	VK_CALLR(vkCreateCommandPool, device, &transferCmdPoolInfo, allocator, &transferCmdPool);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	gpu->transferCommandPool = transferCmdPool;
 
-	VkBufferCopy* inBufferCopies = p;
-	VkBufferCopy* outBufferCopies = (VkBufferCopy*) (inBufferCopies + inoutsPerBuffer);
+	// Create compute command pool (all compute command buffers allocated from same pool)
+	VkCommandPoolCreateInfo computeCmdPoolInfo = {0};
+	computeCmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	computeCmdPoolInfo.queueFamilyIndex = computeFamilyIndex;
 
-	VkBufferMemoryBarrier2 (*transferBufferMemoryBarriers)[3] = (VkBufferMemoryBarrier2(*)[]) (
-		outBufferCopies + inoutsPerBuffer);
-	VkBufferMemoryBarrier2 (*computeBufferMemoryBarriers)[2] = (VkBufferMemoryBarrier2(*)[]) (
-		transferBufferMemoryBarriers + inoutsPerHeap);
+	VkCommandPool computeCmdPool;
+	VK_CALLR(vkCreateCommandPool, device, &computeCmdPoolInfo, allocator, &computeCmdPool);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	gpu->computeCommandPool = computeCmdPool;
 
-	VkDependencyInfo (*transferDependencyInfos)[2] = (VkDependencyInfo(*)[]) (
-		computeBufferMemoryBarriers + inoutsPerHeap);
-	VkDependencyInfo (*computeDependencyInfos)[2] = (VkDependencyInfo(*)[]) (transferDependencyInfos + inoutsPerHeap);
+	// Create transfer command buffers (one per inout-buffer)
+	size_t allocCount = inoutsPerHeap;
+	size_t allocSize = sizeof(VkCommandBuffer);
 
-	const char* transferCmdPoolName = "Transfer";
-	uint32_t transferCmdBufferCount = inoutsPerHeap;
+	VkCommandBuffer* transferCmdBuffers = dyrecord_calloc(gpuRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!transferCmdBuffers) { dyrecord_destroy(localRecord); return false; }
+	gpu->transferCommandBuffers = transferCmdBuffers;
 
-	bool bres = create_command_handles(
-		device, transferQueueFamilyIndex, &gpu->transferCommandPool, transferCmdPoolName, transferCmdBufferCount,
-		transferCmdBuffers);
+	VkCommandBufferAllocateInfo transferCmdBufferAllocInfo = {0};
+	transferCmdBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	transferCmdBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	transferCmdBufferAllocInfo.commandPool = transferCmdPool;
+	transferCmdBufferAllocInfo.commandBufferCount = inoutsPerHeap;
 
-	if EXPECT_FALSE (!bres) { dyrecord_destroy(allocRecord); return false; }
+	VK_CALLR(vkAllocateCommandBuffers, device, &transferCmdBufferAllocInfo, transferCmdBuffers);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
-	const char* computeCmdPoolName = "Compute";
-	uint32_t computeCmdBufferCount = inoutsPerHeap;
+	// Create compute command buffers (one per inout-buffer)
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkCommandBuffer);
 
-	bres = create_command_handles(
-		device, computeQueueFamilyIndex, &gpu->computeCommandPool, computeCmdPoolName, computeCmdBufferCount,
-		computeCmdBuffers);
+	VkCommandBuffer* computeCmdBuffers = dyrecord_calloc(gpuRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!computeCmdBuffers) { dyrecord_destroy(localRecord); return false; }
+	gpu->computeCommandBuffers = computeCmdBuffers;
 
-	if EXPECT_FALSE (!bres) { dyrecord_destroy(allocRecord); return false; }
+	VkCommandBufferAllocateInfo computeCmdBufferAllocInfo = {0};
+	computeCmdBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	computeCmdBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	computeCmdBufferAllocInfo.commandPool = computeCmdPool;
+	computeCmdBufferAllocInfo.commandBufferCount = inoutsPerHeap;
+
+	VK_CALLR(vkAllocateCommandBuffers, device, &computeCmdBufferAllocInfo, computeCmdBuffers);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+
+	// Specify in-buffer copies
+	allocCount = inoutsPerBuffer;
+	allocSize = sizeof(VkBufferCopy);
+
+	VkBufferCopy* inBufferCopies = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!inBufferCopies) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerBuffer; i++) {
 		inBufferCopies[i].srcOffset = bytesPerInout * i;
 		inBufferCopies[i].dstOffset = bytesPerInout * i;
 		inBufferCopies[i].size = bytesPerIn;
+	}
 
+	// Specify out-buffer copies
+	allocCount = inoutsPerBuffer;
+	allocSize = sizeof(VkBufferCopy);
+
+	VkBufferCopy* outBufferCopies = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!outBufferCopies) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0; i < inoutsPerBuffer; i++) {
 		outBufferCopies[i].srcOffset = bytesPerInout * i + bytesPerIn;
 		outBufferCopies[i].dstOffset = bytesPerInout * i + bytesPerIn;
 		outBufferCopies[i].size = bytesPerOut;
 	}
+
+	// Specify transfer buffer memory barriers
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkBufferMemoryBarrier2[3]);
+
+	VkBufferMemoryBarrier2 (*transferBufferMemoryBarriers)[3] = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!transferBufferMemoryBarriers) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 		VkBuffer hostVisibleBuffer = hostVisibleBuffers[i];
@@ -1996,8 +2107,8 @@ bool create_commands(Gpu* restrict gpu)
 			transferBufferMemoryBarriers[j][0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
 			transferBufferMemoryBarriers[j][0].srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
 			transferBufferMemoryBarriers[j][0].srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-			transferBufferMemoryBarriers[j][0].srcQueueFamilyIndex = transferQueueFamilyIndex;
-			transferBufferMemoryBarriers[j][0].dstQueueFamilyIndex = computeQueueFamilyIndex;
+			transferBufferMemoryBarriers[j][0].srcQueueFamilyIndex = transferFamilyIndex;
+			transferBufferMemoryBarriers[j][0].dstQueueFamilyIndex = computeFamilyIndex;
 			transferBufferMemoryBarriers[j][0].buffer = deviceLocalBuffer;
 			transferBufferMemoryBarriers[j][0].offset = bytesPerInout * k;
 			transferBufferMemoryBarriers[j][0].size = bytesPerIn;
@@ -2005,8 +2116,8 @@ bool create_commands(Gpu* restrict gpu)
 			transferBufferMemoryBarriers[j][1].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
 			transferBufferMemoryBarriers[j][1].dstStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
 			transferBufferMemoryBarriers[j][1].dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
-			transferBufferMemoryBarriers[j][1].srcQueueFamilyIndex = computeQueueFamilyIndex;
-			transferBufferMemoryBarriers[j][1].dstQueueFamilyIndex = transferQueueFamilyIndex;
+			transferBufferMemoryBarriers[j][1].srcQueueFamilyIndex = computeFamilyIndex;
+			transferBufferMemoryBarriers[j][1].dstQueueFamilyIndex = transferFamilyIndex;
 			transferBufferMemoryBarriers[j][1].buffer = deviceLocalBuffer;
 			transferBufferMemoryBarriers[j][1].offset = bytesPerInout * k + bytesPerIn;
 			transferBufferMemoryBarriers[j][1].size = bytesPerOut;
@@ -2019,12 +2130,25 @@ bool create_commands(Gpu* restrict gpu)
 			transferBufferMemoryBarriers[j][2].buffer = hostVisibleBuffer;
 			transferBufferMemoryBarriers[j][2].offset = bytesPerInout * k + bytesPerIn;
 			transferBufferMemoryBarriers[j][2].size = bytesPerOut;
+		}
+	}
 
+	// Specify compute buffer memory barriers
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkBufferMemoryBarrier2[2]);
+
+	VkBufferMemoryBarrier2 (*computeBufferMemoryBarriers)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!computeBufferMemoryBarriers) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
+		VkBuffer deviceLocalBuffer = deviceLocalBuffers[i];
+
+		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
 			computeBufferMemoryBarriers[j][0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
 			computeBufferMemoryBarriers[j][0].dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
 			computeBufferMemoryBarriers[j][0].dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT;
-			computeBufferMemoryBarriers[j][0].srcQueueFamilyIndex = transferQueueFamilyIndex;
-			computeBufferMemoryBarriers[j][0].dstQueueFamilyIndex = computeQueueFamilyIndex;
+			computeBufferMemoryBarriers[j][0].srcQueueFamilyIndex = transferFamilyIndex;
+			computeBufferMemoryBarriers[j][0].dstQueueFamilyIndex = computeFamilyIndex;
 			computeBufferMemoryBarriers[j][0].buffer = deviceLocalBuffer;
 			computeBufferMemoryBarriers[j][0].offset = bytesPerInout * k;
 			computeBufferMemoryBarriers[j][0].size = bytesPerIn;
@@ -2032,48 +2156,75 @@ bool create_commands(Gpu* restrict gpu)
 			computeBufferMemoryBarriers[j][1].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
 			computeBufferMemoryBarriers[j][1].srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
 			computeBufferMemoryBarriers[j][1].srcAccessMask = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
-			computeBufferMemoryBarriers[j][1].srcQueueFamilyIndex = computeQueueFamilyIndex;
-			computeBufferMemoryBarriers[j][1].dstQueueFamilyIndex = transferQueueFamilyIndex;
+			computeBufferMemoryBarriers[j][1].srcQueueFamilyIndex = computeFamilyIndex;
+			computeBufferMemoryBarriers[j][1].dstQueueFamilyIndex = transferFamilyIndex;
 			computeBufferMemoryBarriers[j][1].buffer = deviceLocalBuffer;
 			computeBufferMemoryBarriers[j][1].offset = bytesPerInout * k + bytesPerIn;
 			computeBufferMemoryBarriers[j][1].size = bytesPerOut;
-
-			transferDependencyInfos[j][0].sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-			transferDependencyInfos[j][0].bufferMemoryBarrierCount = 2;
-			transferDependencyInfos[j][0].pBufferMemoryBarriers = &transferBufferMemoryBarriers[j][0];
-
-			transferDependencyInfos[j][1].sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-			transferDependencyInfos[j][1].bufferMemoryBarrierCount = 1;
-			transferDependencyInfos[j][1].pBufferMemoryBarriers = &transferBufferMemoryBarriers[j][2];
-
-			computeDependencyInfos[j][0].sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-			computeDependencyInfos[j][0].bufferMemoryBarrierCount = 1;
-			computeDependencyInfos[j][0].pBufferMemoryBarriers = &computeBufferMemoryBarriers[j][0];
-
-			computeDependencyInfos[j][1].sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-			computeDependencyInfos[j][1].bufferMemoryBarrierCount = 1;
-			computeDependencyInfos[j][1].pBufferMemoryBarriers = &computeBufferMemoryBarriers[j][1];
 		}
 	}
 
+	// Transfer dependency infos
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkDependencyInfo[2]);
+
+	VkDependencyInfo (*transferDependencyInfos)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!transferDependencyInfos) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+		transferDependencyInfos[i][0].sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+		transferDependencyInfos[i][0].bufferMemoryBarrierCount = 2;
+		transferDependencyInfos[i][0].pBufferMemoryBarriers = &transferBufferMemoryBarriers[i][0];
+
+		transferDependencyInfos[i][1].sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+		transferDependencyInfos[i][1].bufferMemoryBarrierCount = 1;
+		transferDependencyInfos[i][1].pBufferMemoryBarriers = &transferBufferMemoryBarriers[i][2];
+	}
+
+	// Compute dependency infos
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkDependencyInfo[2]);
+
+	VkDependencyInfo (*computeDependencyInfos)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!computeDependencyInfos) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+		computeDependencyInfos[i][0].sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+		computeDependencyInfos[i][0].bufferMemoryBarrierCount = 1;
+		computeDependencyInfos[i][0].pBufferMemoryBarriers = &computeBufferMemoryBarriers[i][0];
+
+		computeDependencyInfos[i][1].sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+		computeDependencyInfos[i][1].bufferMemoryBarrierCount = 1;
+		computeDependencyInfos[i][1].pBufferMemoryBarriers = &computeBufferMemoryBarriers[i][1];
+	}
+
+	// Record command buffers
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
 			uint32_t firstTransferQuery = j * 4;
-			bres = record_transfer_cmdbuffer(
+			bool bres = record_transfer_cmdbuffer(
 				transferCmdBuffers[j], hostVisibleBuffers[i], deviceLocalBuffers[i], &inBufferCopies[k],
 				&outBufferCopies[k], transferDependencyInfos[j], queryPool, firstTransferQuery,
-				transferQueueFamilyTimestampValidBits);
+				transferFamilyTimestampValidBits);
 
-			if EXPECT_FALSE (!bres) { dyrecord_destroy(allocRecord); return false; }
+			if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
 
 			uint32_t firstComputeQuery = j * 4 + 2;
 			bres = record_compute_cmdbuffer(
 				computeCmdBuffers[j], pipeline, pipelineLayout, &descriptorSets[j], computeDependencyInfos[j],
-				queryPool, firstComputeQuery, computeQueueFamilyTimestampValidBits, workgroupCount);
+				queryPool, firstComputeQuery, computeFamilyTimestampValidBits, workgroupCount);
 
-			if EXPECT_FALSE (!bres) { dyrecord_destroy(allocRecord); return false; }
+			if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
 		}
 	}
+
+	// Create semaphores (one per inout-buffer)
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkSemaphore);
+
+	VkSemaphore* semaphores = dyrecord_calloc(gpuRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!semaphores) { dyrecord_destroy(localRecord); return false; }
+	gpu->semaphores = semaphores;
 
 	VkSemaphoreTypeCreateInfo semaphoreTypeInfo = {0};
 	semaphoreTypeInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
@@ -2086,12 +2237,15 @@ bool create_commands(Gpu* restrict gpu)
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		VkSemaphore semaphore;
-		VK_CALL_RES(vkCreateSemaphore, device, &semaphoreInfo, g_allocator, &semaphore);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+		VK_CALLR(vkCreateSemaphore, device, &semaphoreInfo, allocator, &semaphore);
+		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 		semaphores[i] = semaphore;
 	}
 
 #ifndef NDEBUG
+	set_debug_name(device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t) transferCmdPool, "Transfer");
+	set_debug_name(device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t) computeCmdPool, "Compute");
+
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
 			char objectName[68];
@@ -2116,11 +2270,11 @@ bool create_commands(Gpu* restrict gpu)
 #endif
 
 	if (gpu->usingMaintenance4) {
-		VK_CALL(vkDestroyPipelineLayout, device, pipelineLayout, g_allocator);
+		VK_CALL(vkDestroyPipelineLayout, device, pipelineLayout, allocator);
 		gpu->pipelineLayout = VK_NULL_HANDLE;
 	}
 
-	dyrecord_destroy(allocRecord);
+	dyrecord_destroy(localRecord);
 	return true;
 }
 
@@ -2151,78 +2305,41 @@ bool submit_commands(Gpu* restrict gpu)
 	uint32_t inoutsPerHeap = gpu->inoutsPerHeap;
 	uint32_t buffersPerHeap = gpu->buffersPerHeap;
 
-	uint32_t computeQueueFamilyTimestampValidBits = gpu->computeQueueFamilyTimestampValidBits;
-	uint32_t transferQueueFamilyTimestampValidBits = gpu->transferQueueFamilyTimestampValidBits;
+	uint32_t computeFamilyTimestampValidBits = gpu->computeFamilyTimestampValidBits;
+	uint32_t transferFamilyTimestampValidBits = gpu->transferFamilyTimestampValidBits;
 
 	double timestampPeriod = (double) gpu->timestampPeriod;
 	bool hostNonCoherent = gpu->hostNonCoherent;
 
 	VkResult vkres;
 
-	DyRecord allocRecord = dyrecord_create();
-	if EXPECT_FALSE (!allocRecord) { return false; }
-
-	size_t allocCount = inoutsPerHeap;
-	size_t allocSize =
-		sizeof(StartValue) +
-		sizeof(VkMappedMemoryRange) * 2 +
-		sizeof(VkSubmitInfo2) * 2 +
-		sizeof(VkCommandBufferSubmitInfo) * 2 +
-		sizeof(VkSemaphoreSubmitInfo) * 4 +
-		sizeof(VkSemaphoreWaitInfo) * 2;
-
-	void* p = dyrecord_calloc(allocRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!p) { dyrecord_destroy(allocRecord); return false; }
-
-	StartValue* testedValues = p;
-
-	VkMappedMemoryRange* hostVisibleInBuffersMappedMemoryRanges = (VkMappedMemoryRange*) (testedValues + inoutsPerHeap);
-	VkMappedMemoryRange* hostVisibleOutBuffersMappedMemoryRanges = (VkMappedMemoryRange*) (
-		hostVisibleInBuffersMappedMemoryRanges + inoutsPerHeap);
-
-	VkSubmitInfo2* transferSubmitInfos = (VkSubmitInfo2*) (hostVisibleOutBuffersMappedMemoryRanges + inoutsPerHeap);
-	VkSubmitInfo2* computeSubmitInfos = (VkSubmitInfo2*) (transferSubmitInfos + inoutsPerHeap);
-
-	VkCommandBufferSubmitInfo* transferCmdBufferSubmitInfos = (VkCommandBufferSubmitInfo*) (
-		computeSubmitInfos + inoutsPerHeap);
-	VkCommandBufferSubmitInfo* computeCmdBufferSubmitInfos = (VkCommandBufferSubmitInfo*) (
-		transferCmdBufferSubmitInfos + inoutsPerHeap);
-
-	VkSemaphoreSubmitInfo* transferWaitSemaphoreSubmitInfos = (VkSemaphoreSubmitInfo*) (
-		computeCmdBufferSubmitInfos + inoutsPerHeap);
-	VkSemaphoreSubmitInfo* transferSignalSemaphoreSubmitInfos = (VkSemaphoreSubmitInfo*) (
-		transferWaitSemaphoreSubmitInfos + inoutsPerHeap);
-	VkSemaphoreSubmitInfo* computeWaitSemaphoreSubmitInfos = (VkSemaphoreSubmitInfo*) (
-		transferSignalSemaphoreSubmitInfos + inoutsPerHeap);
-	VkSemaphoreSubmitInfo* computeSignalSemaphoreSubmitInfos = (VkSemaphoreSubmitInfo*) (
-		computeWaitSemaphoreSubmitInfos + inoutsPerHeap);
-
-	VkSemaphoreWaitInfo* transferSemaphoreWaitInfos = (VkSemaphoreWaitInfo*) (
-		computeSignalSemaphoreSubmitInfos + inoutsPerHeap);
-	VkSemaphoreWaitInfo* computeSemaphoreWaitInfos = (VkSemaphoreWaitInfo*) (
-		transferSemaphoreWaitInfos + inoutsPerHeap);
+	DyRecord localRecord = dyrecord_create();
+	if EXPECT_FALSE (!localRecord) { return false; }
 	
+	// Create array of starting values with longest total stopping times
 	size_t elmSize = sizeof(StartValue);
 	size_t elmCount = 32;
 
 	DyArray bestStartValues = dyarray_create(elmSize, elmCount);
-	if EXPECT_FALSE (!bestStartValues) { dyrecord_destroy(allocRecord); return false; }
+	if EXPECT_FALSE (!bestStartValues) { dyrecord_destroy(localRecord); return false; }
 
-	bool bres = dyrecord_add(allocRecord, bestStartValues, dyarray_destroy_stub);
-	if EXPECT_FALSE (!bres) { dyarray_destroy(bestStartValues); dyrecord_destroy(allocRecord); return false; }
+	bool bres = dyrecord_add(localRecord, bestStartValues, dyarray_destroy_stub);
+	if EXPECT_FALSE (!bres) { dyarray_destroy(bestStartValues); dyrecord_destroy(localRecord); return false; }
 
+	// Create array of longest total stopping times found
 	elmSize = sizeof(StopTime);
 	elmCount = 32;
 
 	DyArray bestStopTimes = dyarray_create(elmSize, elmCount);
-	if EXPECT_FALSE (!bestStopTimes) { dyrecord_destroy(allocRecord); return false; }
+	if EXPECT_FALSE (!bestStopTimes) { dyrecord_destroy(localRecord); return false; }
 
-	bres = dyrecord_add(allocRecord, bestStopTimes, dyarray_destroy_stub);
-	if EXPECT_FALSE (!bres) { dyarray_destroy(bestStopTimes); dyrecord_destroy(allocRecord); return false; }
+	bres = dyrecord_add(localRecord, bestStopTimes, dyarray_destroy_stub);
+	if EXPECT_FALSE (!bres) { dyarray_destroy(bestStopTimes); dyrecord_destroy(localRecord); return false; }
 
+	// Check if progress file exists
 	size_t fileSize;
 	bres = file_size(PROGRESS_FILE_NAME, &fileSize);
-	if EXPECT_FALSE (!bres) { dyrecord_destroy(allocRecord); return false; }
+	if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
 
 	Position position = {0};
 	position.val0mod1off[0] = 1;
@@ -2251,7 +2368,7 @@ bool submit_commands(Gpu* restrict gpu)
 			&val1mod6off2Upper, &val1mod6off2Lower,
 			&curValueUpper, &curValueLower, &bestTime);
 
-		if EXPECT_FALSE (!bres) { dyrecord_destroy(allocRecord); return false; }
+		if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
 
 		position.val0mod1off[0] = INT128(val0mod1off0Upper, val0mod1off0Lower);
 		position.val0mod1off[1] = INT128(val0mod1off1Upper, val0mod1off1Lower);
@@ -2265,49 +2382,126 @@ bool submit_commands(Gpu* restrict gpu)
 		position.bestStopTime = bestTime;
 	}
 
+	// Specify mapped memory ranges of host visible in-buffers
+	size_t allocCount = inoutsPerHeap;
+	size_t allocSize = sizeof(VkMappedMemoryRange);
+
+	VkMappedMemoryRange* inBuffersMappedRanges = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!inBuffersMappedRanges) { dyrecord_destroy(localRecord); return false; }
+
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
-		VkDeviceMemory hostVisibleMemory = hostVisibleMemories[i];
-
 		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
-			hostVisibleInBuffersMappedMemoryRanges[j].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-			hostVisibleInBuffersMappedMemoryRanges[j].memory = hostVisibleMemory;
-			hostVisibleInBuffersMappedMemoryRanges[j].offset = bytesPerInout * k;
-			hostVisibleInBuffersMappedMemoryRanges[j].size = bytesPerIn;
-
-			hostVisibleOutBuffersMappedMemoryRanges[j].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-			hostVisibleOutBuffersMappedMemoryRanges[j].memory = hostVisibleMemory;
-			hostVisibleOutBuffersMappedMemoryRanges[j].offset = bytesPerInout * k + bytesPerIn;
-			hostVisibleOutBuffersMappedMemoryRanges[j].size = bytesPerOut;
+			inBuffersMappedRanges[j].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+			inBuffersMappedRanges[j].memory = hostVisibleMemories[i];
+			inBuffersMappedRanges[j].offset = bytesPerInout * k;
+			inBuffersMappedRanges[j].size = bytesPerIn;
 		}
 	}
+
+	// Specify mapped memory ranges of host visible out-buffers
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkMappedMemoryRange);
+
+	VkMappedMemoryRange* outBuffersMappedRanges = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!outBuffersMappedRanges) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
+		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+			outBuffersMappedRanges[j].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+			outBuffersMappedRanges[j].memory = hostVisibleMemories[i];
+			outBuffersMappedRanges[j].offset = bytesPerInout * k + bytesPerIn;
+			outBuffersMappedRanges[j].size = bytesPerOut;
+		}
+	}
+
+	// Specify command buffers for submissions to transfer queue
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkCommandBufferSubmitInfo);
+
+	VkCommandBufferSubmitInfo* transferCmdBufferSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!transferCmdBufferSubmitInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		transferCmdBufferSubmitInfos[i].sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
 		transferCmdBufferSubmitInfos[i].commandBuffer = transferCmdBuffers[i];
+	}
 
+	// Specify command buffers for submissions to compute queue
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkCommandBufferSubmitInfo);
+
+	VkCommandBufferSubmitInfo* computeCmdBufferSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!computeCmdBufferSubmitInfos) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		computeCmdBufferSubmitInfos[i].sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
 		computeCmdBufferSubmitInfos[i].commandBuffer = computeCmdBuffers[i];
+	}
 
+	// Specify semaphore wait operations for submissions to transfer queue
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkSemaphoreSubmitInfo);
+
+	VkSemaphoreSubmitInfo* transferWaitSemaphoreSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!transferWaitSemaphoreSubmitInfos) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		transferWaitSemaphoreSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 		transferWaitSemaphoreSubmitInfos[i].semaphore = semaphores[i];
 		transferWaitSemaphoreSubmitInfos[i].value = 0;
 		transferWaitSemaphoreSubmitInfos[i].stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // Include acquire op
+	}
 
+	// Specify semaphore signal operations for submissions to transfer queue
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkSemaphoreSubmitInfo);
+
+	VkSemaphoreSubmitInfo* transferSignalSemaphoreSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!transferSignalSemaphoreSubmitInfos) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		transferSignalSemaphoreSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 		transferSignalSemaphoreSubmitInfos[i].semaphore = semaphores[i];
 		transferSignalSemaphoreSubmitInfos[i].value = 1;
 		transferSignalSemaphoreSubmitInfos[i].stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // Include release op
+	}
 
+	// Specify semaphore wait operations for submissions to compute queue
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkSemaphoreSubmitInfo);
+
+	VkSemaphoreSubmitInfo* computeWaitSemaphoreSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!computeWaitSemaphoreSubmitInfos) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		computeWaitSemaphoreSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 		computeWaitSemaphoreSubmitInfos[i].semaphore = semaphores[i];
 		computeWaitSemaphoreSubmitInfos[i].value = 1;
 		computeWaitSemaphoreSubmitInfos[i].stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // Include acquire op
+	}
 
+	// Specify semaphore signal operations for submissions to compute queue
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkSemaphoreSubmitInfo);
+
+	VkSemaphoreSubmitInfo* computeSignalSemaphoreSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!computeSignalSemaphoreSubmitInfos) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		computeSignalSemaphoreSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 		computeSignalSemaphoreSubmitInfos[i].semaphore = semaphores[i];
 		computeSignalSemaphoreSubmitInfos[i].value = 2;
 		computeSignalSemaphoreSubmitInfos[i].stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // Include release op
+	}
 
+	// Specify submissions to transfer queue
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkSubmitInfo2);
+
+	VkSubmitInfo2* transferSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!transferSubmitInfos) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		transferSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
 		transferSubmitInfos[i].waitSemaphoreInfoCount = 1;
 		transferSubmitInfos[i].pWaitSemaphoreInfos = &transferWaitSemaphoreSubmitInfos[i];
@@ -2315,7 +2509,16 @@ bool submit_commands(Gpu* restrict gpu)
 		transferSubmitInfos[i].pCommandBufferInfos = &transferCmdBufferSubmitInfos[i];
 		transferSubmitInfos[i].signalSemaphoreInfoCount = 1;
 		transferSubmitInfos[i].pSignalSemaphoreInfos = &transferSignalSemaphoreSubmitInfos[i];
+	}
 
+	// Specify submissions to compute queue
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkSubmitInfo2);
+
+	VkSubmitInfo2* computeSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!computeSubmitInfos) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		computeSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
 		computeSubmitInfos[i].waitSemaphoreInfoCount = 1;
 		computeSubmitInfos[i].pWaitSemaphoreInfos = &computeWaitSemaphoreSubmitInfos[i];
@@ -2323,66 +2526,101 @@ bool submit_commands(Gpu* restrict gpu)
 		computeSubmitInfos[i].pCommandBufferInfos = &computeCmdBufferSubmitInfos[i];
 		computeSubmitInfos[i].signalSemaphoreInfoCount = 1;
 		computeSubmitInfos[i].pSignalSemaphoreInfos = &computeSignalSemaphoreSubmitInfos[i];
+	}
 
+	// Specify semaphore wait operations for transfer queue on host
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkSemaphoreWaitInfo);
+
+	VkSemaphoreWaitInfo* transferSemaphoreWaitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!transferSemaphoreWaitInfos) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		transferSemaphoreWaitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
 		transferSemaphoreWaitInfos[i].semaphoreCount = 1;
 		transferSemaphoreWaitInfos[i].pSemaphores = &semaphores[i];
 		transferSemaphoreWaitInfos[i].pValues = &transferSignalSemaphoreSubmitInfos[i].value;
+	}
 
+	// Specify semaphore wait operations for compute queue on host
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkSemaphoreWaitInfo);
+
+	VkSemaphoreWaitInfo* computeSemaphoreWaitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!computeSemaphoreWaitInfos) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		computeSemaphoreWaitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
 		computeSemaphoreWaitInfos[i].semaphoreCount = 1;
 		computeSemaphoreWaitInfos[i].pSemaphores = &semaphores[i];
 		computeSemaphoreWaitInfos[i].pValues = &computeSignalSemaphoreSubmitInfos[i].value;
 	}
 
+	// Create array keeping track of initial tested starting value for each inout-buffer
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(StartValue);
+
+	StartValue* testedValues = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!testedValues) { dyrecord_destroy(localRecord); return false; }
+
+	// Create thread to wait for user input
+	atomic_bool input;
+	atomic_init(&input, false);
+
+	pthread_t waitThread;
+	int ires = pthread_create(&waitThread, NULL, wait_for_input, &input);
+	if EXPECT_FALSE (ires) { PCREATE_FAILURE(ires); dyrecord_destroy(localRecord); return false; }
+
 	clock_t totalBmStart = clock();
 	StartValue tested = position.curStartValue;
 
+	// Write starting values to mapped in-buffers
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		testedValues[i] = tested;
 		write_inbuffer(mappedInBuffers[i], &testedValues[i], valuesPerInout, valuesPerHeap);
 		tested += valuesPerInout * 4;
 	}
 
+	// Flush mapped host visible in-buffers
 	if (hostNonCoherent) {
-		VK_CALL_RES(vkFlushMappedMemoryRanges, device, inoutsPerHeap, hostVisibleInBuffersMappedMemoryRanges);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+		VK_CALLR(vkFlushMappedMemoryRanges, device, inoutsPerHeap, inBuffersMappedRanges);
+		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 	}
 
+	// Submit transfer command buffers to initiate the first cycle
 	uint32_t transferSubmitInfoCount = inoutsPerHeap;
-	VK_CALL_RES(vkQueueSubmit2KHR, transferQueue, transferSubmitInfoCount, transferSubmitInfos, VK_NULL_HANDLE);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+	VK_CALLR(vkQueueSubmit2KHR, transferQueue, transferSubmitInfoCount, transferSubmitInfos, VK_NULL_HANDLE);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
+	// Submit compute command buffers to the first cycle
 	uint32_t computeSubmitInfoCount = inoutsPerHeap;
-	VK_CALL_RES(vkQueueSubmit2KHR, computeQueue, computeSubmitInfoCount, computeSubmitInfos, VK_NULL_HANDLE);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
-
-	atomic_bool input;
-	atomic_init(&input, false);
-
-	pthread_t waitThread;
-	int ires = pthread_create(&waitThread, NULL, wait_for_input, &input);
-	if EXPECT_FALSE (ires) { PCREATE_FAILURE(ires); dyrecord_destroy(allocRecord); return false; }
+	VK_CALLR(vkQueueSubmit2KHR, computeQueue, computeSubmitInfoCount, computeSubmitInfos, VK_NULL_HANDLE);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+		// Wait for transfers to complete execution
 		uint64_t transferSemaphoreTimeout = UINT64_MAX;
-		VK_CALL_RES(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[i], transferSemaphoreTimeout);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+		VK_CALLR(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[i], transferSemaphoreTimeout);
+		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
+		// Write starting values to mapped in-buffer
 		write_inbuffer(mappedInBuffers[i], &testedValues[i], valuesPerInout, valuesPerHeap);
 
+		// Update semaphore wait/signal values
 		transferWaitSemaphoreSubmitInfos[i].value += 2;
 		transferSignalSemaphoreSubmitInfos[i].value += 2;
 	}
 
+	// Flush mapped host visible in-buffers
 	if (hostNonCoherent) {
-		VK_CALL_RES(vkFlushMappedMemoryRanges, device, inoutsPerHeap, hostVisibleInBuffersMappedMemoryRanges);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+		VK_CALLR(vkFlushMappedMemoryRanges, device, inoutsPerHeap, inBuffersMappedRanges);
+		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 	}
 
+	// Submit transfer command buffers to complete the first cycle
 	transferSubmitInfoCount = inoutsPerHeap;
-	VK_CALL_RES(vkQueueSubmit2KHR, transferQueue, transferSubmitInfoCount, transferSubmitInfos, VK_NULL_HANDLE);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+	VK_CALLR(vkQueueSubmit2KHR, transferQueue, transferSubmitInfoCount, transferSubmitInfos, VK_NULL_HANDLE);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	StartValue total = 0;
 	StartValue initialStartValue = position.curStartValue;
@@ -2415,88 +2653,97 @@ bool submit_commands(Gpu* restrict gpu)
 			double computeBmark = 0;
 			double transferBmark = 0;
 
+			// Wait for dispatch to complete execution
 			clock_t waitComputeBmStart = clock();
 
 			uint64_t computeSemaphoreTimeout = UINT64_MAX;
-			VK_CALL_RES(vkWaitSemaphoresKHR, device, &computeSemaphoreWaitInfos[j], computeSemaphoreTimeout);
-			if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+			VK_CALLR(vkWaitSemaphoresKHR, device, &computeSemaphoreWaitInfos[j], computeSemaphoreTimeout);
+			if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
 			clock_t waitComputeBmEnd = clock();
 
-			if (computeQueueFamilyTimestampValidBits) {
+			// Calculate approx time taken for dispatch to execute
+			if (computeFamilyTimestampValidBits) {
 				uint32_t firstQuery = j * 4 + 2;
 				uint32_t queryCount = 2;
 				VkQueryResultFlags queryFlags = VK_QUERY_RESULT_64_BIT;
 
-				VK_CALL_RES(vkGetQueryPoolResults,
+				VK_CALLR(vkGetQueryPoolResults,
 					device, queryPool, firstQuery, queryCount, sizeof(timestamps), timestamps, sizeof(timestamps[0]),
 					queryFlags);
 
-				if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+				if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 				computeBmark = (double) (timestamps[1] - timestamps[0]) * timestampPeriod / 1000000;
 			}
 
+			// Update semaphore wait/signal values
 			computeWaitSemaphoreSubmitInfos[j].value += 2;
 			computeSignalSemaphoreSubmitInfos[j].value += 2;
 
+			// Resubmit compute command buffer for next cycle
 			computeSubmitInfoCount = 1;
-			VK_CALL_RES(vkQueueSubmit2KHR,
-				computeQueue, computeSubmitInfoCount, &computeSubmitInfos[j], VK_NULL_HANDLE);
+			VK_CALLR(vkQueueSubmit2KHR, computeQueue, computeSubmitInfoCount, &computeSubmitInfos[j], VK_NULL_HANDLE);
+			if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
-			if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
-
+			// Wait for transfers to complete execution
 			clock_t waitTransferBmStart = clock();
 
 			uint64_t transferSemaphoreTimeout = UINT64_MAX;
-			VK_CALL_RES(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[j], transferSemaphoreTimeout);
-			if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+			VK_CALLR(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[j], transferSemaphoreTimeout);
+			if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
 			clock_t waitTransferBmEnd = clock();
 
-			if (transferQueueFamilyTimestampValidBits) {
+			// Calculate approx time taken for transfers to execute
+			if (transferFamilyTimestampValidBits) {
 				uint32_t firstQuery = j * 4;
 				uint32_t queryCount = 2;
 				VkQueryResultFlags queryFlags = VK_QUERY_RESULT_64_BIT;
 
-				VK_CALL_RES(vkGetQueryPoolResults,
+				VK_CALLR(vkGetQueryPoolResults,
 					device, queryPool, firstQuery, queryCount, sizeof(timestamps), timestamps, sizeof(timestamps[0]),
 					queryFlags);
 
-				if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+				if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 				transferBmark = (double) (timestamps[1] - timestamps[0]) * timestampPeriod / 1000000;
 			}
 
+			// Invalidate mapped host visible out-buffer
 			if (hostNonCoherent) {
 				uint32_t rangeCount = 1;
-				VK_CALL_RES(vkInvalidateMappedMemoryRanges,
-					device, rangeCount, &hostVisibleOutBuffersMappedMemoryRanges[j]);
-
-				if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+				VK_CALLR(vkInvalidateMappedMemoryRanges, device, rangeCount, &outBuffersMappedRanges[j]);
+				if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 			}
 
+			// Read total stopping times from mapped out-buffer
 			clock_t readBmStart = clock();
 			read_outbuffer(mappedOutBuffers[j], &position, bestStartValues, bestStopTimes, valuesPerInout);
 			clock_t readBmEnd = clock();
 
+			// Write starting values to mapped in-buffer
 			clock_t writeBmStart = clock();
 			write_inbuffer(mappedInBuffers[j], &testedValues[j], valuesPerInout, valuesPerHeap);
 			clock_t writeBmEnd = clock();
 
+			// Flush mapped host visible in-buffer
 			if (hostNonCoherent) {
 				uint32_t rangeCount = 1;
-				VK_CALL_RES(vkFlushMappedMemoryRanges, device, rangeCount, &hostVisibleInBuffersMappedMemoryRanges[j]);
-				if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+				VK_CALLR(vkFlushMappedMemoryRanges, device, rangeCount, &inBuffersMappedRanges[j]);
+				if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 			}
 
+			// Update semaphore wait/signal values
 			transferWaitSemaphoreSubmitInfos[j].value += 2;
 			transferSignalSemaphoreSubmitInfos[j].value += 2;
 
+			// Resubmit transfer command buffer for next cycle
 			transferSubmitInfoCount = 1;
-			VK_CALL_RES(vkQueueSubmit2KHR,
+			VK_CALLR(vkQueueSubmit2KHR,
 				transferQueue, transferSubmitInfoCount, &transferSubmitInfos[j], VK_NULL_HANDLE);
 
-			if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return NULL; }
+			if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return NULL; }
 
+			// Calculate and display benchmarks for current inout-buffer
 			double readBmark = get_benchmark(readBmStart, readBmEnd);
 			double writeBmark = get_benchmark(writeBmStart, writeBmEnd);
 			double waitComputeBmark = get_benchmark(waitComputeBmStart, waitComputeBmEnd);
@@ -2523,10 +2770,18 @@ bool submit_commands(Gpu* restrict gpu)
 			}
 		}
 
+		// Calculate and display benchmarks for current loop iteration
 		total += valuesPerHeap * 4;
 
 		clock_t mainLoopBmEnd = clock();
 		double mainLoopBmark = get_benchmark(mainLoopBmStart, mainLoopBmEnd);
+
+		double readBmAvg = readBmTotal / (double) inoutsPerHeap;
+		double writeBmAvg = writeBmTotal / (double) inoutsPerHeap;
+		double computeBmAvg = computeBmTotal / (double) inoutsPerHeap;
+		double transferBmAvg = transferBmTotal / (double) inoutsPerHeap;
+		double waitComputeBmAvg = waitComputeBmTotal / (double) inoutsPerHeap;
+		double waitTransferBmAvg = waitTransferBmTotal / (double) inoutsPerHeap;
 
 		switch (g_config.outputLevel) {
 			case OUTPUT_LEVEL_QUIET:
@@ -2549,9 +2804,7 @@ bool submit_commands(Gpu* restrict gpu)
 					"Initial value: 0x %016" PRIx64 " %016" PRIx64 "\n"
 					"Current value: 0x %016" PRIx64 " %016" PRIx64 "\n\n",
 					mainLoopBmark,
-					readBmTotal / (double) inoutsPerHeap, writeBmTotal / (double) inoutsPerHeap,
-					computeBmTotal / (double) inoutsPerHeap, transferBmTotal / (double) inoutsPerHeap,
-					waitComputeBmTotal / (double) inoutsPerHeap, waitTransferBmTotal / (double) inoutsPerHeap,
+					readBmAvg, writeBmAvg, computeBmAvg, transferBmAvg, waitComputeBmAvg, waitTransferBmAvg,
 					INT128_UPPER(initialValue - 2), INT128_LOWER(initialValue - 2),
 					INT128_UPPER(position.curStartValue - 3), INT128_LOWER(position.curStartValue - 3));
 
@@ -2570,12 +2823,9 @@ bool submit_commands(Gpu* restrict gpu)
 					"Initial value: 0x %016" PRIx64 " %016" PRIx64 "\n"
 					"Current value: 0x %016" PRIx64 " %016" PRIx64 "\n\n",
 					mainLoopBmark,
-					readBmTotal, readBmTotal / (double) inoutsPerHeap,
-					writeBmTotal, writeBmTotal / (double) inoutsPerHeap,
-					computeBmTotal, computeBmTotal / (double) inoutsPerHeap,
-					transferBmTotal, transferBmTotal / (double) inoutsPerHeap,
-					waitComputeBmTotal, waitComputeBmTotal / (double) inoutsPerHeap,
-					waitTransferBmTotal, waitTransferBmTotal / (double) inoutsPerHeap,
+					readBmTotal, readBmAvg, writeBmTotal, writeBmAvg,
+					computeBmTotal, computeBmAvg, transferBmTotal, transferBmAvg,
+					waitComputeBmTotal, waitComputeBmAvg, waitTransferBmTotal, waitTransferBmAvg,
 					INT128_UPPER(initialValue - 2), INT128_LOWER(initialValue - 2),
 					INT128_UPPER(position.curStartValue - 3), INT128_LOWER(position.curStartValue - 3));
 
@@ -2590,16 +2840,18 @@ bool submit_commands(Gpu* restrict gpu)
 	clock_t totalBmEnd = clock();
 	double totalBmark = get_benchmark(totalBmStart, totalBmEnd);
 
+	// Stop waiting thread
 	if (atomic_load(&input)) {
 		ires = pthread_join(waitThread, NULL);
-		if EXPECT_FALSE (ires) { PJOIN_FAILURE(ires); dyrecord_destroy(allocRecord); return false; }
+		if EXPECT_FALSE (ires) { PJOIN_FAILURE(ires); dyrecord_destroy(localRecord); return false; }
 	}
 	else {
 		atomic_store(&input, true);
 		ires = pthread_cancel(waitThread);
-		if EXPECT_FALSE (ires) { PCANCEL_FAILURE(ires); dyrecord_destroy(allocRecord); return false; }
+		if EXPECT_FALSE (ires) { PCANCEL_FAILURE(ires); dyrecord_destroy(localRecord); return false; }
 	}
 
+	// Display results of calculations
 	if (g_config.outputLevel > OUTPUT_LEVEL_SILENT) {
 		printf(
 			"Set of starting values tested: [0x %016" PRIx64 " %016" PRIx64 ", 0x %016" PRIx64 " %016" PRIx64 "]\n",
@@ -2607,11 +2859,11 @@ bool submit_commands(Gpu* restrict gpu)
 			INT128_UPPER(position.curStartValue - 3), INT128_LOWER(position.curStartValue - 3));
 	}
 
-	uint32_t bestCount = (uint32_t) dyarray_size(bestStartValues);
+	size_t bestCount = dyarray_size(bestStartValues);
 
 	if (bestCount) {
 		printf(
-			"New highest total stopping times (%" PRIu32 "):\n"
+			"New highest total stopping times (%zu):\n"
 			"|   #   |   Starting value (hexadecimal)    | Total stopping time |\n",
 			bestCount);
 	}
@@ -2636,6 +2888,7 @@ bool submit_commands(Gpu* restrict gpu)
 			totalBmark, (double) (1000 * total) / totalBmark);
 	}
 
+	// Write current position to progress file
 	if (!g_config.restart) {
 		bres = write_text(
 			PROGRESS_FILE_NAME,
@@ -2650,10 +2903,10 @@ bool submit_commands(Gpu* restrict gpu)
 			INT128_UPPER(position.val1mod6off[2]), INT128_LOWER(position.val1mod6off[2]),
 			INT128_UPPER(position.curStartValue), INT128_LOWER(position.curStartValue), position.bestStopTime);
 
-		if EXPECT_FALSE (!bres) { dyrecord_destroy(allocRecord); return false; }
+		if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
 	}
 
-	dyrecord_destroy(allocRecord);
+	dyrecord_destroy(localRecord);
 	return true;
 }
 
@@ -2661,6 +2914,9 @@ bool destroy_gpu(Gpu* restrict gpu)
 {
 	VkInstance instance = volkGetLoadedInstance();
 
+	DyRecord gpuRecord = gpu->allocRecord;
+
+	const VkAllocationCallbacks* allocator = gpu->allocator;
 	const VkBuffer* hostVisibleBuffers = gpu->hostVisibleBuffers;
 	const VkBuffer* deviceLocalBuffers = gpu->deviceLocalBuffers;
 	const VkDeviceMemory* hostVisibleMemories = gpu->hostVisibleDeviceMemories;
@@ -2668,7 +2924,6 @@ bool destroy_gpu(Gpu* restrict gpu)
 	const VkSemaphore* semaphores = gpu->semaphores;
 
 	VkDevice device = gpu->device;
-
 	VkDescriptorSetLayout descriptorSetLayout = gpu->descriptorSetLayout;
 	VkDescriptorPool descriptorPool = gpu->descriptorPool;
 	VkShaderModule shaderModule = gpu->shaderModule;
@@ -2685,85 +2940,46 @@ bool destroy_gpu(Gpu* restrict gpu)
 	VkResult vkres;
 
 	if (device) {
-		VK_CALL(vkDestroyShaderModule, device, shaderModule, g_allocator);
-		VK_CALL(vkDestroyPipelineCache, device, pipelineCache, g_allocator);
-		VK_CALL(vkDestroyPipelineLayout, device, pipelineLayout, g_allocator);
-		VK_CALL(vkDestroyDescriptorSetLayout, device, descriptorSetLayout, g_allocator);
+		VK_CALL(vkDestroyShaderModule, device, shaderModule, allocator);
+		VK_CALL(vkDestroyPipelineCache, device, pipelineCache, allocator);
+		VK_CALL(vkDestroyPipelineLayout, device, pipelineLayout, allocator);
+		VK_CALL(vkDestroyDescriptorSetLayout, device, descriptorSetLayout, allocator);
 
 		// Make sure no command buffers are in the pending state
-		VK_CALL_RES(vkDeviceWaitIdle, device);
+		VK_CALLR(vkDeviceWaitIdle, device);
 
 		for (uint32_t i = 0; i < inoutsPerHeap; i++) {
-			VK_CALL(vkDestroySemaphore, device, semaphores[i], g_allocator);
+			VK_CALL(vkDestroySemaphore, device, semaphores[i], allocator);
 		}
 
-		VK_CALL(vkDestroyCommandPool, device, computeCmdPool, g_allocator);
-		VK_CALL(vkDestroyCommandPool, device, transferCmdPool, g_allocator);
+		VK_CALL(vkDestroyCommandPool, device, computeCmdPool, allocator);
+		VK_CALL(vkDestroyCommandPool, device, transferCmdPool, allocator);
 
-		VK_CALL(vkDestroyPipeline, device, pipeline, g_allocator);
-		VK_CALL(vkDestroyQueryPool, device, queryPool, g_allocator);
-		VK_CALL(vkDestroyDescriptorPool, device, descriptorPool, g_allocator);
+		VK_CALL(vkDestroyPipeline, device, pipeline, allocator);
+		VK_CALL(vkDestroyQueryPool, device, queryPool, allocator);
+		VK_CALL(vkDestroyDescriptorPool, device, descriptorPool, allocator);
 
 		for (uint32_t i = 0; i < buffersPerHeap; i++) {
-			VK_CALL(vkDestroyBuffer, device, hostVisibleBuffers[i], g_allocator);
-			VK_CALL(vkDestroyBuffer, device, deviceLocalBuffers[i], g_allocator);
+			VK_CALL(vkDestroyBuffer, device, hostVisibleBuffers[i], allocator);
+			VK_CALL(vkDestroyBuffer, device, deviceLocalBuffers[i], allocator);
 
-			VK_CALL(vkFreeMemory, device, hostVisibleMemories[i], g_allocator);
-			VK_CALL(vkFreeMemory, device, deviceLocalMemories[i], g_allocator);
+			VK_CALL(vkFreeMemory, device, hostVisibleMemories[i], allocator);
+			VK_CALL(vkFreeMemory, device, deviceLocalMemories[i], allocator);
 		}
 
-		VK_CALL(vkDestroyDevice, device, g_allocator);
+		VK_CALL(vkDestroyDevice, device, allocator);
 	}
 
 	if (instance) {
 #ifndef NDEBUG
-		VK_CALL(vkDestroyDebugUtilsMessengerEXT, instance, gpu->debugMessenger, g_allocator);
+		VK_CALL(vkDestroyDebugUtilsMessengerEXT, instance, gpu->debugMessenger, allocator);
 #endif
-		VK_CALL(vkDestroyInstance, instance, g_allocator);
+		VK_CALL(vkDestroyInstance, instance, allocator);
 	}
 
 	volkFinalize();
 
-	free(gpu->dynamicMemory);
-	return true;
-}
-
-bool create_command_handles(
-	VkDevice device,
-	uint32_t queueFamilyIndex,
-	VkCommandPool* cmdPool,
-	const char* name,
-	uint32_t cmdBufferCount,
-	VkCommandBuffer* cmdBuffers)
-{
-	(void) name;
-	VkResult vkres;
-
-	VkCommandPoolCreateInfo cmdPoolInfo = {0};
-	cmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	cmdPoolInfo.queueFamilyIndex = queueFamilyIndex;
-
-	VkCommandPool newCmdPool;
-	VK_CALL_RES(vkCreateCommandPool, device, &cmdPoolInfo, g_allocator, &newCmdPool);
-	if EXPECT_FALSE (vkres) { return false; }
-	*cmdPool = newCmdPool;
-
-#ifndef NDEBUG
-	if (name) {
-		bool bres = set_debug_name(device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t) newCmdPool, name);
-		if EXPECT_FALSE (!bres) { return false; }
-	}
-#endif
-
-	VkCommandBufferAllocateInfo cmdBufferAllocInfo = {0};
-	cmdBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	cmdBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	cmdBufferAllocInfo.commandPool = newCmdPool;
-	cmdBufferAllocInfo.commandBufferCount = cmdBufferCount;
-
-	VK_CALL_RES(vkAllocateCommandBuffers, device, &cmdBufferAllocInfo, cmdBuffers);
-	if EXPECT_FALSE (vkres) { return false; }
-
+	dyrecord_destroy(gpuRecord);
 	return true;
 }
 
@@ -2771,43 +2987,39 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 {
 	VkResult vkres;
 
-	DyRecord allocRecord = dyrecord_create();
-	if EXPECT_FALSE (!allocRecord) { return false; }
+	DyRecord localRecord = dyrecord_create();
+	if EXPECT_FALSE (!localRecord) { return false; }
 
 	VkPipelineInfoKHR pipelineInfo = {0};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INFO_KHR;
 	pipelineInfo.pipeline = pipeline;
 
+	// Get pipeline executable properties
 	uint32_t executableCount;
-	VK_CALL_RES(vkGetPipelineExecutablePropertiesKHR, device, &pipelineInfo, &executableCount, NULL);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+	VK_CALLR(vkGetPipelineExecutablePropertiesKHR, device, &pipelineInfo, &executableCount, NULL);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	if EXPECT_FALSE (!executableCount) {
-		log_warning(stdout, "No pipeline executables are available for capture");
-		dyrecord_destroy(allocRecord);
+		log_warning(stdout, "No pipeline executables available for capture");
+		dyrecord_destroy(localRecord);
 		return true;
 	}
 
 	size_t allocCount = executableCount;
-	size_t allocSize =
-		sizeof(VkPipelineExecutablePropertiesKHR) +
-		sizeof(VkPipelineExecutableStatisticKHR*) +
-		sizeof(VkPipelineExecutableInfoKHR) +
-		sizeof(uint32_t);
+	size_t allocSize = sizeof(VkPipelineExecutablePropertiesKHR);
 
-	void* p = dyrecord_calloc(allocRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!p) { dyrecord_destroy(allocRecord); return false; }
+	VkPipelineExecutablePropertiesKHR* executablesProperties = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!executablesProperties) { dyrecord_destroy(localRecord); return false; }
 
-	VkPipelineExecutablePropertiesKHR* executablesProperties = p;
-	VkPipelineExecutableStatisticKHR** executablesStatistics = (VkPipelineExecutableStatisticKHR**) (
-		executablesProperties + executableCount);
-	VkPipelineExecutableInfoKHR* executablesInfo = (VkPipelineExecutableInfoKHR*) (
-		executablesStatistics + executableCount);
+	VK_CALLR(vkGetPipelineExecutablePropertiesKHR, device, &pipelineInfo, &executableCount, executablesProperties);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
-	uint32_t* statisticCounts = (uint32_t*) (executablesInfo + executableCount);
+	// Specify pipeline executables to query
+	allocCount = executableCount;
+	allocSize = sizeof(VkPipelineExecutableInfoKHR);
 
-	VK_CALL_RES(vkGetPipelineExecutablePropertiesKHR, device, &pipelineInfo, &executableCount, executablesProperties);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+	VkPipelineExecutableInfoKHR* executablesInfo = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!executablesInfo) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < executableCount; i++) {
 		executablesInfo[i].sType = VK_STRUCTURE_TYPE_PIPELINE_EXECUTABLE_INFO_KHR;
@@ -2815,41 +3027,41 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 		executablesInfo[i].executableIndex = i;
 	}
 
-	uint32_t statisticTotal = 0;
+	// Get statistics for each pipeline executable
+	allocSize = executableCount * sizeof(uint32_t);
+	uint32_t* statisticCounts = dyrecord_malloc(localRecord, allocSize);
+	if EXPECT_FALSE (!statisticCounts) { dyrecord_destroy(localRecord); return false; }
+
+	allocSize = executableCount * sizeof(VkPipelineExecutableStatisticKHR*);
+	VkPipelineExecutableStatisticKHR** executablesStatistics = dyrecord_malloc(localRecord, allocSize);
+	if EXPECT_FALSE (!executablesStatistics) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < executableCount; i++) {
-		VkPipelineExecutableStatisticKHR* executableStatistics = NULL;
-		VK_CALL_RES(vkGetPipelineExecutableStatisticsKHR,
-			device, &executablesInfo[i], &statisticCounts[i], executableStatistics);
+		VK_CALLR(vkGetPipelineExecutableStatisticsKHR, device, &executablesInfo[i], &statisticCounts[i], NULL);
+		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
-		statisticTotal += statisticCounts[i];
-	}
+		allocCount = statisticCounts[i];
+		allocSize = sizeof(VkPipelineExecutableStatisticKHR);
 
-	allocSize = statisticTotal * sizeof(VkPipelineExecutableStatisticKHR);
-	executablesStatistics[0] = dyrecord_malloc(allocRecord, allocSize);
-	if EXPECT_FALSE (!executablesStatistics[0]) { dyrecord_destroy(allocRecord); return false; }
+		executablesStatistics[i] = dyrecord_calloc(localRecord, allocCount, allocSize);
+		if EXPECT_FALSE (!executablesStatistics[i]) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 1; i < executableCount; i++) {
-		executablesStatistics[i] = executablesStatistics[i - 1] + statisticCounts[i - 1];
-	}
-
-	for (uint32_t i = 0; i < executableCount; i++) {
 		for (uint32_t j = 0; j < statisticCounts[i]; j++) {
 			executablesStatistics[i][j].sType = VK_STRUCTURE_TYPE_PIPELINE_EXECUTABLE_STATISTIC_KHR;
 		}
 
-		VK_CALL_RES(vkGetPipelineExecutableStatisticsKHR,
+		VK_CALLR(vkGetPipelineExecutableStatisticsKHR,
 			device, &executablesInfo[i], &statisticCounts[i], executablesStatistics[i]);
-		
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(allocRecord); return false; }
+
+		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 	}
 
+	// Construct message with info on each pipeline executable
 	DyString message = dystring_create(1024);
-	if EXPECT_FALSE (!message) { dyrecord_destroy(allocRecord); return false; }
+	if EXPECT_FALSE (!message) { dyrecord_destroy(localRecord); return false; }
 
-	bool bres = dyrecord_add(allocRecord, message, dystring_destroy_stub);
-	if EXPECT_FALSE (!bres) { dystring_destroy(message); dyrecord_destroy(allocRecord); return false; }
+	bool bres = dyrecord_add(localRecord, message, dystring_destroy_stub);
+	if EXPECT_FALSE (!bres) { dystring_destroy(message); dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < executableCount; i++) {
 		VkShaderStageFlags stages = executablesProperties[i].stages;
@@ -2909,6 +3121,13 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 		}
 	}
 
+	uint32_t statisticTotal = 0;
+
+	for (uint32_t i = 0; i < executableCount; i++) {
+		statisticTotal += statisticCounts[i];
+	}
+
+	// Write collected info to file
 	const char* rawMessage = dystring_raw(message);
 
 	bres = write_text(
@@ -2921,9 +3140,9 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 		"%s",
 		executableCount, statisticTotal, rawMessage);
 	
-	if EXPECT_FALSE (!bres) { dyrecord_destroy(allocRecord); return false; }
+	if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
 
-	dyrecord_destroy(allocRecord);
+	dyrecord_destroy(localRecord);
 	return true;
 }
 

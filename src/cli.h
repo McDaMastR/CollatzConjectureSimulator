@@ -23,6 +23,10 @@
 #define CLI_MAX_OPTION_LENGTH 64ULL
 
 
+typedef struct Cli_T* Cli;
+
+typedef bool (*CliCallback)(void* config, void* arg);
+
 typedef enum CliDatatype
 {
 	CLI_DATATYPE_NONE    = 0,
@@ -37,10 +41,6 @@ typedef enum CliDatatype
 	CLI_DATATYPE_ULLONG  = 9
 } CliDatatype;
 
-typedef bool (*CliCallback)(void* config, void* arg);
-
-typedef struct Cli_T* Cli;
-
 
 // TODO Document these functions like the Dy* functions
 
@@ -50,4 +50,5 @@ Cli cli_create(void* config, size_t count) FREE_FUNC(cli_destroy, 1) NO_ACCESS(1
 
 bool cli_parse(Cli cli, int argc, char** argv) NONNULL_ARGS_ALL;
 
-bool cli_add(Cli cli, char opt, const char* name, CliDatatype type, CliCallback cb) NONNULL_ARGS_ALL NULTSTR_ARG(3);
+bool cli_add(Cli cli, char option, const char* name, CliDatatype type, CliCallback callback)
+	NONNULL_ARGS_ALL NULTSTR_ARG(3);

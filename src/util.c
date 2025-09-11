@@ -120,7 +120,7 @@ bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const c
 
 	if (!vkSetDebugUtilsObjectNameEXT) { return true; }
 
-	VK_CALL_RES(vkSetDebugUtilsObjectNameEXT, device, &info);
+	VK_CALLR(vkSetDebugUtilsObjectNameEXT, device, &info);
 	if EXPECT_FALSE (vkres) { return false; }
 
 	return true;
@@ -137,7 +137,7 @@ bool get_buffer_requirements_noext(
 	bufferInfo.usage = usage;
 
 	VkBuffer buffer;
-	VK_CALL_RES(vkCreateBuffer, device, &bufferInfo, g_allocator, &buffer);
+	VK_CALLR(vkCreateBuffer, device, &bufferInfo, NULL, &buffer);
 	if EXPECT_FALSE (vkres) { return false; }
 
 	VkBufferMemoryRequirementsInfo2 requirementsInfo = {0};
@@ -148,7 +148,7 @@ bool get_buffer_requirements_noext(
 	memoryRequirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
 
 	VK_CALL(vkGetBufferMemoryRequirements2, device, &requirementsInfo, &memoryRequirements);
-	VK_CALL(vkDestroyBuffer, device, buffer, g_allocator);
+	VK_CALL(vkDestroyBuffer, device, buffer, NULL);
 
 	*requirements = memoryRequirements.memoryRequirements;
 	return true;
@@ -180,13 +180,13 @@ bool save_pipeline_cache(VkDevice device, VkPipelineCache cache, const char* fil
 	VkResult vkres;
 
 	size_t dataSize;
-	VK_CALL_RES(vkGetPipelineCacheData, device, cache, &dataSize, NULL);
+	VK_CALLR(vkGetPipelineCacheData, device, cache, &dataSize, NULL);
 	if EXPECT_FALSE (vkres) { return false; }
 
 	void* data = malloc(dataSize);
 	if EXPECT_FALSE (!data) { MALLOC_FAILURE(data, dataSize); return false; }
 
-	VK_CALL_RES(vkGetPipelineCacheData, device, cache, &dataSize, data);
+	VK_CALLR(vkGetPipelineCacheData, device, cache, &dataSize, data);
 	if EXPECT_FALSE (vkres) { free(data); return false; }
 
 	bool bres = write_file(filename, data, dataSize);

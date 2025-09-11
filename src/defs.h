@@ -284,9 +284,6 @@ typedef struct ProgramConfig
 	bool capturePipelines;
 } ProgramConfig;
 
-typedef unsigned __int128 StartValue;
-typedef uint16_t StopTime;
-
 
 // Global constants
 
@@ -312,8 +309,5 @@ extern const uint32_t PROGRAM_VER_MINOR;
 extern const uint32_t PROGRAM_VER_PATCH;
 
 extern const double MS_PER_CLOCK;
-
-extern const VkAllocationCallbacks g_allocationCallbacks;
-extern const VkAllocationCallbacks* g_allocator;
 
 extern ProgramConfig g_config;
