@@ -13,6 +13,7 @@ be annotated with this dependency. Note that for functionalities A and B, A requ
 
 ## Extensions
 
+- `VK_KHR_copy_commands2` (\*)
 - `VK_KHR_create_renderpass2` (required by `VK_KHR_depth_stencil_resolve`)
 - `VK_KHR_depth_stencil_resolve` (required by `VK_KHR_dynamic_rendering`)
 - `VK_KHR_dynamic_rendering` (required by `VK_KHR_maintenance5`)
@@ -22,6 +23,7 @@ be annotated with this dependency. Note that for functionalities A and B, A requ
 - `VK_KHR_maintenance7`
 - `VK_KHR_maintenance8`
 - `VK_KHR_maintenance9`
+- `VK_KHR_map_memory2` (\*)
 - `VK_KHR_shader_float_controls` (required by `VK_KHR_spirv_1_4`)
 - `VK_KHR_spirv_1_4`
 - `VK_KHR_synchronization2` (\*)

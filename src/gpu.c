@@ -457,12 +457,14 @@ bool select_device(Gpu* restrict gpu)
 		}
 
 		// Check extensions
+		bool hasCopyCommands2 = false;
 		bool hasMaintenance4 = false;
 		bool hasMaintenance5 = false;
 		bool hasMaintenance6 = false;
 		bool hasMaintenance7 = false;
 		bool hasMaintenance8 = false;
 		bool hasMaintenance9 = false;
+		bool hasMapMemory2 = false;
 		bool hasPipelineExecutableProperties = false;
 		bool hasPortabilitySubset = false;
 		bool hasSpirv14 = false;
@@ -476,12 +478,14 @@ bool select_device(Gpu* restrict gpu)
 		for (uint32_t j = 0; j < extensionCount; j++) {
 			const char* extensionName = devicesExtensionsProperties[i][j].extensionName;
 
-			if (!strcmp(extensionName, VK_KHR_MAINTENANCE_4_EXTENSION_NAME))      { hasMaintenance4 = true; }
+			if (!strcmp(extensionName, VK_KHR_COPY_COMMANDS_2_EXTENSION_NAME))    { hasCopyCommands2 = true; }
+			else if (!strcmp(extensionName, VK_KHR_MAINTENANCE_4_EXTENSION_NAME)) { hasMaintenance4 = true; }
 			else if (!strcmp(extensionName, VK_KHR_MAINTENANCE_5_EXTENSION_NAME)) { hasMaintenance5 = true; }
 			else if (!strcmp(extensionName, VK_KHR_MAINTENANCE_6_EXTENSION_NAME)) { hasMaintenance6 = true; }
 			else if (!strcmp(extensionName, VK_KHR_MAINTENANCE_7_EXTENSION_NAME)) { hasMaintenance7 = true; }
 			else if (!strcmp(extensionName, VK_KHR_MAINTENANCE_8_EXTENSION_NAME)) { hasMaintenance8 = true; }
 			else if (!strcmp(extensionName, VK_KHR_MAINTENANCE_9_EXTENSION_NAME)) { hasMaintenance9 = true; }
+			else if (!strcmp(extensionName, VK_KHR_MAP_MEMORY_2_EXTENSION_NAME))  { hasMapMemory2 = true; }
 			else if (!strcmp(extensionName, VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME)) {
 				hasPipelineExecutableProperties = true; }
 			else if (!strcmp(extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) { hasPortabilitySubset = true; }
@@ -506,6 +510,8 @@ bool select_device(Gpu* restrict gpu)
 
 		if (!hasCompute) { continue; }
 
+		if (!hasCopyCommands2)     { continue; }
+		if (!hasMapMemory2)        { continue; }
 		if (!hasSynchronization2)  { continue; }
 		if (!hasTimelineSemaphore) { continue; }
 
@@ -780,7 +786,7 @@ bool create_device(Gpu* restrict gpu)
 	if EXPECT_FALSE (!localRecord) { return false; }
 
 	size_t elmSize = sizeof(const char*);
-	size_t elmCount = 19;
+	size_t elmCount = 21;
 
 	DyArray enabledExtensions = dyarray_create(elmSize, elmCount);
 	if EXPECT_FALSE (!enabledExtensions) { dyrecord_destroy(localRecord); return false; }
@@ -789,7 +795,13 @@ bool create_device(Gpu* restrict gpu)
 	if EXPECT_FALSE (!bres) { dyarray_destroy(enabledExtensions); dyrecord_destroy(localRecord); return false; }
 
 	// Required extensions
-	const char* extensionName = VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME;
+	const char* extensionName = VK_KHR_COPY_COMMANDS_2_EXTENSION_NAME;
+	dyarray_append(enabledExtensions, &extensionName);
+
+	extensionName = VK_KHR_MAP_MEMORY_2_EXTENSION_NAME;
+	dyarray_append(enabledExtensions, &extensionName);
+
+	extensionName = VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME;
 	dyarray_append(enabledExtensions, &extensionName);
 
 	extensionName = VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME;
@@ -1470,10 +1482,12 @@ bool create_buffers(Gpu* restrict gpu)
 		bindBufferMemoryInfos[i][0].sType = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO;
 		bindBufferMemoryInfos[i][0].buffer = hostVisibleBuffers[i];
 		bindBufferMemoryInfos[i][0].memory = hostVisibleMemories[i];
+		bindBufferMemoryInfos[i][0].memoryOffset = 0;
 
 		bindBufferMemoryInfos[i][1].sType = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO;
 		bindBufferMemoryInfos[i][1].buffer = deviceLocalBuffers[i];
 		bindBufferMemoryInfos[i][1].memory = deviceLocalMemories[i];
+		bindBufferMemoryInfos[i][1].memoryOffset = 0;
 	}
 
 	uint32_t bindInfoCount = buffersPerHeap * ARRAY_SIZE(bindBufferMemoryInfos[0]);
@@ -1494,11 +1508,13 @@ bool create_buffers(Gpu* restrict gpu)
 	gpu->mappedOutBuffers = mappedOutBuffers;
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
-		VkDeviceSize offset = 0;
-		VkMemoryMapFlags flags = 0;
-		void* mappedMemory;
+		VkMemoryMapInfo mapInfo = {0};
+		mapInfo.sType = VK_STRUCTURE_TYPE_MEMORY_MAP_INFO;
+		mapInfo.memory = hostVisibleMemories[i];
+		mapInfo.size = bytesPerHostVisibleMemory;
 
-		VK_CALLR(vkMapMemory, device, hostVisibleMemories[i], offset, bytesPerHostVisibleMemory, flags, &mappedMemory);
+		void* mappedMemory;
+		VK_CALLR(vkMapMemory2KHR, device, &mapInfo, &mappedMemory);
 		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
 		mappedInBuffers[j] = mappedMemory;
@@ -1863,10 +1879,8 @@ bool create_pipeline(Gpu* restrict gpu)
 
 static bool record_transfer_cmdbuffer(
 	VkCommandBuffer cmdBuffer,
-	VkBuffer hostVisibleBuffer,
-	VkBuffer deviceLocalBuffer,
-	const VkBufferCopy* inBufferRegion,
-	const VkBufferCopy* outBufferRegion,
+	const VkCopyBufferInfo2* inBufferCopyInfo,
+	const VkCopyBufferInfo2* outBufferCopyInfo,
 	const VkDependencyInfo* dependencyInfos,
 	VkQueryPool queryPool,
 	uint32_t firstQuery,
@@ -1891,14 +1905,10 @@ static bool record_transfer_cmdbuffer(
 		VK_CALL(vkCmdWriteTimestamp2KHR, cmdBuffer, stage, queryPool, query);
 	}
 
-	uint32_t inBufferRegionCount = 1;
-	VK_CALL(vkCmdCopyBuffer, cmdBuffer, hostVisibleBuffer, deviceLocalBuffer, inBufferRegionCount, inBufferRegion);
-
+	VK_CALL(vkCmdCopyBuffer2KHR, cmdBuffer, inBufferCopyInfo);
 	VK_CALL(vkCmdPipelineBarrier2KHR, cmdBuffer, &dependencyInfos[0]);
-	
-	uint32_t outBufferRegionCount = 1;
-	VK_CALL(vkCmdCopyBuffer, cmdBuffer, deviceLocalBuffer, hostVisibleBuffer, outBufferRegionCount, outBufferRegion);
 
+	VK_CALL(vkCmdCopyBuffer2KHR, cmdBuffer, outBufferCopyInfo);
 	VK_CALL(vkCmdPipelineBarrier2KHR, cmdBuffer, &dependencyInfos[1]);
 
 	if (timestampValidBits) {
@@ -2066,30 +2076,72 @@ bool create_commands(Gpu* restrict gpu)
 	VK_CALLR(vkAllocateCommandBuffers, device, &computeCmdBufferAllocInfo, computeCmdBuffers);
 	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
-	// Specify in-buffer copies
+	// Specify in-buffer copy regions (same region layout per buffer)
 	allocCount = inoutsPerBuffer;
-	allocSize = sizeof(VkBufferCopy);
+	allocSize = sizeof(VkBufferCopy2);
 
-	VkBufferCopy* inBufferCopies = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!inBufferCopies) { dyrecord_destroy(localRecord); return false; }
+	VkBufferCopy2* inBufferRegions = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!inBufferRegions) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerBuffer; i++) {
-		inBufferCopies[i].srcOffset = bytesPerInout * i;
-		inBufferCopies[i].dstOffset = bytesPerInout * i;
-		inBufferCopies[i].size = bytesPerIn;
+		inBufferRegions[i].sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+		inBufferRegions[i].srcOffset = bytesPerInout * i;
+		inBufferRegions[i].dstOffset = bytesPerInout * i;
+		inBufferRegions[i].size = bytesPerIn;
+	}
+
+	// Specify out-buffer copy regions (same region layout per buffer)
+	allocCount = inoutsPerBuffer;
+	allocSize = sizeof(VkBufferCopy2);
+
+	VkBufferCopy2* outBufferRegions = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!outBufferRegions) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0; i < inoutsPerBuffer; i++) {
+		outBufferRegions[i].sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+		outBufferRegions[i].srcOffset = bytesPerInout * i + bytesPerIn;
+		outBufferRegions[i].dstOffset = bytesPerInout * i + bytesPerIn;
+		outBufferRegions[i].size = bytesPerOut;
+	}
+
+	// Specify in-buffer copies
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkCopyBufferInfo2);
+
+	VkCopyBufferInfo2* inBufferCopyInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!inBufferCopyInfos) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
+		VkBuffer hostVisibleBuffer = hostVisibleBuffers[i];
+		VkBuffer deviceLocalBuffer = deviceLocalBuffers[i];
+
+		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+			inBufferCopyInfos[j].sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+			inBufferCopyInfos[j].srcBuffer = hostVisibleBuffer;
+			inBufferCopyInfos[j].dstBuffer = deviceLocalBuffer;
+			inBufferCopyInfos[j].regionCount = 1;
+			inBufferCopyInfos[j].pRegions = &inBufferRegions[k];
+		}
 	}
 
 	// Specify out-buffer copies
-	allocCount = inoutsPerBuffer;
-	allocSize = sizeof(VkBufferCopy);
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkCopyBufferInfo2);
 
-	VkBufferCopy* outBufferCopies = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!outBufferCopies) { dyrecord_destroy(localRecord); return false; }
+	VkCopyBufferInfo2* outBufferCopyInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!outBufferCopyInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerBuffer; i++) {
-		outBufferCopies[i].srcOffset = bytesPerInout * i + bytesPerIn;
-		outBufferCopies[i].dstOffset = bytesPerInout * i + bytesPerIn;
-		outBufferCopies[i].size = bytesPerOut;
+	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
+		VkBuffer hostVisibleBuffer = hostVisibleBuffers[i];
+		VkBuffer deviceLocalBuffer = deviceLocalBuffers[i];
+
+		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+			outBufferCopyInfos[j].sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+			outBufferCopyInfos[j].srcBuffer = deviceLocalBuffer;
+			outBufferCopyInfos[j].dstBuffer = hostVisibleBuffer;
+			outBufferCopyInfos[j].regionCount = 1;
+			outBufferCopyInfos[j].pRegions = &outBufferRegions[k];
+		}
 	}
 
 	// Specify transfer buffer memory barriers
@@ -2203,9 +2255,8 @@ bool create_commands(Gpu* restrict gpu)
 		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
 			uint32_t firstTransferQuery = j * 4;
 			bool bres = record_transfer_cmdbuffer(
-				transferCmdBuffers[j], hostVisibleBuffers[i], deviceLocalBuffers[i], &inBufferCopies[k],
-				&outBufferCopies[k], transferDependencyInfos[j], queryPool, firstTransferQuery,
-				transferFamilyTimestampValidBits);
+				transferCmdBuffers[j], &inBufferCopyInfos[j], &outBufferCopyInfos[j], transferDependencyInfos[j],
+				queryPool, firstTransferQuery, transferFamilyTimestampValidBits);
 
 			if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
 

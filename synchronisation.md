@@ -29,13 +29,13 @@ A description of the Vulkan synchronisation that occurs within Collatz Conjectur
 
 | Memory Operation | Source                    | Destination               | Function                 |
 | ---------------- | ------------------------- | ------------------------- | ------------------------ |
-| read             | HV-in                     |                           | vkCmdCopyBuffer          |
+| read             | HV-in                     |                           | vkCmdCopyBuffer2KHR      |
 | write            |                           | DL-in                     |                          |
 | availability     | (copy operations; DL-in)  | device domain             | vkCmdPipelineBarrier2KHR |
 | release          | DL-in                     |                           |                          |
 | acquire          |                           | DL-out                    |                          |
 | visibility       | device domain             | (copy operations; DL-out) |                          |
-| read             | DL-out                    |                           | vkCmdCopyBuffer          |
+| read             | DL-out                    |                           | vkCmdCopyBuffer2KHR      |
 | write            |                           | HV-out                    |                          |
 | availability     | (copy operations; HV-out) | device domain             | vkCmdPipelineBarrier2KHR |
 | memory domain    | device domain             | host domain               |                          |
@@ -46,7 +46,7 @@ A description of the Vulkan synchronisation that occurs within Collatz Conjectur
 | ---------------- | ----------------------------- | ---------------------------- | ------------------------ |
 | acquire          |                               | DL-in                        | vkCmdPipelineBarrier2KHR |
 | visibility       | device domain                 | (dispatch operations; DL-in) |                          |
-| read             | DL-in                         |                              | vkCmdDispatchBase        |
+| read             | DL-in                         |                              | vkCmdDispatch            |
 | write            |                               | DL-out                       |                          |
 | availability     | (dispatch operations; DL-out) | device domain                | vkCmdPipelineBarrier2KHR |
 | release          | DL-out                        |                              |                          |

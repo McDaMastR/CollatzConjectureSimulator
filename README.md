@@ -72,14 +72,16 @@ correctly are listed below. The full requirements of the GPU are given in
   - `_Atomic` (Optional C11 feature)
   - `__int128` (GNU C extension)
 - [Vulkan](https://www.vulkan.org) 1.1.
-  - `synchronization2`
-  - `timelineSemaphore`
+  - `VK_KHR_copy_commands2`
+  - `VK_KHR_map_memory2`
+  - `VK_KHR_synchronization2`
+  - `VK_KHR_timeline_semaphore`
 
 ## Building and Running
 
-Collatz Conjecture Simulator is built via CMake. Comprehensive documentation regarding usage of CMake can be found
-[here](https://cmake.org/cmake/help/latest). To generate the build system, navigate the terminal to the project
-directory and execute the following command.
+Collatz Conjecture Simulator is built via CMake. Comprehensive documentation regarding usage of CMake can be found at
+the [CMake website](https://cmake.org/cmake/help/latest). To generate the build system, navigate the terminal to the
+project directory and execute the following command.
 
 ```bash
 cmake -S . -B build
@@ -206,11 +208,11 @@ are calculated by the GPU. The remaining starting values' total stopping times a
 ## Licensing
 
 Collatz Conjecture Simulator is licensed under version 3 of the GNU General Public License (GPLv3). A copy of this
-licence should be [included](COPYING) with Collatz Conjecture Simulator. Otherwise, the licence may be viewed
-[here](https://www.gnu.org/licenses/gpl-3.0.html).
+licence should be [included](COPYING) with Collatz Conjecture Simulator. Otherwise, the licence may be viewed at the
+[GNU website](https://www.gnu.org/licenses/gpl-3.0.html).
 
-The building of Collatz Conjecture Simulator is dependent on a number of external works, each with their own associated
-licence or licences.
+The building of Collatz Conjecture Simulator is dependent on a number of external works, each with their own licence or
+licences. The below table lists each such work with its corresponding licence or licences.
 
 | Work                     | Licences        |
 | ------------------------ | --------------- |
