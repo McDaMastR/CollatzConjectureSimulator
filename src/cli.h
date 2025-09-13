@@ -20,35 +20,35 @@
 #include "defs.h"
 
 
-#define CLI_MAX_OPTION_LENGTH 64ULL
+#define CLTZ_CLI_MAX_OPTION_LENGTH 64ULL
 
 
-typedef struct Cli_T* Cli;
+typedef struct CltzCli_T* CltzCli;
 
-typedef bool (*CliCallback)(void* config, void* arg);
+typedef bool (*CltzCliCallback)(void* config, void* arg);
 
-typedef enum CliDatatype
+typedef enum CltzCliDatatype
 {
-	CLI_DATATYPE_NONE    = 0,
-	CLI_DATATYPE_CHAR    = 1,
-	CLI_DATATYPE_STRING  = 2,
-	CLI_DATATYPE_FLOAT   = 3,
-	CLI_DATATYPE_DOUBLE  = 4,
-	CLI_DATATYPE_LDOUBLE = 5,
-	CLI_DATATYPE_LONG    = 6,
-	CLI_DATATYPE_LLONG   = 7,
-	CLI_DATATYPE_ULONG   = 8,
-	CLI_DATATYPE_ULLONG  = 9
-} CliDatatype;
+	CLTZ_CLI_DATATYPE_NONE    = 0,
+	CLTZ_CLI_DATATYPE_CHAR    = 1,
+	CLTZ_CLI_DATATYPE_STRING  = 2,
+	CLTZ_CLI_DATATYPE_FLOAT   = 3,
+	CLTZ_CLI_DATATYPE_DOUBLE  = 4,
+	CLTZ_CLI_DATATYPE_LDOUBLE = 5,
+	CLTZ_CLI_DATATYPE_LONG    = 6,
+	CLTZ_CLI_DATATYPE_LLONG   = 7,
+	CLTZ_CLI_DATATYPE_ULONG   = 8,
+	CLTZ_CLI_DATATYPE_ULLONG  = 9
+} CltzCliDatatype;
 
 
 // TODO Document these functions like the Dy* functions
 
-void cli_destroy(Cli cli);
+void cltzCliDestroy(CltzCli cli);
 
-Cli cli_create(void* config, size_t count) FREE_FUNC(cli_destroy, 1) NO_ACCESS(1) USE_RET;
+CltzCli cltzCliCreate(void* config, size_t count) FREE_FUNC(cltzCliDestroy, 1) NO_ACCESS(1) USE_RET;
 
-bool cli_parse(Cli cli, int argc, char** argv) NONNULL_ARGS_ALL;
+bool cltzCliParse(CltzCli cli, int argc, char** argv) NONNULL_ARGS_ALL;
 
-bool cli_add(Cli cli, char option, const char* name, CliDatatype type, CliCallback callback)
+bool cltzCliAdd(CltzCli cli, char option, const char* name, CltzCliDatatype type, CltzCliCallback callback)
 	NONNULL_ARGS_ALL NULTSTR_ARG(3);

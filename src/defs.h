@@ -308,6 +308,13 @@ extern const uint32_t PROGRAM_VER_MAJOR;
 extern const uint32_t PROGRAM_VER_MINOR;
 extern const uint32_t PROGRAM_VER_PATCH;
 
+extern const uint32_t KiB_SIZE;
+extern const uint32_t MiB_SIZE;
+extern const uint32_t GiB_SIZE;
+
 extern const double MS_PER_CLOCK;
+
+
+// Global variables
 
 extern ProgramConfig g_config;

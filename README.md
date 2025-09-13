@@ -73,6 +73,7 @@ correctly are listed below. The full requirements of the GPU are given in
   - `__int128` (GNU C extension)
 - [Vulkan](https://www.vulkan.org) 1.1.
   - `VK_KHR_copy_commands2`
+  - `VK_KHR_maintenance6`
   - `VK_KHR_map_memory2`
   - `VK_KHR_synchronization2`
   - `VK_KHR_timeline_semaphore`

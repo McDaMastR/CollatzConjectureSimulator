@@ -36,28 +36,28 @@ typedef union CliData
 
 typedef struct CliOption
 {
-	char fullName[CLI_MAX_OPTION_LENGTH];
+	char fullName[CLTZ_CLI_MAX_OPTION_LENGTH];
 	char shortName;
 
-	CliCallback callback;
-	CliDatatype type;
+	CltzCliCallback callback;
+	CltzCliDatatype type;
 } CliOption;
 
 typedef struct CliCallbackData
 {
-	CliCallback callback;
-	CliDatatype type;
+	CltzCliCallback callback;
+	CltzCliDatatype type;
 	CliData data;
 } CliCallbackData;
 
-typedef struct Cli_T
+typedef struct CltzCli_T
 {
 	DyArray options;
 	void* config;
-} Cli_T;
+} CltzCli_T;
 
 
-void cli_destroy(Cli cli)
+void cltzCliDestroy(CltzCli cli)
 {
 	if EXPECT_FALSE (!cli) { return; }
 
@@ -65,10 +65,10 @@ void cli_destroy(Cli cli)
 	free(cli);
 }
 
-Cli cli_create(void* config, size_t count)
+CltzCli cltzCliCreate(void* config, size_t count)
 {
-	size_t allocSize = sizeof(Cli_T);
-	Cli cli = malloc(allocSize);
+	size_t allocSize = sizeof(CltzCli_T);
+	CltzCli cli = malloc(allocSize);
 	if EXPECT_FALSE (!cli) { MALLOC_FAILURE(cli, allocSize); return NULL; }
 
 	size_t elmSize = sizeof(CliOption);
@@ -83,92 +83,92 @@ Cli cli_create(void* config, size_t count)
 	return cli;
 }
 
-static void cli_parse_arg(CliDatatype type, const char* option, const char* arg, CliData* result)
+static void cltzCliParseArg(CltzCliDatatype type, const char* option, const char* arg, CliData* result)
 {
 	char* end = NULL;
 
 	switch (type) {
-		case CLI_DATATYPE_NONE:
-			break;
+	case CLTZ_CLI_DATATYPE_NONE:
+		break;
 
-		case CLI_DATATYPE_CHAR:
-			result->c = *arg;
-			break;
+	case CLTZ_CLI_DATATYPE_CHAR:
+		result->c = *arg;
+		break;
 
-		case CLI_DATATYPE_STRING:
-			result->s = arg;
-			break;
+	case CLTZ_CLI_DATATYPE_STRING:
+		result->s = arg;
+		break;
 
-		case CLI_DATATYPE_FLOAT:;
-			float f = strtof(arg, &end);
-			if (*end) { 
-				log_warning(stdout, "Partially interpreting argument %s for option %s as %f", arg, option, (double) f);
-			}
+	case CLTZ_CLI_DATATYPE_FLOAT:;
+		float f = strtof(arg, &end);
+		if (*end) { 
+			log_warning(stdout, "Partially interpreting argument %s for option %s as %f", arg, option, (double) f);
+		}
 
-			result->f = f;
-			break;
+		result->f = f;
+		break;
 
-		case CLI_DATATYPE_DOUBLE:;
-			double d = strtod(arg, &end);
-			if (*end) {
-				log_warning(stdout, "Partially interpreting argument %s for option %s as %f", arg, option, d);
-			}
+	case CLTZ_CLI_DATATYPE_DOUBLE:;
+		double d = strtod(arg, &end);
+		if (*end) {
+			log_warning(stdout, "Partially interpreting argument %s for option %s as %f", arg, option, d);
+		}
 
-			result->d = d;
-			break;
+		result->d = d;
+		break;
 
-		case CLI_DATATYPE_LDOUBLE:;
-			long double ld = strtold(arg, &end);
-			if (*end) {
-				log_warning(stdout, "Partially interpreting argument %s for option %s as %Lf", arg, option, ld);
-			}
+	case CLTZ_CLI_DATATYPE_LDOUBLE:;
+		long double ld = strtold(arg, &end);
+		if (*end) {
+			log_warning(stdout, "Partially interpreting argument %s for option %s as %Lf", arg, option, ld);
+		}
 
-			result->ld = ld;
-			break;
+		result->ld = ld;
+		break;
 
-		case CLI_DATATYPE_LONG:;
-			long l = strtol(arg, &end, 0);
-			if (*end) {
-				log_warning(stdout, "Partially interpreting argument %s for option %s as %ld", arg, option, l);
-			}
+	case CLTZ_CLI_DATATYPE_LONG:;
+		long l = strtol(arg, &end, 0);
+		if (*end) {
+			log_warning(stdout, "Partially interpreting argument %s for option %s as %ld", arg, option, l);
+		}
 
-			result->l = l;
-			break;
+		result->l = l;
+		break;
 
-		case CLI_DATATYPE_LLONG:;
-			long long ll = strtoll(arg, &end, 0);
-			if (*end) {
-				log_warning(stdout, "Partially interpreting argument %s for option %s as %lld", arg, option, ll);
-			}
+	case CLTZ_CLI_DATATYPE_LLONG:;
+		long long ll = strtoll(arg, &end, 0);
+		if (*end) {
+			log_warning(stdout, "Partially interpreting argument %s for option %s as %lld", arg, option, ll);
+		}
 
-			result->ll = ll;
-			break;
+		result->ll = ll;
+		break;
 
-		case CLI_DATATYPE_ULONG:;
-			unsigned long ul = strtoul(arg, &end, 0);
-			if (*end) {
-				log_warning(stdout, "Partially interpreting argument %s for option %s as %lu", arg, option, ul);
-			}
+	case CLTZ_CLI_DATATYPE_ULONG:;
+		unsigned long ul = strtoul(arg, &end, 0);
+		if (*end) {
+			log_warning(stdout, "Partially interpreting argument %s for option %s as %lu", arg, option, ul);
+		}
 
-			result->ul = ul;
-			break;
+		result->ul = ul;
+		break;
 
-		case CLI_DATATYPE_ULLONG:;
-			unsigned long long ull = strtoull(arg, &end, 0);
-			if (*end) {
-				log_warning(stdout, "Partially interpreting argument %s for option %s as %llu", arg, option, ull);
-			}
+	case CLTZ_CLI_DATATYPE_ULLONG:;
+		unsigned long long ull = strtoull(arg, &end, 0);
+		if (*end) {
+			log_warning(stdout, "Partially interpreting argument %s for option %s as %llu", arg, option, ull);
+		}
 
-			result->ull = ull;
-			break;
+		result->ull = ull;
+		break;
 
-		default:
-			log_error(stderr, "Invalid datatype for option %s", option);
-			break;
+	default:
+		log_error(stderr, "Invalid datatype for option %s", option);
+		break;
 	}
 }
 
-bool cli_parse(Cli cli, int argc, char** argv)
+bool cltzCliParse(CltzCli cli, int argc, char** argv)
 {
 	size_t elmSize = sizeof(CliCallbackData);
 	DyQueue callbacks = dyqueue_create(elmSize);
@@ -179,19 +179,19 @@ bool cli_parse(Cli cli, int argc, char** argv)
 	void* config = cli->config;
 
 	CliCallbackData callbackData = {0};
-	CliDatatype argType = CLI_DATATYPE_NONE;
+	CltzCliDatatype argType = CLTZ_CLI_DATATYPE_NONE;
 	const char* optionName = NULL;
 
 	for (int i = 1; i < argc; i++) {
 		const char* arg = argv[i];
 
 		if (argType) {
-			cli_parse_arg(argType, optionName, arg, &callbackData.data);
+			cltzCliParseArg(argType, optionName, arg, &callbackData.data);
 
 			bool bres = dyqueue_enqueue(callbacks, &callbackData);
 			if EXPECT_FALSE (!bres) { dyqueue_destroy(callbacks); return false; }
 
-			argType = CLI_DATATYPE_NONE;
+			argType = CLTZ_CLI_DATATYPE_NONE;
 			optionName = NULL;
 		}
 
@@ -200,7 +200,7 @@ bool cli_parse(Cli cli, int argc, char** argv)
 				CliOption option;
 				dyarray_get(options, &option, j);
 
-				if (!strncmp(arg + 2, option.fullName, CLI_MAX_OPTION_LENGTH)) {
+				if (!strncmp(arg + 2, option.fullName, CLTZ_CLI_MAX_OPTION_LENGTH)) {
 					argType = option.type;
 					optionName = arg;
 
@@ -227,7 +227,7 @@ bool cli_parse(Cli cli, int argc, char** argv)
 				if (argType) {
 					log_warning(stdout, "Ignoring incomplete option -%c", arg[j - 1]);
 
-					argType = CLI_DATATYPE_NONE;
+					argType = CLTZ_CLI_DATATYPE_NONE;
 					optionName = NULL;
 				}
 
@@ -280,14 +280,14 @@ bool cli_parse(Cli cli, int argc, char** argv)
 	return true;
 }
 
-bool cli_add(Cli cli, char option, const char* name, CliDatatype type, CliCallback callback)
+bool cltzCliAdd(CltzCli cli, char option, const char* name, CltzCliDatatype type, CltzCliCallback callback)
 {
 	CliOption newOption = {0};
 
 	size_t length = strlen(name);
-	if EXPECT_FALSE (length > CLI_MAX_OPTION_LENGTH) { return false; }
+	if EXPECT_FALSE (length > CLTZ_CLI_MAX_OPTION_LENGTH) { return false; }
 
-	strncpy(newOption.fullName, name, CLI_MAX_OPTION_LENGTH);
+	strncpy(newOption.fullName, name, CLTZ_CLI_MAX_OPTION_LENGTH);
 
 	newOption.shortName = option;
 	newOption.callback = callback;

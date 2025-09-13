@@ -40,6 +40,10 @@ const uint32_t PROGRAM_VER_MAJOR = CLTZ_VERSION_MAJOR;
 const uint32_t PROGRAM_VER_MINOR = CLTZ_VERSION_MINOR;
 const uint32_t PROGRAM_VER_PATCH = CLTZ_VERSION_PATCH;
 
+const uint32_t KiB_SIZE = UINT32_C(1) << 10;
+const uint32_t MiB_SIZE = UINT32_C(1) << 20;
+const uint32_t GiB_SIZE = UINT32_C(1) << 30;
+
 const double MS_PER_CLOCK = 1000. / CLOCKS_PER_SEC;
 
 ProgramConfig g_config = {

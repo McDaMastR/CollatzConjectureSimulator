@@ -361,7 +361,6 @@ bool select_device(Gpu* restrict gpu)
 	bool using16BitStorage = false;
 	bool usingMaintenance4 = false;
 	bool usingMaintenance5 = false;
-	bool usingMaintenance6 = false;
 	bool usingMaintenance7 = false;
 	bool usingMaintenance8 = false;
 	bool usingMaintenance9 = false;
@@ -511,6 +510,7 @@ bool select_device(Gpu* restrict gpu)
 		if (!hasCompute) { continue; }
 
 		if (!hasCopyCommands2)     { continue; }
+		if (!hasMaintenance6)      { continue; }
 		if (!hasMapMemory2)        { continue; }
 		if (!hasSynchronization2)  { continue; }
 		if (!hasTimelineSemaphore) { continue; }
@@ -533,7 +533,6 @@ bool select_device(Gpu* restrict gpu)
 
 		if (hasMaintenance4)                 { currentScore += 10; }
 		if (hasMaintenance5)                 { currentScore += 10; }
-		if (hasMaintenance6)                 { currentScore += 10; }
 		if (hasMaintenance7)                 { currentScore += 10; }
 		if (hasMaintenance8)                 { currentScore += 10; }
 		if (hasMaintenance9)                 { currentScore += 10; }
@@ -553,7 +552,6 @@ bool select_device(Gpu* restrict gpu)
 			using16BitStorage = hasStorageBuffer16BitAccess;
 			usingMaintenance4 = hasMaintenance4;
 			usingMaintenance5 = hasMaintenance5;
-			usingMaintenance6 = hasMaintenance6;
 			usingMaintenance7 = hasMaintenance7;
 			usingMaintenance8 = hasMaintenance8;
 			usingMaintenance9 = hasMaintenance9;
@@ -683,7 +681,6 @@ bool select_device(Gpu* restrict gpu)
 	gpu->using16BitStorage = using16BitStorage;
 	gpu->usingMaintenance4 = usingMaintenance4;
 	gpu->usingMaintenance5 = usingMaintenance5;
-	gpu->usingMaintenance6 = usingMaintenance6;
 	gpu->usingMaintenance7 = usingMaintenance7;
 	gpu->usingMaintenance8 = usingMaintenance8;
 	gpu->usingMaintenance9 = usingMaintenance9;
@@ -708,59 +705,61 @@ bool select_device(Gpu* restrict gpu)
 
 	// Display info about selected device
 	switch (g_config.outputLevel) {
-		case OUTPUT_LEVEL_DEFAULT:
-			printf(
-				"Device: %s\n"
-				"\tVulkan version:    %" PRIu32 ".%" PRIu32 "\n"
-				"\tSPIR-V version:    %" PRIu32 ".%" PRIu32 "\n"
-				"\tCompute QF index:  %" PRIu32 "\n"
-				"\tTransfer QF index: %" PRIu32 "\n",
-				deviceName, vkVerMajor, vkVerMinor, spvVerMajor, spvVerMinor, computeFamilyIndex, transferFamilyIndex);
+	case OUTPUT_LEVEL_DEFAULT:
+		printf(
+			"Device: %s\n"
+			"\tVulkan version:    %" PRIu32 ".%" PRIu32 "\n"
+			"\tSPIR-V version:    %" PRIu32 ".%" PRIu32 "\n"
+			"\tCompute QF index:  %" PRIu32 "\n"
+			"\tTransfer QF index: %" PRIu32 "\n",
+			deviceName,
+			vkVerMajor,  vkVerMinor,
+			spvVerMajor, spvVerMinor,
+			computeFamilyIndex, transferFamilyIndex);
 
-			if (g_config.preferInt16) {
-				printf("\tshaderInt16:       %d\n", usingShaderInt16);
-			}
-			if (g_config.preferInt64) {
-				printf("\tshaderInt64:       %d\n", usingShaderInt64);
-			}
+		if (g_config.preferInt16) {
+			printf("\tshaderInt16:       %d\n", usingShaderInt16);
+		}
+		if (g_config.preferInt64) {
+			printf("\tshaderInt64:       %d\n", usingShaderInt64);
+		}
 
-			NEWLINE();
-			break;
+		NEWLINE();
+		break;
 
-		case OUTPUT_LEVEL_VERBOSE:
-			printf(
-				"Device: %s\n"
-				"\tScore:                             %" PRIu32 "\n"
-				"\tVulkan version:                    %" PRIu32 ".%" PRIu32 "\n"
-				"\tSPIR-V version:                    %" PRIu32 ".%" PRIu32 "\n"
-				"\tCompute queue family index:        %" PRIu32 "\n"
-				"\tTransfer queue family index:       %" PRIu32 "\n"
-				"\tCompute queue index:               %" PRIu32 "\n"
-				"\tTransfer queue index:              %" PRIu32 "\n"
-				"\tmaintenance4                       %d\n"
-				"\tmaintenance5                       %d\n"
-				"\tmaintenance6                       %d\n"
-				"\tmaintenance7                       %d\n"
-				"\tmaintenance8                       %d\n"
-				"\tmaintenance9                       %d\n"
-				"\tmemoryPriority:                    %d\n"
-				"\tpipelineCreationCacheControl:      %d\n"
-				"\tpipelineExecutableProperties:      %d\n"
-				"\tshaderInt16:                       %d\n"
-				"\tshaderInt64:                       %d\n"
-				"\tstorageBuffer16BitAccess:          %d\n"
-				"\tsubgroupSizeControl:               %d\n\n",
-				deviceName, bestScore, vkVerMajor, vkVerMinor, spvVerMajor, spvVerMinor,
-				computeFamilyIndex, transferFamilyIndex, computeQueueIndex, transferQueueIndex,
-				usingMaintenance4, usingMaintenance5, usingMaintenance6, usingMaintenance7, usingMaintenance8,
-				usingMaintenance9, usingMemoryPriority, usingPipelineCreationCacheControl,
-				usingPipelineExecutableProperties, usingShaderInt16, usingShaderInt64, using16BitStorage,
-				usingSubgroupSizeControl);
+	case OUTPUT_LEVEL_VERBOSE:
+		printf(
+			"Device: %s\n"
+			"\tScore:                             %" PRIu32 "\n"
+			"\tVulkan version:                    %" PRIu32 ".%" PRIu32 "\n"
+			"\tSPIR-V version:                    %" PRIu32 ".%" PRIu32 "\n"
+			"\tCompute queue family index:        %" PRIu32 "\n"
+			"\tTransfer queue family index:       %" PRIu32 "\n"
+			"\tCompute queue index:               %" PRIu32 "\n"
+			"\tTransfer queue index:              %" PRIu32 "\n"
+			"\tmaintenance4                       %d\n"
+			"\tmaintenance5                       %d\n"
+			"\tmaintenance7                       %d\n"
+			"\tmaintenance8                       %d\n"
+			"\tmaintenance9                       %d\n"
+			"\tmemoryPriority:                    %d\n"
+			"\tpipelineCreationCacheControl:      %d\n"
+			"\tpipelineExecutableProperties:      %d\n"
+			"\tshaderInt16:                       %d\n"
+			"\tshaderInt64:                       %d\n"
+			"\tstorageBuffer16BitAccess:          %d\n"
+			"\tsubgroupSizeControl:               %d\n\n",
+			deviceName, bestScore,
+			vkVerMajor, vkVerMinor, spvVerMajor, spvVerMinor,
+			computeFamilyIndex, transferFamilyIndex, computeQueueIndex, transferQueueIndex,
+			usingMaintenance4, usingMaintenance5, usingMaintenance7, usingMaintenance8, usingMaintenance9,
+			usingMemoryPriority, usingPipelineCreationCacheControl, usingPipelineExecutableProperties,
+			usingShaderInt16, usingShaderInt64, using16BitStorage, usingSubgroupSizeControl);
 
-			break;
+		break;
 
-		default:
-			break;
+	default:
+		break;
 	}
 
 	dyrecord_destroy(localRecord);
@@ -798,6 +797,9 @@ bool create_device(Gpu* restrict gpu)
 	const char* extensionName = VK_KHR_COPY_COMMANDS_2_EXTENSION_NAME;
 	dyarray_append(enabledExtensions, &extensionName);
 
+	extensionName = VK_KHR_MAINTENANCE_6_EXTENSION_NAME;
+	dyarray_append(enabledExtensions, &extensionName);
+
 	extensionName = VK_KHR_MAP_MEMORY_2_EXTENSION_NAME;
 	dyarray_append(enabledExtensions, &extensionName);
 
@@ -823,10 +825,6 @@ bool create_device(Gpu* restrict gpu)
 		dyarray_append(enabledExtensions, &extensionName);
 
 		extensionName = VK_KHR_MAINTENANCE_5_EXTENSION_NAME;
-		dyarray_append(enabledExtensions, &extensionName);
-	}
-	if (gpu->usingMaintenance6) {
-		extensionName = VK_KHR_MAINTENANCE_6_EXTENSION_NAME;
 		dyarray_append(enabledExtensions, &extensionName);
 	}
 	if (gpu->usingMaintenance7) {
@@ -874,107 +872,105 @@ bool create_device(Gpu* restrict gpu)
 		dyarray_append(enabledExtensions, &extensionName);
 	}
 
-	VkPhysicalDeviceFeatures2 deviceFeats = {0};
-	deviceFeats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-	deviceFeats.features.shaderInt64 = gpu->usingShaderInt64;
-	deviceFeats.features.shaderInt16 = gpu->usingShaderInt16;
+	VkPhysicalDeviceFeatures2 deviceFeatures = {0};
+	deviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	deviceFeatures.features.shaderInt64 = gpu->usingShaderInt64;
+	deviceFeatures.features.shaderInt16 = gpu->usingShaderInt16;
 
-	VkPhysicalDevice16BitStorageFeatures device16BitStorageFeats = {0};
-	device16BitStorageFeats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES;
-	device16BitStorageFeats.storageBuffer16BitAccess = VK_TRUE;
+	VkPhysicalDevice16BitStorageFeatures device16BitStorageFeatures = {0};
+	device16BitStorageFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES;
+	device16BitStorageFeatures.storageBuffer16BitAccess = VK_TRUE;
 
-	VkPhysicalDeviceDynamicRenderingFeatures deviceDynamicRenderingFeats = {0};
-	deviceDynamicRenderingFeats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
-	deviceDynamicRenderingFeats.dynamicRendering = VK_TRUE;
+	VkPhysicalDeviceDynamicRenderingFeatures deviceDynamicRenderingFeatures = {0};
+	deviceDynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
+	deviceDynamicRenderingFeatures.dynamicRendering = VK_TRUE;
 
-	VkPhysicalDeviceMaintenance4Features deviceMaintenance4Feats = {0};
-	deviceMaintenance4Feats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_FEATURES;
-	deviceMaintenance4Feats.maintenance4 = VK_TRUE;
+	VkPhysicalDeviceMaintenance4Features deviceMaintenance4Features = {0};
+	deviceMaintenance4Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_FEATURES;
+	deviceMaintenance4Features.maintenance4 = VK_TRUE;
 
-	VkPhysicalDeviceMaintenance5Features deviceMaintenance5Feats = {0};
-	deviceMaintenance5Feats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_5_FEATURES;
-	deviceMaintenance5Feats.maintenance5 = VK_TRUE;
+	VkPhysicalDeviceMaintenance5Features deviceMaintenance5Features = {0};
+	deviceMaintenance5Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_5_FEATURES;
+	deviceMaintenance5Features.maintenance5 = VK_TRUE;
 
-	VkPhysicalDeviceMaintenance6Features deviceMaintenance6Feats = {0};
-	deviceMaintenance6Feats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_6_FEATURES;
-	deviceMaintenance6Feats.maintenance6 = VK_TRUE;
+	VkPhysicalDeviceMaintenance6Features deviceMaintenance6Features = {0};
+	deviceMaintenance6Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_6_FEATURES;
+	deviceMaintenance6Features.maintenance6 = VK_TRUE;
 
-	VkPhysicalDeviceMaintenance7FeaturesKHR deviceMaintenance7Feats = {0};
-	deviceMaintenance7Feats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_7_FEATURES_KHR;
-	deviceMaintenance7Feats.maintenance7 = VK_TRUE;
+	VkPhysicalDeviceMaintenance7FeaturesKHR deviceMaintenance7Features = {0};
+	deviceMaintenance7Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_7_FEATURES_KHR;
+	deviceMaintenance7Features.maintenance7 = VK_TRUE;
 
-	VkPhysicalDeviceMaintenance8FeaturesKHR deviceMaintenance8Feats = {0};
-	deviceMaintenance8Feats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_8_FEATURES_KHR;
-	deviceMaintenance8Feats.maintenance8 = VK_TRUE;
+	VkPhysicalDeviceMaintenance8FeaturesKHR deviceMaintenance8Features = {0};
+	deviceMaintenance8Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_8_FEATURES_KHR;
+	deviceMaintenance8Features.maintenance8 = VK_TRUE;
 
-	VkPhysicalDeviceMaintenance9FeaturesKHR deviceMaintenance9Feats = {0};
-	deviceMaintenance9Feats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_9_FEATURES_KHR;
-	deviceMaintenance9Feats.maintenance9 = VK_TRUE;
+	VkPhysicalDeviceMaintenance9FeaturesKHR deviceMaintenance9Features = {0};
+	deviceMaintenance9Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_9_FEATURES_KHR;
+	deviceMaintenance9Features.maintenance9 = VK_TRUE;
 
-	VkPhysicalDeviceMemoryPriorityFeaturesEXT deviceMemoryPriorityFeats = {0};
-	deviceMemoryPriorityFeats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT;
-	deviceMemoryPriorityFeats.memoryPriority = VK_TRUE;
+	VkPhysicalDeviceMemoryPriorityFeaturesEXT deviceMemoryPriorityFeatures = {0};
+	deviceMemoryPriorityFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT;
+	deviceMemoryPriorityFeatures.memoryPriority = VK_TRUE;
 
-	VkPhysicalDevicePipelineCreationCacheControlFeatures devicePipelineCreationCacheControlFeats = {0};
-	devicePipelineCreationCacheControlFeats.sType =
+	VkPhysicalDevicePipelineCreationCacheControlFeatures devicePipelineCreationCacheControlFeatures = {0};
+	devicePipelineCreationCacheControlFeatures.sType =
 		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_CREATION_CACHE_CONTROL_FEATURES;
-	devicePipelineCreationCacheControlFeats.pipelineCreationCacheControl = VK_TRUE;
+	devicePipelineCreationCacheControlFeatures.pipelineCreationCacheControl = VK_TRUE;
 
-	VkPhysicalDevicePipelineExecutablePropertiesFeaturesKHR devicePipelineExecutablePropertiesFeats = {0};
-	devicePipelineExecutablePropertiesFeats.sType =
+	VkPhysicalDevicePipelineExecutablePropertiesFeaturesKHR devicePipelineExecutablePropertiesFeatures = {0};
+	devicePipelineExecutablePropertiesFeatures.sType =
 		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_EXECUTABLE_PROPERTIES_FEATURES_KHR;
-	devicePipelineExecutablePropertiesFeats.pipelineExecutableInfo = VK_TRUE;
+	devicePipelineExecutablePropertiesFeatures.pipelineExecutableInfo = VK_TRUE;
 
-	VkPhysicalDeviceSubgroupSizeControlFeatures deviceSubgroupSizeControlFeats = {0};
-	deviceSubgroupSizeControlFeats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES;
-	deviceSubgroupSizeControlFeats.subgroupSizeControl = VK_TRUE;
+	VkPhysicalDeviceSubgroupSizeControlFeatures deviceSubgroupSizeControlFeatures = {0};
+	deviceSubgroupSizeControlFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES;
+	deviceSubgroupSizeControlFeatures.subgroupSizeControl = VK_TRUE;
 
-	VkPhysicalDeviceSynchronization2Features deviceSynchronization2Feats = {0};
-	deviceSynchronization2Feats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
-	deviceSynchronization2Feats.synchronization2 = VK_TRUE;
+	VkPhysicalDeviceSynchronization2Features deviceSynchronization2Features = {0};
+	deviceSynchronization2Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
+	deviceSynchronization2Features.synchronization2 = VK_TRUE;
 
-	VkPhysicalDeviceTimelineSemaphoreFeatures deviceTimelineSemaphoreFeats = {0};
-	deviceTimelineSemaphoreFeats.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
-	deviceTimelineSemaphoreFeats.timelineSemaphore = VK_TRUE;
+	VkPhysicalDeviceTimelineSemaphoreFeatures deviceTimelineSemaphoreFeatures = {0};
+	deviceTimelineSemaphoreFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
+	deviceTimelineSemaphoreFeatures.timelineSemaphore = VK_TRUE;
 
-	void** next = &deviceFeats.pNext;
+	void** next = &deviceFeatures.pNext;
 
-	PNEXT_ADD(next, deviceSynchronization2Feats);
-	PNEXT_ADD(next, deviceTimelineSemaphoreFeats);
+	PNEXT_ADD(next, deviceMaintenance6Features);
+	PNEXT_ADD(next, deviceSynchronization2Features);
+	PNEXT_ADD(next, deviceTimelineSemaphoreFeatures);
 
 	if (gpu->using16BitStorage) {
-		PNEXT_ADD(next, device16BitStorageFeats);
+		PNEXT_ADD(next, device16BitStorageFeatures);
 	}
 	if (gpu->usingMaintenance4) {
-		PNEXT_ADD(next, deviceMaintenance4Feats);
+		PNEXT_ADD(next, deviceMaintenance4Features);
 	}
 	if (gpu->usingMaintenance5) {
-		PNEXT_ADD(next, deviceDynamicRenderingFeats);
-		PNEXT_ADD(next, deviceMaintenance5Feats);
-	}
-	if (gpu->usingMaintenance6) {
-		PNEXT_ADD(next, deviceMaintenance6Feats);
+		PNEXT_ADD(next, deviceDynamicRenderingFeatures);
+		PNEXT_ADD(next, deviceMaintenance5Features);
 	}
 	if (gpu->usingMaintenance7) {
-		PNEXT_ADD(next, deviceMaintenance7Feats);
+		PNEXT_ADD(next, deviceMaintenance7Features);
 	}
 	if (gpu->usingMaintenance8) {
-		PNEXT_ADD(next, deviceMaintenance8Feats);
+		PNEXT_ADD(next, deviceMaintenance8Features);
 	}
 	if (gpu->usingMaintenance9) {
-		PNEXT_ADD(next, deviceMaintenance9Feats);
+		PNEXT_ADD(next, deviceMaintenance9Features);
 	}
 	if (gpu->usingMemoryPriority) {
-		PNEXT_ADD(next, deviceMemoryPriorityFeats);
+		PNEXT_ADD(next, deviceMemoryPriorityFeatures);
 	}
 	if (gpu->usingPipelineCreationCacheControl) {
-		PNEXT_ADD(next, devicePipelineCreationCacheControlFeats);
+		PNEXT_ADD(next, devicePipelineCreationCacheControlFeatures);
 	}
 	if (gpu->usingPipelineExecutableProperties) {
-		PNEXT_ADD(next, devicePipelineExecutablePropertiesFeats);
+		PNEXT_ADD(next, devicePipelineExecutablePropertiesFeatures);
 	}
 	if (gpu->usingSubgroupSizeControl) {
-		PNEXT_ADD(next, deviceSubgroupSizeControlFeats);
+		PNEXT_ADD(next, deviceSubgroupSizeControlFeatures);
 	}
 
 	// Create logical device
@@ -1002,7 +998,7 @@ bool create_device(Gpu* restrict gpu)
 
 	VkDeviceCreateInfo deviceInfo = {0};
 	deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	deviceInfo.pNext = &deviceFeats;
+	deviceInfo.pNext = &deviceFeatures;
 	deviceInfo.queueCreateInfoCount = computeFamilyIndex == transferFamilyIndex ? 1 : 2;
 	deviceInfo.pQueueCreateInfos = queueCreateInfos;
 	deviceInfo.enabledExtensionCount = enabledExtensionCount;
@@ -1051,37 +1047,37 @@ bool manage_memory(Gpu* restrict gpu)
 		gpu->usingMaintenance4 ? get_buffer_requirements_main4 : get_buffer_requirements_noext;
 
 	// Get device properties
-	VkPhysicalDeviceMaintenance4Properties deviceMaintenance4Props = {0};
-	deviceMaintenance4Props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_PROPERTIES;
+	VkPhysicalDeviceMaintenance4Properties deviceMaintenance4Properties = {0};
+	deviceMaintenance4Properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_PROPERTIES;
 
-	VkPhysicalDeviceMaintenance3Properties deviceMaintenance3Props = {0};
-	deviceMaintenance3Props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES;
-	deviceMaintenance3Props.pNext = gpu->usingMaintenance4 ? &deviceMaintenance4Props : NULL;
+	VkPhysicalDeviceMaintenance3Properties deviceMaintenance3Properties = {0};
+	deviceMaintenance3Properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES;
+	deviceMaintenance3Properties.pNext = gpu->usingMaintenance4 ? &deviceMaintenance4Properties : NULL;
 
-	VkPhysicalDeviceProperties2 deviceProps = {0};
-	deviceProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-	deviceProps.pNext = &deviceMaintenance3Props;
+	VkPhysicalDeviceProperties2 deviceProperties = {0};
+	deviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+	deviceProperties.pNext = &deviceMaintenance3Properties;
 
-	VK_CALL(vkGetPhysicalDeviceProperties2, physicalDevice, &deviceProps);
+	VK_CALL(vkGetPhysicalDeviceProperties2, physicalDevice, &deviceProperties);
 
 	// Get memory properties
-	VkPhysicalDeviceMemoryBudgetPropertiesEXT deviceMemoryBudgetProps = {0};
-	deviceMemoryBudgetProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT;
+	VkPhysicalDeviceMemoryBudgetPropertiesEXT deviceBudgetProperties = {0};
+	deviceBudgetProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT;
 
-	VkPhysicalDeviceMemoryProperties2 deviceMemoryProps = {0};
-	deviceMemoryProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
-	deviceMemoryProps.pNext = gpu->usingMemoryBudget ? &deviceMemoryBudgetProps : NULL;
+	VkPhysicalDeviceMemoryProperties2 deviceMemoryProperties = {0};
+	deviceMemoryProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
+	deviceMemoryProperties.pNext = gpu->usingMemoryBudget ? &deviceBudgetProperties : NULL;
 
-	VK_CALL(vkGetPhysicalDeviceMemoryProperties2, physicalDevice, &deviceMemoryProps);
+	VK_CALL(vkGetPhysicalDeviceMemoryProperties2, physicalDevice, &deviceMemoryProperties);
 
-	VkDeviceSize maxMemorySize = deviceMaintenance3Props.maxMemoryAllocationSize;
-	VkDeviceSize maxBufferSize = gpu->usingMaintenance4 ? deviceMaintenance4Props.maxBufferSize : maxMemorySize;
+	VkDeviceSize maxMemorySize = deviceMaintenance3Properties.maxMemoryAllocationSize;
+	VkDeviceSize maxBufferSize = gpu->usingMaintenance4 ? deviceMaintenance4Properties.maxBufferSize : maxMemorySize;
 
-	uint32_t maxStorageBufferRange = deviceProps.properties.limits.maxStorageBufferRange;
-	uint32_t maxMemoryCount = deviceProps.properties.limits.maxMemoryAllocationCount;
-	uint32_t maxWorkgroupCount = deviceProps.properties.limits.maxComputeWorkGroupCount[0];
-	uint32_t maxWorkgroupSize = deviceProps.properties.limits.maxComputeWorkGroupSize[0];
-	uint32_t memoryTypeCount = deviceMemoryProps.memoryProperties.memoryTypeCount;
+	uint32_t maxStorageBufferRange = deviceProperties.properties.limits.maxStorageBufferRange;
+	uint32_t maxMemoryCount = deviceProperties.properties.limits.maxMemoryAllocationCount;
+	uint32_t maxWorkgroupCount = deviceProperties.properties.limits.maxComputeWorkGroupCount[0];
+	uint32_t maxWorkgroupSize = deviceProperties.properties.limits.maxComputeWorkGroupSize[0];
+	uint32_t memoryTypeCount = deviceMemoryProperties.memoryProperties.memoryTypeCount;
 
 	// Get memoryTypeBits for wanted host visible & device local buffers
 	VkBufferUsageFlags hostVisibleBufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -1116,8 +1112,8 @@ bool manage_memory(Gpu* restrict gpu)
 
 	for (uint32_t i = 0; i < memoryTypeCount; i++) {
 		uint32_t memoryTypeBit = UINT32_C(1) << i;
-		uint32_t heapIndex = deviceMemoryProps.memoryProperties.memoryTypes[i].heapIndex;
-		VkMemoryPropertyFlags propFlags = deviceMemoryProps.memoryProperties.memoryTypes[i].propertyFlags;
+		uint32_t heapIndex = deviceMemoryProperties.memoryProperties.memoryTypes[i].heapIndex;
+		VkMemoryPropertyFlags propFlags = deviceMemoryProperties.memoryProperties.memoryTypes[i].propertyFlags;
 
 		bool isDeviceLocal = propFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 		bool isHostVisible = propFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
@@ -1175,11 +1171,11 @@ bool manage_memory(Gpu* restrict gpu)
 		}
 	}
 
-	VkDeviceSize hostVisibleHeapBudget = deviceMemoryBudgetProps.heapBudget[hostVisibleHeapIndex];
-	VkDeviceSize deviceLocalHeapBudget = deviceMemoryBudgetProps.heapBudget[deviceLocalHeapIndex];
+	VkDeviceSize hostVisibleHeapBudget = deviceBudgetProperties.heapBudget[hostVisibleHeapIndex];
+	VkDeviceSize deviceLocalHeapBudget = deviceBudgetProperties.heapBudget[deviceLocalHeapIndex];
 
-	VkDeviceSize hostVisibleHeapSize = deviceMemoryProps.memoryProperties.memoryHeaps[hostVisibleHeapIndex].size;
-	VkDeviceSize deviceLocalHeapSize = deviceMemoryProps.memoryProperties.memoryHeaps[deviceLocalHeapIndex].size;
+	VkDeviceSize hostVisibleHeapSize = deviceMemoryProperties.memoryProperties.memoryHeaps[hostVisibleHeapIndex].size;
+	VkDeviceSize deviceLocalHeapSize = deviceMemoryProperties.memoryProperties.memoryHeaps[deviceLocalHeapIndex].size;
 
 	VkDeviceSize bytesPerHostVisibleHeap = gpu->usingMemoryBudget ? hostVisibleHeapBudget : hostVisibleHeapSize;
 	VkDeviceSize bytesPerDeviceLocalHeap = gpu->usingMemoryBudget ? deviceLocalHeapBudget : deviceLocalHeapSize;
@@ -1302,42 +1298,45 @@ bool manage_memory(Gpu* restrict gpu)
 
 	// Display info on planned memory usage
 	switch (g_config.outputLevel) {
-		case OUTPUT_LEVEL_DEFAULT:
-			printf(
-				"Memory information:\n"
-				"\tHV memory type index:    %" PRIu32 "\n"
-				"\tDL memory type index:    %" PRIu32 "\n"
-				"\tWorkgroup size:          %" PRIu32 "\n"
-				"\tWorkgroup count:         %" PRIu32 "\n"
-				"\tValues per inout-buffer: %" PRIu32 "\n"
-				"\tInout-buffers per heap:  %" PRIu32 "\n\n",
-				hostVisibleTypeIndex, deviceLocalTypeIndex,
-				workgroupSize, workgroupCount, valuesPerInout, inoutsPerHeap);
+	case OUTPUT_LEVEL_DEFAULT:
+		printf(
+			"Memory information:\n"
+			"\tHV memory type index:    %" PRIu32 "\n"
+			"\tDL memory type index:    %" PRIu32 "\n"
+			"\tWorkgroup size:          %" PRIu32 "\n"
+			"\tWorkgroup count:         %" PRIu32 "\n"
+			"\tValues per inout-buffer: %" PRIu32 "\n"
+			"\tInout-buffers per heap:  %" PRIu32 "\n\n",
+			hostVisibleTypeIndex, deviceLocalTypeIndex,
+			workgroupSize, workgroupCount,
+			valuesPerInout, inoutsPerHeap);
 
-			break;
+		break;
 
-		case OUTPUT_LEVEL_VERBOSE:
-			printf(
-				"Memory information:\n"
-				"\tHV non-coherent memory:   %d\n"
-				"\tHV memory heap index:     %" PRIu32 "\n"
-				"\tDL memory heap index:     %" PRIu32 "\n"
-				"\tHV memory type index:     %" PRIu32 "\n"
-				"\tDL memory type index:     %" PRIu32 "\n"
-				"\tWorkgroup size:           %" PRIu32 "\n"
-				"\tWorkgroup count:          %" PRIu32 "\n"
-				"\tValues per inout-buffer:  %" PRIu32 "\n"
-				"\tInout-buffers per buffer: %" PRIu32 "\n"
-				"\tBuffers per heap:         %" PRIu32 "\n"
-				"\tValues per heap:          %" PRIu32 "\n\n",
-				hasHostNonCoherent, hostVisibleHeapIndex, deviceLocalHeapIndex, hostVisibleTypeIndex,
-				deviceLocalTypeIndex, workgroupSize, workgroupCount, valuesPerInout, inoutsPerBuffer, buffersPerHeap,
-				valuesPerHeap);
+	case OUTPUT_LEVEL_VERBOSE:
+		printf(
+			"Memory information:\n"
+			"\tHV non-coherent memory:   %d\n"
+			"\tHV memory heap index:     %" PRIu32 "\n"
+			"\tDL memory heap index:     %" PRIu32 "\n"
+			"\tHV memory type index:     %" PRIu32 "\n"
+			"\tDL memory type index:     %" PRIu32 "\n"
+			"\tWorkgroup size:           %" PRIu32 "\n"
+			"\tWorkgroup count:          %" PRIu32 "\n"
+			"\tValues per inout-buffer:  %" PRIu32 "\n"
+			"\tInout-buffers per buffer: %" PRIu32 "\n"
+			"\tBuffers per heap:         %" PRIu32 "\n"
+			"\tValues per heap:          %" PRIu32 "\n\n",
+			hasHostNonCoherent,
+			hostVisibleHeapIndex, deviceLocalHeapIndex,
+			hostVisibleTypeIndex, deviceLocalTypeIndex,
+			workgroupSize, workgroupCount,
+			valuesPerInout, inoutsPerBuffer, buffersPerHeap, valuesPerHeap);
 
-			break;
+		break;
 
-		default:
-			break;
+	default:
+		break;
 	}
 
 	return true;
@@ -1849,7 +1848,7 @@ bool create_pipeline(Gpu* restrict gpu)
 		VkQueryPoolCreateInfo queryPoolInfo = {0};
 		queryPoolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
 		queryPoolInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
-		queryPoolInfo.queryCount = inoutsPerHeap * 4;
+		queryPoolInfo.queryCount = inoutsPerHeap * 4; // Two per copy, two per dispatch
 
 		VkQueryPool queryPool;
 		VK_CALLR(vkCreateQueryPool, device, &queryPoolInfo, allocator, &queryPool);
@@ -1874,6 +1873,33 @@ bool create_pipeline(Gpu* restrict gpu)
 	}
 
 	dyrecord_destroy(localRecord);
+	return true;
+}
+
+static bool record_initial_cmdbuffer(
+	VkCommandBuffer cmdBuffer,
+	const VkCopyBufferInfo2* inBufferCopyInfos,
+	const VkDependencyInfo* dependencyInfo,
+	uint32_t buffersPerHeap)
+{
+	VkResult vkres;
+
+	VkCommandBufferBeginInfo beginInfo = {0};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	VK_CALLR(vkBeginCommandBuffer, cmdBuffer, &beginInfo);
+	if EXPECT_FALSE (vkres) { return false; }
+
+	for (uint32_t i = 0; i < buffersPerHeap; i++) {
+		VK_CALL(vkCmdCopyBuffer2KHR, cmdBuffer, &inBufferCopyInfos[i]);
+	}
+
+	VK_CALL(vkCmdPipelineBarrier2KHR, cmdBuffer, dependencyInfo);
+
+	VK_CALLR(vkEndCommandBuffer, cmdBuffer);
+	if EXPECT_FALSE (vkres) { return false; }
+
 	return true;
 }
 
@@ -1927,8 +1953,7 @@ static bool record_transfer_cmdbuffer(
 static bool record_compute_cmdbuffer(
 	VkCommandBuffer cmdBuffer,
 	VkPipeline pipeline,
-	VkPipelineLayout pipelineLayout,
-	const VkDescriptorSet* descriptorSet,
+	const VkBindDescriptorSetsInfo* bindDescriptorSetsInfo,
 	const VkDependencyInfo* dependencyInfos,
 	VkQueryPool queryPool,
 	uint32_t firstQuery,
@@ -1954,17 +1979,9 @@ static bool record_compute_cmdbuffer(
 	}
 
 	VK_CALL(vkCmdPipelineBarrier2KHR, cmdBuffer, &dependencyInfos[0]);
+	VK_CALL(vkCmdBindDescriptorSets2KHR, cmdBuffer, bindDescriptorSetsInfo);
 
 	VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
-	uint32_t firstDescriptorSet = 0;
-	uint32_t descriptorSetCount = 1;
-	uint32_t dynamicOffsetCount = 0;
-	uint32_t* dynamicOffsets = NULL;
-
-	VK_CALL(vkCmdBindDescriptorSets,
-		cmdBuffer, bindPoint, pipelineLayout, firstDescriptorSet, descriptorSetCount, descriptorSet, dynamicOffsetCount,
-		dynamicOffsets);
-
 	VK_CALL(vkCmdBindPipeline, cmdBuffer, bindPoint, pipeline);
 
 	uint32_t workgroupCountX = workgroupCount;
@@ -1973,7 +1990,6 @@ static bool record_compute_cmdbuffer(
 
 	// Use vkCmdDispatchBase if want to alter base value of workgroup index (first value of WorkgroupId)
 	VK_CALL(vkCmdDispatch, cmdBuffer, workgroupCountX, workgroupCountY, workgroupCountZ);
-
 	VK_CALL(vkCmdPipelineBarrier2KHR, cmdBuffer, &dependencyInfos[1]);
 
 	if (timestampValidBits) {
@@ -2018,21 +2034,24 @@ bool create_commands(Gpu* restrict gpu)
 	uint32_t transferFamilyTimestampValidBits = gpu->transferFamilyTimestampValidBits;
 
 	VkResult vkres;
+	size_t allocCount;
+	size_t allocSize;
 
 	DyRecord localRecord = dyrecord_create();
 	if EXPECT_FALSE (!localRecord) { return false; }
 
-	// Create transfer command pool (all transfer command buffers allocated from same pool)
-	VkCommandPoolCreateInfo transferCmdPoolInfo = {0};
-	transferCmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	transferCmdPoolInfo.queueFamilyIndex = transferFamilyIndex;
+	// Create initial command pool
+	VkCommandPoolCreateInfo initialCmdPoolInfo = {0};
+	initialCmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	initialCmdPoolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+	initialCmdPoolInfo.queueFamilyIndex = transferFamilyIndex;
 
-	VkCommandPool transferCmdPool;
-	VK_CALLR(vkCreateCommandPool, device, &transferCmdPoolInfo, allocator, &transferCmdPool);
+	VkCommandPool initialCmdPool;
+	VK_CALLR(vkCreateCommandPool, device, &initialCmdPoolInfo, allocator, &initialCmdPool);
 	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
-	gpu->transferCommandPool = transferCmdPool;
+	gpu->initialCmdPool = initialCmdPool;
 
-	// Create compute command pool (all compute command buffers allocated from same pool)
+	// Create compute command pool (all compute command buffers allocated from this pool)
 	VkCommandPoolCreateInfo computeCmdPoolInfo = {0};
 	computeCmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	computeCmdPoolInfo.queueFamilyIndex = computeFamilyIndex;
@@ -2040,32 +2059,37 @@ bool create_commands(Gpu* restrict gpu)
 	VkCommandPool computeCmdPool;
 	VK_CALLR(vkCreateCommandPool, device, &computeCmdPoolInfo, allocator, &computeCmdPool);
 	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
-	gpu->computeCommandPool = computeCmdPool;
+	gpu->computeCmdPool = computeCmdPool;
 
-	// Create transfer command buffers (one per inout-buffer)
-	size_t allocCount = inoutsPerHeap;
-	size_t allocSize = sizeof(VkCommandBuffer);
+	// Create transfer command pool (all transfer command buffers allocated from this pool)
+	VkCommandPoolCreateInfo transferCmdPoolInfo = {0};
+	transferCmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	transferCmdPoolInfo.queueFamilyIndex = transferFamilyIndex;
 
-	VkCommandBuffer* transferCmdBuffers = dyrecord_calloc(gpuRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!transferCmdBuffers) { dyrecord_destroy(localRecord); return false; }
-	gpu->transferCommandBuffers = transferCmdBuffers;
-
-	VkCommandBufferAllocateInfo transferCmdBufferAllocInfo = {0};
-	transferCmdBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	transferCmdBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	transferCmdBufferAllocInfo.commandPool = transferCmdPool;
-	transferCmdBufferAllocInfo.commandBufferCount = inoutsPerHeap;
-
-	VK_CALLR(vkAllocateCommandBuffers, device, &transferCmdBufferAllocInfo, transferCmdBuffers);
+	VkCommandPool transferCmdPool;
+	VK_CALLR(vkCreateCommandPool, device, &transferCmdPoolInfo, allocator, &transferCmdPool);
 	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	gpu->transferCmdPool = transferCmdPool;
 
-	// Create compute command buffers (one per inout-buffer)
+	// Allocate initial command buffer
+	VkCommandBufferAllocateInfo initialCmdBufferAllocInfo = {0};
+	initialCmdBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	initialCmdBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	initialCmdBufferAllocInfo.commandPool = initialCmdPool;
+	initialCmdBufferAllocInfo.commandBufferCount = 1;
+
+	VkCommandBuffer initialCmdBuffer;
+	VK_CALLR(vkAllocateCommandBuffers, device, &initialCmdBufferAllocInfo, &initialCmdBuffer);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	gpu->initialCmdBuffer = initialCmdBuffer;
+
+	// Allocate compute command buffers (one per inout-buffer)
 	allocCount = inoutsPerHeap;
 	allocSize = sizeof(VkCommandBuffer);
 
 	VkCommandBuffer* computeCmdBuffers = dyrecord_calloc(gpuRecord, allocCount, allocSize);
 	if EXPECT_FALSE (!computeCmdBuffers) { dyrecord_destroy(localRecord); return false; }
-	gpu->computeCommandBuffers = computeCmdBuffers;
+	gpu->computeCmdBuffers = computeCmdBuffers;
 
 	VkCommandBufferAllocateInfo computeCmdBufferAllocInfo = {0};
 	computeCmdBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -2074,6 +2098,23 @@ bool create_commands(Gpu* restrict gpu)
 	computeCmdBufferAllocInfo.commandBufferCount = inoutsPerHeap;
 
 	VK_CALLR(vkAllocateCommandBuffers, device, &computeCmdBufferAllocInfo, computeCmdBuffers);
+	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+
+	// Allocate transfer command buffers (one per inout-buffer)
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkCommandBuffer);
+
+	VkCommandBuffer* transferCmdBuffers = dyrecord_calloc(gpuRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!transferCmdBuffers) { dyrecord_destroy(localRecord); return false; }
+	gpu->transferCmdBuffers = transferCmdBuffers;
+
+	VkCommandBufferAllocateInfo transferCmdBufferAllocInfo = {0};
+	transferCmdBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	transferCmdBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	transferCmdBufferAllocInfo.commandPool = transferCmdPool;
+	transferCmdBufferAllocInfo.commandBufferCount = inoutsPerHeap;
+
+	VK_CALLR(vkAllocateCommandBuffers, device, &transferCmdBufferAllocInfo, transferCmdBuffers);
 	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	// Specify in-buffer copy regions (same region layout per buffer)
@@ -2102,6 +2143,21 @@ bool create_commands(Gpu* restrict gpu)
 		outBufferRegions[i].srcOffset = bytesPerInout * i + bytesPerIn;
 		outBufferRegions[i].dstOffset = bytesPerInout * i + bytesPerIn;
 		outBufferRegions[i].size = bytesPerOut;
+	}
+
+	// Specify initial buffer copies
+	allocCount = buffersPerHeap;
+	allocSize = sizeof(VkCopyBufferInfo2);
+
+	VkCopyBufferInfo2* initialBufferCopyInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!initialBufferCopyInfos) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0; i < buffersPerHeap; i++) {
+		initialBufferCopyInfos[i].sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+		initialBufferCopyInfos[i].srcBuffer = hostVisibleBuffers[i];
+		initialBufferCopyInfos[i].dstBuffer = deviceLocalBuffers[i];
+		initialBufferCopyInfos[i].regionCount = inoutsPerBuffer;
+		initialBufferCopyInfos[i].pRegions = inBufferRegions;
 	}
 
 	// Specify in-buffer copies
@@ -2144,7 +2200,76 @@ bool create_commands(Gpu* restrict gpu)
 		}
 	}
 
-	// Specify transfer buffer memory barriers
+	// Specify descriptor set bindings
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkBindDescriptorSetsInfo);
+
+	VkBindDescriptorSetsInfo* bindDescriptorSetsInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!bindDescriptorSetsInfos) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+		bindDescriptorSetsInfos[i].sType = VK_STRUCTURE_TYPE_BIND_DESCRIPTOR_SETS_INFO;
+		bindDescriptorSetsInfos[i].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+		bindDescriptorSetsInfos[i].layout = pipelineLayout;
+		bindDescriptorSetsInfos[i].firstSet = 0;
+		bindDescriptorSetsInfos[i].descriptorSetCount = 1;
+		bindDescriptorSetsInfos[i].pDescriptorSets = &descriptorSets[i];
+	}
+
+	// Specify buffer memory barriers for initial command buffer
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkBufferMemoryBarrier2);
+
+	VkBufferMemoryBarrier2* initialBufferMemoryBarriers = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!initialBufferMemoryBarriers) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
+		VkBuffer deviceLocalBuffer = deviceLocalBuffers[i];
+
+		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+			initialBufferMemoryBarriers[j].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+			initialBufferMemoryBarriers[j].srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
+			initialBufferMemoryBarriers[j].srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+			initialBufferMemoryBarriers[j].srcQueueFamilyIndex = transferFamilyIndex;
+			initialBufferMemoryBarriers[j].dstQueueFamilyIndex = computeFamilyIndex;
+			initialBufferMemoryBarriers[j].buffer = deviceLocalBuffer;
+			initialBufferMemoryBarriers[j].offset = bytesPerInout * k;
+			initialBufferMemoryBarriers[j].size = bytesPerIn;
+		}
+	}
+
+	// Specify buffer memory barriers for compute command buffer
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkBufferMemoryBarrier2[2]);
+
+	VkBufferMemoryBarrier2 (*computeBufferMemoryBarriers)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!computeBufferMemoryBarriers) { dyrecord_destroy(localRecord); return false; }
+
+	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
+		VkBuffer deviceLocalBuffer = deviceLocalBuffers[i];
+
+		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+			computeBufferMemoryBarriers[j][0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+			computeBufferMemoryBarriers[j][0].dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+			computeBufferMemoryBarriers[j][0].dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT;
+			computeBufferMemoryBarriers[j][0].srcQueueFamilyIndex = transferFamilyIndex;
+			computeBufferMemoryBarriers[j][0].dstQueueFamilyIndex = computeFamilyIndex;
+			computeBufferMemoryBarriers[j][0].buffer = deviceLocalBuffer;
+			computeBufferMemoryBarriers[j][0].offset = bytesPerInout * k;
+			computeBufferMemoryBarriers[j][0].size = bytesPerIn;
+
+			computeBufferMemoryBarriers[j][1].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+			computeBufferMemoryBarriers[j][1].srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+			computeBufferMemoryBarriers[j][1].srcAccessMask = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
+			computeBufferMemoryBarriers[j][1].srcQueueFamilyIndex = computeFamilyIndex;
+			computeBufferMemoryBarriers[j][1].dstQueueFamilyIndex = transferFamilyIndex;
+			computeBufferMemoryBarriers[j][1].buffer = deviceLocalBuffer;
+			computeBufferMemoryBarriers[j][1].offset = bytesPerInout * k + bytesPerIn;
+			computeBufferMemoryBarriers[j][1].size = bytesPerOut;
+		}
+	}
+
+	// Specify buffer memory barriers for transfer command buffer
 	allocCount = inoutsPerHeap;
 	allocSize = sizeof(VkBufferMemoryBarrier2[3]);
 
@@ -2185,55 +2310,13 @@ bool create_commands(Gpu* restrict gpu)
 		}
 	}
 
-	// Specify compute buffer memory barriers
-	allocCount = inoutsPerHeap;
-	allocSize = sizeof(VkBufferMemoryBarrier2[2]);
+	// Specify dependency info for initial command buffer
+	VkDependencyInfo initialDependencyInfo = {0};
+	initialDependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+	initialDependencyInfo.bufferMemoryBarrierCount = inoutsPerHeap;
+	initialDependencyInfo.pBufferMemoryBarriers = initialBufferMemoryBarriers;
 
-	VkBufferMemoryBarrier2 (*computeBufferMemoryBarriers)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!computeBufferMemoryBarriers) { dyrecord_destroy(localRecord); return false; }
-
-	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
-		VkBuffer deviceLocalBuffer = deviceLocalBuffers[i];
-
-		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
-			computeBufferMemoryBarriers[j][0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
-			computeBufferMemoryBarriers[j][0].dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
-			computeBufferMemoryBarriers[j][0].dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT;
-			computeBufferMemoryBarriers[j][0].srcQueueFamilyIndex = transferFamilyIndex;
-			computeBufferMemoryBarriers[j][0].dstQueueFamilyIndex = computeFamilyIndex;
-			computeBufferMemoryBarriers[j][0].buffer = deviceLocalBuffer;
-			computeBufferMemoryBarriers[j][0].offset = bytesPerInout * k;
-			computeBufferMemoryBarriers[j][0].size = bytesPerIn;
-
-			computeBufferMemoryBarriers[j][1].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
-			computeBufferMemoryBarriers[j][1].srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
-			computeBufferMemoryBarriers[j][1].srcAccessMask = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
-			computeBufferMemoryBarriers[j][1].srcQueueFamilyIndex = computeFamilyIndex;
-			computeBufferMemoryBarriers[j][1].dstQueueFamilyIndex = transferFamilyIndex;
-			computeBufferMemoryBarriers[j][1].buffer = deviceLocalBuffer;
-			computeBufferMemoryBarriers[j][1].offset = bytesPerInout * k + bytesPerIn;
-			computeBufferMemoryBarriers[j][1].size = bytesPerOut;
-		}
-	}
-
-	// Transfer dependency infos
-	allocCount = inoutsPerHeap;
-	allocSize = sizeof(VkDependencyInfo[2]);
-
-	VkDependencyInfo (*transferDependencyInfos)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!transferDependencyInfos) { dyrecord_destroy(localRecord); return false; }
-
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
-		transferDependencyInfos[i][0].sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-		transferDependencyInfos[i][0].bufferMemoryBarrierCount = 2;
-		transferDependencyInfos[i][0].pBufferMemoryBarriers = &transferBufferMemoryBarriers[i][0];
-
-		transferDependencyInfos[i][1].sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-		transferDependencyInfos[i][1].bufferMemoryBarrierCount = 1;
-		transferDependencyInfos[i][1].pBufferMemoryBarriers = &transferBufferMemoryBarriers[i][2];
-	}
-
-	// Compute dependency infos
+	// Specify dependency infos for compute command buffers
 	allocCount = inoutsPerHeap;
 	allocSize = sizeof(VkDependencyInfo[2]);
 
@@ -2250,23 +2333,47 @@ bool create_commands(Gpu* restrict gpu)
 		computeDependencyInfos[i][1].pBufferMemoryBarriers = &computeBufferMemoryBarriers[i][1];
 	}
 
-	// Record command buffers
-	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
-		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
-			uint32_t firstTransferQuery = j * 4;
-			bool bres = record_transfer_cmdbuffer(
-				transferCmdBuffers[j], &inBufferCopyInfos[j], &outBufferCopyInfos[j], transferDependencyInfos[j],
-				queryPool, firstTransferQuery, transferFamilyTimestampValidBits);
+	// Specify dependency infos for transfer command buffers
+	allocCount = inoutsPerHeap;
+	allocSize = sizeof(VkDependencyInfo[2]);
 
-			if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+	VkDependencyInfo (*transferDependencyInfos)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
+	if EXPECT_FALSE (!transferDependencyInfos) { dyrecord_destroy(localRecord); return false; }
 
-			uint32_t firstComputeQuery = j * 4 + 2;
-			bres = record_compute_cmdbuffer(
-				computeCmdBuffers[j], pipeline, pipelineLayout, &descriptorSets[j], computeDependencyInfos[j],
-				queryPool, firstComputeQuery, computeFamilyTimestampValidBits, workgroupCount);
+	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+		transferDependencyInfos[i][0].sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+		transferDependencyInfos[i][0].bufferMemoryBarrierCount = 2;
+		transferDependencyInfos[i][0].pBufferMemoryBarriers = &transferBufferMemoryBarriers[i][0];
 
-			if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
-		}
+		transferDependencyInfos[i][1].sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+		transferDependencyInfos[i][1].bufferMemoryBarrierCount = 1;
+		transferDependencyInfos[i][1].pBufferMemoryBarriers = &transferBufferMemoryBarriers[i][2];
+	}
+
+	// Record initial command buffer
+	bool bres = record_initial_cmdbuffer(
+		initialCmdBuffer, initialBufferCopyInfos, &initialDependencyInfo, buffersPerHeap);
+
+	if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+
+	// Record compute command buffers
+	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+		uint32_t firstQuery = i * 4;
+		bres = record_compute_cmdbuffer(
+			computeCmdBuffers[i], pipeline, &bindDescriptorSetsInfos[i], computeDependencyInfos[i], queryPool,
+			firstQuery, computeFamilyTimestampValidBits, workgroupCount);
+
+		if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+	}
+
+	// Record transfer command buffers
+	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+		uint32_t firstQuery = i * 4 + 2;
+		bres = record_transfer_cmdbuffer(
+			transferCmdBuffers[i], &inBufferCopyInfos[i], &outBufferCopyInfos[i], transferDependencyInfos[i], queryPool,
+			firstQuery, transferFamilyTimestampValidBits);
+
+		if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
 	}
 
 	// Create semaphores (one per inout-buffer)
@@ -2307,23 +2414,21 @@ bool create_commands(Gpu* restrict gpu)
 				", Inout %" PRIu32 "/%" PRIu32 ", Buffer %" PRIu32 "/%" PRIu32,
 				k + 1, inoutsPerBuffer, i + 1, buffersPerHeap);
 
-			strcpy(objectName, "Transfer");
-			strcat(objectName, specs);
-
-			set_debug_name(device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t) transferCmdBuffers[j], objectName);
-
 			strcpy(objectName, "Compute");
 			strcat(objectName, specs);
 
 			set_debug_name(device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t) computeCmdBuffers[j], objectName);
+
+			strcpy(objectName, "Transfer");
+			strcat(objectName, specs);
+
+			set_debug_name(device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t) transferCmdBuffers[j], objectName);
 		}
 	}
 #endif
 
-	if (gpu->usingMaintenance4) {
-		VK_CALL(vkDestroyPipelineLayout, device, pipelineLayout, allocator);
-		gpu->pipelineLayout = VK_NULL_HANDLE;
-	}
+	VK_CALL(vkDestroyPipelineLayout, device, pipelineLayout, allocator);
+	gpu->pipelineLayout = VK_NULL_HANDLE;
 
 	dyrecord_destroy(localRecord);
 	return true;
@@ -2331,9 +2436,10 @@ bool create_commands(Gpu* restrict gpu)
 
 bool submit_commands(Gpu* restrict gpu)
 {
+	const VkAllocationCallbacks* allocator = gpu->allocator;
 	const VkDeviceMemory* hostVisibleMemories = gpu->hostVisibleDeviceMemories;
-	const VkCommandBuffer* computeCmdBuffers = gpu->computeCommandBuffers;
-	const VkCommandBuffer* transferCmdBuffers = gpu->transferCommandBuffers;
+	const VkCommandBuffer* computeCmdBuffers = gpu->computeCmdBuffers;
+	const VkCommandBuffer* transferCmdBuffers = gpu->transferCmdBuffers;
 	const VkSemaphore* semaphores = gpu->semaphores;
 
 	StartValue* const* mappedInBuffers = gpu->mappedInBuffers;
@@ -2343,6 +2449,9 @@ bool submit_commands(Gpu* restrict gpu)
 
 	VkQueue computeQueue = gpu->computeQueue;
 	VkQueue transferQueue = gpu->transferQueue;
+
+	VkCommandPool initialCmdPool = gpu->initialCmdPool;
+	VkCommandBuffer initialCmdBuffer = gpu->initialCmdBuffer;
 
 	VkQueryPool queryPool = gpu->queryPool;
 
@@ -2363,6 +2472,8 @@ bool submit_commands(Gpu* restrict gpu)
 	bool hostNonCoherent = gpu->hostNonCoherent;
 
 	VkResult vkres;
+	size_t allocCount;
+	size_t allocSize;
 
 	DyRecord localRecord = dyrecord_create();
 	if EXPECT_FALSE (!localRecord) { return false; }
@@ -2434,38 +2545,51 @@ bool submit_commands(Gpu* restrict gpu)
 	}
 
 	// Specify mapped memory ranges of host visible in-buffers
-	size_t allocCount = inoutsPerHeap;
-	size_t allocSize = sizeof(VkMappedMemoryRange);
+	VkMappedMemoryRange* inBuffersMappedRanges = NULL;
 
-	VkMappedMemoryRange* inBuffersMappedRanges = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!inBuffersMappedRanges) { dyrecord_destroy(localRecord); return false; }
+	if (hostNonCoherent) {
+		allocCount = inoutsPerHeap;
+		allocSize = sizeof(VkMappedMemoryRange);
 
-	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
-		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
-			inBuffersMappedRanges[j].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-			inBuffersMappedRanges[j].memory = hostVisibleMemories[i];
-			inBuffersMappedRanges[j].offset = bytesPerInout * k;
-			inBuffersMappedRanges[j].size = bytesPerIn;
+		inBuffersMappedRanges = dyrecord_calloc(localRecord, allocCount, allocSize);
+		if EXPECT_FALSE (!inBuffersMappedRanges) { dyrecord_destroy(localRecord); return false; }
+
+		for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
+			for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+				inBuffersMappedRanges[j].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+				inBuffersMappedRanges[j].memory = hostVisibleMemories[i];
+				inBuffersMappedRanges[j].offset = bytesPerInout * k;
+				inBuffersMappedRanges[j].size = bytesPerIn;
+			}
 		}
 	}
 
 	// Specify mapped memory ranges of host visible out-buffers
-	allocCount = inoutsPerHeap;
-	allocSize = sizeof(VkMappedMemoryRange);
+	VkMappedMemoryRange* outBuffersMappedRanges = NULL;
 
-	VkMappedMemoryRange* outBuffersMappedRanges = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!outBuffersMappedRanges) { dyrecord_destroy(localRecord); return false; }
+	if (hostNonCoherent) {
+		allocCount = inoutsPerHeap;
+		allocSize = sizeof(VkMappedMemoryRange);
 
-	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
-		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
-			outBuffersMappedRanges[j].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-			outBuffersMappedRanges[j].memory = hostVisibleMemories[i];
-			outBuffersMappedRanges[j].offset = bytesPerInout * k + bytesPerIn;
-			outBuffersMappedRanges[j].size = bytesPerOut;
+		outBuffersMappedRanges = dyrecord_calloc(localRecord, allocCount, allocSize);
+		if EXPECT_FALSE (!outBuffersMappedRanges) { dyrecord_destroy(localRecord); return false; }
+
+		for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
+			for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+				outBuffersMappedRanges[j].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+				outBuffersMappedRanges[j].memory = hostVisibleMemories[i];
+				outBuffersMappedRanges[j].offset = bytesPerInout * k + bytesPerIn;
+				outBuffersMappedRanges[j].size = bytesPerOut;
+			}
 		}
 	}
 
-	// Specify command buffers for submissions to transfer queue
+	// Specify initial command buffer for submission
+	VkCommandBufferSubmitInfo initialCmdBufferSubmitInfo = {0};
+	initialCmdBufferSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+	initialCmdBufferSubmitInfo.commandBuffer = initialCmdBuffer;
+
+	// Specify transfer command buffers for submission
 	allocCount = inoutsPerHeap;
 	allocSize = sizeof(VkCommandBufferSubmitInfo);
 
@@ -2477,7 +2601,7 @@ bool submit_commands(Gpu* restrict gpu)
 		transferCmdBufferSubmitInfos[i].commandBuffer = transferCmdBuffers[i];
 	}
 
-	// Specify command buffers for submissions to compute queue
+	// Specify compute command buffers for submission
 	allocCount = inoutsPerHeap;
 	allocSize = sizeof(VkCommandBufferSubmitInfo);
 
@@ -2544,6 +2668,14 @@ bool submit_commands(Gpu* restrict gpu)
 		computeSignalSemaphoreSubmitInfos[i].value = 2;
 		computeSignalSemaphoreSubmitInfos[i].stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // Include release op
 	}
+
+	// Specify submission of initial command buffer
+	VkSubmitInfo2 initialSubmitInfo = {0};
+	initialSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+	initialSubmitInfo.commandBufferInfoCount = 1;
+	initialSubmitInfo.pCommandBufferInfos = &initialCmdBufferSubmitInfo;
+	initialSubmitInfo.signalSemaphoreInfoCount = inoutsPerHeap;
+	initialSubmitInfo.pSignalSemaphoreInfos = transferSignalSemaphoreSubmitInfos;
 
 	// Specify submissions to transfer queue
 	allocCount = inoutsPerHeap;
@@ -2632,26 +2764,24 @@ bool submit_commands(Gpu* restrict gpu)
 		tested += valuesPerInout * 4;
 	}
 
-	// Flush mapped host visible in-buffers
 	if (hostNonCoherent) {
 		VK_CALLR(vkFlushMappedMemoryRanges, device, inoutsPerHeap, inBuffersMappedRanges);
 		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 	}
 
-	// Submit transfer command buffers to initiate the first cycle
-	uint32_t transferSubmitInfoCount = inoutsPerHeap;
-	VK_CALLR(vkQueueSubmit2KHR, transferQueue, transferSubmitInfoCount, transferSubmitInfos, VK_NULL_HANDLE);
+	// Initiate the first cycle
+	uint32_t submitInfoCount = 1;
+	VK_CALLR(vkQueueSubmit2KHR, transferQueue, submitInfoCount, &initialSubmitInfo, VK_NULL_HANDLE);
 	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
-	// Submit compute command buffers to the first cycle
-	uint32_t computeSubmitInfoCount = inoutsPerHeap;
-	VK_CALLR(vkQueueSubmit2KHR, computeQueue, computeSubmitInfoCount, computeSubmitInfos, VK_NULL_HANDLE);
+	submitInfoCount = inoutsPerHeap;
+	VK_CALLR(vkQueueSubmit2KHR, computeQueue, submitInfoCount, computeSubmitInfos, VK_NULL_HANDLE);
 	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		// Wait for transfers to complete execution
-		uint64_t transferSemaphoreTimeout = UINT64_MAX;
-		VK_CALLR(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[i], transferSemaphoreTimeout);
+		uint64_t transferTimeout = UINT64_MAX;
+		VK_CALLR(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[i], transferTimeout);
 		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
 		// Write starting values to mapped in-buffer
@@ -2662,16 +2792,19 @@ bool submit_commands(Gpu* restrict gpu)
 		transferSignalSemaphoreSubmitInfos[i].value += 2;
 	}
 
-	// Flush mapped host visible in-buffers
 	if (hostNonCoherent) {
 		VK_CALLR(vkFlushMappedMemoryRanges, device, inoutsPerHeap, inBuffersMappedRanges);
 		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 	}
 
-	// Submit transfer command buffers to complete the first cycle
-	transferSubmitInfoCount = inoutsPerHeap;
-	VK_CALLR(vkQueueSubmit2KHR, transferQueue, transferSubmitInfoCount, transferSubmitInfos, VK_NULL_HANDLE);
+	// Complete the first cycle (and initiate the second)
+	submitInfoCount = inoutsPerHeap;
+	VK_CALLR(vkQueueSubmit2KHR, transferQueue, submitInfoCount, transferSubmitInfos, VK_NULL_HANDLE);
 	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+
+	// Initial command buffer and pool are no longer needed
+	VK_CALL(vkDestroyCommandPool, device, initialCmdPool, allocator);
+	gpu->initialCmdPool = VK_NULL_HANDLE;
 
 	StartValue total = 0;
 	StartValue initialStartValue = position.curStartValue;
@@ -2699,26 +2832,25 @@ bool submit_commands(Gpu* restrict gpu)
 		 * TODO Figure out what on Earth is going on here???
 		 */
 		for (uint32_t j = 0; j < inoutsPerHeap; j++) {
-			uint64_t timestamps[2];
-
 			double computeBmark = 0;
 			double transferBmark = 0;
 
 			// Wait for dispatch to complete execution
 			clock_t waitComputeBmStart = clock();
 
-			uint64_t computeSemaphoreTimeout = UINT64_MAX;
-			VK_CALLR(vkWaitSemaphoresKHR, device, &computeSemaphoreWaitInfos[j], computeSemaphoreTimeout);
+			uint64_t computeTimeout = UINT64_MAX;
+			VK_CALLR(vkWaitSemaphoresKHR, device, &computeSemaphoreWaitInfos[j], computeTimeout);
 			if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
 			clock_t waitComputeBmEnd = clock();
 
 			// Calculate approx time taken for dispatch to execute
 			if (computeFamilyTimestampValidBits) {
-				uint32_t firstQuery = j * 4 + 2;
+				uint32_t firstQuery = j * 4;
 				uint32_t queryCount = 2;
 				VkQueryResultFlags queryFlags = VK_QUERY_RESULT_64_BIT;
 
+				uint64_t timestamps[2];
 				VK_CALLR(vkGetQueryPoolResults,
 					device, queryPool, firstQuery, queryCount, sizeof(timestamps), timestamps, sizeof(timestamps[0]),
 					queryFlags);
@@ -2732,25 +2864,26 @@ bool submit_commands(Gpu* restrict gpu)
 			computeSignalSemaphoreSubmitInfos[j].value += 2;
 
 			// Resubmit compute command buffer for next cycle
-			computeSubmitInfoCount = 1;
-			VK_CALLR(vkQueueSubmit2KHR, computeQueue, computeSubmitInfoCount, &computeSubmitInfos[j], VK_NULL_HANDLE);
+			submitInfoCount = 1;
+			VK_CALLR(vkQueueSubmit2KHR, computeQueue, submitInfoCount, &computeSubmitInfos[j], VK_NULL_HANDLE);
 			if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
 			// Wait for transfers to complete execution
 			clock_t waitTransferBmStart = clock();
 
-			uint64_t transferSemaphoreTimeout = UINT64_MAX;
-			VK_CALLR(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[j], transferSemaphoreTimeout);
+			uint64_t transferTimeout = UINT64_MAX;
+			VK_CALLR(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[j], transferTimeout);
 			if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
 
 			clock_t waitTransferBmEnd = clock();
 
 			// Calculate approx time taken for transfers to execute
 			if (transferFamilyTimestampValidBits) {
-				uint32_t firstQuery = j * 4;
+				uint32_t firstQuery = j * 4 + 2;
 				uint32_t queryCount = 2;
 				VkQueryResultFlags queryFlags = VK_QUERY_RESULT_64_BIT;
 
+				uint64_t timestamps[2];
 				VK_CALLR(vkGetQueryPoolResults,
 					device, queryPool, firstQuery, queryCount, sizeof(timestamps), timestamps, sizeof(timestamps[0]),
 					queryFlags);
@@ -2759,7 +2892,6 @@ bool submit_commands(Gpu* restrict gpu)
 				transferBmark = (double) (timestamps[1] - timestamps[0]) * timestampPeriod / 1000000;
 			}
 
-			// Invalidate mapped host visible out-buffer
 			if (hostNonCoherent) {
 				uint32_t rangeCount = 1;
 				VK_CALLR(vkInvalidateMappedMemoryRanges, device, rangeCount, &outBuffersMappedRanges[j]);
@@ -2776,7 +2908,6 @@ bool submit_commands(Gpu* restrict gpu)
 			write_inbuffer(mappedInBuffers[j], &testedValues[j], valuesPerInout, valuesPerHeap);
 			clock_t writeBmEnd = clock();
 
-			// Flush mapped host visible in-buffer
 			if (hostNonCoherent) {
 				uint32_t rangeCount = 1;
 				VK_CALLR(vkFlushMappedMemoryRanges, device, rangeCount, &inBuffersMappedRanges[j]);
@@ -2788,10 +2919,8 @@ bool submit_commands(Gpu* restrict gpu)
 			transferSignalSemaphoreSubmitInfos[j].value += 2;
 
 			// Resubmit transfer command buffer for next cycle
-			transferSubmitInfoCount = 1;
-			VK_CALLR(vkQueueSubmit2KHR,
-				transferQueue, transferSubmitInfoCount, &transferSubmitInfos[j], VK_NULL_HANDLE);
-
+			submitInfoCount = 1;
+			VK_CALLR(vkQueueSubmit2KHR, transferQueue, submitInfoCount, &transferSubmitInfos[j], VK_NULL_HANDLE);
 			if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return NULL; }
 
 			// Calculate and display benchmarks for current inout-buffer
@@ -2817,7 +2946,9 @@ bool submit_commands(Gpu* restrict gpu)
 					"\tIdle (compute):     %8.0fms\n"
 					"\tIdle (transfer):    %8.0fms\n",
 					j + 1, inoutsPerHeap,
-					readBmark, writeBmark, computeBmark, transferBmark, waitComputeBmark, waitTransferBmark);
+					readBmark,        writeBmark,
+					computeBmark,     transferBmark,
+					waitComputeBmark, waitTransferBmark);
 			}
 		}
 
@@ -2835,55 +2966,57 @@ bool submit_commands(Gpu* restrict gpu)
 		double waitTransferBmAvg = waitTransferBmTotal / (double) inoutsPerHeap;
 
 		switch (g_config.outputLevel) {
-			case OUTPUT_LEVEL_QUIET:
-				printf(
-					"Main loop: %.0fms\n"
-					"Current value: 0x %016" PRIx64 " %016" PRIx64 "\n\n",
-					mainLoopBmark, INT128_UPPER(position.curStartValue - 3), INT128_LOWER(position.curStartValue - 3));
+		case OUTPUT_LEVEL_QUIET:
+			printf(
+				"Main loop: %.0fms\n"
+				"Current value: 0x %016" PRIx64 " %016" PRIx64 "\n\n",
+				mainLoopBmark, INT128_UPPER(position.curStartValue - 3), INT128_LOWER(position.curStartValue - 3));
 
-				break;
+			break;
 
-			case OUTPUT_LEVEL_DEFAULT:
-				printf(
-					"Main loop: %.0fms\n"
-					"Reading buffers:    %8.1fms\n"
-					"Writing buffers:    %8.1fms\n"
-					"Compute execution:  %8.1fms\n"
-					"Transfer execution: %8.1fms\n"
-					"Idle (compute):     %8.1fms\n"
-					"Idle (transfer):    %8.1fms\n"
-					"Initial value: 0x %016" PRIx64 " %016" PRIx64 "\n"
-					"Current value: 0x %016" PRIx64 " %016" PRIx64 "\n\n",
-					mainLoopBmark,
-					readBmAvg, writeBmAvg, computeBmAvg, transferBmAvg, waitComputeBmAvg, waitTransferBmAvg,
-					INT128_UPPER(initialValue - 2), INT128_LOWER(initialValue - 2),
-					INT128_UPPER(position.curStartValue - 3), INT128_LOWER(position.curStartValue - 3));
+		case OUTPUT_LEVEL_DEFAULT:
+			printf(
+				"Main loop: %.0fms\n"
+				"Reading buffers:    %8.1fms\n"
+				"Writing buffers:    %8.1fms\n"
+				"Compute execution:  %8.1fms\n"
+				"Transfer execution: %8.1fms\n"
+				"Idle (compute):     %8.1fms\n"
+				"Idle (transfer):    %8.1fms\n"
+				"Initial value: 0x %016" PRIx64 " %016" PRIx64 "\n"
+				"Current value: 0x %016" PRIx64 " %016" PRIx64 "\n\n",
+				mainLoopBmark,
+				readBmAvg,        writeBmAvg,
+				computeBmAvg,     transferBmAvg,
+				waitComputeBmAvg, waitTransferBmAvg,
+				INT128_UPPER(initialValue - 2),           INT128_LOWER(initialValue - 2),
+				INT128_UPPER(position.curStartValue - 3), INT128_LOWER(position.curStartValue - 3));
 
-				break;
+			break;
 
-			case OUTPUT_LEVEL_VERBOSE:
-				printf(
-					"Main loop: %.0fms\n"
-					"|      Benchmark     | Total (ms) | Average (ms) |\n"
-					"|    Reading buffers | %10.0f | %12.1f |\n"
-					"|    Writing buffers | %10.0f | %12.1f |\n"
-					"|  Compute execution | %10.0f | %12.1f |\n"
-					"| Transfer execution | %10.0f | %12.1f |\n"
-					"|     Idle (compute) | %10.0f | %12.1f |\n"
-					"|    Idle (transfer) | %10.0f | %12.1f |\n"
-					"Initial value: 0x %016" PRIx64 " %016" PRIx64 "\n"
-					"Current value: 0x %016" PRIx64 " %016" PRIx64 "\n\n",
-					mainLoopBmark,
-					readBmTotal, readBmAvg, writeBmTotal, writeBmAvg,
-					computeBmTotal, computeBmAvg, transferBmTotal, transferBmAvg,
-					waitComputeBmTotal, waitComputeBmAvg, waitTransferBmTotal, waitTransferBmAvg,
-					INT128_UPPER(initialValue - 2), INT128_LOWER(initialValue - 2),
-					INT128_UPPER(position.curStartValue - 3), INT128_LOWER(position.curStartValue - 3));
+		case OUTPUT_LEVEL_VERBOSE:
+			printf(
+				"Main loop: %.0fms\n"
+				"|      Benchmark     | Total (ms) | Average (ms) |\n"
+				"|    Reading buffers | %10.0f | %12.1f |\n"
+				"|    Writing buffers | %10.0f | %12.1f |\n"
+				"|  Compute execution | %10.0f | %12.1f |\n"
+				"| Transfer execution | %10.0f | %12.1f |\n"
+				"|     Idle (compute) | %10.0f | %12.1f |\n"
+				"|    Idle (transfer) | %10.0f | %12.1f |\n"
+				"Initial value: 0x %016" PRIx64 " %016" PRIx64 "\n"
+				"Current value: 0x %016" PRIx64 " %016" PRIx64 "\n\n",
+				mainLoopBmark,
+				readBmTotal,        readBmAvg,        writeBmTotal,        writeBmAvg,
+				computeBmTotal,     computeBmAvg,     transferBmTotal,     transferBmAvg,
+				waitComputeBmTotal, waitComputeBmAvg, waitTransferBmTotal, waitTransferBmAvg,
+				INT128_UPPER(initialValue - 2),           INT128_LOWER(initialValue - 2),
+				INT128_UPPER(position.curStartValue - 3), INT128_LOWER(position.curStartValue - 3));
 
-				break;
+			break;
 
-			default:
-				break;
+		default:
+			break;
 		}
 	}
 	NEWLINE();
@@ -2906,7 +3039,7 @@ bool submit_commands(Gpu* restrict gpu)
 	if (g_config.outputLevel > OUTPUT_LEVEL_SILENT) {
 		printf(
 			"Set of starting values tested: [0x %016" PRIx64 " %016" PRIx64 ", 0x %016" PRIx64 " %016" PRIx64 "]\n",
-			INT128_UPPER(initialStartValue - 2), INT128_LOWER(initialStartValue - 2),
+			INT128_UPPER(initialStartValue - 2),      INT128_LOWER(initialStartValue - 2),
 			INT128_UPPER(position.curStartValue - 3), INT128_LOWER(position.curStartValue - 3));
 	}
 
@@ -2932,11 +3065,13 @@ bool submit_commands(Gpu* restrict gpu)
 	}
 
 	if (g_config.outputLevel > OUTPUT_LEVEL_SILENT) {
+		double valuesPerSecond = (double) (1000 * total) / totalBmark;
+
 		printf(
 			"\n"
 			"Time: %.3fms\n"
 			"Speed: %.3f/s\n",
-			totalBmark, (double) (1000 * total) / totalBmark);
+			totalBmark, valuesPerSecond);
 	}
 
 	// Write current position to progress file
@@ -2952,7 +3087,8 @@ bool submit_commands(Gpu* restrict gpu)
 			INT128_UPPER(position.val1mod6off[0]), INT128_LOWER(position.val1mod6off[0]),
 			INT128_UPPER(position.val1mod6off[1]), INT128_LOWER(position.val1mod6off[1]),
 			INT128_UPPER(position.val1mod6off[2]), INT128_LOWER(position.val1mod6off[2]),
-			INT128_UPPER(position.curStartValue), INT128_LOWER(position.curStartValue), position.bestStopTime);
+			INT128_UPPER(position.curStartValue),  INT128_LOWER(position.curStartValue),
+			position.bestStopTime);
 
 		if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
 	}
@@ -2975,14 +3111,19 @@ bool destroy_gpu(Gpu* restrict gpu)
 	const VkSemaphore* semaphores = gpu->semaphores;
 
 	VkDevice device = gpu->device;
+
 	VkDescriptorSetLayout descriptorSetLayout = gpu->descriptorSetLayout;
 	VkDescriptorPool descriptorPool = gpu->descriptorPool;
+
 	VkShaderModule shaderModule = gpu->shaderModule;
 	VkPipelineCache pipelineCache = gpu->pipelineCache;
 	VkPipelineLayout pipelineLayout = gpu->pipelineLayout;
 	VkPipeline pipeline = gpu->pipeline;
-	VkCommandPool computeCmdPool = gpu->computeCommandPool;
-	VkCommandPool transferCmdPool = gpu->transferCommandPool;
+
+	VkCommandPool initialCmdPool = gpu->initialCmdPool;
+	VkCommandPool computeCmdPool = gpu->computeCmdPool;
+	VkCommandPool transferCmdPool = gpu->transferCmdPool;
+
 	VkQueryPool queryPool = gpu->queryPool;
 
 	uint32_t inoutsPerHeap = gpu->inoutsPerHeap;
@@ -3003,6 +3144,7 @@ bool destroy_gpu(Gpu* restrict gpu)
 			VK_CALL(vkDestroySemaphore, device, semaphores[i], allocator);
 		}
 
+		VK_CALL(vkDestroyCommandPool, device, initialCmdPool, allocator);
 		VK_CALL(vkDestroyCommandPool, device, computeCmdPool, allocator);
 		VK_CALL(vkDestroyCommandPool, device, transferCmdPool, allocator);
 
@@ -3145,24 +3287,24 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 			dystring_append(message, ": ");
 
 			switch (executablesStatistics[i][j].format) {
-				case VK_PIPELINE_EXECUTABLE_STATISTIC_FORMAT_BOOL32_KHR:
-					strcpy(str, executablesStatistics[i][j].value.b32 ? "True" : "False");
-					break;
+			case VK_PIPELINE_EXECUTABLE_STATISTIC_FORMAT_BOOL32_KHR:
+				strcpy(str, executablesStatistics[i][j].value.b32 ? "True" : "False");
+				break;
 
-				case VK_PIPELINE_EXECUTABLE_STATISTIC_FORMAT_INT64_KHR:
-					sprintf(str, "%" PRId64, executablesStatistics[i][j].value.i64);
-					break;
+			case VK_PIPELINE_EXECUTABLE_STATISTIC_FORMAT_INT64_KHR:
+				sprintf(str, "%" PRId64, executablesStatistics[i][j].value.i64);
+				break;
 
-				case VK_PIPELINE_EXECUTABLE_STATISTIC_FORMAT_UINT64_KHR:
-					sprintf(str, "%" PRIu64, executablesStatistics[i][j].value.u64);
-					break;
+			case VK_PIPELINE_EXECUTABLE_STATISTIC_FORMAT_UINT64_KHR:
+				sprintf(str, "%" PRIu64, executablesStatistics[i][j].value.u64);
+				break;
 
-				case VK_PIPELINE_EXECUTABLE_STATISTIC_FORMAT_FLOAT64_KHR:
-					sprintf(str, "%g", executablesStatistics[i][j].value.f64);
-					break;
+			case VK_PIPELINE_EXECUTABLE_STATISTIC_FORMAT_FLOAT64_KHR:
+				sprintf(str, "%g", executablesStatistics[i][j].value.f64);
+				break;
 
-				default:
-					break;
+			default:
+				break;
 			}
 
 			dystring_append(message, str);

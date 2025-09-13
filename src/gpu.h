@@ -53,11 +53,13 @@ typedef struct Gpu
 
 	VkQueryPool queryPool;
 
-	VkCommandPool computeCommandPool;
-	VkCommandPool transferCommandPool;
+	VkCommandPool initialCmdPool;
+	VkCommandPool computeCmdPool;
+	VkCommandPool transferCmdPool;
 
-	VkCommandBuffer* restrict computeCommandBuffers; // Count = inoutsPerHeap
-	VkCommandBuffer* restrict transferCommandBuffers; // Count = inoutsPerHeap
+	VkCommandBuffer initialCmdBuffer;
+	VkCommandBuffer* restrict computeCmdBuffers; // Count = inoutsPerHeap
+	VkCommandBuffer* restrict transferCmdBuffers; // Count = inoutsPerHeap
 
 	VkSemaphore* restrict semaphores; // Count = inoutsPerHeap
 
@@ -104,7 +106,6 @@ typedef struct Gpu
 	bool using16BitStorage;
 	bool usingMaintenance4;
 	bool usingMaintenance5;
-	bool usingMaintenance6;
 	bool usingMaintenance7;
 	bool usingMaintenance8;
 	bool usingMaintenance9;

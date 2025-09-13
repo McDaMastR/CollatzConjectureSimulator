@@ -19,7 +19,7 @@ be annotated with this dependency. Note that for functionalities A and B, A requ
 - `VK_KHR_dynamic_rendering` (required by `VK_KHR_maintenance5`)
 - `VK_KHR_maintenance4`
 - `VK_KHR_maintenance5`
-- `VK_KHR_maintenance6`
+- `VK_KHR_maintenance6` (\*)
 - `VK_KHR_maintenance7`
 - `VK_KHR_maintenance8`
 - `VK_KHR_maintenance9`
@@ -56,7 +56,7 @@ be annotated with this dependency. Note that for functionalities A and B, A requ
 
 - `maintenance5` (guaranteed by `VK_KHR_maintenance5`)
 
-`VkPhysicalDeviceMaintenance6FeaturesKHR`
+`VkPhysicalDeviceMaintenance6FeaturesKHR` (\*)
 
 - `maintenance6` (guaranteed by `VK_KHR_maintenance6`)
 

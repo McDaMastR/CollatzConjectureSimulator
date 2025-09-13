@@ -41,7 +41,10 @@ bool init_debug_logfile(void)
 		"PROGRAM: %s %" PRIu32 ".%" PRIu32 ".%" PRIu32 " (%s)\n"
 		"CURRENT LOCAL TIME: %s"
 		"TIME SINCE LAUNCH: %.3fms\n\n",
-		PROGRAM_NAME, PROGRAM_VER_MAJOR, PROGRAM_VER_MINOR, PROGRAM_VER_PATCH, PROGRAM_EXE, sCurrTime, programTime);
+		PROGRAM_NAME,
+		PROGRAM_VER_MAJOR, PROGRAM_VER_MINOR, PROGRAM_VER_PATCH,
+		PROGRAM_EXE,
+		sCurrTime, programTime);
 
 	if EXPECT_FALSE (!bres) { return false; }
 	return true;
@@ -58,7 +61,10 @@ bool init_alloc_logfile(void)
 		"PROGRAM: %s %" PRIu32 ".%" PRIu32 ".%" PRIu32 " (%s)\n"
 		"CURRENT LOCAL TIME: %s"
 		"TIME SINCE LAUNCH: %.3fms\n\n",
-		PROGRAM_NAME, PROGRAM_VER_MAJOR, PROGRAM_VER_MINOR, PROGRAM_VER_PATCH, PROGRAM_EXE, sCurrTime, programTime);
+		PROGRAM_NAME,
+		PROGRAM_VER_MAJOR, PROGRAM_VER_MINOR, PROGRAM_VER_PATCH,
+		PROGRAM_EXE,
+		sCurrTime, programTime);
 
 	if EXPECT_FALSE (!bres) { return false; }
 	return true;
@@ -328,6 +334,8 @@ static void log_allocation_callback(
 	const void* memory)
 {
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
+	double totalSizeKiB = (double) totalSize / KiB_SIZE;
+	double totalSizeMiB = (double) totalSize / MiB_SIZE;
 
 	fprintf(stream, "Allocation callback %" PRIu64 " (%.3fms)\n", allocationCount, time);
 
@@ -342,7 +350,7 @@ static void log_allocation_callback(
 		"Alignment: %zu\n"
 		"Scope:     %s\n"
 		"Address:   0x%016" PRIxPTR "\n\n",
-		totalSize, (double) totalSize / (1 << 10), (double) totalSize / (1 << 20),
+		totalSize, totalSizeKiB, totalSizeMiB,
 		size, alignment, sAllocationScope, (uintptr_t) memory);
 }
 
@@ -383,6 +391,8 @@ static void log_reallocation_callback(
 	const void* memory)
 {
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
+	double totalSizeKiB = (double) totalSize / KiB_SIZE;
+	double totalSizeMiB = (double) totalSize / MiB_SIZE;
 
 	fprintf(stream, "Reallocation callback %" PRIu64 " (%.3fms)\n", reallocationCount, time);
 
@@ -399,8 +409,9 @@ static void log_reallocation_callback(
 		"Scope:             %s\n"
 		"Original address:  0x%016" PRIxPTR "\n"
 		"Allocated address: 0x%016" PRIxPTR "\n\n",
-		totalSize, (double) totalSize / (1 << 10), (double) totalSize / (1 << 20),
-		originalSize, size, alignment, sAllocationScope, (uintptr_t) originalAddr, (uintptr_t) memory);
+		totalSize, totalSizeKiB, totalSizeMiB,
+		originalSize, size, alignment, sAllocationScope,
+		(uintptr_t) originalAddr, (uintptr_t) memory);
 }
 
 void* reallocation_callback(
@@ -450,6 +461,9 @@ static void log_free_callback(
 	size_t size,
 	const void* memory)
 {
+	double totalSizeKiB = (double) totalSize / KiB_SIZE;
+	double totalSizeMiB = (double) totalSize / MiB_SIZE;
+
 	fprintf(stream, "Free callback %" PRIu64 " (%.3fms)\n", freeCount, time);
 
 	if (line) {
@@ -461,7 +475,8 @@ static void log_free_callback(
 		"Memory usage: %zu B (%.2f KiB, %.2f MiB)\n"
 		"Size:    %zu\n"
 		"Address: 0x%016" PRIxPTR "\n\n",
-		totalSize, (double) totalSize / (1 << 10), (double) totalSize / (1 << 20), size, (uintptr_t) memory);
+		totalSize, totalSizeKiB, totalSizeMiB,
+		size, (uintptr_t) memory);
 }
 
 void free_callback(void* pUserData, void* pMemory)

@@ -39,7 +39,9 @@ static bool version_option_callback(void* data, void* arg)
 
 	printf(
 		"%s %" PRIu32 ".%" PRIu32 ".%" PRIu32 "\n%s\n%s\n",
-		PROGRAM_NAME, PROGRAM_VER_MAJOR, PROGRAM_VER_MINOR, PROGRAM_VER_PATCH, PROGRAM_COPYRIGHT, PROGRAM_LICENCE);
+		PROGRAM_NAME,
+		PROGRAM_VER_MAJOR, PROGRAM_VER_MINOR, PROGRAM_VER_PATCH,
+		PROGRAM_COPYRIGHT, PROGRAM_LICENCE);
 
 	return false;
 }
@@ -74,7 +76,8 @@ static bool help_option_callback(void* data, void* arg)
 		"  -r --restart                Restart the simulation. Do not overwrite previous progress.\n"
 		"  -b --no-query-benchmarks    Do not benchmark Vulkan commands via queries.\n"
 		"  --log-allocations           Log all memory allocations performed by Vulkan to %s.\n"
-		"  --capture-pipelines         Output pipeline data captured via %s, if present.\n"
+		"  --capture-pipelines         Output pipeline data captured via VK_KHR_pipeline_executable_properties, if "
+			"present.\n"
 		"\n"
 		"  --iter-size <value>         Bit precision of the iterating value in shaders. Must be 128 or 256. Defaults "
 			"to 128.\n"
@@ -82,7 +85,7 @@ static bool help_option_callback(void* data, void* arg)
 			"Defaults to 2^64-1.\n"
 		"  --max-memory <value>        Maximum proportion of available GPU heap memory to be allocated. Must be within "
 			"(0, 1]. Defaults to 0.4.\n",
-		PROGRAM_EXE, ALLOC_LOG_NAME, VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME);
+		PROGRAM_EXE, ALLOC_LOG_NAME);
 
 	return false;
 }
@@ -277,40 +280,40 @@ static bool max_memory_option_callback(void* data, void* arg)
 static bool init_config(int argc, char** argv)
 {
 	size_t optCount = 20;
-	Cli cli = cli_create(&g_config, optCount);
+	CltzCli cli = cltzCliCreate(&g_config, optCount);
 	if EXPECT_FALSE (!cli) { return false; }
 
-	cli_add(cli, 'V', "version", CLI_DATATYPE_NONE, version_option_callback);
-	cli_add(cli, 'h', "help",    CLI_DATATYPE_NONE, help_option_callback);
+	cltzCliAdd(cli, 'V', "version", CLTZ_CLI_DATATYPE_NONE, version_option_callback);
+	cltzCliAdd(cli, 'h', "help",    CLTZ_CLI_DATATYPE_NONE, help_option_callback);
 
-	cli_add(cli, 's', "silent",  CLI_DATATYPE_NONE, silent_option_callback);
-	cli_add(cli, 'q', "quiet",   CLI_DATATYPE_NONE, quiet_option_callback);
-	cli_add(cli, 'v', "verbose", CLI_DATATYPE_NONE, verbose_option_callback);
+	cltzCliAdd(cli, 's', "silent",  CLTZ_CLI_DATATYPE_NONE, silent_option_callback);
+	cltzCliAdd(cli, 'q', "quiet",   CLTZ_CLI_DATATYPE_NONE, quiet_option_callback);
+	cltzCliAdd(cli, 'v', "verbose", CLTZ_CLI_DATATYPE_NONE, verbose_option_callback);
 
-	cli_add(cli, 'n', "no-colour",  CLI_DATATYPE_NONE, no_colour_option_callback);
-	cli_add(cli, 'c', "colour",     CLI_DATATYPE_NONE, colour_option_callback);
-	cli_add(cli, 'C', "colour-all", CLI_DATATYPE_NONE, colour_all_option_callback);
+	cltzCliAdd(cli, 'n', "no-colour",  CLTZ_CLI_DATATYPE_NONE, no_colour_option_callback);
+	cltzCliAdd(cli, 'c', "colour",     CLTZ_CLI_DATATYPE_NONE, colour_option_callback);
+	cltzCliAdd(cli, 'C', "colour-all", CLTZ_CLI_DATATYPE_NONE, colour_all_option_callback);
 
-	cli_add(cli, 'e', "ext-layers",     CLI_DATATYPE_NONE, ext_layers_option_callback);
-	cli_add(cli, 'p', "profile-layers", CLI_DATATYPE_NONE, profile_layers_option_callback);
-	cli_add(cli, 'd', "validation",     CLI_DATATYPE_NONE, validation_option_callback);
+	cltzCliAdd(cli, 'e', "ext-layers",     CLTZ_CLI_DATATYPE_NONE, ext_layers_option_callback);
+	cltzCliAdd(cli, 'p', "profile-layers", CLTZ_CLI_DATATYPE_NONE, profile_layers_option_callback);
+	cltzCliAdd(cli, 'd', "validation",     CLTZ_CLI_DATATYPE_NONE, validation_option_callback);
 
-	cli_add(cli, 'i', "int16", CLI_DATATYPE_NONE, int16_option_callback);
-	cli_add(cli, 'I', "int64", CLI_DATATYPE_NONE, int64_option_callback);
+	cltzCliAdd(cli, 'i', "int16", CLTZ_CLI_DATATYPE_NONE, int16_option_callback);
+	cltzCliAdd(cli, 'I', "int64", CLTZ_CLI_DATATYPE_NONE, int64_option_callback);
 
-	cli_add(cli, 'r',  "restart",             CLI_DATATYPE_NONE, restart_option_callback);
-	cli_add(cli, 'b',  "no-query-benchmarks", CLI_DATATYPE_NONE, no_query_benchmarks_option_callback);
-	cli_add(cli, '\0', "log-allocations",     CLI_DATATYPE_NONE, log_allocations_option_callback);
-	cli_add(cli, '\0', "capture-pipelines",   CLI_DATATYPE_NONE, capture_pipelines_option_callback);
+	cltzCliAdd(cli, 'r',  "restart",             CLTZ_CLI_DATATYPE_NONE, restart_option_callback);
+	cltzCliAdd(cli, 'b',  "no-query-benchmarks", CLTZ_CLI_DATATYPE_NONE, no_query_benchmarks_option_callback);
+	cltzCliAdd(cli, 0, "log-allocations",     CLTZ_CLI_DATATYPE_NONE, log_allocations_option_callback);
+	cltzCliAdd(cli, 0, "capture-pipelines",   CLTZ_CLI_DATATYPE_NONE, capture_pipelines_option_callback);
 
-	cli_add(cli, '\0', "iter-size",  CLI_DATATYPE_ULONG,  iter_size_option_callback);
-	cli_add(cli, '\0', "max-loops",  CLI_DATATYPE_ULLONG, max_loops_option_callback);
-	cli_add(cli, '\0', "max-memory", CLI_DATATYPE_FLOAT,  max_memory_option_callback);
+	cltzCliAdd(cli, 0, "iter-size",  CLTZ_CLI_DATATYPE_ULONG,  iter_size_option_callback);
+	cltzCliAdd(cli, 0, "max-loops",  CLTZ_CLI_DATATYPE_ULLONG, max_loops_option_callback);
+	cltzCliAdd(cli, 0, "max-memory", CLTZ_CLI_DATATYPE_FLOAT,  max_memory_option_callback);
 
-	bool bres = cli_parse(cli, argc, argv);
-	if (!bres) { cli_destroy(cli); return false; }
+	bool bres = cltzCliParse(cli, argc, argv);
+	if (!bres) { cltzCliDestroy(cli); return false; }
 
-	cli_destroy(cli);
+	cltzCliDestroy(cli);
 	return true;
 }
 
