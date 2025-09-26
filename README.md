@@ -94,8 +94,7 @@ Several options can be specified to customise the build system by appending `-D 
   _RelWithDebInfo_. If not set, it defaults to _Debug_.
 - `EXCESS_WARNINGS` specifies whether to compile the program with a potentially excessive amount of warnings, and
   defaults to _OFF_.
-- `STATIC_ANALYSIS` specifies whether to statically analyse the program during compilation if compiling with GCC, and
-  defaults to _OFF_.
+- `STATIC_ANALYSIS` specifies whether to statically analyse the program during compilation, and defaults to _OFF_.
 - `DEBUG_SHADERS` specifies whether to include debug information in generated SPIR-V, and defaults to _OFF_.
 - `OPTIMISE_SHADERS` specifies whether to optimise generated SPIR-V using `spirv-opt`, and defaults to _ON_.
 - `DISASSEMBLE_SHADERS` specifies whether to disassemble generated SPIR-V using `spirv-dis`, and defaults to _OFF_.

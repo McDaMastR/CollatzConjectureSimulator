@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "dymemory.h"
+#include "dynamic.h"
 
 
 typedef unsigned __int128 StartValue;

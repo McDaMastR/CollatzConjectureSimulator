@@ -1,11 +1,20 @@
-cmake_minimum_required(VERSION 3.23 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.24...3.31 FATAL_ERROR)
 project(CollatzConjectureSimulator VERSION 2.2.2.1 LANGUAGES C)
 
 if(NOT CMAKE_BUILD_TYPE)
-	message(WARNING "Build variant not specified - defaulting to Debug")
+	message(WARNING "cltz> Build variant not specified - defaulting to Debug")
 	set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-add_subdirectory(external)
-add_subdirectory(shaders)
+add_subdirectory(lib)
+add_subdirectory(shader)
+
+set(USING_APPLE  "$<BOOL:${APPLE}>")
+set(USING_CYGWIN "$<BOOL:${CYGWIN}>")
+set(USING_MINGW  "$<BOOL:${MINGW}>")
+set(USING_UNIX   "$<BOOL:${UNIX}>")
+set(USING_WIN32  "$<BOOL:${WIN32}>")
+
+add_subdirectory(common)
+add_subdirectory(dynamic)
 add_subdirectory(src)

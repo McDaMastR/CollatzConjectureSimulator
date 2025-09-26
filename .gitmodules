@@ -1,9 +1,9 @@
 [submodule "external/Vulkan-Headers"]
-	path = external/Vulkan-Headers
+	path = lib/Vulkan-Headers
 	url = https://github.com/KhronosGroup/Vulkan-Headers.git
 [submodule "external/volk"]
-	path = external/volk
+	path = lib/volk
 	url = https://github.com/zeux/volk.git
 [submodule "external/Vulkan-Utility-Libraries"]
-	path = external/Vulkan-Utility-Libraries
+	path = lib/Vulkan-Utility-Libraries
 	url = https://github.com/KhronosGroup/Vulkan-Utility-Libraries.git

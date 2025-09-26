@@ -15,7 +15,7 @@
  * Simulator. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "dymemory.h"
+#include "dynamic.h"
 
 
 void dyarray_destroy_stub(void* array)
