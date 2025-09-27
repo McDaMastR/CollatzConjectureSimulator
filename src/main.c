@@ -20,28 +20,16 @@
 #include "debug.h"
 
 
-#define CHECK_RESULT(func, ...)                  \
-	do {                                         \
-		bool _bres_##func = (func)(__VA_ARGS__); \
-		if EXPECT_FALSE (!_bres_##func) {        \
-			puts("EXIT FAILURE AT " #func);      \
-			destroy_gpu(&gpu);                   \
-			return EXIT_FAILURE;                 \
-		}                                        \
-	}                                            \
-	while (0)
-
-
 static bool version_option_callback(void* data, void* arg)
 {
 	(void) data;
 	(void) arg;
 
 	printf(
-		"%s %" PRIu32 ".%" PRIu32 ".%" PRIu32 "\n%s\n%s\n",
-		PROGRAM_NAME,
-		PROGRAM_VER_MAJOR, PROGRAM_VER_MINOR, PROGRAM_VER_PATCH,
-		PROGRAM_COPYRIGHT, PROGRAM_LICENCE);
+		CLTZ_NAME " %d.%d.%d\n"
+		CLTZ_COPYRIGHT "\n"
+		CLTZ_LICENCE "\n",
+		CLTZ_VERSION_MAJOR, CLTZ_VERSION_MINOR, CLTZ_VERSION_PATCH);
 
 	return false;
 }
@@ -51,41 +39,64 @@ static bool help_option_callback(void* data, void* arg)
 	(void) data;
 	(void) arg;
 
-	printf(
-		"Usage: %s [options]\n"
+	printf( // TO MAINTAIN 80 COLUMN LIMIT IN TERMINAL OUTPUT, DO NOT CROSS THIS LINE ---> |
+		"Usage: " CLTZ_EXECUTABLE " [options]...\n"
+		"\n"
+		"Legend:\n"
+		"  <arg>                       A single mandatory argument.\n"
+		"  [arg]                       A single optional argument.\n"
+		"  [arg]...                    A variable number of consecutive optional\n"
+		"                              arguments.\n"
 		"\n"
 		"Options:\n"
-		"  -V --version                Output version and licence information, then terminate.\n"
-		"  -h --help                   Output this hopefully helpful CLI overview, then terminate.\n"
+		"  -V --version                Output version and licence information, then\n"
+		"                              terminate.\n"
+		"  -h --help                   Output this hopefully helpful CLI overview, then\n"
+		"                              terminate.\n"
 		"\n"
 		"  -s --silent                 Output no diagnostic information.\n"
 		"  -q --quiet                  Output minimal diagnostic information.\n"
 		"  -v --verbose                Output maximal diagnostic information.\n"
 		"\n"
-		"  -n --no-colour              Do not use colour in terminal and file output.\n"
-		"  -c --colour                 Use colour in terminal output, but not file output. (default)\n"
+		"  -n --no-colour              Do not use colour in terminal or file output.\n"
+		"  -c --colour                 Use colour in terminal but not file output.\n"
+		"                              (default)\n"
 		"  -C --colour-all             Use colour in both terminal and file output.\n"
 		"\n"
 		"  -e --ext-layers             Enable the Khronos extension layers, if present.\n"
 		"  -p --profile-layers         Enable the Khronos profiles layer, if present.\n"
 		"  -d --validation             Enable the Khronos validation layer, if present.\n"
 		"\n"
-		"  -i --int16                  Prefer shaders using 16-bit integers where appropriate.\n"
-		"  -I --int64                  Prefer shaders using 64-bit integers where appropriate.\n"
+		"  -i --int16                  Prefer shaders using 16-bit integers where\n"
+		"                              appropriate.\n"
+		"  -I --int64                  Prefer shaders using 64-bit integers where\n"
+		"                              appropriate.\n"
 		"\n"
-		"  -r --restart                Restart the simulation. Do not overwrite previous progress.\n"
-		"  -b --no-query-benchmarks    Do not benchmark Vulkan commands via queries.\n"
-		"  --log-allocations           Log all memory allocations performed by Vulkan to %s.\n"
-		"  --capture-pipelines         Output pipeline data captured via VK_KHR_pipeline_executable_properties, if "
-			"present.\n"
+		"  -r --restart                Restart the simulation. Do not save progress nor\n"
+		"                              overwrite previous progress.\n"
+		"  -b --no-query-benchmarks    Do not benchmark GPU operations via Vulkan\n"
+		"                              queries.\n"
 		"\n"
-		"  --iter-size <value>         Bit precision of the iterating value in shaders. Must be 128 or 256. Defaults "
-			"to 128.\n"
-		"  --max-loops <value>         Maximum number of iterations of the main loop. Must be a nonnegative integer. "
-			"Defaults to 2^64-1.\n"
-		"  --max-memory <value>        Maximum proportion of available GPU heap memory to be allocated. Must be within "
-			"(0, 1]. Defaults to 0.4.\n",
-		PROGRAM_EXE, ALLOC_LOG_NAME);
+		"  --log-allocations <path>    Log all memory allocations performed by Vulkan to\n"
+		"                              the file located at <path>.\n"
+		"  --capture-pipelines <path>  Output pipeline data captured via the\n"
+		"                              VK_KHR_pipeline_executable_properties extension,\n"
+		"                              if present, to the file located at <path>.\n"
+		"\n"
+		"  --iter-size <size>          Set the bit precision of the iterating value in\n"
+		"                              shaders to <size>. Higher precision decreases the\n"
+		"                              chance of integer overflow, but also decreases\n"
+		"                              performance. Must be 128 or 256. Defaults to 128.\n"
+		"  --max-loops <count>         Set the maximum number of main loop iterations to\n"
+		"                              <count>. More iterations increase the number of\n"
+		"                              tested starting values, but also increase\n"
+		"                              execution time. Must be a nonnegative integer.\n"
+		"                              Defaults to 2^64-1 (UINT64_MAX).\n"
+		"  --max-memory <prop>         Limit the usable proportion of GPU heap memory to\n"
+		"                              <prop>. Larger proportions may increase\n"
+		"                              concurrency, but also increase execution time and\n"
+		"                              memory usage. Must be within the interval (0, 1].\n"
+		"                              Defaults to 0.4 (40%%).\n");
 
 	return false;
 }
@@ -96,7 +107,6 @@ static bool silent_option_callback(void* data, void* arg)
 
 	ProgramConfig* config = (ProgramConfig*) data;
 	config->outputLevel = OUTPUT_LEVEL_SILENT;
-
 	return true;
 }
 
@@ -106,7 +116,6 @@ static bool quiet_option_callback(void* data, void* arg)
 
 	ProgramConfig* config = (ProgramConfig*) data;
 	config->outputLevel = OUTPUT_LEVEL_QUIET;
-
 	return true;
 }
 
@@ -116,7 +125,6 @@ static bool verbose_option_callback(void* data, void* arg)
 
 	ProgramConfig* config = (ProgramConfig*) data;
 	config->outputLevel = OUTPUT_LEVEL_VERBOSE;
-
 	return true;
 }
 
@@ -126,7 +134,6 @@ static bool no_colour_option_callback(void* data, void* arg)
 
 	ProgramConfig* config = (ProgramConfig*) data;
 	config->colourLevel = COLOUR_LEVEL_NONE;
-
 	return true;
 }
 
@@ -136,7 +143,6 @@ static bool colour_option_callback(void* data, void* arg)
 
 	ProgramConfig* config = (ProgramConfig*) data;
 	config->colourLevel = COLOUR_LEVEL_TTY;
-
 	return true;
 }
 
@@ -146,7 +152,6 @@ static bool colour_all_option_callback(void* data, void* arg)
 
 	ProgramConfig* config = (ProgramConfig*) data;
 	config->colourLevel = COLOUR_LEVEL_ALL;
-
 	return true;
 }
 
@@ -156,7 +161,6 @@ static bool ext_layers_option_callback(void* data, void* arg)
 
 	ProgramConfig* config = (ProgramConfig*) data;
 	config->extensionLayers = true;
-
 	return true;
 }
 
@@ -166,7 +170,6 @@ static bool profile_layers_option_callback(void* data, void* arg)
 
 	ProgramConfig* config = (ProgramConfig*) data;
 	config->profileLayers = true;
-
 	return true;
 }
 
@@ -176,7 +179,6 @@ static bool validation_option_callback(void* data, void* arg)
 
 	ProgramConfig* config = (ProgramConfig*) data;
 	config->validationLayers = true;
-
 	return true;
 }
 
@@ -186,7 +188,6 @@ static bool int16_option_callback(void* data, void* arg)
 
 	ProgramConfig* config = (ProgramConfig*) data;
 	config->preferInt16 = true;
-
 	return true;
 }
 
@@ -196,7 +197,6 @@ static bool int64_option_callback(void* data, void* arg)
 
 	ProgramConfig* config = (ProgramConfig*) data;
 	config->preferInt64 = true;
-
 	return true;
 }
 
@@ -206,7 +206,6 @@ static bool restart_option_callback(void* data, void* arg)
 
 	ProgramConfig* config = (ProgramConfig*) data;
 	config->restart = true;
-
 	return true;
 }
 
@@ -216,27 +215,24 @@ static bool no_query_benchmarks_option_callback(void* data, void* arg)
 
 	ProgramConfig* config = (ProgramConfig*) data;
 	config->queryBenchmarks = false;
-
 	return true;
 }
 
 static bool log_allocations_option_callback(void* data, void* arg)
 {
-	(void) arg;
-
 	ProgramConfig* config = (ProgramConfig*) data;
-	config->logAllocations = true;
+	const char* allocLogPath = *(const char**) arg;
 
+	config->allocLogPath = allocLogPath;
 	return true;
 }
 
 static bool capture_pipelines_option_callback(void* data, void* arg)
 {
-	(void) arg;
-
 	ProgramConfig* config = (ProgramConfig*) data;
-	config->capturePipelines = true;
+	const char* capturePath = *(const char**) arg;
 
+	config->capturePath = capturePath;
 	return true;
 }
 
@@ -281,7 +277,7 @@ static bool init_config(int argc, char** argv)
 {
 	size_t optCount = 20;
 	CltzCli cli = cltzCliCreate(&g_config, optCount);
-	if EXPECT_FALSE (!cli) { return false; }
+	if NOEXPECT (!cli) { return false; }
 
 	cltzCliAdd(cli, 'V', "version", CLTZ_CLI_DATATYPE_NONE, version_option_callback);
 	cltzCliAdd(cli, 'h', "help",    CLTZ_CLI_DATATYPE_NONE, help_option_callback);
@@ -303,8 +299,9 @@ static bool init_config(int argc, char** argv)
 
 	cltzCliAdd(cli, 'r',  "restart",             CLTZ_CLI_DATATYPE_NONE, restart_option_callback);
 	cltzCliAdd(cli, 'b',  "no-query-benchmarks", CLTZ_CLI_DATATYPE_NONE, no_query_benchmarks_option_callback);
-	cltzCliAdd(cli, 0, "log-allocations",     CLTZ_CLI_DATATYPE_NONE, log_allocations_option_callback);
-	cltzCliAdd(cli, 0, "capture-pipelines",   CLTZ_CLI_DATATYPE_NONE, capture_pipelines_option_callback);
+
+	cltzCliAdd(cli, 0, "log-allocations",   CLTZ_CLI_DATATYPE_STRING, log_allocations_option_callback);
+	cltzCliAdd(cli, 0, "capture-pipelines", CLTZ_CLI_DATATYPE_STRING, capture_pipelines_option_callback);
 
 	cltzCliAdd(cli, 0, "iter-size",  CLTZ_CLI_DATATYPE_ULONG,  iter_size_option_callback);
 	cltzCliAdd(cli, 0, "max-loops",  CLTZ_CLI_DATATYPE_ULLONG, max_loops_option_callback);
@@ -320,36 +317,66 @@ static bool init_config(int argc, char** argv)
 static bool init_env(void)
 {
 #if defined(_WIN32)
-	DWORD dwMode;
+	HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
 
-	HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-	WINBOOL wbRes = GetConsoleMode(hOutput, &dwMode);
-	if (!wbRes) { return false; }
+	DWORD mode;
+	BOOL bres = GetConsoleMode(output, &mode);
+	if NOEXPECT (!bres) { return false; }
 
 	// Enable ANSI escape codes (for pretty coloured output)
-	dwMode |= ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-	wbRes = SetConsoleMode(hOutput, dwMode);
-	if (!wbRes) { return false; }
+	mode |= ENABLE_PROCESSED_OUTPUT;
+	mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+
+	bres = SetConsoleMode(output, mode);
+	if NOEXPECT (!bres) { return false; }
 
 	// Prevent system from sleeping, but allow display to sleep
-	EXECUTION_STATE esFlags = ES_CONTINUOUS | ES_SYSTEM_REQUIRED;
-	SetThreadExecutionState(esFlags);
+	EXECUTION_STATE flags = 0;
+	flags |= ES_CONTINUOUS;
+	flags |= ES_SYSTEM_REQUIRED;
+
+	SetThreadExecutionState(flags);
 #elif defined(__APPLE__)
-	CFAllocatorRef allocator = NULL;
-	const char* string = PROGRAM_NAME;
-	CFStringEncoding encoding = kCFStringEncodingUTF8; // Hoping UTF-8 is the implementation's encoding for C strings
-
-	CFStringRef name = CFStringCreateWithCString(allocator, string, encoding);
-	if (!name) { return false; }
-
 	// Prevent system from sleeping, but allow display to sleep
 	CFStringRef type = kIOPMAssertPreventUserIdleSystemSleep;
 	IOPMAssertionLevel level = kIOPMAssertionLevelOn;
+	CFStringRef name = CFSTR(CLTZ_NAME);
 	IOPMAssertionID id;
 
 	IOReturn iores = IOPMAssertionCreateWithName(type, level, name, &id);
-	if (iores != kIOReturnSuccess) { return false; }
+	if NOEXPECT (iores != kIOReturnSuccess) { return false; }
+#elif defined(__unix__)
+	// TODO
 #endif
+
+	return true;
+}
+
+static bool init_gpu(Gpu* gpu)
+{
+	bool bres = create_instance(gpu);
+	if NOEXPECT (!bres) { return false; }
+
+	bres = select_device(gpu);
+	if NOEXPECT (!bres) { return false; }
+
+	bres = create_device(gpu);
+	if NOEXPECT (!bres) { return false; }
+
+	bres = manage_memory(gpu);
+	if NOEXPECT (!bres) { return false; }
+
+	bres = create_buffers(gpu);
+	if NOEXPECT (!bres) { return false; }
+
+	bres = create_descriptors(gpu);
+	if NOEXPECT (!bres) { return false; }
+
+	bres = create_pipeline(gpu);
+	if NOEXPECT (!bres) { return false; }
+
+	bres = create_commands(gpu);
+	if NOEXPECT (!bres) { return false; }
 
 	return true;
 }
@@ -364,16 +391,16 @@ int main(int argc, char** argv)
 	bres = init_config(argc, argv);
 	if (!bres) { return EXIT_SUCCESS; }
 
-	CHECK_RESULT(create_instance, &gpu);
-	CHECK_RESULT(select_device, &gpu);
-	CHECK_RESULT(create_device, &gpu);
-	CHECK_RESULT(manage_memory, &gpu);
-	CHECK_RESULT(create_buffers, &gpu);
-	CHECK_RESULT(create_descriptors, &gpu);
-	CHECK_RESULT(create_pipeline, &gpu);
-	CHECK_RESULT(create_commands, &gpu);
-	CHECK_RESULT(submit_commands, &gpu);
+	bres = init_gpu(&gpu);
+	if NOEXPECT (!bres) { goto err_destroy_gpu; }
+
+	bres = submit_commands(&gpu);
+	if NOEXPECT (!bres) { goto err_destroy_gpu; }
 
 	destroy_gpu(&gpu);
 	return EXIT_SUCCESS;
+
+err_destroy_gpu:
+	destroy_gpu(&gpu);
+	return EXIT_FAILURE;
 }

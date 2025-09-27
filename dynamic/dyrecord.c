@@ -35,7 +35,7 @@ typedef struct DyRecord_T
 
 void dyrecord_destroy(DyRecord record)
 {
-	if EXPECT_FALSE (!record) { return; }
+	if NOEXPECT (!record) { return; }
 
 	dyrecord_free(record);
 	free(record);
@@ -45,7 +45,7 @@ DyRecord dyrecord_create(void)
 {
 	size_t size = sizeof(DyRecord_T);
 	DyRecord record = malloc(size);
-	if EXPECT_FALSE (!record) { MALLOC_FAILURE(record, size); return NULL; }
+	if NOEXPECT (!record) { MALLOC_FAILURE(record, size); return NULL; }
 
 	record->count = 0;
 	record->top = NULL;
@@ -65,7 +65,7 @@ bool dyrecord_add(DyRecord record, void* restrict memory, FreeCallback callback)
 
 	size_t size = sizeof(Node);
 	Node* node = malloc(size);
-	if EXPECT_FALSE (!node) { MALLOC_FAILURE(node, size); return false; }
+	if NOEXPECT (!node) { MALLOC_FAILURE(node, size); return false; }
 
 	node->next = top;
 	node->memory = memory;
@@ -82,10 +82,10 @@ void* dyrecord_malloc(DyRecord record, size_t size)
 	ASSUME(size != 0);
 
 	void* memory = malloc(size);
-	if EXPECT_FALSE (!memory) { MALLOC_FAILURE(memory, size); return NULL; }
+	if NOEXPECT (!memory) { MALLOC_FAILURE(memory, size); return NULL; }
 
 	bool bres = dyrecord_add(record, memory, free);
-	if EXPECT_FALSE (!bres) { free(memory); return NULL; }
+	if NOEXPECT (!bres) { free(memory); return NULL; }
 
 	return memory;
 }
@@ -96,10 +96,10 @@ void* dyrecord_calloc(DyRecord record, size_t count, size_t size)
 	ASSUME(size != 0);
 
 	void* memory = calloc(count, size);
-	if EXPECT_FALSE (!memory) { CALLOC_FAILURE(memory, count, size); return NULL; }
+	if NOEXPECT (!memory) { CALLOC_FAILURE(memory, count, size); return NULL; }
 
 	bool bres = dyrecord_add(record, memory, free);
-	if EXPECT_FALSE (!bres) { free(memory); return NULL; }
+	if NOEXPECT (!bres) { free(memory); return NULL; }
 
 	return memory;
 }

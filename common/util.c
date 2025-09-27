@@ -71,7 +71,7 @@ uint32_t ceil_pow2(uint32_t x)
 	return x == 1 ? UINT32_C(1) : UINT32_C(2) << (31 - __builtin_clz(x - 1));
 #elif has_builtin(clzl) && UINT32_MAX == ULONG_MAX
 	return x == 1 ? UINT32_C(1) : UINT32_C(2) << (31 - __builtin_clzl(x - 1));
-#elif defined(_MSC_VER) || defined(__MINGW32__)
+#elif defined(_WIN32)
 	unsigned long i;
 	_BitScanReverse(&i, x - 1);
 	return UINT32_C(1) << (i + 1);
@@ -92,7 +92,7 @@ uint32_t floor_pow2(uint32_t x)
 	return UINT32_C(1) << (31 - __builtin_clz(x));
 #elif has_builtin(clzl) && UINT32_MAX == ULONG_MAX
 	return UINT32_C(1) << (31 - __builtin_clzl(x));
-#elif defined(_MSC_VER) || defined(__MINGW32__)
+#elif defined(_WIN32)
 	unsigned long i;
 	_BitScanReverse(&i, x);
 	return UINT32_C(1) << i;
@@ -121,7 +121,7 @@ bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const c
 	if (!vkSetDebugUtilsObjectNameEXT) { return true; }
 
 	VK_CALLR(vkSetDebugUtilsObjectNameEXT, device, &info);
-	if EXPECT_FALSE (vkres) { return false; }
+	if NOEXPECT (vkres) { return false; }
 
 	return true;
 }
@@ -138,7 +138,7 @@ bool get_buffer_requirements_noext(
 
 	VkBuffer buffer;
 	VK_CALLR(vkCreateBuffer, device, &bufferInfo, NULL, &buffer);
-	if EXPECT_FALSE (vkres) { return false; }
+	if NOEXPECT (vkres) { return false; }
 
 	VkBufferMemoryRequirementsInfo2 requirementsInfo = {0};
 	requirementsInfo.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2;
@@ -181,16 +181,16 @@ bool save_pipeline_cache(VkDevice device, VkPipelineCache cache, const char* fil
 
 	size_t dataSize;
 	VK_CALLR(vkGetPipelineCacheData, device, cache, &dataSize, NULL);
-	if EXPECT_FALSE (vkres) { return false; }
+	if NOEXPECT (vkres) { return false; }
 
 	void* data = malloc(dataSize);
-	if EXPECT_FALSE (!data) { MALLOC_FAILURE(data, dataSize); return false; }
+	if NOEXPECT (!data) { MALLOC_FAILURE(data, dataSize); return false; }
 
 	VK_CALLR(vkGetPipelineCacheData, device, cache, &dataSize, data);
-	if EXPECT_FALSE (vkres) { free(data); return false; }
+	if NOEXPECT (vkres) { free(data); return false; }
 
 	bool bres = write_file(filename, data, dataSize);
-	if EXPECT_FALSE (!bres) { free(data); return false; }
+	if NOEXPECT (!bres) { free(data); return false; }
 
 	free(data);
 	return true;
@@ -211,10 +211,10 @@ bool file_size(const char* filename, size_t* size)
 	int origin = SEEK_END;
 
 	int ires = fseek(file, offset, origin);
-	if EXPECT_FALSE (ires) { FSEEK_FAILURE(ires, file, offset, origin); fclose(file); return false; }
+	if NOEXPECT (ires) { FSEEK_FAILURE(ires, file, offset, origin); fclose(file); return false; }
 
 	long lres = ftell(file);
-	if EXPECT_FALSE (lres == -1) { FTELL_FAILURE(lres, file); fclose(file); return false; }
+	if NOEXPECT (lres == -1) { FTELL_FAILURE(lres, file); fclose(file); return false; }
 
 	fclose(file);
 	*size = (size_t) lres;
@@ -226,13 +226,13 @@ bool read_file(const char* filename, void* data, size_t size)
 {
 	const char* mode = "rb";
 	FILE* file = fopen(filename, mode);
-	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, mode); return false; }
+	if NOEXPECT (!file) { FOPEN_FAILURE(file, filename, mode); return false; }
 
 	size_t objSize = sizeof(char);
 	size_t objCount = size;
 
 	size_t sres = fread(data, objSize, objCount, file);
-	if EXPECT_FALSE (sres != size) { FREAD_FAILURE(sres, data, objSize, objCount, file); fclose(file); return false; }
+	if NOEXPECT (sres != size) { FREAD_FAILURE(sres, data, objSize, objCount, file); fclose(file); return false; }
 
 	fclose(file);
 	return true;
@@ -242,13 +242,13 @@ bool write_file(const char* filename, const void* data, size_t size)
 {
 	const char* mode = "wb";
 	FILE* file = fopen(filename, mode);
-	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, mode); return false; }
+	if NOEXPECT (!file) { FOPEN_FAILURE(file, filename, mode); return false; }
 
 	size_t objSize = sizeof(char);
 	size_t objCount = size;
 
 	size_t sres = fwrite(data, objSize, objCount, file);
-	if EXPECT_FALSE (sres != size) { FWRITE_FAILURE(sres, data, objSize, objCount, file); fclose(file); return false; }
+	if NOEXPECT (sres != size) { FWRITE_FAILURE(sres, data, objSize, objCount, file); fclose(file); return false; }
 
 	fclose(file);
 	return true;
@@ -261,10 +261,10 @@ bool read_text(const char* filename, const char* format, ...)
 
 	const char* mode = "r";
 	FILE* file = fopen(filename, mode);
-	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, mode); va_end(args); return false; }
+	if NOEXPECT (!file) { FOPEN_FAILURE(file, filename, mode); va_end(args); return false; }
 
 	int ires = vfscanf(file, format, args);
-	if EXPECT_FALSE (ires == EOF) { FSCANF_FAILURE(ires, file, format); fclose(file); va_end(args); return false; }
+	if NOEXPECT (ires == EOF) { FSCANF_FAILURE(ires, file, format); fclose(file); va_end(args); return false; }
 
 	fclose(file);
 	va_end(args);
@@ -279,10 +279,10 @@ bool write_text(const char* filename, const char* format, ...)
 
 	const char* mode = "w";
 	FILE* file = fopen(filename, mode);
-	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, filename, mode); va_end(args); return false; }
+	if NOEXPECT (!file) { FOPEN_FAILURE(file, filename, mode); va_end(args); return false; }
 
 	int ires = vfprintf(file, format, args);
-	if EXPECT_FALSE (ires < 0) { FPRINTF_FAILURE(ires, file, format); fclose(file); va_end(args); return false; }
+	if NOEXPECT (ires < 0) { FPRINTF_FAILURE(ires, file, format); fclose(file); va_end(args); return false; }
 
 	fclose(file);
 	va_end(args);
@@ -298,13 +298,13 @@ void* aligned_malloc(size_t size, size_t alignment)
 	void* memory;
 	AlignedInfo* info;
 
-#if defined(_MSC_VER) || defined(__MINGW32__)
+#if defined(_WIN32)
 	size_t allocSize = size + sizeof(AlignedInfo);
 	size_t allocAlignment = maxz(alignment, alignof(AlignedInfo));
 	size_t offset = sizeof(AlignedInfo);
 
 	memory = _aligned_offset_malloc(allocSize, allocAlignment, offset);
-	if EXPECT_FALSE (!memory) { return NULL; }
+	if NOEXPECT (!memory) { return NULL; }
 
 	info = memory;
 #else
@@ -312,7 +312,7 @@ void* aligned_malloc(size_t size, size_t alignment)
 	size_t allocSize = size + maxz(alignment, sizeof(AlignedInfo));
 
 	int ires = posix_memalign(&memory, allocAlignment, allocSize);
-	if EXPECT_FALSE (ires) { return NULL; }
+	if NOEXPECT (ires) { return NULL; }
 
 	info = (AlignedInfo*) memory + maxz(alignment, sizeof(AlignedInfo)) / sizeof(AlignedInfo) - 1;
 #endif
@@ -334,13 +334,13 @@ void* aligned_realloc(void* memory, size_t size, size_t alignment)
 
 	void* newMemory;
 
-#if defined(_MSC_VER) || defined(__MINGW32__)
+#if defined(_WIN32)
 	size_t allocSize = size + sizeof(AlignedInfo);
 	size_t allocAlignment = maxz(alignment, alignof(AlignedInfo));
 	size_t offset = sizeof(AlignedInfo);
 
 	newMemory = _aligned_offset_realloc(oldMemory, allocSize, allocAlignment, offset);
-	if EXPECT_FALSE (!newMemory) { return NULL; }
+	if NOEXPECT (!newMemory) { return NULL; }
 
 	info = newMemory;
 #else
@@ -348,7 +348,7 @@ void* aligned_realloc(void* memory, size_t size, size_t alignment)
 	size_t allocSize = size + maxz(alignment, sizeof(AlignedInfo));
 
 	int ires = posix_memalign(&newMemory, allocAlignment, allocSize);
-	if EXPECT_FALSE (ires) { return NULL; }
+	if NOEXPECT (ires) { return NULL; }
 
 	info = (AlignedInfo*) newMemory + maxz(alignment, sizeof(AlignedInfo)) / sizeof(AlignedInfo) - 1;
 
@@ -370,7 +370,7 @@ void aligned_free(void* memory)
 {
 	AlignedInfo* info = (AlignedInfo*) memory - 1;
 
-#if defined(_MSC_VER) || defined(__MINGW32__)
+#if defined(_WIN32)
 	_aligned_free(info->start);
 #else
 	free(info->start);

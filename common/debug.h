@@ -72,7 +72,7 @@ void log_pjoin_failure(int line, int res) COLD_FUNC;
 
 void log_vkinit_failure(int line, VkResult res) COLD_FUNC;
 void log_vkvers_failure(int line, uint32_t res) COLD_FUNC;
-void log_vulkan_failure(int line, VkResult res, const char* func) COLD_FUNC NONNULL_ARGS_ALL NULTSTR_ARG(3);
+void log_vulkan_failure(int line, VkResult res, const char* func) COLD_FUNC NONNULL_ALL NULTSTR_ARG(3);
 
 
 // Callback functions
@@ -130,13 +130,13 @@ VKAPI_ATTR void VKAPI_CALL internal_free_callback(
 		}                          \
 		while (0)
 
-	#define VK_CALLR(vkfunc, ...)                   \
-		do {                                        \
-			vkres = (vkfunc)(__VA_ARGS__);          \
-			if EXPECT_FALSE (vkres != VK_SUCCESS) { \
-				VULKAN_FAILURE(vkfunc);             \
-			}                                       \
-		}                                           \
+	#define VK_CALLR(vkfunc, ...)               \
+		do {                                    \
+			vkres = (vkfunc)(__VA_ARGS__);      \
+			if NOEXPECT (vkres != VK_SUCCESS) { \
+				VULKAN_FAILURE(vkfunc);         \
+			}                                   \
+		}                                       \
 		while (0)
 #else
 	#define VK_CALL(vkfunc, ...)             \
@@ -148,15 +148,15 @@ VKAPI_ATTR void VKAPI_CALL internal_free_callback(
 		}                                    \
 		while (0)
 
-	#define VK_CALLR(vkfunc, ...)                   \
-		do {                                        \
-			g_callbackData.func = #vkfunc;          \
-			g_callbackData.file = FILE_NAME;        \
-			g_callbackData.line = __LINE__;         \
-			vkres = (vkfunc)(__VA_ARGS__);          \
-			if EXPECT_FALSE (vkres != VK_SUCCESS) { \
-				VULKAN_FAILURE(vkfunc);             \
-			}                                       \
-		}                                           \
+	#define VK_CALLR(vkfunc, ...)               \
+		do {                                    \
+			g_callbackData.func = #vkfunc;      \
+			g_callbackData.file = FILE_NAME;    \
+			g_callbackData.line = __LINE__;     \
+			vkres = (vkfunc)(__VA_ARGS__);      \
+			if NOEXPECT (vkres != VK_SUCCESS) { \
+				VULKAN_FAILURE(vkfunc);         \
+			}                                   \
+		}                                       \
 		while (0)
 #endif

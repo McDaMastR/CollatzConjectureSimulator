@@ -30,7 +30,7 @@ typedef struct DyQueue_T
 
 void dyqueue_destroy(DyQueue queue)
 {
-	if EXPECT_FALSE (!queue) { return; }
+	if NOEXPECT (!queue) { return; }
 
 	void** node = queue->head;
 	void* next = NULL;
@@ -50,7 +50,7 @@ DyQueue dyqueue_create(size_t size)
 
 	size_t allocSize = sizeof(DyQueue_T);
 	DyQueue queue = malloc(allocSize);
-	if EXPECT_FALSE (!queue) { MALLOC_FAILURE(queue, allocSize); return NULL; }
+	if NOEXPECT (!queue) { MALLOC_FAILURE(queue, allocSize); return NULL; }
 
 	queue->size = size;
 	queue->count = 0;
@@ -75,7 +75,7 @@ bool dyqueue_enqueue(DyQueue queue, const void* value)
 
 	size_t allocSize = sizeof(void*) + size;
 	void** node = malloc(allocSize);
-	if EXPECT_FALSE (!node) { MALLOC_FAILURE(node, allocSize); return false; }
+	if NOEXPECT (!node) { MALLOC_FAILURE(node, allocSize); return false; }
 
 	*node = NULL;
 

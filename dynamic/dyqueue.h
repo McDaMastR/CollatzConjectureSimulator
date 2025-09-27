@@ -72,7 +72,7 @@ DyQueue dyqueue_create(size_t size) FREE_FUNC(dyqueue_destroy, 1) USE_RET;
  * 
  * @pre @p queue is nonnull.
  */
-size_t dyqueue_size(DyQueue queue) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
+size_t dyqueue_size(DyQueue queue) NONNULL_ALL RE_ACCESS(1) USE_RET;
 
 
 /**
@@ -92,7 +92,7 @@ size_t dyqueue_size(DyQueue queue) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
  * @pre @p queue is nonnull.
  * @pre @p value is nonnull.
  */
-bool dyqueue_enqueue(DyQueue queue, const void* value) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
+bool dyqueue_enqueue(DyQueue queue, const void* value) NONNULL_ALL RW_ACCESS(1) RE_ACCESS(2);
 
 /**
  * @memberof DyQueue
@@ -107,4 +107,4 @@ bool dyqueue_enqueue(DyQueue queue, const void* value) NONNULL_ARGS_ALL RW_ACCES
  * @pre @p queue is nonnull and nonempty.
  * @pre @p value is nonnull and does not overlap in memory with @p queue.
  */
-void dyqueue_dequeue(DyQueue queue, void* value) NONNULL_ARGS_ALL RW_ACCESS(1) WR_ACCESS(2);
+void dyqueue_dequeue(DyQueue queue, void* value) NONNULL_ALL RW_ACCESS(1) WR_ACCESS(2);

@@ -135,33 +135,33 @@ typedef struct Position
 
 // If the return type is bool, then the function returns true on success and false elsewise
 
-bool create_instance(Gpu* restrict gpu) NONNULL_ARGS_ALL;
-bool select_device(Gpu* restrict gpu) NONNULL_ARGS_ALL;
-bool create_device(Gpu* restrict gpu) NONNULL_ARGS_ALL;
-bool manage_memory(Gpu* restrict gpu) NONNULL_ARGS_ALL;
-bool create_buffers(Gpu* restrict gpu) NONNULL_ARGS_ALL;
-bool create_descriptors(Gpu* restrict gpu) NONNULL_ARGS_ALL;
-bool create_pipeline(Gpu* restrict gpu) NONNULL_ARGS_ALL;
-bool create_commands(Gpu* restrict gpu) NONNULL_ARGS_ALL;
-bool submit_commands(Gpu* restrict gpu) NONNULL_ARGS_ALL;
-bool destroy_gpu(Gpu* restrict gpu) NONNULL_ARGS_ALL;
+bool create_instance(Gpu* restrict gpu) NONNULL_ALL;
+bool select_device(Gpu* restrict gpu) NONNULL_ALL;
+bool create_device(Gpu* restrict gpu) NONNULL_ALL;
+bool manage_memory(Gpu* restrict gpu) NONNULL_ALL;
+bool create_buffers(Gpu* restrict gpu) NONNULL_ALL;
+bool create_descriptors(Gpu* restrict gpu) NONNULL_ALL;
+bool create_pipeline(Gpu* restrict gpu) NONNULL_ALL;
+bool create_commands(Gpu* restrict gpu) NONNULL_ALL;
+bool submit_commands(Gpu* restrict gpu) NONNULL_ALL;
+bool destroy_gpu(Gpu* restrict gpu) NONNULL_ALL;
 
 bool capture_pipeline(VkDevice device, VkPipeline pipeline);
 
-void* wait_for_input(void* ptr) NONNULL_ARGS_ALL;
+void* wait_for_input(void* ptr) NONNULL_ALL;
 
 void write_inbuffer(
 	StartValue* restrict mappedInBuffer,
 	StartValue* restrict firstStartValue,
 	uint32_t valuesPerInout,
-	uint32_t valuesPerHeap) NONNULL_ARGS_ALL;
+	uint32_t valuesPerHeap) NONNULL_ALL;
 
 void read_outbuffer(
 	const StopTime* restrict mappedOutBuffer,
 	Position* restrict position,
 	DyArray bestStartValues,
 	DyArray bestStopTimes,
-	uint32_t valuesPerInout) NONNULL_ARGS_ALL;
+	uint32_t valuesPerInout) NONNULL_ALL;
 
 void new_high(
 	const StartValue* restrict startValue,
@@ -170,4 +170,4 @@ void new_high(
 	StartValue* restrict val0mod1off,
 	StartValue* restrict val1mod6off,
 	DyArray bestStartValues,
-	DyArray bestStopTimes) NONNULL_ARGS_ALL;
+	DyArray bestStopTimes) NONNULL_ALL;

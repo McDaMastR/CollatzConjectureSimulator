@@ -74,7 +74,7 @@ DyArray dyarray_create(size_t size, size_t count) FREE_FUNC(dyarray_destroy, 1) 
  * 
  * @pre @p array is nonnull.
  */
-size_t dyarray_size(DyArray array) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
+size_t dyarray_size(DyArray array) NONNULL_ALL RE_ACCESS(1) USE_RET;
 
 /**
  * @memberof DyArray
@@ -91,7 +91,7 @@ size_t dyarray_size(DyArray array) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
  * 
  * @note Adding an element to @p array may result in the raw array changing memory location.
  */
-void* dyarray_raw(DyArray array) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
+void* dyarray_raw(DyArray array) NONNULL_ALL RE_ACCESS(1) USE_RET;
 
 
 /**
@@ -109,7 +109,7 @@ void* dyarray_raw(DyArray array) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
  * @pre @p value is nonnull and does not overlap in memory with @p array.
  * @pre @p index is less than the size of @p array.
  */
-void dyarray_get(DyArray array, void* value, size_t index) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
+void dyarray_get(DyArray array, void* value, size_t index) NONNULL_ALL RE_ACCESS(1) WR_ACCESS(2);
 
 /**
  * @memberof DyArray
@@ -126,7 +126,7 @@ void dyarray_get(DyArray array, void* value, size_t index) NONNULL_ARGS_ALL RE_A
  * @pre @p value is nonnull and does not overlap in memory with @p array.
  * @pre @p index is less than the size of @p array.
  */
-void dyarray_set(DyArray array, const void* value, size_t index) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
+void dyarray_set(DyArray array, const void* value, size_t index) NONNULL_ALL RW_ACCESS(1) RE_ACCESS(2);
 
 /**
  * @memberof DyArray
@@ -141,7 +141,7 @@ void dyarray_set(DyArray array, const void* value, size_t index) NONNULL_ARGS_AL
  * @pre @p array is nonnull and nonempty.
  * @pre @p value is nonnull and does not overlap in memory with @p array.
  */
-void dyarray_last(DyArray array, void* value) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
+void dyarray_last(DyArray array, void* value) NONNULL_ALL RE_ACCESS(1) WR_ACCESS(2);
 
 /**
  * @memberof DyArray
@@ -156,7 +156,7 @@ void dyarray_last(DyArray array, void* value) NONNULL_ARGS_ALL RE_ACCESS(1) WR_A
  * @pre @p array is nonnull and nonempty.
  * @pre @p value is nonnull and does not overlap in memory with @p array.
  */
-void dyarray_first(DyArray array, void* value) NONNULL_ARGS_ALL RE_ACCESS(1) WR_ACCESS(2);
+void dyarray_first(DyArray array, void* value) NONNULL_ALL RE_ACCESS(1) WR_ACCESS(2);
 
 
 /**
@@ -174,7 +174,7 @@ void dyarray_first(DyArray array, void* value) NONNULL_ARGS_ALL RE_ACCESS(1) WR_
  * @pre @p array is nonnull.
  * @pre @p value is nonnull and does not overlap in memory with @p array.
  */
-void* dyarray_append(DyArray array, const void* value) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
+void* dyarray_append(DyArray array, const void* value) NONNULL_ALL RW_ACCESS(1) RE_ACCESS(2);
 
 /**
  * @memberof DyArray
@@ -192,7 +192,7 @@ void* dyarray_append(DyArray array, const void* value) NONNULL_ARGS_ALL RW_ACCES
  * @pre @p array is nonnull.
  * @pre @p value is nonnull and does not overlap in memory with @p array.
  */
-void* dyarray_prepend(DyArray array, const void* value) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
+void* dyarray_prepend(DyArray array, const void* value) NONNULL_ALL RW_ACCESS(1) RE_ACCESS(2);
 
 /**
  * @memberof DyArray
@@ -212,4 +212,4 @@ void* dyarray_prepend(DyArray array, const void* value) NONNULL_ARGS_ALL RW_ACCE
  * @pre @p value is nonnull and does not overlap in memory with @p array.
  * @pre @p index is less than or equal to the size of @p array.
  */
-void* dyarray_add(DyArray array, const void* value, size_t index) NONNULL_ARGS_ALL RW_ACCESS(1) RE_ACCESS(2);
+void* dyarray_add(DyArray array, const void* value, size_t index) NONNULL_ALL RW_ACCESS(1) RE_ACCESS(2);

@@ -79,7 +79,7 @@ DyRecord dyrecord_create(void) FREE_FUNC(dyrecord_destroy, 1) USE_RET;
  * 
  * @pre @p record is nonnull.
  */
-size_t dyrecord_size(DyRecord record) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
+size_t dyrecord_size(DyRecord record) NONNULL_ALL RE_ACCESS(1) USE_RET;
 
 
 /**
@@ -100,7 +100,7 @@ size_t dyrecord_size(DyRecord record) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
  * @pre @p memory is nonnull and does not overlap in memory with @p record.
  * @pre @p callback is nonnull.
  */
-bool dyrecord_add(DyRecord record, void* memory, FreeCallback callback) NONNULL_ARGS_ALL RW_ACCESS(1) NO_ACCESS(2);
+bool dyrecord_add(DyRecord record, void* memory, FreeCallback callback) NONNULL_ALL RW_ACCESS(1) NO_ACCESS(2);
 
 /**
  * @memberof DyRecord
@@ -116,7 +116,7 @@ bool dyrecord_add(DyRecord record, void* memory, FreeCallback callback) NONNULL_
  * 
  * @pre @p record is nonnull.
  */
-void* dyrecord_malloc(DyRecord record, size_t size) MALLOC_FUNC NONNULL_ARGS_ALL ALLOC_ARG(2) RW_ACCESS(1) USE_RET;
+void* dyrecord_malloc(DyRecord record, size_t size) MALLOC_FUNC NONNULL_ALL ALLOC_ARG(2) RW_ACCESS(1) USE_RET;
 
 /**
  * @memberof DyRecord
@@ -134,7 +134,7 @@ void* dyrecord_malloc(DyRecord record, size_t size) MALLOC_FUNC NONNULL_ARGS_ALL
  * @pre @p record is nonnull.
  */
 void* dyrecord_calloc(DyRecord record, size_t count, size_t size)
-	MALLOC_FUNC NONNULL_ARGS_ALL ALLOC_ARGS(2, 3) RW_ACCESS(1) USE_RET;
+	MALLOC_FUNC NONNULL_ALL ALLOC_ARGS(2, 3) RW_ACCESS(1) USE_RET;
 
 /**
  * @memberof DyRecord
@@ -148,4 +148,4 @@ void* dyrecord_calloc(DyRecord record, size_t count, size_t size)
  * 
  * @pre @p record is nonnull.
  */
-void dyrecord_free(DyRecord record) NONNULL_ARGS_ALL RW_ACCESS(1);
+void dyrecord_free(DyRecord record) NONNULL_ALL RW_ACCESS(1);

@@ -48,7 +48,7 @@ void cltzCliDestroy(CltzCli cli);
 
 CltzCli cltzCliCreate(void* config, size_t count) FREE_FUNC(cltzCliDestroy, 1) NO_ACCESS(1) USE_RET;
 
-bool cltzCliParse(CltzCli cli, int argc, char** argv) NONNULL_ARGS_ALL;
+bool cltzCliParse(CltzCli cli, int argc, char** argv) NONNULL_ALL;
 
 bool cltzCliAdd(CltzCli cli, char option, const char* name, CltzCliDatatype type, CltzCliCallback callback)
-	NONNULL_ARGS_ALL NULTSTR_ARG(3);
+	NONNULL_ALL NULTSTR_ARG(3);

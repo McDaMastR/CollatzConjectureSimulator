@@ -75,7 +75,7 @@ DyString dystring_create(size_t count) FREE_FUNC(dystring_destroy, 1) USE_RET;
  * 
  * @invariant The length is nonzero.
  */
-size_t dystring_length(DyString string) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
+size_t dystring_length(DyString string) NONNULL_ALL RE_ACCESS(1) USE_RET;
 
 /**
  * @memberof DyString
@@ -94,7 +94,7 @@ size_t dystring_length(DyString string) NONNULL_ARGS_ALL RE_ACCESS(1) USE_RET;
  * 
  * @note Adding a substring to @p string may result in the raw string changing memory location.
  */
-char* dystring_raw(DyString string) NONNULL_ARGS_ALL RE_ACCESS(1) NONNULL_RET USE_RET;
+char* dystring_raw(DyString string) NONNULL_ALL RE_ACCESS(1) NONNULL_RET USE_RET;
 
 
 /**
@@ -112,7 +112,7 @@ char* dystring_raw(DyString string) NONNULL_ARGS_ALL RE_ACCESS(1) NONNULL_RET US
  * @pre @p string is nonnull.
  * @pre @p substring is nonnull, null-terminated, and does not overlap in memory with @p string.
  */
-char* dystring_append(DyString string, const char* substring) NONNULL_ARGS_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
+char* dystring_append(DyString string, const char* substring) NONNULL_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
 
 /**
  * @memberof DyString
@@ -129,8 +129,7 @@ char* dystring_append(DyString string, const char* substring) NONNULL_ARGS_ALL N
  * @pre @p string is nonnull.
  * @pre @p substring is nonnull, null-terminated, and does not overlap in memory with @p string.
  */
-char* dystring_prepend(DyString string, const char* substring)
-	NONNULL_ARGS_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
+char* dystring_prepend(DyString string, const char* substring) NONNULL_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
 
 /**
  * @memberof DyString
@@ -151,4 +150,4 @@ char* dystring_prepend(DyString string, const char* substring)
  * @pre @p index is less than the length of @p string.
  */
 char* dystring_add(DyString string, const char* substring, size_t index)
-	NONNULL_ARGS_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
+	NONNULL_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);

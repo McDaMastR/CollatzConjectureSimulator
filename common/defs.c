@@ -16,37 +16,11 @@
  */
 
 #include "defs.h"
-#include "debug.h"
 
-
-const char* const PROGRAM_NAME = CLTZ_NAME;
-const char* const PROGRAM_EXE = CLTZ_EXECUTABLE;
-const char* const PROGRAM_COPYRIGHT = "Copyright (C) 2025 Seth McDonald";
-const char* const PROGRAM_LICENCE = "Licence GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>";
-
-const char* const DEBUG_LOG_NAME = "debug.log";
-const char* const ALLOC_LOG_NAME = "alloc.log";
-const char* const PIPELINE_CACHE_NAME = "pipeline_cache.bin";
-const char* const PROGRESS_FILE_NAME = "position.txt";
-const char* const CAPTURE_FILE_NAME = "pipeline_capture.txt";
-
-const char* const VK_KHR_PROFILES_LAYER_NAME = "VK_LAYER_KHRONOS_profiles";
-const char* const VK_KHR_VALIDATION_LAYER_NAME = "VK_LAYER_KHRONOS_validation";
-const char* const VK_KHR_SYNCHRONIZATION_2_LAYER_NAME = "VK_LAYER_KHRONOS_synchronization2";
-const char* const VK_KHR_TIMELINE_SEMAPHORE_LAYER_NAME = "VK_LAYER_KHRONOS_timeline_semaphore";
-
-const uint32_t PROGRAM_VERSION = VK_MAKE_API_VERSION(0, CLTZ_VERSION_MAJOR, CLTZ_VERSION_MINOR, CLTZ_VERSION_PATCH);
-const uint32_t PROGRAM_VER_MAJOR = CLTZ_VERSION_MAJOR;
-const uint32_t PROGRAM_VER_MINOR = CLTZ_VERSION_MINOR;
-const uint32_t PROGRAM_VER_PATCH = CLTZ_VERSION_PATCH;
-
-const uint32_t KiB_SIZE = UINT32_C(1) << 10;
-const uint32_t MiB_SIZE = UINT32_C(1) << 20;
-const uint32_t GiB_SIZE = UINT32_C(1) << 30;
-
-const double MS_PER_CLOCK = 1000. / CLOCKS_PER_SEC;
 
 ProgramConfig g_config = {
+	.allocLogPath = NULL,
+	.capturePath = NULL,
 	.outputLevel = OUTPUT_LEVEL_DEFAULT,
 	.colourLevel = COLOUR_LEVEL_TTY,
 	.iterSize = 128,
@@ -58,7 +32,5 @@ ProgramConfig g_config = {
 	.profileLayers = false,
 	.validationLayers = false,
 	.restart = false,
-	.queryBenchmarks = true,
-	.logAllocations = false,
-	.capturePipelines = false
+	.queryBenchmarks = true
 };

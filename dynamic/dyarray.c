@@ -44,7 +44,7 @@ static void* dyarray_stretch(DyArray array)
 
 	size_t allocSize = newCapacity * size;
 	void* newRaw = realloc(raw, allocSize);
-	if EXPECT_FALSE (!newRaw) { REALLOC_FAILURE(newRaw, raw, allocSize); return NULL; }
+	if NOEXPECT (!newRaw) { REALLOC_FAILURE(newRaw, raw, allocSize); return NULL; }
 
 	array->capacity = newCapacity;
 	array->raw = newRaw;
@@ -55,7 +55,7 @@ static void* dyarray_stretch(DyArray array)
 
 void dyarray_destroy(DyArray array)
 {
-	if EXPECT_FALSE (!array) { return; }
+	if NOEXPECT (!array) { return; }
 
 	free(array->raw);
 	free(array);
@@ -67,7 +67,7 @@ DyArray dyarray_create(size_t size, size_t count)
 
 	size_t allocSize = sizeof(DyArray_T);
 	DyArray array = malloc(allocSize);
-	if EXPECT_FALSE (!array) { MALLOC_FAILURE(array, allocSize); return NULL; }
+	if NOEXPECT (!array) { MALLOC_FAILURE(array, allocSize); return NULL; }
 
 	array->size = size;
 	array->count = 0;
@@ -77,7 +77,7 @@ DyArray dyarray_create(size_t size, size_t count)
 	if (count) {
 		allocSize = count * size;
 		void* raw = malloc(allocSize);
-		if EXPECT_FALSE (!raw) { MALLOC_FAILURE(raw, allocSize); free(array); return NULL; }
+		if NOEXPECT (!raw) { MALLOC_FAILURE(raw, allocSize); free(array); return NULL; }
 		array->raw = raw;
 	}
 
@@ -155,7 +155,7 @@ void* dyarray_append(DyArray array, const void* restrict value)
 
 	if (count == capacity) {
 		void* newRaw = dyarray_stretch(array);
-		if EXPECT_FALSE (!newRaw) { return NULL; }
+		if NOEXPECT (!newRaw) { return NULL; }
 		raw = newRaw;
 	}
 
@@ -177,7 +177,7 @@ void* dyarray_prepend(DyArray array, const void* restrict value)
 
 	if (count == capacity) {
 		void* newRaw = dyarray_stretch(array);
-		if EXPECT_FALSE (!newRaw) { return NULL; }
+		if NOEXPECT (!newRaw) { return NULL; }
 		raw = newRaw;
 	}
 
@@ -203,7 +203,7 @@ void* dyarray_add(DyArray array, const void* restrict value, size_t index)
 
 	if (count == capacity) {
 		void* newRaw = dyarray_stretch(array);
-		if EXPECT_FALSE (!newRaw) { return NULL; }
+		if NOEXPECT (!newRaw) { return NULL; }
 		raw = newRaw;
 	}
 

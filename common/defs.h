@@ -56,11 +56,11 @@
 #endif
 
 #if has_builtin(expect)
-	#define EXPECT_TRUE(x)  ( __builtin_expect ((bool) (x), true) )
-	#define EXPECT_FALSE(x) ( __builtin_expect ((bool) (x), false) )
+	#define EXPECT(x)   ( __builtin_expect ((x) ? 1 : 0, 1) )
+	#define NOEXPECT(x) ( __builtin_expect ((x) ? 1 : 0, 0) )
 #else
-	#define EXPECT_TRUE(x)  (x)
-	#define EXPECT_FALSE(x) (x)
+	#define EXPECT(x)   (x)
+	#define NOEXPECT(x) (x)
 #endif
 
 #if has_attribute(hot)
@@ -114,16 +114,18 @@
 
 #if has_attribute(nonnull)
 	#define NONNULL_ARGS(...) __attribute__ (( nonnull (__VA_ARGS__) ))
-	#define NONNULL_ARGS_ALL  __attribute__ (( nonnull ))
+	#define NONNULL_ALL       __attribute__ (( nonnull ))
 #else
 	#define NONNULL_ARGS(...)
-	#define NONNULL_ARGS_ALL
+	#define NONNULL_ALL
 #endif
 
 #if has_attribute(nonnull_if_nonzero)
-	#define NONNULL_NONZERO_ARGS(arg1, arg2) __attribute__ (( nonnull_if_nonzero (arg1, arg2) ))
+	#define NONNULL_NONZERO_ARG(arg1, arg2)        __attribute__ (( nonnull_if_nonzero (arg1, arg2) ))
+	#define NONNULL_NONZERO_ARGS(arg1, arg2, arg3) __attribute__ (( nonnull_if_nonzero (arg1, arg2, arg3) ))
 #else
-	#define NONNULL_NONZERO_ARGS(arg1, arg2)
+	#define NONNULL_NONZERO_ARG(arg1, arg2)
+	#define NONNULL_NONZERO_ARGS(arg1, arg2, arg3)
 #endif
 
 #if has_attribute(alloc_size)
@@ -180,7 +182,7 @@
 #endif
 
 
-// ANSI escape codes regarding Select Graphic Rendition
+// ANSI escape codes regarding Select Graphic Rendition (SGR)
 
 #define SGR_RESET      "\033[m"
 #define SGR_BOLD       "\033[1m"
@@ -220,6 +222,24 @@
 #define SGR_BG_24BIT(r, g, b) "\033[48;2;" #r ";" #g ";" #b "m"
 
 
+// Useful values
+
+#define KIB_SIZE ( UINT64_C(1) << 10 )
+#define MIB_SIZE ( UINT64_C(1) << 20 )
+#define GIB_SIZE ( UINT64_C(1) << 30 )
+
+#define MS_PER_CLOCK ( 1000.0 / CLOCKS_PER_SEC )
+
+#define VK_KHR_PROFILES_LAYER_NAME           "VK_LAYER_KHRONOS_profiles"
+#define VK_KHR_VALIDATION_LAYER_NAME         "VK_LAYER_KHRONOS_validation"
+#define VK_KHR_SYNCHRONIZATION_2_LAYER_NAME  "VK_LAYER_KHRONOS_synchronization2"
+#define VK_KHR_TIMELINE_SEMAPHORE_LAYER_NAME "VK_LAYER_KHRONOS_timeline_semaphore"
+
+#define CLTZ_DEBUG_LOG_NAME      "debug.log"
+#define CLTZ_PIPELINE_CACHE_NAME "pipeline_cache.bin"
+#define CLTZ_PROGRESS_FILE_NAME  "position.txt"
+
+
 // Helper macros
 
 #define NEWLINE() putchar('\n')
@@ -227,7 +247,7 @@
 #define ARRAY_SIZE(a) ( sizeof(a) / sizeof(*(a)) )
 
 #define INT128_UPPER(x) ( (uint64_t) ((x) >> 64) )
-#define INT128_LOWER(x) ( (uint64_t) ((x) & ~0ULL) )
+#define INT128_LOWER(x) ( (uint64_t) ((x) & ~UINT64_C(0)) )
 
 #define INT128(upper, lower) ( (StartValue) (upper) << 64 | (StartValue) (lower) )
 
@@ -264,6 +284,9 @@ typedef enum ColourLevel
 
 typedef struct ProgramConfig
 {
+	const char* allocLogPath;
+	const char* capturePath;
+
 	OutputLevel outputLevel;
 	ColourLevel colourLevel;
 
@@ -280,39 +303,7 @@ typedef struct ProgramConfig
 
 	bool restart;
 	bool queryBenchmarks;
-	bool logAllocations;
-	bool capturePipelines;
 } ProgramConfig;
-
-
-// Global constants
-
-extern const char* const PROGRAM_NAME;
-extern const char* const PROGRAM_EXE;
-extern const char* const PROGRAM_COPYRIGHT;
-extern const char* const PROGRAM_LICENCE;
-
-extern const char* const DEBUG_LOG_NAME;
-extern const char* const ALLOC_LOG_NAME;
-extern const char* const PIPELINE_CACHE_NAME;
-extern const char* const PROGRESS_FILE_NAME;
-extern const char* const CAPTURE_FILE_NAME;
-
-extern const char* const VK_KHR_PROFILES_LAYER_NAME;
-extern const char* const VK_KHR_VALIDATION_LAYER_NAME;
-extern const char* const VK_KHR_SYNCHRONIZATION_2_LAYER_NAME;
-extern const char* const VK_KHR_TIMELINE_SEMAPHORE_LAYER_NAME;
-
-extern const uint32_t PROGRAM_VERSION;
-extern const uint32_t PROGRAM_VER_MAJOR;
-extern const uint32_t PROGRAM_VER_MINOR;
-extern const uint32_t PROGRAM_VER_PATCH;
-
-extern const uint32_t KiB_SIZE;
-extern const uint32_t MiB_SIZE;
-extern const uint32_t GiB_SIZE;
-
-extern const double MS_PER_CLOCK;
 
 
 // Global variables

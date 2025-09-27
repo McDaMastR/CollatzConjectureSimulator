@@ -36,26 +36,26 @@ bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const c
 	NONNULL_ARGS(1) NULTSTR_ARG(4);
 
 bool get_buffer_requirements_noext(
-	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* requirements) NONNULL_ARGS_ALL;
+	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* requirements) NONNULL_ALL;
 bool get_buffer_requirements_main4(
-	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* requirements) NONNULL_ARGS_ALL;
+	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* requirements) NONNULL_ALL;
 
-bool save_pipeline_cache(VkDevice device, VkPipelineCache cache, const char* filename) NONNULL_ARGS_ALL NULTSTR_ARG(3);
+bool save_pipeline_cache(VkDevice device, VkPipelineCache cache, const char* filename) NONNULL_ALL NULTSTR_ARG(3);
 
-bool file_size(const char* filename, size_t* size) NONNULL_ARGS_ALL NULTSTR_ARG(1);
-bool read_file(const char* filename, void* data, size_t size) NONNULL_ARGS_ALL NULTSTR_ARG(1);
-bool write_file(const char* filename, const void* data, size_t size) NONNULL_ARGS_ALL NULTSTR_ARG(1);
+bool file_size(const char* filename, size_t* size) NONNULL_ALL NULTSTR_ARG(1);
+bool read_file(const char* filename, void* data, size_t size) NONNULL_ALL NULTSTR_ARG(1);
+bool write_file(const char* filename, const void* data, size_t size) NONNULL_ALL NULTSTR_ARG(1);
 
 bool read_text(const char* filename, const char* format, ...)
-	SCANF_FUNC(2, 3) NONNULL_ARGS_ALL NULTSTR_ARG(1) NULTSTR_ARG(2);
+	SCANF_FUNC(2, 3) NONNULL_ALL NULTSTR_ARG(1) NULTSTR_ARG(2);
 bool write_text(const char* filename, const char* format, ...)
 	PRINTF_FUNC(2, 3) NONNULL_ARGS(1, 2) NULTSTR_ARG(1) NULTSTR_ARG(2);
 
 void* aligned_malloc(size_t size, size_t alignment) MALLOC_FUNC ALLOC_ARG(1) ALIGN_ARG(2) USE_RET;
-void* aligned_realloc(void* memory, size_t size, size_t alignment) NONNULL_ARGS_ALL ALLOC_ARG(2) ALIGN_ARG(3) USE_RET;
-void aligned_free(void* memory) NONNULL_ARGS_ALL;
+void* aligned_realloc(void* memory, size_t size, size_t alignment) NONNULL_ALL ALLOC_ARG(2) ALIGN_ARG(3) USE_RET;
+void aligned_free(void* memory) NONNULL_ALL;
 
-size_t aligned_size(const void* memory) NONNULL_ARGS_ALL USE_RET;
+size_t aligned_size(const void* memory) NONNULL_ALL USE_RET;
 
 
 // Unsigned integer maximum and minimum functions

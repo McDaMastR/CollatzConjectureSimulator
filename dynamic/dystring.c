@@ -43,7 +43,7 @@ static char* dystring_stretch(DyString string, size_t length)
 	}
 
 	char* newRaw = realloc(raw, newCapacity);
-	if EXPECT_FALSE (!newRaw) { REALLOC_FAILURE(newRaw, raw, newCapacity); return NULL; }
+	if NOEXPECT (!newRaw) { REALLOC_FAILURE(newRaw, raw, newCapacity); return NULL; }
 
 	void* addedMemory = newRaw + capacity;
 	size_t addedMemorySize = newCapacity - capacity;
@@ -60,7 +60,7 @@ static char* dystring_stretch(DyString string, size_t length)
 
 void dystring_destroy(DyString string)
 {
-	if EXPECT_FALSE (!string) { return; }
+	if NOEXPECT (!string) { return; }
 
 	free(string->raw);
 	free(string);
@@ -70,11 +70,11 @@ DyString dystring_create(size_t count)
 {
 	size_t allocSize = sizeof(DyString_T);
 	DyString string = malloc(allocSize);
-	if EXPECT_FALSE (!string) { MALLOC_FAILURE(string, allocSize); return NULL; }
+	if NOEXPECT (!string) { MALLOC_FAILURE(string, allocSize); return NULL; }
 
 	allocSize = sizeof(char);
 	char* raw = calloc(count, allocSize);
-	if EXPECT_FALSE (!raw) { CALLOC_FAILURE(raw, count, allocSize); free(string); return NULL; }
+	if NOEXPECT (!raw) { CALLOC_FAILURE(raw, count, allocSize); free(string); return NULL; }
 
 	string->length = 1;
 	string->capacity = count;
@@ -108,7 +108,7 @@ char* dystring_append(DyString string, const char* restrict substring)
 
 	if (newLength > capacity) {
 		char* newRaw = dystring_stretch(string, newLength);
-		if EXPECT_FALSE (!newRaw) { return NULL; }
+		if NOEXPECT (!newRaw) { return NULL; }
 		raw = newRaw;
 	}
 
@@ -134,7 +134,7 @@ char* dystring_prepend(DyString string, const char* restrict substring)
 
 	if (newLength > capacity) {
 		char* newRaw = dystring_stretch(string, newLength);
-		if EXPECT_FALSE (!newRaw) { return NULL; }
+		if NOEXPECT (!newRaw) { return NULL; }
 		raw = newRaw;
 	}
 
@@ -164,7 +164,7 @@ char* dystring_add(DyString string, const char* restrict substring, size_t index
 
 	if (newLength > capacity) {
 		char* newRaw = dystring_stretch(string, newLength);
-		if EXPECT_FALSE (!newRaw) { return NULL; }
+		if NOEXPECT (!newRaw) { return NULL; }
 		raw = newRaw;
 	}
 

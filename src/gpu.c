@@ -26,27 +26,27 @@ bool create_instance(Gpu* restrict gpu)
 	bool bres;
 
 	DyRecord localRecord = dyrecord_create();
-	if EXPECT_FALSE (!localRecord) { return false; }
+	if NOEXPECT (!localRecord) { return false; }
 
 	DyRecord gpuRecord = dyrecord_create();
-	if EXPECT_FALSE (!gpuRecord) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!gpuRecord) { dyrecord_destroy(localRecord); return false; }
 	gpu->allocRecord = gpuRecord;
 
 	// Load global-level Vulkan functions via volk
 	vkres = volkInitialize();
-	if EXPECT_FALSE (vkres) { VKINIT_FAILURE(vkres); dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { VKINIT_FAILURE(vkres); dyrecord_destroy(localRecord); return false; }
 
 	uint32_t instanceApiVersion = volkGetInstanceVersion();
-	if EXPECT_FALSE (instanceApiVersion == VK_API_VERSION_1_0) {
+	if NOEXPECT (instanceApiVersion == VK_API_VERSION_1_0) {
 		VKVERS_FAILURE(instanceApiVersion); dyrecord_destroy(localRecord); return false; }
 
 	// Specify allocator for Vulkan to use
 	VkAllocationCallbacks* allocator = NULL;
 
-	if (g_config.logAllocations) {
+	if (g_config.allocLogPath) {
 		size_t allocSize = sizeof(VkAllocationCallbacks);
 		allocator = dyrecord_malloc(gpuRecord, allocSize);
-		if EXPECT_FALSE (!allocator) {dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (!allocator) {dyrecord_destroy(localRecord); return false; }
 		gpu->allocator = allocator;
 
 		allocator->pUserData = &g_callbackData;
@@ -57,12 +57,12 @@ bool create_instance(Gpu* restrict gpu)
 		allocator->pfnInternalFree = internal_free_callback;
 
 		bres = init_alloc_logfile();
-		if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 	}
 
 #ifndef NDEBUG
 	bres = init_debug_logfile();
-	if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 #endif
 
 	VkDebugUtilsMessengerCreateInfoEXT debugMessengerInfo = {0};
@@ -82,33 +82,33 @@ bool create_instance(Gpu* restrict gpu)
 	// Get instance layers
 	uint32_t layerCount;
 	VK_CALLR(vkEnumerateInstanceLayerProperties, &layerCount, NULL);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	VkLayerProperties* layersProps = NULL;
 
 	if (layerCount) {
 		size_t allocSize = layerCount * sizeof(VkLayerProperties);
 		layersProps = dyrecord_malloc(localRecord, allocSize);
-		if EXPECT_FALSE (!layersProps) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (!layersProps) { dyrecord_destroy(localRecord); return false; }
 
 		VK_CALLR(vkEnumerateInstanceLayerProperties, &layerCount, layersProps);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	}
 
 	// Get instance extensions
 	uint32_t extensionCount;
 	VK_CALLR(vkEnumerateInstanceExtensionProperties, NULL, &extensionCount, NULL);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	VkExtensionProperties* extensionsProps = NULL;
 
 	if (extensionCount) {
 		size_t allocSize = extensionCount * sizeof(VkExtensionProperties);
 		extensionsProps = dyrecord_malloc(localRecord, allocSize);
-		if EXPECT_FALSE (!extensionsProps) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (!extensionsProps) { dyrecord_destroy(localRecord); return false; }
 
 		VK_CALLR(vkEnumerateInstanceExtensionProperties, NULL, &extensionCount, extensionsProps);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	}
 
 	// Select layers
@@ -116,10 +116,10 @@ bool create_instance(Gpu* restrict gpu)
 	size_t elmCount = 4;
 
 	DyArray enabledLayers = dyarray_create(elmSize, elmCount);
-	if EXPECT_FALSE (!enabledLayers) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!enabledLayers) { dyrecord_destroy(localRecord); return false; }
 
 	bres = dyrecord_add(localRecord, enabledLayers, dyarray_destroy_stub);
-	if EXPECT_FALSE (!bres) { dyarray_destroy(enabledLayers); dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!bres) { dyarray_destroy(enabledLayers); dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < layerCount; i++) {
 		const char* layerName = layersProps[i].layerName;
@@ -146,10 +146,10 @@ bool create_instance(Gpu* restrict gpu)
 	elmCount = 2;
 
 	DyArray enabledExtensions = dyarray_create(elmSize, elmCount);
-	if EXPECT_FALSE (!enabledExtensions) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!enabledExtensions) { dyrecord_destroy(localRecord); return false; }
 
 	bres = dyrecord_add(localRecord, enabledExtensions, dyarray_destroy_stub);
-	if EXPECT_FALSE (!bres) { dyarray_destroy(enabledExtensions); dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!bres) { dyarray_destroy(enabledExtensions); dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < extensionCount; i++) {
 		const char* extensionName = extensionsProps[i].extensionName;
@@ -172,8 +172,8 @@ bool create_instance(Gpu* restrict gpu)
 	// Create instance
 	VkApplicationInfo appInfo = {0};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName = PROGRAM_NAME;
-	appInfo.applicationVersion = PROGRAM_VERSION;
+	appInfo.pApplicationName = CLTZ_NAME;
+	appInfo.applicationVersion = VK_MAKE_API_VERSION(0, CLTZ_VERSION_MAJOR, CLTZ_VERSION_MINOR, CLTZ_VERSION_PATCH);
 	appInfo.apiVersion = VK_API_VERSION_1_4;
 
 	uint32_t enabledLayerCount = (uint32_t) dyarray_size(enabledLayers);
@@ -208,7 +208,7 @@ bool create_instance(Gpu* restrict gpu)
 
 	VkInstance instance;
 	VK_CALLR(vkCreateInstance, &instanceInfo, allocator, &instance);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	volkLoadInstanceOnly(instance);
 
@@ -232,17 +232,17 @@ bool select_device(Gpu* restrict gpu)
 	size_t allocSize;
 
 	VkInstance instance = volkGetLoadedInstance();
-	if EXPECT_FALSE (!instance) { return false; }
+	if NOEXPECT (!instance) { return false; }
 
 	DyRecord localRecord = dyrecord_create();
-	if EXPECT_FALSE (!localRecord) { return false; }
+	if NOEXPECT (!localRecord) { return false; }
 
 	// Get physical devices
 	uint32_t deviceCount;
 	VK_CALLR(vkEnumeratePhysicalDevices, instance, &deviceCount, NULL);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
-	if EXPECT_FALSE (!deviceCount) {
+	if NOEXPECT (!deviceCount) {
 		log_critical(stderr, "No physical devices are accessible to the Vulkan instance");
 		dyrecord_destroy(localRecord);
 		return false;
@@ -250,45 +250,45 @@ bool select_device(Gpu* restrict gpu)
 
 	allocSize = deviceCount * sizeof(VkPhysicalDevice);
 	VkPhysicalDevice* devices = dyrecord_malloc(localRecord, allocSize);
-	if EXPECT_FALSE (!devices) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!devices) { dyrecord_destroy(localRecord); return false; }
 
 	VK_CALLR(vkEnumeratePhysicalDevices, instance, &deviceCount, devices);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	// Get extensions of each device
 	allocSize = deviceCount * sizeof(uint32_t);
 	uint32_t* extensionCounts = dyrecord_malloc(localRecord, allocSize);
-	if EXPECT_FALSE (!extensionCounts) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!extensionCounts) { dyrecord_destroy(localRecord); return false; }
 
 	allocSize = deviceCount * sizeof(VkExtensionProperties*);
 	VkExtensionProperties** devicesExtensionsProperties = dyrecord_malloc(localRecord, allocSize);
-	if EXPECT_FALSE (!devicesExtensionsProperties) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!devicesExtensionsProperties) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < deviceCount; i++) {
 		VkPhysicalDevice device = devices[i];
 		VK_CALLR(vkEnumerateDeviceExtensionProperties, device, NULL, &extensionCounts[i], NULL);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 		allocCount = extensionCounts[i];
 		allocSize = sizeof(VkExtensionProperties);
 
 		devicesExtensionsProperties[i] = dyrecord_calloc(localRecord, allocCount, allocSize);
-		if EXPECT_FALSE (!devicesExtensionsProperties[i]) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (!devicesExtensionsProperties[i]) { dyrecord_destroy(localRecord); return false; }
 
 		VK_CALLR(vkEnumerateDeviceExtensionProperties,
 			device, NULL, &extensionCounts[i], devicesExtensionsProperties[i]);
 
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	}
 
 	// Get queue familes of each device
 	allocSize = deviceCount * sizeof(uint32_t);
 	uint32_t* familyCounts = dyrecord_malloc(localRecord, allocSize);
-	if EXPECT_FALSE (!familyCounts) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!familyCounts) { dyrecord_destroy(localRecord); return false; }
 
 	allocSize = deviceCount * sizeof(VkQueueFamilyProperties2*);
 	VkQueueFamilyProperties2** devicesFamiliesProperties = dyrecord_malloc(localRecord, allocSize);
-	if EXPECT_FALSE (!devicesFamiliesProperties) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!devicesFamiliesProperties) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < deviceCount; i++) {
 		VkPhysicalDevice device = devices[i];
@@ -298,7 +298,7 @@ bool select_device(Gpu* restrict gpu)
 		allocSize = sizeof(VkQueueFamilyProperties2);
 
 		devicesFamiliesProperties[i] = dyrecord_calloc(localRecord, allocCount, allocSize);
-		if EXPECT_FALSE (!devicesFamiliesProperties[i]) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (!devicesFamiliesProperties[i]) { dyrecord_destroy(localRecord); return false; }
 
 		for (uint32_t j = 0; j < familyCounts[i]; j++) {
 			devicesFamiliesProperties[i][j].sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2;
@@ -312,7 +312,7 @@ bool select_device(Gpu* restrict gpu)
 	allocSize = sizeof(VkPhysicalDeviceMemoryProperties2);
 
 	VkPhysicalDeviceMemoryProperties2* devicesMemoryProperties = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!devicesMemoryProperties) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!devicesMemoryProperties) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < deviceCount; i++) {
 		devicesMemoryProperties[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
@@ -324,7 +324,7 @@ bool select_device(Gpu* restrict gpu)
 	allocSize = sizeof(VkPhysicalDeviceProperties2);
 
 	VkPhysicalDeviceProperties2* devicesProperties = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!devicesProperties) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!devicesProperties) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < deviceCount; i++) {
 		devicesProperties[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
@@ -336,7 +336,7 @@ bool select_device(Gpu* restrict gpu)
 	allocSize = sizeof(VkPhysicalDeviceFeatures2);
 
 	VkPhysicalDeviceFeatures2* devicesFeatures = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!devicesFeatures) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!devicesFeatures) { dyrecord_destroy(localRecord); return false; }
 
 	allocCount = deviceCount;
 	allocSize = sizeof(VkPhysicalDevice16BitStorageFeatures);
@@ -344,7 +344,7 @@ bool select_device(Gpu* restrict gpu)
 	VkPhysicalDevice16BitStorageFeatures* devices16BitStorageFeatures = dyrecord_calloc(
 		localRecord, allocCount, allocSize);
 
-	if EXPECT_FALSE (!devices16BitStorageFeatures) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!devices16BitStorageFeatures) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < deviceCount; i++) {
 		devices16BitStorageFeatures[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES;
@@ -543,7 +543,7 @@ bool select_device(Gpu* restrict gpu)
 		if (hasStorageBuffer16BitAccess)     { currentScore += 100; }
 		if (hasSubgroupSizeControl)          { currentScore += 10; }
 
-		if (g_config.capturePipelines && hasPipelineExecutableProperties) { currentScore += 10; }
+		if (g_config.capturePath && hasPipelineExecutableProperties) { currentScore += 10; }
 
 		if (currentScore > bestScore) {
 			bestScore = currentScore;
@@ -558,7 +558,7 @@ bool select_device(Gpu* restrict gpu)
 			usingMemoryBudget = hasMemoryBudget;
 			usingMemoryPriority = hasMemoryPriority;
 			usingPipelineCreationCacheControl = hasPipelineCreationCacheControl;
-			usingPipelineExecutableProperties = g_config.capturePipelines && hasPipelineExecutableProperties;
+			usingPipelineExecutableProperties = g_config.capturePath && hasPipelineExecutableProperties;
 			usingPortabilitySubset = hasPortabilitySubset;
 			usingShaderInt16 = g_config.preferInt16 && hasShaderInt16;
 			usingShaderInt64 = g_config.preferInt64 && hasShaderInt64;
@@ -782,16 +782,16 @@ bool create_device(Gpu* restrict gpu)
 	VkResult vkres;
 
 	DyRecord localRecord = dyrecord_create();
-	if EXPECT_FALSE (!localRecord) { return false; }
+	if NOEXPECT (!localRecord) { return false; }
 
 	size_t elmSize = sizeof(const char*);
 	size_t elmCount = 21;
 
 	DyArray enabledExtensions = dyarray_create(elmSize, elmCount);
-	if EXPECT_FALSE (!enabledExtensions) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!enabledExtensions) { dyrecord_destroy(localRecord); return false; }
 
 	bool bres = dyrecord_add(localRecord, enabledExtensions, dyarray_destroy_stub);
-	if EXPECT_FALSE (!bres) { dyarray_destroy(enabledExtensions); dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!bres) { dyarray_destroy(enabledExtensions); dyrecord_destroy(localRecord); return false; }
 
 	// Required extensions
 	const char* extensionName = VK_KHR_COPY_COMMANDS_2_EXTENSION_NAME;
@@ -1014,7 +1014,7 @@ bool create_device(Gpu* restrict gpu)
 
 	VkDevice device;
 	VK_CALLR(vkCreateDevice, physicalDevice, &deviceInfo, allocator, &device);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->device = device;
 
 	volkLoadDevice(device);
@@ -1084,14 +1084,14 @@ bool manage_memory(Gpu* restrict gpu)
 	VkMemoryRequirements hostVisibleMemoryRequirements;
 
 	bool bres = get_buffer_requirements(device, sizeof(char), hostVisibleBufferUsage, &hostVisibleMemoryRequirements);
-	if EXPECT_FALSE (!bres) { return false; }
+	if NOEXPECT (!bres) { return false; }
 
 	VkBufferUsageFlags deviceLocalBufferUsage =
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	VkMemoryRequirements deviceLocalMemoryRequirements;
 
 	bres = get_buffer_requirements(device, sizeof(char), deviceLocalBufferUsage, &deviceLocalMemoryRequirements);
-	if EXPECT_FALSE (!bres) { return false; }
+	if NOEXPECT (!bres) { return false; }
 
 	uint32_t deviceLocalMemoryTypeBits = deviceLocalMemoryRequirements.memoryTypeBits;
 	uint32_t hostVisibleMemoryTypeBits = hostVisibleMemoryRequirements.memoryTypeBits;
@@ -1249,10 +1249,10 @@ bool manage_memory(Gpu* restrict gpu)
 	uint32_t inoutsPerHeap = inoutsPerBuffer * buffersPerHeap;
 
 	bres = get_buffer_requirements(device, bytesPerBuffer, hostVisibleBufferUsage, &hostVisibleMemoryRequirements);
-	if EXPECT_FALSE (!bres) { return false; }
+	if NOEXPECT (!bres) { return false; }
 
 	bres = get_buffer_requirements(device, bytesPerBuffer, deviceLocalBufferUsage, &deviceLocalMemoryRequirements);
-	if EXPECT_FALSE (!bres) { return false; }
+	if NOEXPECT (!bres) { return false; }
 
 	VkDeviceSize bytesPerHostVisibleMemory = hostVisibleMemoryRequirements.size;
 	VkDeviceSize bytesPerDeviceLocalMemory = deviceLocalMemoryRequirements.size;
@@ -1365,14 +1365,14 @@ bool create_buffers(Gpu* restrict gpu)
 	VkResult vkres;
 
 	DyRecord localRecord = dyrecord_create();
-	if EXPECT_FALSE (!localRecord) { return false; }
+	if NOEXPECT (!localRecord) { return false; }
 
 	// Create host visible buffers
 	size_t allocCount = buffersPerHeap;
 	size_t allocSize = sizeof(VkBuffer);
 
 	VkBuffer* hostVisibleBuffers = dyrecord_calloc(gpuRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!hostVisibleBuffers) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!hostVisibleBuffers) { dyrecord_destroy(localRecord); return false; }
 	gpu->hostVisibleBuffers = hostVisibleBuffers;
 
 	VkBufferCreateInfo hostVisibleBufferInfo = {0};
@@ -1384,7 +1384,7 @@ bool create_buffers(Gpu* restrict gpu)
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
 		VkBuffer hostVisibleBuffer;
 		VK_CALLR(vkCreateBuffer, device, &hostVisibleBufferInfo, allocator, &hostVisibleBuffer);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 		hostVisibleBuffers[i] = hostVisibleBuffer;
 	}
 
@@ -1393,7 +1393,7 @@ bool create_buffers(Gpu* restrict gpu)
 	allocSize = sizeof(VkBuffer);
 
 	VkBuffer* deviceLocalBuffers = dyrecord_calloc(gpuRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!deviceLocalBuffers) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!deviceLocalBuffers) { dyrecord_destroy(localRecord); return false; }
 	gpu->deviceLocalBuffers = deviceLocalBuffers;
 
 	VkBufferCreateInfo deviceLocalBufferInfo = {0};
@@ -1406,7 +1406,7 @@ bool create_buffers(Gpu* restrict gpu)
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
 		VkBuffer deviceLocalBuffer;
 		VK_CALLR(vkCreateBuffer, device, &deviceLocalBufferInfo, allocator, &deviceLocalBuffer);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 		deviceLocalBuffers[i] = deviceLocalBuffer;
 	}
 
@@ -1415,7 +1415,7 @@ bool create_buffers(Gpu* restrict gpu)
 	allocSize = sizeof(VkDeviceMemory);
 
 	VkDeviceMemory* hostVisibleMemories = dyrecord_calloc(gpuRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!hostVisibleMemories) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!hostVisibleMemories) { dyrecord_destroy(localRecord); return false; }
 	gpu->hostVisibleDeviceMemories = hostVisibleMemories;
 
 	VkMemoryPriorityAllocateInfoEXT hostVisiblePriorityInfo = {0};
@@ -1436,7 +1436,7 @@ bool create_buffers(Gpu* restrict gpu)
 
 		VkDeviceMemory hostVisibleMemory;
 		VK_CALLR(vkAllocateMemory, device, &hostVisibleAllocInfo, allocator, &hostVisibleMemory);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 		hostVisibleMemories[i] = hostVisibleMemory;
 	}
 
@@ -1445,7 +1445,7 @@ bool create_buffers(Gpu* restrict gpu)
 	allocSize = sizeof(VkDeviceMemory);
 
 	VkDeviceMemory* deviceLocalMemories = dyrecord_calloc(gpuRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!deviceLocalMemories) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!deviceLocalMemories) { dyrecord_destroy(localRecord); return false; }
 	gpu->deviceLocalDeviceMemories = deviceLocalMemories;
 
 	VkMemoryPriorityAllocateInfoEXT deviceLocalPriorityInfo = {0};
@@ -1466,7 +1466,7 @@ bool create_buffers(Gpu* restrict gpu)
 
 		VkDeviceMemory deviceLocalMemory;
 		VK_CALLR(vkAllocateMemory, device, &deviceLocalAllocInfo, allocator, &deviceLocalMemory);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 		deviceLocalMemories[i] = deviceLocalMemory;
 	}
 
@@ -1475,7 +1475,7 @@ bool create_buffers(Gpu* restrict gpu)
 	allocSize = sizeof(VkBindBufferMemoryInfo[2]);
 
 	VkBindBufferMemoryInfo (*bindBufferMemoryInfos)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!bindBufferMemoryInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!bindBufferMemoryInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
 		bindBufferMemoryInfos[i][0].sType = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO;
@@ -1493,17 +1493,17 @@ bool create_buffers(Gpu* restrict gpu)
 	VkBindBufferMemoryInfo* bindInfos = (VkBindBufferMemoryInfo*) bindBufferMemoryInfos;
 
 	VK_CALLR(vkBindBufferMemory2, device, bindInfoCount, bindInfos);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	// Map host visible device memories
 	allocSize = inoutsPerHeap * sizeof(StartValue*);
 	StartValue** mappedInBuffers = dyrecord_malloc(gpuRecord, allocSize);
-	if EXPECT_FALSE (!mappedInBuffers) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!mappedInBuffers) { dyrecord_destroy(localRecord); return false; }
 	gpu->mappedInBuffers = mappedInBuffers;
 
 	allocSize = inoutsPerHeap * sizeof(StopTime*);
 	StopTime** mappedOutBuffers = dyrecord_malloc(gpuRecord, allocSize);
-	if EXPECT_FALSE (!mappedOutBuffers) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!mappedOutBuffers) { dyrecord_destroy(localRecord); return false; }
 	gpu->mappedOutBuffers = mappedOutBuffers;
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
@@ -1514,7 +1514,7 @@ bool create_buffers(Gpu* restrict gpu)
 
 		void* mappedMemory;
 		VK_CALLR(vkMapMemory2KHR, device, &mapInfo, &mappedMemory);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 		mappedInBuffers[j] = mappedMemory;
 		mappedOutBuffers[j] = (StopTime*) (mappedInBuffers[j] + valuesPerInout);
@@ -1568,7 +1568,7 @@ bool create_descriptors(Gpu* restrict gpu)
 	size_t allocSize;
 
 	DyRecord localRecord = dyrecord_create();
-	if EXPECT_FALSE (!localRecord) { return false; }
+	if NOEXPECT (!localRecord) { return false; }
 
 	// Create descriptor set layout (same layout for each set)
 	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[2] = {0};
@@ -1589,7 +1589,7 @@ bool create_descriptors(Gpu* restrict gpu)
 
 	VkDescriptorSetLayout descriptorSetLayout;
 	VK_CALLR(vkCreateDescriptorSetLayout, device, &descriptorSetLayoutInfo, allocator, &descriptorSetLayout);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->descriptorSetLayout = descriptorSetLayout;
 
 	// Create descriptor pool (all sets allocated from same pool)
@@ -1605,18 +1605,18 @@ bool create_descriptors(Gpu* restrict gpu)
 
 	VkDescriptorPool descriptorPool;
 	VK_CALLR(vkCreateDescriptorPool, device, &descriptorPoolInfo, allocator, &descriptorPool);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->descriptorPool = descriptorPool;
 
 	// Allocate descriptor sets (one per inout-buffer)
 	allocSize = inoutsPerHeap * sizeof(VkDescriptorSet);
 	VkDescriptorSet* descriptorSets = dyrecord_malloc(gpuRecord, allocSize);
-	if EXPECT_FALSE (!descriptorSets) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!descriptorSets) { dyrecord_destroy(localRecord); return false; }
 	gpu->descriptorSets = descriptorSets;
 
 	allocSize = inoutsPerHeap * sizeof(VkDescriptorSetLayout);
 	VkDescriptorSetLayout* descriptorSetLayouts = dyrecord_malloc(localRecord, allocSize);
-	if EXPECT_FALSE (!descriptorSetLayouts) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!descriptorSetLayouts) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		descriptorSetLayouts[i] = descriptorSetLayout;
@@ -1629,20 +1629,20 @@ bool create_descriptors(Gpu* restrict gpu)
 	descriptorSetAllocInfo.pSetLayouts = descriptorSetLayouts;
 
 	VK_CALLR(vkAllocateDescriptorSets, device, &descriptorSetAllocInfo, descriptorSets);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	// Write to each descriptor set
 	allocCount = inoutsPerHeap;
 	allocSize = sizeof(VkWriteDescriptorSet);
 
 	VkWriteDescriptorSet* writeDescriptorSets = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!writeDescriptorSets) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!writeDescriptorSets) { dyrecord_destroy(localRecord); return false; }
 
 	allocCount = inoutsPerHeap;
 	allocSize = sizeof(VkDescriptorBufferInfo[2]);
 
 	VkDescriptorBufferInfo (*descriptorBufferInfos)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!descriptorBufferInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!descriptorBufferInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
@@ -1709,7 +1709,7 @@ bool create_pipeline(Gpu* restrict gpu)
 	VkResult vkres;
 
 	DyRecord localRecord = dyrecord_create();
-	if EXPECT_FALSE (!localRecord) { return false; }
+	if NOEXPECT (!localRecord) { return false; }
 
 	char shaderName[52];
 	sprintf(
@@ -1737,32 +1737,32 @@ bool create_pipeline(Gpu* restrict gpu)
 
 	size_t shaderSize;
 	bool bres = file_size(shaderName, &shaderSize);
-	if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 
-	if EXPECT_FALSE (!shaderSize) {
+	if NOEXPECT (!shaderSize) {
 		log_critical(stderr, "Selected shader '%s' not found", shaderName);
 		dyrecord_destroy(localRecord);
 		return false;
 	}
 
 	uint32_t* shaderCode = dyrecord_malloc(localRecord, shaderSize);
-	if EXPECT_FALSE (!shaderCode) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!shaderCode) { dyrecord_destroy(localRecord); return false; }
 
 	bres = read_file(shaderName, shaderCode, shaderSize);
-	if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 
 	size_t cacheSize;
-	bres = file_size(PIPELINE_CACHE_NAME, &cacheSize);
-	if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+	bres = file_size(CLTZ_PIPELINE_CACHE_NAME, &cacheSize);
+	if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 
 	void* cacheData = NULL;
 
 	if (cacheSize) {
 		cacheData = dyrecord_malloc(localRecord, cacheSize);
-		if EXPECT_FALSE (!cacheData) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (!cacheData) { dyrecord_destroy(localRecord); return false; }
 
-		bres = read_file(PIPELINE_CACHE_NAME, cacheData, cacheSize);
-		if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+		bres = read_file(CLTZ_PIPELINE_CACHE_NAME, cacheData, cacheSize);
+		if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 	}
 
 	VkShaderModuleCreateInfo shaderInfo = {0};
@@ -1774,7 +1774,7 @@ bool create_pipeline(Gpu* restrict gpu)
 
 	if (!gpu->usingMaintenance5) {
 		VK_CALLR(vkCreateShaderModule, device, &shaderInfo, allocator, &shader);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 		gpu->shaderModule = shader;
 	}
 
@@ -1787,7 +1787,7 @@ bool create_pipeline(Gpu* restrict gpu)
 
 	VkPipelineCache cache;
 	VK_CALLR(vkCreatePipelineCache, device, &cacheInfo, allocator, &cache);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->pipelineCache = cache;
 
 	VkDescriptorSetLayout descriptorSetLayouts[1];
@@ -1800,7 +1800,7 @@ bool create_pipeline(Gpu* restrict gpu)
 
 	VkPipelineLayout pipelineLayout;
 	VK_CALLR(vkCreatePipelineLayout, device, &pipelineLayoutInfo, allocator, &pipelineLayout);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->pipelineLayout = pipelineLayout;
 
 	uint32_t specialisationData[1];
@@ -1838,11 +1838,11 @@ bool create_pipeline(Gpu* restrict gpu)
 
 	VkPipeline pipeline;
 	VK_CALLR(vkCreateComputePipelines, device, cache, ARRAY_SIZE(pipelineInfos), pipelineInfos, allocator, &pipeline);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->pipeline = pipeline;
 
-	bres = save_pipeline_cache(device, cache, PIPELINE_CACHE_NAME);
-	if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+	bres = save_pipeline_cache(device, cache, CLTZ_PIPELINE_CACHE_NAME);
+	if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 
 	if (computeFamilyTimestampValidBits || transferFamilyTimestampValidBits) {
 		VkQueryPoolCreateInfo queryPoolInfo = {0};
@@ -1852,13 +1852,13 @@ bool create_pipeline(Gpu* restrict gpu)
 
 		VkQueryPool queryPool;
 		VK_CALLR(vkCreateQueryPool, device, &queryPoolInfo, allocator, &queryPool);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 		gpu->queryPool = queryPool;
 	}
 
 	if (gpu->usingPipelineExecutableProperties) {
 		bres = capture_pipeline(device, pipeline);
-		if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 	}
 
 	VK_CALL(vkDestroyDescriptorSetLayout, device, descriptorSetLayout, allocator);
@@ -1889,7 +1889,7 @@ static bool record_initial_cmdbuffer(
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
 	VK_CALLR(vkBeginCommandBuffer, cmdBuffer, &beginInfo);
-	if EXPECT_FALSE (vkres) { return false; }
+	if NOEXPECT (vkres) { return false; }
 
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
 		VK_CALL(vkCmdCopyBuffer2KHR, cmdBuffer, &inBufferCopyInfos[i]);
@@ -1898,7 +1898,7 @@ static bool record_initial_cmdbuffer(
 	VK_CALL(vkCmdPipelineBarrier2KHR, cmdBuffer, dependencyInfo);
 
 	VK_CALLR(vkEndCommandBuffer, cmdBuffer);
-	if EXPECT_FALSE (vkres) { return false; }
+	if NOEXPECT (vkres) { return false; }
 
 	return true;
 }
@@ -1918,7 +1918,7 @@ static bool record_transfer_cmdbuffer(
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
 	VK_CALLR(vkBeginCommandBuffer, cmdBuffer, &beginInfo);
-	if EXPECT_FALSE (vkres) { return false; }
+	if NOEXPECT (vkres) { return false; }
 
 	if (timestampValidBits) {
 		// TODO Remove (vkCmdResetQueryPool not guaranteed to work on dedicated transfer queue families)
@@ -1945,7 +1945,7 @@ static bool record_transfer_cmdbuffer(
 	}
 
 	VK_CALLR(vkEndCommandBuffer, cmdBuffer);
-	if EXPECT_FALSE (vkres) { return false; }
+	if NOEXPECT (vkres) { return false; }
 
 	return true;
 }
@@ -1966,7 +1966,7 @@ static bool record_compute_cmdbuffer(
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
 	VK_CALLR(vkBeginCommandBuffer, cmdBuffer, &beginInfo);
-	if EXPECT_FALSE (vkres) { return false; }
+	if NOEXPECT (vkres) { return false; }
 
 	if (timestampValidBits) {
 		uint32_t queryCount = 2;
@@ -2000,7 +2000,7 @@ static bool record_compute_cmdbuffer(
 	}
 
 	VK_CALLR(vkEndCommandBuffer, cmdBuffer);
-	if EXPECT_FALSE (vkres) { return false; }
+	if NOEXPECT (vkres) { return false; }
 
 	return true;
 }
@@ -2038,7 +2038,7 @@ bool create_commands(Gpu* restrict gpu)
 	size_t allocSize;
 
 	DyRecord localRecord = dyrecord_create();
-	if EXPECT_FALSE (!localRecord) { return false; }
+	if NOEXPECT (!localRecord) { return false; }
 
 	// Create initial command pool
 	VkCommandPoolCreateInfo initialCmdPoolInfo = {0};
@@ -2048,7 +2048,7 @@ bool create_commands(Gpu* restrict gpu)
 
 	VkCommandPool initialCmdPool;
 	VK_CALLR(vkCreateCommandPool, device, &initialCmdPoolInfo, allocator, &initialCmdPool);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->initialCmdPool = initialCmdPool;
 
 	// Create compute command pool (all compute command buffers allocated from this pool)
@@ -2058,7 +2058,7 @@ bool create_commands(Gpu* restrict gpu)
 
 	VkCommandPool computeCmdPool;
 	VK_CALLR(vkCreateCommandPool, device, &computeCmdPoolInfo, allocator, &computeCmdPool);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->computeCmdPool = computeCmdPool;
 
 	// Create transfer command pool (all transfer command buffers allocated from this pool)
@@ -2068,7 +2068,7 @@ bool create_commands(Gpu* restrict gpu)
 
 	VkCommandPool transferCmdPool;
 	VK_CALLR(vkCreateCommandPool, device, &transferCmdPoolInfo, allocator, &transferCmdPool);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->transferCmdPool = transferCmdPool;
 
 	// Allocate initial command buffer
@@ -2080,7 +2080,7 @@ bool create_commands(Gpu* restrict gpu)
 
 	VkCommandBuffer initialCmdBuffer;
 	VK_CALLR(vkAllocateCommandBuffers, device, &initialCmdBufferAllocInfo, &initialCmdBuffer);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->initialCmdBuffer = initialCmdBuffer;
 
 	// Allocate compute command buffers (one per inout-buffer)
@@ -2088,7 +2088,7 @@ bool create_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkCommandBuffer);
 
 	VkCommandBuffer* computeCmdBuffers = dyrecord_calloc(gpuRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!computeCmdBuffers) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!computeCmdBuffers) { dyrecord_destroy(localRecord); return false; }
 	gpu->computeCmdBuffers = computeCmdBuffers;
 
 	VkCommandBufferAllocateInfo computeCmdBufferAllocInfo = {0};
@@ -2098,14 +2098,14 @@ bool create_commands(Gpu* restrict gpu)
 	computeCmdBufferAllocInfo.commandBufferCount = inoutsPerHeap;
 
 	VK_CALLR(vkAllocateCommandBuffers, device, &computeCmdBufferAllocInfo, computeCmdBuffers);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	// Allocate transfer command buffers (one per inout-buffer)
 	allocCount = inoutsPerHeap;
 	allocSize = sizeof(VkCommandBuffer);
 
 	VkCommandBuffer* transferCmdBuffers = dyrecord_calloc(gpuRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!transferCmdBuffers) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!transferCmdBuffers) { dyrecord_destroy(localRecord); return false; }
 	gpu->transferCmdBuffers = transferCmdBuffers;
 
 	VkCommandBufferAllocateInfo transferCmdBufferAllocInfo = {0};
@@ -2115,14 +2115,14 @@ bool create_commands(Gpu* restrict gpu)
 	transferCmdBufferAllocInfo.commandBufferCount = inoutsPerHeap;
 
 	VK_CALLR(vkAllocateCommandBuffers, device, &transferCmdBufferAllocInfo, transferCmdBuffers);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	// Specify in-buffer copy regions (same region layout per buffer)
 	allocCount = inoutsPerBuffer;
 	allocSize = sizeof(VkBufferCopy2);
 
 	VkBufferCopy2* inBufferRegions = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!inBufferRegions) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!inBufferRegions) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerBuffer; i++) {
 		inBufferRegions[i].sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
@@ -2136,7 +2136,7 @@ bool create_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkBufferCopy2);
 
 	VkBufferCopy2* outBufferRegions = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!outBufferRegions) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!outBufferRegions) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerBuffer; i++) {
 		outBufferRegions[i].sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
@@ -2150,7 +2150,7 @@ bool create_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkCopyBufferInfo2);
 
 	VkCopyBufferInfo2* initialBufferCopyInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!initialBufferCopyInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!initialBufferCopyInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
 		initialBufferCopyInfos[i].sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
@@ -2165,7 +2165,7 @@ bool create_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkCopyBufferInfo2);
 
 	VkCopyBufferInfo2* inBufferCopyInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!inBufferCopyInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!inBufferCopyInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 		VkBuffer hostVisibleBuffer = hostVisibleBuffers[i];
@@ -2185,7 +2185,7 @@ bool create_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkCopyBufferInfo2);
 
 	VkCopyBufferInfo2* outBufferCopyInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!outBufferCopyInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!outBufferCopyInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 		VkBuffer hostVisibleBuffer = hostVisibleBuffers[i];
@@ -2205,7 +2205,7 @@ bool create_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkBindDescriptorSetsInfo);
 
 	VkBindDescriptorSetsInfo* bindDescriptorSetsInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!bindDescriptorSetsInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!bindDescriptorSetsInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		bindDescriptorSetsInfos[i].sType = VK_STRUCTURE_TYPE_BIND_DESCRIPTOR_SETS_INFO;
@@ -2221,7 +2221,7 @@ bool create_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkBufferMemoryBarrier2);
 
 	VkBufferMemoryBarrier2* initialBufferMemoryBarriers = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!initialBufferMemoryBarriers) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!initialBufferMemoryBarriers) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 		VkBuffer deviceLocalBuffer = deviceLocalBuffers[i];
@@ -2243,7 +2243,7 @@ bool create_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkBufferMemoryBarrier2[2]);
 
 	VkBufferMemoryBarrier2 (*computeBufferMemoryBarriers)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!computeBufferMemoryBarriers) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!computeBufferMemoryBarriers) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 		VkBuffer deviceLocalBuffer = deviceLocalBuffers[i];
@@ -2274,7 +2274,7 @@ bool create_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkBufferMemoryBarrier2[3]);
 
 	VkBufferMemoryBarrier2 (*transferBufferMemoryBarriers)[3] = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!transferBufferMemoryBarriers) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!transferBufferMemoryBarriers) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 		VkBuffer hostVisibleBuffer = hostVisibleBuffers[i];
@@ -2321,7 +2321,7 @@ bool create_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkDependencyInfo[2]);
 
 	VkDependencyInfo (*computeDependencyInfos)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!computeDependencyInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!computeDependencyInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		computeDependencyInfos[i][0].sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
@@ -2338,7 +2338,7 @@ bool create_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkDependencyInfo[2]);
 
 	VkDependencyInfo (*transferDependencyInfos)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!transferDependencyInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!transferDependencyInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		transferDependencyInfos[i][0].sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
@@ -2354,7 +2354,7 @@ bool create_commands(Gpu* restrict gpu)
 	bool bres = record_initial_cmdbuffer(
 		initialCmdBuffer, initialBufferCopyInfos, &initialDependencyInfo, buffersPerHeap);
 
-	if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 
 	// Record compute command buffers
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
@@ -2363,7 +2363,7 @@ bool create_commands(Gpu* restrict gpu)
 			computeCmdBuffers[i], pipeline, &bindDescriptorSetsInfos[i], computeDependencyInfos[i], queryPool,
 			firstQuery, computeFamilyTimestampValidBits, workgroupCount);
 
-		if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 	}
 
 	// Record transfer command buffers
@@ -2373,7 +2373,7 @@ bool create_commands(Gpu* restrict gpu)
 			transferCmdBuffers[i], &inBufferCopyInfos[i], &outBufferCopyInfos[i], transferDependencyInfos[i], queryPool,
 			firstQuery, transferFamilyTimestampValidBits);
 
-		if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 	}
 
 	// Create semaphores (one per inout-buffer)
@@ -2381,7 +2381,7 @@ bool create_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkSemaphore);
 
 	VkSemaphore* semaphores = dyrecord_calloc(gpuRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!semaphores) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!semaphores) { dyrecord_destroy(localRecord); return false; }
 	gpu->semaphores = semaphores;
 
 	VkSemaphoreTypeCreateInfo semaphoreTypeInfo = {0};
@@ -2396,7 +2396,7 @@ bool create_commands(Gpu* restrict gpu)
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		VkSemaphore semaphore;
 		VK_CALLR(vkCreateSemaphore, device, &semaphoreInfo, allocator, &semaphore);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 		semaphores[i] = semaphore;
 	}
 
@@ -2476,32 +2476,32 @@ bool submit_commands(Gpu* restrict gpu)
 	size_t allocSize;
 
 	DyRecord localRecord = dyrecord_create();
-	if EXPECT_FALSE (!localRecord) { return false; }
+	if NOEXPECT (!localRecord) { return false; }
 	
 	// Create array of starting values with longest total stopping times
 	size_t elmSize = sizeof(StartValue);
 	size_t elmCount = 32;
 
 	DyArray bestStartValues = dyarray_create(elmSize, elmCount);
-	if EXPECT_FALSE (!bestStartValues) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!bestStartValues) { dyrecord_destroy(localRecord); return false; }
 
 	bool bres = dyrecord_add(localRecord, bestStartValues, dyarray_destroy_stub);
-	if EXPECT_FALSE (!bres) { dyarray_destroy(bestStartValues); dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!bres) { dyarray_destroy(bestStartValues); dyrecord_destroy(localRecord); return false; }
 
 	// Create array of longest total stopping times found
 	elmSize = sizeof(StopTime);
 	elmCount = 32;
 
 	DyArray bestStopTimes = dyarray_create(elmSize, elmCount);
-	if EXPECT_FALSE (!bestStopTimes) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!bestStopTimes) { dyrecord_destroy(localRecord); return false; }
 
 	bres = dyrecord_add(localRecord, bestStopTimes, dyarray_destroy_stub);
-	if EXPECT_FALSE (!bres) { dyarray_destroy(bestStopTimes); dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!bres) { dyarray_destroy(bestStopTimes); dyrecord_destroy(localRecord); return false; }
 
 	// Check if progress file exists
 	size_t fileSize;
-	bres = file_size(PROGRESS_FILE_NAME, &fileSize);
-	if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+	bres = file_size(CLTZ_PROGRESS_FILE_NAME, &fileSize);
+	if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 
 	Position position = {0};
 	position.val0mod1off[0] = 1;
@@ -2518,7 +2518,7 @@ bool submit_commands(Gpu* restrict gpu)
 		uint16_t bestTime;
 
 		bres = read_text(
-			PROGRESS_FILE_NAME,
+			CLTZ_PROGRESS_FILE_NAME,
 			"%" SCNx64 " %" SCNx64 "\n%" SCNx64 " %" SCNx64 "\n%" SCNx64 " %" SCNx64 "\n"
 			"%" SCNx64 " %" SCNx64 "\n%" SCNx64 " %" SCNx64 "\n%" SCNx64 " %" SCNx64 "\n"
 			"%" SCNx64 " %" SCNx64 "\n%" SCNx16,
@@ -2530,7 +2530,7 @@ bool submit_commands(Gpu* restrict gpu)
 			&val1mod6off2Upper, &val1mod6off2Lower,
 			&curValueUpper, &curValueLower, &bestTime);
 
-		if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 
 		position.val0mod1off[0] = INT128(val0mod1off0Upper, val0mod1off0Lower);
 		position.val0mod1off[1] = INT128(val0mod1off1Upper, val0mod1off1Lower);
@@ -2552,7 +2552,7 @@ bool submit_commands(Gpu* restrict gpu)
 		allocSize = sizeof(VkMappedMemoryRange);
 
 		inBuffersMappedRanges = dyrecord_calloc(localRecord, allocCount, allocSize);
-		if EXPECT_FALSE (!inBuffersMappedRanges) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (!inBuffersMappedRanges) { dyrecord_destroy(localRecord); return false; }
 
 		for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 			for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
@@ -2572,7 +2572,7 @@ bool submit_commands(Gpu* restrict gpu)
 		allocSize = sizeof(VkMappedMemoryRange);
 
 		outBuffersMappedRanges = dyrecord_calloc(localRecord, allocCount, allocSize);
-		if EXPECT_FALSE (!outBuffersMappedRanges) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (!outBuffersMappedRanges) { dyrecord_destroy(localRecord); return false; }
 
 		for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 			for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
@@ -2594,7 +2594,7 @@ bool submit_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkCommandBufferSubmitInfo);
 
 	VkCommandBufferSubmitInfo* transferCmdBufferSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!transferCmdBufferSubmitInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!transferCmdBufferSubmitInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		transferCmdBufferSubmitInfos[i].sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
@@ -2606,7 +2606,7 @@ bool submit_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkCommandBufferSubmitInfo);
 
 	VkCommandBufferSubmitInfo* computeCmdBufferSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!computeCmdBufferSubmitInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!computeCmdBufferSubmitInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		computeCmdBufferSubmitInfos[i].sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
@@ -2618,7 +2618,7 @@ bool submit_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkSemaphoreSubmitInfo);
 
 	VkSemaphoreSubmitInfo* transferWaitSemaphoreSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!transferWaitSemaphoreSubmitInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!transferWaitSemaphoreSubmitInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		transferWaitSemaphoreSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
@@ -2632,7 +2632,7 @@ bool submit_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkSemaphoreSubmitInfo);
 
 	VkSemaphoreSubmitInfo* transferSignalSemaphoreSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!transferSignalSemaphoreSubmitInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!transferSignalSemaphoreSubmitInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		transferSignalSemaphoreSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
@@ -2646,7 +2646,7 @@ bool submit_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkSemaphoreSubmitInfo);
 
 	VkSemaphoreSubmitInfo* computeWaitSemaphoreSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!computeWaitSemaphoreSubmitInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!computeWaitSemaphoreSubmitInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		computeWaitSemaphoreSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
@@ -2660,7 +2660,7 @@ bool submit_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkSemaphoreSubmitInfo);
 
 	VkSemaphoreSubmitInfo* computeSignalSemaphoreSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!computeSignalSemaphoreSubmitInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!computeSignalSemaphoreSubmitInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		computeSignalSemaphoreSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
@@ -2682,7 +2682,7 @@ bool submit_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkSubmitInfo2);
 
 	VkSubmitInfo2* transferSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!transferSubmitInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!transferSubmitInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		transferSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
@@ -2699,7 +2699,7 @@ bool submit_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkSubmitInfo2);
 
 	VkSubmitInfo2* computeSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!computeSubmitInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!computeSubmitInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		computeSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
@@ -2716,7 +2716,7 @@ bool submit_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkSemaphoreWaitInfo);
 
 	VkSemaphoreWaitInfo* transferSemaphoreWaitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!transferSemaphoreWaitInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!transferSemaphoreWaitInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		transferSemaphoreWaitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
@@ -2730,7 +2730,7 @@ bool submit_commands(Gpu* restrict gpu)
 	allocSize = sizeof(VkSemaphoreWaitInfo);
 
 	VkSemaphoreWaitInfo* computeSemaphoreWaitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!computeSemaphoreWaitInfos) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!computeSemaphoreWaitInfos) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		computeSemaphoreWaitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
@@ -2744,7 +2744,7 @@ bool submit_commands(Gpu* restrict gpu)
 	allocSize = sizeof(StartValue);
 
 	StartValue* testedValues = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!testedValues) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!testedValues) { dyrecord_destroy(localRecord); return false; }
 
 	// Create thread to wait for user input
 	atomic_bool input;
@@ -2752,7 +2752,7 @@ bool submit_commands(Gpu* restrict gpu)
 
 	pthread_t waitThread;
 	int ires = pthread_create(&waitThread, NULL, wait_for_input, &input);
-	if EXPECT_FALSE (ires) { PCREATE_FAILURE(ires); dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (ires) { PCREATE_FAILURE(ires); dyrecord_destroy(localRecord); return false; }
 
 	clock_t totalBmStart = clock();
 	StartValue tested = position.curStartValue;
@@ -2766,23 +2766,23 @@ bool submit_commands(Gpu* restrict gpu)
 
 	if (hostNonCoherent) {
 		VK_CALLR(vkFlushMappedMemoryRanges, device, inoutsPerHeap, inBuffersMappedRanges);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	}
 
 	// Initiate the first cycle
 	uint32_t submitInfoCount = 1;
 	VK_CALLR(vkQueueSubmit2KHR, transferQueue, submitInfoCount, &initialSubmitInfo, VK_NULL_HANDLE);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	submitInfoCount = inoutsPerHeap;
 	VK_CALLR(vkQueueSubmit2KHR, computeQueue, submitInfoCount, computeSubmitInfos, VK_NULL_HANDLE);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
 		// Wait for transfers to complete execution
 		uint64_t transferTimeout = UINT64_MAX;
 		VK_CALLR(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[i], transferTimeout);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 		// Write starting values to mapped in-buffer
 		write_inbuffer(mappedInBuffers[i], &testedValues[i], valuesPerInout, valuesPerHeap);
@@ -2794,13 +2794,13 @@ bool submit_commands(Gpu* restrict gpu)
 
 	if (hostNonCoherent) {
 		VK_CALLR(vkFlushMappedMemoryRanges, device, inoutsPerHeap, inBuffersMappedRanges);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	}
 
 	// Complete the first cycle (and initiate the second)
 	submitInfoCount = inoutsPerHeap;
 	VK_CALLR(vkQueueSubmit2KHR, transferQueue, submitInfoCount, transferSubmitInfos, VK_NULL_HANDLE);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	// Initial command buffer and pool are no longer needed
 	VK_CALL(vkDestroyCommandPool, device, initialCmdPool, allocator);
@@ -2840,7 +2840,7 @@ bool submit_commands(Gpu* restrict gpu)
 
 			uint64_t computeTimeout = UINT64_MAX;
 			VK_CALLR(vkWaitSemaphoresKHR, device, &computeSemaphoreWaitInfos[j], computeTimeout);
-			if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+			if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 			clock_t waitComputeBmEnd = clock();
 
@@ -2855,7 +2855,7 @@ bool submit_commands(Gpu* restrict gpu)
 					device, queryPool, firstQuery, queryCount, sizeof(timestamps), timestamps, sizeof(timestamps[0]),
 					queryFlags);
 
-				if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+				if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 				computeBmark = (double) (timestamps[1] - timestamps[0]) * timestampPeriod / 1000000;
 			}
 
@@ -2866,14 +2866,14 @@ bool submit_commands(Gpu* restrict gpu)
 			// Resubmit compute command buffer for next cycle
 			submitInfoCount = 1;
 			VK_CALLR(vkQueueSubmit2KHR, computeQueue, submitInfoCount, &computeSubmitInfos[j], VK_NULL_HANDLE);
-			if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+			if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 			// Wait for transfers to complete execution
 			clock_t waitTransferBmStart = clock();
 
 			uint64_t transferTimeout = UINT64_MAX;
 			VK_CALLR(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[j], transferTimeout);
-			if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+			if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 			clock_t waitTransferBmEnd = clock();
 
@@ -2888,14 +2888,14 @@ bool submit_commands(Gpu* restrict gpu)
 					device, queryPool, firstQuery, queryCount, sizeof(timestamps), timestamps, sizeof(timestamps[0]),
 					queryFlags);
 
-				if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+				if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 				transferBmark = (double) (timestamps[1] - timestamps[0]) * timestampPeriod / 1000000;
 			}
 
 			if (hostNonCoherent) {
 				uint32_t rangeCount = 1;
 				VK_CALLR(vkInvalidateMappedMemoryRanges, device, rangeCount, &outBuffersMappedRanges[j]);
-				if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+				if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 			}
 
 			// Read total stopping times from mapped out-buffer
@@ -2911,7 +2911,7 @@ bool submit_commands(Gpu* restrict gpu)
 			if (hostNonCoherent) {
 				uint32_t rangeCount = 1;
 				VK_CALLR(vkFlushMappedMemoryRanges, device, rangeCount, &inBuffersMappedRanges[j]);
-				if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+				if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 			}
 
 			// Update semaphore wait/signal values
@@ -2921,7 +2921,7 @@ bool submit_commands(Gpu* restrict gpu)
 			// Resubmit transfer command buffer for next cycle
 			submitInfoCount = 1;
 			VK_CALLR(vkQueueSubmit2KHR, transferQueue, submitInfoCount, &transferSubmitInfos[j], VK_NULL_HANDLE);
-			if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return NULL; }
+			if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return NULL; }
 
 			// Calculate and display benchmarks for current inout-buffer
 			double readBmark = get_benchmark(readBmStart, readBmEnd);
@@ -3027,12 +3027,12 @@ bool submit_commands(Gpu* restrict gpu)
 	// Stop waiting thread
 	if (atomic_load(&input)) {
 		ires = pthread_join(waitThread, NULL);
-		if EXPECT_FALSE (ires) { PJOIN_FAILURE(ires); dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (ires) { PJOIN_FAILURE(ires); dyrecord_destroy(localRecord); return false; }
 	}
 	else {
 		atomic_store(&input, true);
 		ires = pthread_cancel(waitThread);
-		if EXPECT_FALSE (ires) { PCANCEL_FAILURE(ires); dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (ires) { PCANCEL_FAILURE(ires); dyrecord_destroy(localRecord); return false; }
 	}
 
 	// Display results of calculations
@@ -3077,7 +3077,7 @@ bool submit_commands(Gpu* restrict gpu)
 	// Write current position to progress file
 	if (!g_config.restart) {
 		bres = write_text(
-			PROGRESS_FILE_NAME,
+			CLTZ_PROGRESS_FILE_NAME,
 			"%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n"
 			"%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n"
 			"%016" PRIx64 " %016" PRIx64 "\n%04"  PRIx16,
@@ -3090,7 +3090,7 @@ bool submit_commands(Gpu* restrict gpu)
 			INT128_UPPER(position.curStartValue),  INT128_LOWER(position.curStartValue),
 			position.bestStopTime);
 
-		if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 	}
 
 	dyrecord_destroy(localRecord);
@@ -3181,7 +3181,7 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 	VkResult vkres;
 
 	DyRecord localRecord = dyrecord_create();
-	if EXPECT_FALSE (!localRecord) { return false; }
+	if NOEXPECT (!localRecord) { return false; }
 
 	VkPipelineInfoKHR pipelineInfo = {0};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INFO_KHR;
@@ -3190,9 +3190,9 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 	// Get pipeline executable properties
 	uint32_t executableCount;
 	VK_CALLR(vkGetPipelineExecutablePropertiesKHR, device, &pipelineInfo, &executableCount, NULL);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
-	if EXPECT_FALSE (!executableCount) {
+	if NOEXPECT (!executableCount) {
 		log_warning(stdout, "No pipeline executables available for capture");
 		dyrecord_destroy(localRecord);
 		return true;
@@ -3202,17 +3202,17 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 	size_t allocSize = sizeof(VkPipelineExecutablePropertiesKHR);
 
 	VkPipelineExecutablePropertiesKHR* executablesProperties = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!executablesProperties) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!executablesProperties) { dyrecord_destroy(localRecord); return false; }
 
 	VK_CALLR(vkGetPipelineExecutablePropertiesKHR, device, &pipelineInfo, &executableCount, executablesProperties);
-	if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	// Specify pipeline executables to query
 	allocCount = executableCount;
 	allocSize = sizeof(VkPipelineExecutableInfoKHR);
 
 	VkPipelineExecutableInfoKHR* executablesInfo = dyrecord_calloc(localRecord, allocCount, allocSize);
-	if EXPECT_FALSE (!executablesInfo) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!executablesInfo) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < executableCount; i++) {
 		executablesInfo[i].sType = VK_STRUCTURE_TYPE_PIPELINE_EXECUTABLE_INFO_KHR;
@@ -3223,21 +3223,21 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 	// Get statistics for each pipeline executable
 	allocSize = executableCount * sizeof(uint32_t);
 	uint32_t* statisticCounts = dyrecord_malloc(localRecord, allocSize);
-	if EXPECT_FALSE (!statisticCounts) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!statisticCounts) { dyrecord_destroy(localRecord); return false; }
 
 	allocSize = executableCount * sizeof(VkPipelineExecutableStatisticKHR*);
 	VkPipelineExecutableStatisticKHR** executablesStatistics = dyrecord_malloc(localRecord, allocSize);
-	if EXPECT_FALSE (!executablesStatistics) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!executablesStatistics) { dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < executableCount; i++) {
 		VK_CALLR(vkGetPipelineExecutableStatisticsKHR, device, &executablesInfo[i], &statisticCounts[i], NULL);
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 		allocCount = statisticCounts[i];
 		allocSize = sizeof(VkPipelineExecutableStatisticKHR);
 
 		executablesStatistics[i] = dyrecord_calloc(localRecord, allocCount, allocSize);
-		if EXPECT_FALSE (!executablesStatistics[i]) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (!executablesStatistics[i]) { dyrecord_destroy(localRecord); return false; }
 
 		for (uint32_t j = 0; j < statisticCounts[i]; j++) {
 			executablesStatistics[i][j].sType = VK_STRUCTURE_TYPE_PIPELINE_EXECUTABLE_STATISTIC_KHR;
@@ -3246,15 +3246,15 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 		VK_CALLR(vkGetPipelineExecutableStatisticsKHR,
 			device, &executablesInfo[i], &statisticCounts[i], executablesStatistics[i]);
 
-		if EXPECT_FALSE (vkres) { dyrecord_destroy(localRecord); return false; }
+		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	}
 
 	// Construct message with info on each pipeline executable
 	DyString message = dystring_create(1024);
-	if EXPECT_FALSE (!message) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!message) { dyrecord_destroy(localRecord); return false; }
 
 	bool bres = dyrecord_add(localRecord, message, dystring_destroy_stub);
-	if EXPECT_FALSE (!bres) { dystring_destroy(message); dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!bres) { dystring_destroy(message); dyrecord_destroy(localRecord); return false; }
 
 	for (uint32_t i = 0; i < executableCount; i++) {
 		VkShaderStageFlags stages = executablesProperties[i].stages;
@@ -3324,7 +3324,7 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 	const char* rawMessage = dystring_raw(message);
 
 	bres = write_text(
-		CAPTURE_FILE_NAME,
+		g_config.capturePath,
 		"PIPELINE CAPTURE DATA\n"
 		"\n"
 		"Total # executables: %" PRIu32 "\n"
@@ -3333,7 +3333,7 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 		"%s",
 		executableCount, statisticTotal, rawMessage);
 	
-	if EXPECT_FALSE (!bres) { dyrecord_destroy(localRecord); return false; }
+	if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 
 	dyrecord_destroy(localRecord);
 	return true;

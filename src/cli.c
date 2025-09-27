@@ -59,7 +59,7 @@ typedef struct CltzCli_T
 
 void cltzCliDestroy(CltzCli cli)
 {
-	if EXPECT_FALSE (!cli) { return; }
+	if NOEXPECT (!cli) { return; }
 
 	dyarray_destroy(cli->options);
 	free(cli);
@@ -69,13 +69,13 @@ CltzCli cltzCliCreate(void* config, size_t count)
 {
 	size_t allocSize = sizeof(CltzCli_T);
 	CltzCli cli = malloc(allocSize);
-	if EXPECT_FALSE (!cli) { MALLOC_FAILURE(cli, allocSize); return NULL; }
+	if NOEXPECT (!cli) { MALLOC_FAILURE(cli, allocSize); return NULL; }
 
 	size_t elmSize = sizeof(CliOption);
 	size_t elmCount = count;
 
 	DyArray options = dyarray_create(elmSize, elmCount);
-	if EXPECT_FALSE (!options) { free(cli); return NULL; }
+	if NOEXPECT (!options) { free(cli); return NULL; }
 
 	cli->options = options;
 	cli->config = config;
@@ -172,7 +172,7 @@ bool cltzCliParse(CltzCli cli, int argc, char** argv)
 {
 	size_t elmSize = sizeof(CliCallbackData);
 	DyQueue callbacks = dyqueue_create(elmSize);
-	if EXPECT_FALSE (!callbacks) { return false; }
+	if NOEXPECT (!callbacks) { return false; }
 
 	DyArray options = cli->options;
 	size_t optionCount = dyarray_size(options);
@@ -189,7 +189,7 @@ bool cltzCliParse(CltzCli cli, int argc, char** argv)
 			cltzCliParseArg(argType, optionName, arg, &callbackData.data);
 
 			bool bres = dyqueue_enqueue(callbacks, &callbackData);
-			if EXPECT_FALSE (!bres) { dyqueue_destroy(callbacks); return false; }
+			if NOEXPECT (!bres) { dyqueue_destroy(callbacks); return false; }
 
 			argType = CLTZ_CLI_DATATYPE_NONE;
 			optionName = NULL;
@@ -214,7 +214,7 @@ bool cltzCliParse(CltzCli cli, int argc, char** argv)
 
 			if (optionName && !argType) {
 				bool bres = dyqueue_enqueue(callbacks, &callbackData);
-				if EXPECT_FALSE (!bres) { dyqueue_destroy(callbacks); return false; }
+				if NOEXPECT (!bres) { dyqueue_destroy(callbacks); return false; }
 				optionName = NULL;
 			}
 			else if (!optionName) {
@@ -249,7 +249,7 @@ bool cltzCliParse(CltzCli cli, int argc, char** argv)
 
 				if (optionName && !argType) {
 					bool bres = dyqueue_enqueue(callbacks, &callbackData);
-					if EXPECT_FALSE (!bres) { dyqueue_destroy(callbacks); return false; }
+					if NOEXPECT (!bres) { dyqueue_destroy(callbacks); return false; }
 					optionName = NULL;
 				}
 				else if (!optionName) {
@@ -285,7 +285,7 @@ bool cltzCliAdd(CltzCli cli, char option, const char* name, CltzCliDatatype type
 	CliOption newOption = {0};
 
 	size_t length = strlen(name);
-	if EXPECT_FALSE (length > CLTZ_CLI_MAX_OPTION_LENGTH) { return false; }
+	if NOEXPECT (length > CLTZ_CLI_MAX_OPTION_LENGTH) { return false; }
 
 	strncpy(newOption.fullName, name, CLTZ_CLI_MAX_OPTION_LENGTH);
 
@@ -294,7 +294,7 @@ bool cltzCliAdd(CltzCli cli, char option, const char* name, CltzCliDatatype type
 	newOption.type = type;
 
 	void* pres = dyarray_append(cli->options, &newOption);
-	if EXPECT_FALSE (!pres) { return false; }
+	if NOEXPECT (!pres) { return false; }
 
 	return true;
 }

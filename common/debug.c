@@ -36,17 +36,15 @@ bool init_debug_logfile(void)
 	const char* sCurrTime = stime();
 
 	bool bres = write_text(
-		DEBUG_LOG_NAME,
+		CLTZ_DEBUG_LOG_NAME,
 		"VULKAN DEBUG CALLBACK LOGFILE\n"
-		"PROGRAM: %s %" PRIu32 ".%" PRIu32 ".%" PRIu32 " (%s)\n"
+		"PROGRAM: " CLTZ_NAME " %d.%d.%d (" CLTZ_EXECUTABLE ")\n"
 		"CURRENT LOCAL TIME: %s"
 		"TIME SINCE LAUNCH: %.3fms\n\n",
-		PROGRAM_NAME,
-		PROGRAM_VER_MAJOR, PROGRAM_VER_MINOR, PROGRAM_VER_PATCH,
-		PROGRAM_EXE,
+		CLTZ_VERSION_MAJOR, CLTZ_VERSION_MINOR, CLTZ_VERSION_PATCH,
 		sCurrTime, programTime);
 
-	if EXPECT_FALSE (!bres) { return false; }
+	if NOEXPECT (!bres) { return false; }
 	return true;
 }
 
@@ -56,17 +54,15 @@ bool init_alloc_logfile(void)
 	const char* sCurrTime = stime();
 
 	bool bres = write_text(
-		ALLOC_LOG_NAME,
+		g_config.allocLogPath,
 		"VULKAN ALLOCATION CALLBACK LOGFILE\n"
-		"PROGRAM: %s %" PRIu32 ".%" PRIu32 ".%" PRIu32 " (%s)\n"
+		"PROGRAM: " CLTZ_NAME " %d.%d.%d (" CLTZ_EXECUTABLE ")\n"
 		"CURRENT LOCAL TIME: %s"
 		"TIME SINCE LAUNCH: %.3fms\n\n",
-		PROGRAM_NAME,
-		PROGRAM_VER_MAJOR, PROGRAM_VER_MINOR, PROGRAM_VER_PATCH,
-		PROGRAM_EXE,
+		CLTZ_VERSION_MAJOR, CLTZ_VERSION_MINOR, CLTZ_VERSION_PATCH,
 		sCurrTime, programTime);
 
-	if EXPECT_FALSE (!bres) { return false; }
+	if NOEXPECT (!bres) { return false; }
 	return true;
 }
 
@@ -110,7 +106,7 @@ static bool log_colour(
 		size_t size = lenSgr1 + lenPre + lenFmt + lenPost + lenSgr2 + 1;
 
 		char* newFmt = malloc(size);
-		if EXPECT_FALSE (!newFmt) { MALLOC_FAILURE(newFmt, size); return false; }
+		if NOEXPECT (!newFmt) { MALLOC_FAILURE(newFmt, size); return false; }
 
 		strcpy(newFmt, sgr1);
 		strcpy(newFmt + lenSgr1, prefix);
@@ -134,7 +130,7 @@ static bool log_colour(
 		size_t size = lenPre + lenFmt + lenPost + 1;
 
 		char* newFmt = malloc(size);
-		if EXPECT_FALSE (!newFmt) { MALLOC_FAILURE(newFmt, size); return false; }
+		if NOEXPECT (!newFmt) { MALLOC_FAILURE(newFmt, size); return false; }
 
 		strcpy(newFmt, prefix);
 		strcpy(newFmt + lenPre, fmt);
@@ -308,8 +304,11 @@ VkBool32 debug_callback(
 			data.line);
 	}
 
-	FILE* file = fopen(DEBUG_LOG_NAME, "a");
-	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, DEBUG_LOG_NAME, "a"); return VK_FALSE; }
+	const char* path = CLTZ_DEBUG_LOG_NAME;
+	const char* mode = "a";
+
+	FILE* file = fopen(path, mode);
+	if NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return VK_FALSE; }
 
 	log_debug_callback(
 		file, time, messageSeverity, messageTypes, pCallbackData, g_debugCallbackCount, data.func, data.file,
@@ -334,8 +333,8 @@ static void log_allocation_callback(
 	const void* memory)
 {
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
-	double totalSizeKiB = (double) totalSize / KiB_SIZE;
-	double totalSizeMiB = (double) totalSize / MiB_SIZE;
+	double totalSizeKiB = (double) totalSize / KIB_SIZE;
+	double totalSizeMiB = (double) totalSize / MIB_SIZE;
 
 	fprintf(stream, "Allocation callback %" PRIu64 " (%.3fms)\n", allocationCount, time);
 
@@ -364,8 +363,11 @@ void* allocation_callback(void* pUserData, size_t size, size_t alignment, VkSyst
 	g_allocCount++;
 	g_totalAllocSize += size;
 
-	FILE* file = fopen(ALLOC_LOG_NAME, "a");
-	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return memory; }
+	const char* path = g_config.allocLogPath;
+	const char* mode = "a";
+
+	FILE* file = fopen(path, mode);
+	if NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return memory; }
 
 	log_allocation_callback(
 		file, time, g_allocCount, data.func, data.file, data.line, g_totalAllocSize, size, alignment, allocationScope,
@@ -391,8 +393,8 @@ static void log_reallocation_callback(
 	const void* memory)
 {
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
-	double totalSizeKiB = (double) totalSize / KiB_SIZE;
-	double totalSizeMiB = (double) totalSize / MiB_SIZE;
+	double totalSizeKiB = (double) totalSize / KIB_SIZE;
+	double totalSizeMiB = (double) totalSize / MIB_SIZE;
 
 	fprintf(stream, "Reallocation callback %" PRIu64 " (%.3fms)\n", reallocationCount, time);
 
@@ -439,8 +441,11 @@ void* reallocation_callback(
 	g_totalAllocSize -= originalSize;
 	g_totalAllocSize += size;
 
-	FILE* file = fopen(ALLOC_LOG_NAME, "a");
-	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return memory; }
+	const char* path = g_config.allocLogPath;
+	const char* mode = "a";
+
+	FILE* file = fopen(path, mode);
+	if NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return memory; }
 
 	log_reallocation_callback(
 		file, time, g_reallocCount, data.func, data.file, data.line, g_totalAllocSize, originalSize, size, alignment,
@@ -461,8 +466,8 @@ static void log_free_callback(
 	size_t size,
 	const void* memory)
 {
-	double totalSizeKiB = (double) totalSize / KiB_SIZE;
-	double totalSizeMiB = (double) totalSize / MiB_SIZE;
+	double totalSizeKiB = (double) totalSize / KIB_SIZE;
+	double totalSizeMiB = (double) totalSize / MIB_SIZE;
 
 	fprintf(stream, "Free callback %" PRIu64 " (%.3fms)\n", freeCount, time);
 
@@ -494,8 +499,11 @@ void free_callback(void* pUserData, void* pMemory)
 	g_freeCount++;
 	g_totalAllocSize -= size;
 
-	FILE* file = fopen(ALLOC_LOG_NAME, "a");
-	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return; }
+	const char* path = g_config.allocLogPath;
+	const char* mode = "a";
+
+	FILE* file = fopen(path, mode);
+	if NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return; }
 
 	log_free_callback(file, time, g_freeCount, data.func, data.file, data.line, g_totalAllocSize, size, pMemory);
 	fclose(file);
@@ -537,8 +545,11 @@ void internal_allocation_callback(
 
 	g_internalAllocCount++;
 
-	FILE* file = fopen(ALLOC_LOG_NAME, "a");
-	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return; }
+	const char* path = g_config.allocLogPath;
+	const char* mode = "a";
+
+	FILE* file = fopen(path, mode);
+	if NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return; }
 
 	log_internal_allocation_callback(
 		file, time, g_internalAllocCount, data.func, data.file, data.line, size, allocationType, allocationScope);
@@ -582,8 +593,11 @@ void internal_free_callback(
 
 	g_internalFreeCount++;
 
-	FILE* file = fopen(ALLOC_LOG_NAME, "a");
-	if EXPECT_FALSE (!file) { FOPEN_FAILURE(file, ALLOC_LOG_NAME, "a"); return; }
+	const char* path = g_config.allocLogPath;
+	const char* mode = "a";
+
+	FILE* file = fopen(path, mode);
+	if NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return; }
 
 	log_internal_free_callback(
 		file, time, g_internalFreeCount, data.func, data.file, data.line, size, allocationType, allocationScope);
