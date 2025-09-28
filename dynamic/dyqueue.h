@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "defs.h"
+#include "common.h"
 
 
 /**
@@ -25,7 +25,7 @@
  * 
  * @brief A dynamically sized FIFO queue.
  */
-typedef struct DyQueue_T* DyQueue;
+typedef struct DyQueue_* DyQueue;
 
 
 /**
@@ -46,7 +46,7 @@ void dyqueue_destroy(DyQueue queue);
  * 
  * @brief Creates a new dynamic queue.
  * 
- * Creates an empty dynamic queue.
+ * Creates an empty dynamic queue. Failure can occur if sufficient memory is unable to be allocated.
  * 
  * @param[in] size The number of bytes per element.
  * 
@@ -57,7 +57,6 @@ void dyqueue_destroy(DyQueue queue);
  * @note Failing to destroy the returned dynamic queue will result in a memory leak.
  */
 DyQueue dyqueue_create(size_t size) FREE_FUNC(dyqueue_destroy, 1) USE_RET;
-
 
 /**
  * @memberof DyQueue
@@ -74,14 +73,13 @@ DyQueue dyqueue_create(size_t size) FREE_FUNC(dyqueue_destroy, 1) USE_RET;
  */
 size_t dyqueue_size(DyQueue queue) NONNULL_ALL RE_ACCESS(1) USE_RET;
 
-
 /**
  * @memberof DyQueue
  * 
  * @brief Adds an element to a dynamic queue.
  * 
  * Enqueues an element to the back of @p queue. The element is initialised as a copy of the value pointed to by
- * @p value.
+ * @p value. Failure can occur if sufficient memory is unable to be allocated.
  * 
  * @param[in,out] queue The dynamic queue.
  * @param[in] value The initialising value.
@@ -105,6 +103,6 @@ bool dyqueue_enqueue(DyQueue queue, const void* value) NONNULL_ALL RW_ACCESS(1) 
  * @param[out] value The memory to write the element to.
  * 
  * @pre @p queue is nonnull and nonempty.
- * @pre @p value is nonnull and does not overlap in memory with @p queue.
+ * @pre @p value is nonnull.
  */
 void dyqueue_dequeue(DyQueue queue, void* value) NONNULL_ALL RW_ACCESS(1) WR_ACCESS(2);

@@ -16,19 +16,18 @@
  */
 
 #include "dyqueue.h"
-#include "debug.h"
 
 
-typedef struct DyQueue_T
+struct DyQueue_
 {
 	size_t size; // Number of bytes per element
 	size_t count; // Number of elements currently in queue
 	void** head; // Head node
 	void** tail; // Tail node
-} DyQueue_T;
+};
 
 
-void dyqueue_destroy(DyQueue queue)
+void dyqueue_destroy(struct DyQueue_* restrict queue)
 {
 	if NOEXPECT (!queue) { return; }
 
@@ -44,12 +43,12 @@ void dyqueue_destroy(DyQueue queue)
 	free(queue);
 }
 
-DyQueue dyqueue_create(size_t size)
+struct DyQueue_* dyqueue_create(size_t size)
 {
 	ASSUME(size != 0);
 
-	size_t allocSize = sizeof(DyQueue_T);
-	DyQueue queue = malloc(allocSize);
+	size_t allocSize = sizeof(struct DyQueue_);
+	struct DyQueue_* queue = malloc(allocSize);
 	if NOEXPECT (!queue) { MALLOC_FAILURE(queue, allocSize); return NULL; }
 
 	queue->size = size;
@@ -60,12 +59,12 @@ DyQueue dyqueue_create(size_t size)
 	return queue;
 }
 
-size_t dyqueue_size(DyQueue queue)
+size_t dyqueue_size(struct DyQueue_* restrict queue)
 {
 	return queue->count;
 }
 
-bool dyqueue_enqueue(DyQueue queue, const void* value)
+bool dyqueue_enqueue(struct DyQueue_* restrict queue, const void* restrict value)
 {
 	ASSUME(queue->size != 0);
 
@@ -95,7 +94,7 @@ bool dyqueue_enqueue(DyQueue queue, const void* value)
 	return true;
 }
 
-void dyqueue_dequeue(DyQueue queue, void* restrict value)
+void dyqueue_dequeue(struct DyQueue_* restrict queue, void* restrict value)
 {
 	ASSUME(queue->size != 0);
 	ASSUME(queue->count != 0);

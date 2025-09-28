@@ -16,11 +16,10 @@
  */
 
 #include "gpu.h"
-#include "debug.h"
-#include "util.h"
+#include "config.h"
 
 
-bool create_instance(Gpu* restrict gpu)
+bool create_instance(struct Gpu* restrict gpu)
 {
 	VkResult vkres;
 	bool bres;
@@ -38,46 +37,53 @@ bool create_instance(Gpu* restrict gpu)
 
 	uint32_t instanceApiVersion = volkGetInstanceVersion();
 	if NOEXPECT (instanceApiVersion == VK_API_VERSION_1_0) {
-		VKVERS_FAILURE(instanceApiVersion); dyrecord_destroy(localRecord); return false; }
+		log_error(stderr, "Vulkan instance version (1.0) does not satisfy minimum version requirement (1.1)");
+		dyrecord_destroy(localRecord);
+		return false;
+	}
 
 	// Specify allocator for Vulkan to use
 	VkAllocationCallbacks* allocator = NULL;
 
-	if (g_config.allocLogPath) {
+	if (czgConfig.allocLogPath) {
 		size_t allocSize = sizeof(VkAllocationCallbacks);
 		allocator = dyrecord_malloc(gpuRecord, allocSize);
 		if NOEXPECT (!allocator) {dyrecord_destroy(localRecord); return false; }
 		gpu->allocator = allocator;
 
-		allocator->pUserData = &g_callbackData;
+		allocator->pUserData = &czgCallbackData;
 		allocator->pfnAllocation = allocation_callback;
 		allocator->pfnReallocation = reallocation_callback;
 		allocator->pfnFree = free_callback;
 		allocator->pfnInternalAllocation = internal_allocation_callback;
 		allocator->pfnInternalFree = internal_free_callback;
 
-		bres = init_alloc_logfile();
+		bres = init_alloc_logfile(czgConfig.allocLogPath);
 		if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 	}
 
 #ifndef NDEBUG
-	bres = init_debug_logfile();
+	bres = init_debug_logfile(CZ_DEBUG_LOG_NAME);
 	if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 #endif
 
+	VkDebugUtilsMessageSeverityFlagsEXT debugMessageSeverity = 0;
+	debugMessageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
+	debugMessageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
+	debugMessageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+	debugMessageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+
+	VkDebugUtilsMessageTypeFlagsEXT debugMessageType = 0;
+	debugMessageType |= VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT;
+	debugMessageType |= VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+	debugMessageType |= VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+
 	VkDebugUtilsMessengerCreateInfoEXT debugMessengerInfo = {0};
 	debugMessengerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-	debugMessengerInfo.messageSeverity =
-		// VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-		VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-		VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-		VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-	debugMessengerInfo.messageType =
-		VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-		VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-		VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+	debugMessengerInfo.messageSeverity = debugMessageSeverity;
+	debugMessengerInfo.messageType = debugMessageType;
 	debugMessengerInfo.pfnUserCallback = debug_callback;
-	debugMessengerInfo.pUserData = &g_callbackData;
+	debugMessengerInfo.pUserData = &czgCallbackData;
 
 	// Get instance layers
 	uint32_t layerCount;
@@ -125,11 +131,11 @@ bool create_instance(Gpu* restrict gpu)
 		const char* layerName = layersProps[i].layerName;
 
 		if (
-			(g_config.extensionLayers && (
+			(czgConfig.extensionLayers && (
 				!strcmp(layerName, VK_KHR_SYNCHRONIZATION_2_LAYER_NAME) ||
 				!strcmp(layerName, VK_KHR_TIMELINE_SEMAPHORE_LAYER_NAME))) ||
-			(g_config.profileLayers && !strcmp(layerName, VK_KHR_PROFILES_LAYER_NAME)) ||
-			(g_config.validationLayers && !strcmp(layerName, VK_KHR_VALIDATION_LAYER_NAME)))
+			(czgConfig.profileLayers && !strcmp(layerName, VK_KHR_PROFILES_LAYER_NAME)) ||
+			(czgConfig.validationLayers && !strcmp(layerName, VK_KHR_VALIDATION_LAYER_NAME)))
 		{
 			dyarray_append(enabledLayers, &layerName);
 		}
@@ -172,8 +178,8 @@ bool create_instance(Gpu* restrict gpu)
 	// Create instance
 	VkApplicationInfo appInfo = {0};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName = CLTZ_NAME;
-	appInfo.applicationVersion = VK_MAKE_API_VERSION(0, CLTZ_VERSION_MAJOR, CLTZ_VERSION_MINOR, CLTZ_VERSION_PATCH);
+	appInfo.pApplicationName = CZ_NAME;
+	appInfo.applicationVersion = VK_MAKE_API_VERSION(0, CZ_VERSION_MAJOR, CZ_VERSION_MINOR, CZ_VERSION_PATCH);
 	appInfo.apiVersion = VK_API_VERSION_1_4;
 
 	uint32_t enabledLayerCount = (uint32_t) dyarray_size(enabledLayers);
@@ -182,17 +188,22 @@ bool create_instance(Gpu* restrict gpu)
 	uint32_t enabledExtensionCount = (uint32_t) dyarray_size(enabledExtensions);
 	const char** enabledExtensionNames = dyarray_raw(enabledExtensions);
 
+	VkInstanceCreateFlags instanceFlags = 0;
+	if (usingPortabilityEnumeration) {
+		instanceFlags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+	}
+
 	VkInstanceCreateInfo instanceInfo = {0};
 	instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	instanceInfo.pNext = nextChain;
-	instanceInfo.flags = usingPortabilityEnumeration ? VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR : 0;
+	instanceInfo.flags = instanceFlags;
 	instanceInfo.pApplicationInfo = &appInfo;
 	instanceInfo.enabledLayerCount = enabledLayerCount;
 	instanceInfo.ppEnabledLayerNames = enabledLayerNames;
 	instanceInfo.enabledExtensionCount = enabledExtensionCount;
 	instanceInfo.ppEnabledExtensionNames = enabledExtensionNames;
 
-	if (g_config.outputLevel > OUTPUT_LEVEL_DEFAULT) {
+	if (czgConfig.outputLevel > CZ_OUTPUT_LEVEL_DEFAULT) {
 		printf("Enabled instance layers (%" PRIu32 "):\n", enabledLayerCount);
 		for (uint32_t i = 0; i < enabledLayerCount; i++) {
 			printf("\t%" PRIu32 ") %s\n", i + 1, enabledLayerNames[i]);
@@ -225,7 +236,7 @@ bool create_instance(Gpu* restrict gpu)
 	return true;
 }
 
-bool select_device(Gpu* restrict gpu)
+bool select_device(struct Gpu* restrict gpu)
 {
 	VkResult vkres;
 	size_t allocCount;
@@ -243,7 +254,7 @@ bool select_device(Gpu* restrict gpu)
 	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	if NOEXPECT (!deviceCount) {
-		log_critical(stderr, "No physical devices are accessible to the Vulkan instance");
+		log_error(stderr, "No physical devices are accessible to the Vulkan instance");
 		dyrecord_destroy(localRecord);
 		return false;
 	}
@@ -519,8 +530,8 @@ bool select_device(Gpu* restrict gpu)
 		if (hasVulkan13) { currentScore += 50; }
 		if (hasVulkan14) { currentScore += 50; }
 
-		if (g_config.preferInt16 && hasShaderInt16) { currentScore += 1000; }
-		if (g_config.preferInt64 && hasShaderInt64) { currentScore += 1000; }
+		if (czgConfig.preferInt16 && hasShaderInt16) { currentScore += 1000; }
+		if (czgConfig.preferInt64 && hasShaderInt64) { currentScore += 1000; }
 
 		if (hasDeviceNonHost) { currentScore += 50; }
 
@@ -543,7 +554,7 @@ bool select_device(Gpu* restrict gpu)
 		if (hasStorageBuffer16BitAccess)     { currentScore += 100; }
 		if (hasSubgroupSizeControl)          { currentScore += 10; }
 
-		if (g_config.capturePath && hasPipelineExecutableProperties) { currentScore += 10; }
+		if (czgConfig.capturePath && hasPipelineExecutableProperties) { currentScore += 10; }
 
 		if (currentScore > bestScore) {
 			bestScore = currentScore;
@@ -558,10 +569,10 @@ bool select_device(Gpu* restrict gpu)
 			usingMemoryBudget = hasMemoryBudget;
 			usingMemoryPriority = hasMemoryPriority;
 			usingPipelineCreationCacheControl = hasPipelineCreationCacheControl;
-			usingPipelineExecutableProperties = g_config.capturePath && hasPipelineExecutableProperties;
+			usingPipelineExecutableProperties = czgConfig.capturePath && hasPipelineExecutableProperties;
 			usingPortabilitySubset = hasPortabilitySubset;
-			usingShaderInt16 = g_config.preferInt16 && hasShaderInt16;
-			usingShaderInt64 = g_config.preferInt64 && hasShaderInt64;
+			usingShaderInt16 = czgConfig.preferInt16 && hasShaderInt16;
+			usingShaderInt64 = czgConfig.preferInt64 && hasShaderInt64;
 			usingSpirv14 = hasSpirv14;
 			usingSubgroupSizeControl = hasSubgroupSizeControl;
 			usingVulkan12 = hasVulkan12;
@@ -571,9 +582,9 @@ bool select_device(Gpu* restrict gpu)
 	}
 
 	if (deviceIndex == UINT32_MAX) {
-		log_critical(
+		log_error(
 			stderr,
-			"No physical device meets program requirements; "
+			"No physical device satisfies program requirements; "
 			"see device_requirements.md for comprehensive physical device requirements");
 
 		dyrecord_destroy(localRecord);
@@ -693,7 +704,7 @@ bool select_device(Gpu* restrict gpu)
 	gpu->usingShaderInt64 = usingShaderInt64;
 	gpu->usingSubgroupSizeControl = usingSubgroupSizeControl;
 
-	if (g_config.queryBenchmarks) {
+	if (czgConfig.queryBenchmarks) {
 		gpu->computeFamilyTimestampValidBits =
 			devicesFamiliesProperties[deviceIndex][computeFamilyIndex].queueFamilyProperties.timestampValidBits;
 
@@ -704,8 +715,8 @@ bool select_device(Gpu* restrict gpu)
 	}
 
 	// Display info about selected device
-	switch (g_config.outputLevel) {
-	case OUTPUT_LEVEL_DEFAULT:
+	switch (czgConfig.outputLevel) {
+	case CZ_OUTPUT_LEVEL_DEFAULT:
 		printf(
 			"Device: %s\n"
 			"\tVulkan version:    %" PRIu32 ".%" PRIu32 "\n"
@@ -717,17 +728,17 @@ bool select_device(Gpu* restrict gpu)
 			spvVerMajor, spvVerMinor,
 			computeFamilyIndex, transferFamilyIndex);
 
-		if (g_config.preferInt16) {
+		if (czgConfig.preferInt16) {
 			printf("\tshaderInt16:       %d\n", usingShaderInt16);
 		}
-		if (g_config.preferInt64) {
+		if (czgConfig.preferInt64) {
 			printf("\tshaderInt64:       %d\n", usingShaderInt64);
 		}
 
 		NEWLINE();
 		break;
 
-	case OUTPUT_LEVEL_VERBOSE:
+	case CZ_OUTPUT_LEVEL_VERBOSE:
 		printf(
 			"Device: %s\n"
 			"\tScore:                             %" PRIu32 "\n"
@@ -766,7 +777,7 @@ bool select_device(Gpu* restrict gpu)
 	return true;
 }
 
-bool create_device(Gpu* restrict gpu)
+bool create_device(struct Gpu* restrict gpu)
 {
 	const VkAllocationCallbacks* allocator = gpu->allocator;
 
@@ -1004,7 +1015,7 @@ bool create_device(Gpu* restrict gpu)
 	deviceInfo.enabledExtensionCount = enabledExtensionCount;
 	deviceInfo.ppEnabledExtensionNames = enabledExtensionNames;
 
-	if (g_config.outputLevel > OUTPUT_LEVEL_DEFAULT) {
+	if (czgConfig.outputLevel > CZ_OUTPUT_LEVEL_DEFAULT) {
 		printf("Enabled device extensions (%" PRIu32 "):\n", enabledExtensionCount);
 		for (uint32_t i = 0; i < enabledExtensionCount; i++) {
 			printf("\t%" PRIu32 ") %s\n", i + 1, enabledExtensionNames[i]);
@@ -1038,7 +1049,7 @@ bool create_device(Gpu* restrict gpu)
 	return true;
 }
 
-bool manage_memory(Gpu* restrict gpu)
+bool manage_memory(struct Gpu* restrict gpu)
 {
 	VkPhysicalDevice physicalDevice = gpu->physicalDevice;
 	VkDevice device = gpu->device;
@@ -1080,16 +1091,20 @@ bool manage_memory(Gpu* restrict gpu)
 	uint32_t memoryTypeCount = deviceMemoryProperties.memoryProperties.memoryTypeCount;
 
 	// Get memoryTypeBits for wanted host visible & device local buffers
-	VkBufferUsageFlags hostVisibleBufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-	VkMemoryRequirements hostVisibleMemoryRequirements;
+	VkBufferUsageFlags hostVisibleBufferUsage = 0;
+	hostVisibleBufferUsage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	hostVisibleBufferUsage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
+	VkMemoryRequirements hostVisibleMemoryRequirements;
 	bool bres = get_buffer_requirements(device, sizeof(char), hostVisibleBufferUsage, &hostVisibleMemoryRequirements);
 	if NOEXPECT (!bres) { return false; }
 
-	VkBufferUsageFlags deviceLocalBufferUsage =
-		VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-	VkMemoryRequirements deviceLocalMemoryRequirements;
+	VkBufferUsageFlags deviceLocalBufferUsage = 0;
+	deviceLocalBufferUsage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	deviceLocalBufferUsage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	deviceLocalBufferUsage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
+	VkMemoryRequirements deviceLocalMemoryRequirements;
 	bres = get_buffer_requirements(device, sizeof(char), deviceLocalBufferUsage, &deviceLocalMemoryRequirements);
 	if NOEXPECT (!bres) { return false; }
 
@@ -1181,7 +1196,7 @@ bool manage_memory(Gpu* restrict gpu)
 	VkDeviceSize bytesPerDeviceLocalHeap = gpu->usingMemoryBudget ? deviceLocalHeapBudget : deviceLocalHeapSize;
 
 	VkDeviceSize bytesPerHeap = minu64(bytesPerHostVisibleHeap, bytesPerDeviceLocalHeap);
-	bytesPerHeap = (VkDeviceSize) ((float) bytesPerHeap * g_config.maxMemory); // User-given limit on heap memory
+	bytesPerHeap = (VkDeviceSize) ((float) bytesPerHeap * czgConfig.maxMemory); // User-given limit on heap memory
 
 	if (deviceLocalHeapIndex == hostVisibleHeapIndex) {
 		bytesPerHeap /= 2; // Evenly partition heap into HV memory and DL memory
@@ -1297,8 +1312,8 @@ bool manage_memory(Gpu* restrict gpu)
 	gpu->hostNonCoherent = hasHostNonCoherent;
 
 	// Display info on planned memory usage
-	switch (g_config.outputLevel) {
-	case OUTPUT_LEVEL_DEFAULT:
+	switch (czgConfig.outputLevel) {
+	case CZ_OUTPUT_LEVEL_DEFAULT:
 		printf(
 			"Memory information:\n"
 			"\tHV memory type index:    %" PRIu32 "\n"
@@ -1313,7 +1328,7 @@ bool manage_memory(Gpu* restrict gpu)
 
 		break;
 
-	case OUTPUT_LEVEL_VERBOSE:
+	case CZ_OUTPUT_LEVEL_VERBOSE:
 		printf(
 			"Memory information:\n"
 			"\tHV non-coherent memory:   %d\n"
@@ -1342,7 +1357,7 @@ bool manage_memory(Gpu* restrict gpu)
 	return true;
 }
 
-bool create_buffers(Gpu* restrict gpu)
+bool create_buffers(struct Gpu* restrict gpu)
 {
 	DyRecord gpuRecord = gpu->allocRecord;
 
@@ -1375,10 +1390,14 @@ bool create_buffers(Gpu* restrict gpu)
 	if NOEXPECT (!hostVisibleBuffers) { dyrecord_destroy(localRecord); return false; }
 	gpu->hostVisibleBuffers = hostVisibleBuffers;
 
+	VkBufferUsageFlags hostVisibleBufferUsage = 0;
+	hostVisibleBufferUsage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	hostVisibleBufferUsage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
 	VkBufferCreateInfo hostVisibleBufferInfo = {0};
 	hostVisibleBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	hostVisibleBufferInfo.size = bytesPerBuffer;
-	hostVisibleBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	hostVisibleBufferInfo.usage = hostVisibleBufferUsage;
 	hostVisibleBufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
@@ -1396,11 +1415,15 @@ bool create_buffers(Gpu* restrict gpu)
 	if NOEXPECT (!deviceLocalBuffers) { dyrecord_destroy(localRecord); return false; }
 	gpu->deviceLocalBuffers = deviceLocalBuffers;
 
+	VkBufferUsageFlags deviceLocalBufferUsage = 0;
+	deviceLocalBufferUsage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	deviceLocalBufferUsage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	deviceLocalBufferUsage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+
 	VkBufferCreateInfo deviceLocalBufferInfo = {0};
 	deviceLocalBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	deviceLocalBufferInfo.size = bytesPerBuffer;
-	deviceLocalBufferInfo.usage =
-		VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+	deviceLocalBufferInfo.usage = deviceLocalBufferUsage;
 	deviceLocalBufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
@@ -1546,7 +1569,7 @@ bool create_buffers(Gpu* restrict gpu)
 	return true;
 }
 
-bool create_descriptors(Gpu* restrict gpu)
+bool create_descriptors(struct Gpu* restrict gpu)
 {
 	DyRecord gpuRecord = gpu->allocRecord;
 
@@ -1690,7 +1713,7 @@ bool create_descriptors(Gpu* restrict gpu)
 	return true;
 }
 
-bool create_pipeline(Gpu* restrict gpu)
+bool create_pipeline(struct Gpu* restrict gpu)
 {
 	const VkAllocationCallbacks* allocator = gpu->allocator;
 
@@ -1727,11 +1750,11 @@ bool create_pipeline(Gpu* restrict gpu)
 	 * [integers] on every physical device supported."
 	 */
 	char entryPointName[37];
-	Endianness endianness = get_endianness();
+	enum CzEndianness endianness = get_endianness();
 
-	sprintf(entryPointName, "main-%u-%lu", endianness, g_config.iterSize);
+	sprintf(entryPointName, "main-%u-%lu", endianness, czgConfig.iterSize);
 
-	if (g_config.outputLevel > OUTPUT_LEVEL_QUIET) {
+	if (czgConfig.outputLevel > CZ_OUTPUT_LEVEL_QUIET) {
 		printf("Selected shader: %s\nSelected entry point: %s\n\n", shaderName, entryPointName);
 	}
 
@@ -1740,7 +1763,7 @@ bool create_pipeline(Gpu* restrict gpu)
 	if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 
 	if NOEXPECT (!shaderSize) {
-		log_critical(stderr, "Selected shader '%s' not found", shaderName);
+		log_error(stderr, "Selected shader '%s' not found", shaderName);
 		dyrecord_destroy(localRecord);
 		return false;
 	}
@@ -1752,16 +1775,15 @@ bool create_pipeline(Gpu* restrict gpu)
 	if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 
 	size_t cacheSize;
-	bres = file_size(CLTZ_PIPELINE_CACHE_NAME, &cacheSize);
+	bres = file_size(CZ_PIPELINE_CACHE_NAME, &cacheSize);
 	if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 
 	void* cacheData = NULL;
-
 	if (cacheSize) {
 		cacheData = dyrecord_malloc(localRecord, cacheSize);
 		if NOEXPECT (!cacheData) { dyrecord_destroy(localRecord); return false; }
 
-		bres = read_file(CLTZ_PIPELINE_CACHE_NAME, cacheData, cacheSize);
+		bres = read_file(CZ_PIPELINE_CACHE_NAME, cacheData, cacheSize);
 		if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 	}
 
@@ -1771,17 +1793,20 @@ bool create_pipeline(Gpu* restrict gpu)
 	shaderInfo.pCode = shaderCode;
 
 	VkShaderModule shader = VK_NULL_HANDLE;
-
 	if (!gpu->usingMaintenance5) {
 		VK_CALLR(vkCreateShaderModule, device, &shaderInfo, allocator, &shader);
 		if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 		gpu->shaderModule = shader;
 	}
 
+	VkPipelineCacheCreateFlags cacheFlags = 0;
+	if (gpu->usingPipelineCreationCacheControl) {
+		cacheFlags |= VK_PIPELINE_CACHE_CREATE_EXTERNALLY_SYNCHRONIZED_BIT;
+	}
+
 	VkPipelineCacheCreateInfo cacheInfo = {0};
 	cacheInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-	cacheInfo.flags =
-		gpu->usingPipelineCreationCacheControl ? VK_PIPELINE_CACHE_CREATE_EXTERNALLY_SYNCHRONIZED_BIT : 0;
+	cacheInfo.flags = cacheFlags;
 	cacheInfo.initialDataSize = cacheSize;
 	cacheInfo.pInitialData = cacheData;
 
@@ -1817,22 +1842,29 @@ bool create_pipeline(Gpu* restrict gpu)
 	specialisationInfo.dataSize = sizeof(specialisationData);
 	specialisationInfo.pData = specialisationData;
 
+	VkPipelineShaderStageCreateFlags shaderStageFlags = 0;
+	if (gpu->usingSubgroupSizeControl) {
+		shaderStageFlags |= VK_PIPELINE_SHADER_STAGE_CREATE_ALLOW_VARYING_SUBGROUP_SIZE_BIT_EXT;
+	}
+
 	VkPipelineShaderStageCreateInfo shaderStageInfo = {0};
 	shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	shaderStageInfo.pNext = gpu->usingMaintenance5 ? &shaderInfo : NULL;
-	shaderStageInfo.flags =
-		gpu->usingSubgroupSizeControl ? VK_PIPELINE_SHADER_STAGE_CREATE_ALLOW_VARYING_SUBGROUP_SIZE_BIT_EXT : 0;
+	shaderStageInfo.flags = shaderStageFlags;
 	shaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
 	shaderStageInfo.module = shader;
 	shaderStageInfo.pName = entryPointName;
 	shaderStageInfo.pSpecializationInfo = &specialisationInfo;
 
+	VkPipelineCreateFlags pipelineFlags = 0;
+	if (gpu->usingPipelineExecutableProperties) {
+		pipelineFlags |= VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR;
+		pipelineFlags |= VK_PIPELINE_CREATE_CAPTURE_INTERNAL_REPRESENTATIONS_BIT_KHR;
+	}
+
 	VkComputePipelineCreateInfo pipelineInfos[1] = {0};
 	pipelineInfos[0].sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-	pipelineInfos[0].flags =
-		gpu->usingPipelineExecutableProperties ?
-		VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR | VK_PIPELINE_CREATE_CAPTURE_INTERNAL_REPRESENTATIONS_BIT_KHR :
-		0;
+	pipelineInfos[0].flags = pipelineFlags;
 	pipelineInfos[0].stage = shaderStageInfo;
 	pipelineInfos[0].layout = pipelineLayout;
 
@@ -1841,7 +1873,7 @@ bool create_pipeline(Gpu* restrict gpu)
 	if NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->pipeline = pipeline;
 
-	bres = save_pipeline_cache(device, cache, CLTZ_PIPELINE_CACHE_NAME);
+	bres = save_pipeline_cache(device, cache, CZ_PIPELINE_CACHE_NAME);
 	if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 
 	if (computeFamilyTimestampValidBits || transferFamilyTimestampValidBits) {
@@ -2005,7 +2037,7 @@ static bool record_compute_cmdbuffer(
 	return true;
 }
 
-bool create_commands(Gpu* restrict gpu)
+bool create_commands(struct Gpu* restrict gpu)
 {
 	DyRecord gpuRecord = gpu->allocRecord;
 
@@ -2434,7 +2466,7 @@ bool create_commands(Gpu* restrict gpu)
 	return true;
 }
 
-bool submit_commands(Gpu* restrict gpu)
+bool submit_commands(struct Gpu* restrict gpu)
 {
 	const VkAllocationCallbacks* allocator = gpu->allocator;
 	const VkDeviceMemory* hostVisibleMemories = gpu->hostVisibleDeviceMemories;
@@ -2500,14 +2532,14 @@ bool submit_commands(Gpu* restrict gpu)
 
 	// Check if progress file exists
 	size_t fileSize;
-	bres = file_size(CLTZ_PROGRESS_FILE_NAME, &fileSize);
+	bres = file_size(CZ_PROGRESS_FILE_NAME, &fileSize);
 	if NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 
-	Position position = {0};
+	struct Position position = {0};
 	position.val0mod1off[0] = 1;
 	position.curStartValue = 3;
 
-	if (!g_config.restart && fileSize) {
+	if (!czgConfig.restart && fileSize) {
 		uint64_t val0mod1off0Upper, val0mod1off0Lower;
 		uint64_t val0mod1off1Upper, val0mod1off1Lower;
 		uint64_t val0mod1off2Upper, val0mod1off2Lower;
@@ -2518,7 +2550,7 @@ bool submit_commands(Gpu* restrict gpu)
 		uint16_t bestTime;
 
 		bres = read_text(
-			CLTZ_PROGRESS_FILE_NAME,
+			CZ_PROGRESS_FILE_NAME,
 			"%" SCNx64 " %" SCNx64 "\n%" SCNx64 " %" SCNx64 "\n%" SCNx64 " %" SCNx64 "\n"
 			"%" SCNx64 " %" SCNx64 "\n%" SCNx64 " %" SCNx64 "\n%" SCNx64 " %" SCNx64 "\n"
 			"%" SCNx64 " %" SCNx64 "\n%" SCNx16,
@@ -2810,7 +2842,7 @@ bool submit_commands(Gpu* restrict gpu)
 	StartValue initialStartValue = position.curStartValue;
 
 	// ===== Enter main loop =====
-	for (uint64_t i = 0; i < g_config.maxLoops && !atomic_load(&input); i++) {
+	for (uint64_t i = 0; i < czgConfig.maxLoops && !atomic_load(&input); i++) {
 		clock_t mainLoopBmStart = clock();
 		StartValue initialValue = position.curStartValue;
 
@@ -2821,7 +2853,7 @@ bool submit_commands(Gpu* restrict gpu)
 		double computeBmTotal = 0;
 		double transferBmTotal = 0;
 
-		if (g_config.outputLevel > OUTPUT_LEVEL_SILENT) {
+		if (czgConfig.outputLevel > CZ_OUTPUT_LEVEL_SILENT) {
 			printf("Loop #%" PRIu64 "\n", i + 1);
 		}
 
@@ -2936,7 +2968,7 @@ bool submit_commands(Gpu* restrict gpu)
 			waitComputeBmTotal += waitComputeBmark;
 			waitTransferBmTotal += waitTransferBmark;
 
-			if (g_config.outputLevel > OUTPUT_LEVEL_QUIET) {
+			if (czgConfig.outputLevel > CZ_OUTPUT_LEVEL_QUIET) {
 				printf(
 					"Inout-buffer %" PRIu32 "/%" PRIu32 "\n"
 					"\tReading buffers:    %8.0fms\n"
@@ -2965,8 +2997,8 @@ bool submit_commands(Gpu* restrict gpu)
 		double waitComputeBmAvg = waitComputeBmTotal / (double) inoutsPerHeap;
 		double waitTransferBmAvg = waitTransferBmTotal / (double) inoutsPerHeap;
 
-		switch (g_config.outputLevel) {
-		case OUTPUT_LEVEL_QUIET:
+		switch (czgConfig.outputLevel) {
+		case CZ_OUTPUT_LEVEL_QUIET:
 			printf(
 				"Main loop: %.0fms\n"
 				"Current value: 0x %016" PRIx64 " %016" PRIx64 "\n\n",
@@ -2974,7 +3006,7 @@ bool submit_commands(Gpu* restrict gpu)
 
 			break;
 
-		case OUTPUT_LEVEL_DEFAULT:
+		case CZ_OUTPUT_LEVEL_DEFAULT:
 			printf(
 				"Main loop: %.0fms\n"
 				"Reading buffers:    %8.1fms\n"
@@ -2994,7 +3026,7 @@ bool submit_commands(Gpu* restrict gpu)
 
 			break;
 
-		case OUTPUT_LEVEL_VERBOSE:
+		case CZ_OUTPUT_LEVEL_VERBOSE:
 			printf(
 				"Main loop: %.0fms\n"
 				"|      Benchmark     | Total (ms) | Average (ms) |\n"
@@ -3036,7 +3068,7 @@ bool submit_commands(Gpu* restrict gpu)
 	}
 
 	// Display results of calculations
-	if (g_config.outputLevel > OUTPUT_LEVEL_SILENT) {
+	if (czgConfig.outputLevel > CZ_OUTPUT_LEVEL_SILENT) {
 		printf(
 			"Set of starting values tested: [0x %016" PRIx64 " %016" PRIx64 ", 0x %016" PRIx64 " %016" PRIx64 "]\n",
 			INT128_UPPER(initialStartValue - 2),      INT128_LOWER(initialStartValue - 2),
@@ -3064,7 +3096,7 @@ bool submit_commands(Gpu* restrict gpu)
 			i + 1, INT128_UPPER(startValue), INT128_LOWER(startValue), stopTime);
 	}
 
-	if (g_config.outputLevel > OUTPUT_LEVEL_SILENT) {
+	if (czgConfig.outputLevel > CZ_OUTPUT_LEVEL_SILENT) {
 		double valuesPerSecond = (double) (1000 * total) / totalBmark;
 
 		printf(
@@ -3075,9 +3107,9 @@ bool submit_commands(Gpu* restrict gpu)
 	}
 
 	// Write current position to progress file
-	if (!g_config.restart) {
+	if (!czgConfig.restart) {
 		bres = write_text(
-			CLTZ_PROGRESS_FILE_NAME,
+			CZ_PROGRESS_FILE_NAME,
 			"%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n"
 			"%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n"
 			"%016" PRIx64 " %016" PRIx64 "\n%04"  PRIx16,
@@ -3097,7 +3129,7 @@ bool submit_commands(Gpu* restrict gpu)
 	return true;
 }
 
-bool destroy_gpu(Gpu* restrict gpu)
+bool destroy_gpu(struct Gpu* restrict gpu)
 {
 	VkInstance instance = volkGetLoadedInstance();
 
@@ -3322,9 +3354,8 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 
 	// Write collected info to file
 	const char* rawMessage = dystring_raw(message);
-
 	bres = write_text(
-		g_config.capturePath,
+		czgConfig.capturePath,
 		"PIPELINE CAPTURE DATA\n"
 		"\n"
 		"Total # executables: %" PRIu32 "\n"
@@ -3376,7 +3407,7 @@ void write_inbuffer(
 
 void read_outbuffer(
 	const StopTime* restrict mappedOutBuffer,
-	Position* restrict position,
+	struct Position* restrict position,
 	DyArray bestStartValues,
 	DyArray bestStopTimes,
 	uint32_t valuesPerInout)

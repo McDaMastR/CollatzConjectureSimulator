@@ -17,7 +17,30 @@
 
 #pragma once
 
-#include "def.h"
-#include "debug.h"
+#include "common.h"
 
-#include "util.h"
+
+struct CzConfig
+{
+	const char* allocLogPath;
+	const char* capturePath;
+
+	enum CzOutputLevel outputLevel;
+	enum CzColourLevel colourLevel;
+
+	unsigned long iterSize;
+	unsigned long long maxLoops;
+	float maxMemory;
+
+	bool preferInt16;
+	bool preferInt64;
+
+	bool extensionLayers;
+	bool profileLayers;
+	bool validationLayers;
+
+	bool restart;
+	bool queryBenchmarks;
+};
+
+extern struct CzConfig czgConfig;

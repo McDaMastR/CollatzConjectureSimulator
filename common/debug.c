@@ -19,7 +19,11 @@
 #include "util.h"
 
 
-CallbackData g_callbackData = {.func = "", .file = "", .line = 0};
+struct CzVulkanCallbackData czgCallbackData = {.func = "", .file = "", .line = 0};
+
+static const char* g_allocLogPath = NULL;
+static const char* g_debugLogPath = NULL;
+static enum CzColourLevel g_colourLevel = CZ_COLOUR_LEVEL_NONE;
 
 static uint64_t g_debugCallbackCount = 0;
 static uint64_t g_allocCount = 0;
@@ -30,39 +34,49 @@ static uint64_t g_internalFreeCount = 0;
 static size_t g_totalAllocSize = 0;
 
 
-bool init_debug_logfile(void)
+bool init_debug_logfile(const char* filename)
 {
 	double programTime = program_time();
 	const char* sCurrTime = stime();
 
 	bool bres = write_text(
-		CLTZ_DEBUG_LOG_NAME,
+		filename,
 		"VULKAN DEBUG CALLBACK LOGFILE\n"
-		"PROGRAM: " CLTZ_NAME " %d.%d.%d (" CLTZ_EXECUTABLE ")\n"
+		"PROGRAM: " CZ_NAME " %d.%d.%d (" CZ_EXECUTABLE ")\n"
 		"CURRENT LOCAL TIME: %s"
 		"TIME SINCE LAUNCH: %.3fms\n\n",
-		CLTZ_VERSION_MAJOR, CLTZ_VERSION_MINOR, CLTZ_VERSION_PATCH,
+		CZ_VERSION_MAJOR, CZ_VERSION_MINOR, CZ_VERSION_PATCH,
 		sCurrTime, programTime);
 
 	if NOEXPECT (!bres) { return false; }
+
+	g_debugLogPath = filename;
 	return true;
 }
 
-bool init_alloc_logfile(void)
+bool init_alloc_logfile(const char* filename)
 {
 	double programTime = program_time();
 	const char* sCurrTime = stime();
 
 	bool bres = write_text(
-		g_config.allocLogPath,
+		filename,
 		"VULKAN ALLOCATION CALLBACK LOGFILE\n"
-		"PROGRAM: " CLTZ_NAME " %d.%d.%d (" CLTZ_EXECUTABLE ")\n"
+		"PROGRAM: " CZ_NAME " %d.%d.%d (" CZ_EXECUTABLE ")\n"
 		"CURRENT LOCAL TIME: %s"
 		"TIME SINCE LAUNCH: %.3fms\n\n",
-		CLTZ_VERSION_MAJOR, CLTZ_VERSION_MINOR, CLTZ_VERSION_PATCH,
+		CZ_VERSION_MAJOR, CZ_VERSION_MINOR, CZ_VERSION_PATCH,
 		sCurrTime, programTime);
 
 	if NOEXPECT (!bres) { return false; }
+
+	g_allocLogPath = filename;
+	return true;
+}
+
+bool init_colour_level(enum CzColourLevel level)
+{
+	g_colourLevel = level;
 	return true;
 }
 
@@ -81,7 +95,7 @@ static bool log_colour(
 	const char* postfix,
 	va_list args)
 {
-	ColourLevel colourLevel = g_config.colourLevel;
+	enum CzColourLevel colourLevel = g_colourLevel;
 	bool tty = fisatty(stream);
 
 	/* 
@@ -89,14 +103,14 @@ static bool log_colour(
 	 * speed in each case.
 	 */
 
-	if (colourLevel == COLOUR_LEVEL_ALL && !tty) {
+	if (colourLevel == CZ_COLOUR_LEVEL_ALL && !tty) {
 		fputs(sgr1, stream);
 		fputs(prefix, stream);
 		vfprintf(stream, fmt, args);
 		fputs(postfix, stream);
 		fputs(sgr2, stream);
 	}
-	else if ((colourLevel == COLOUR_LEVEL_ALL || colourLevel == COLOUR_LEVEL_TTY) && tty) {
+	else if ((colourLevel == CZ_COLOUR_LEVEL_ALL || colourLevel == CZ_COLOUR_LEVEL_TTY) && tty) {
 		size_t lenSgr1 = strlen(sgr1);
 		size_t lenSgr2 = strlen(sgr2);
 		size_t lenPre = strlen(prefix);
@@ -289,7 +303,7 @@ VkBool32 debug_callback(
 	void* pUserData)
 {
 	double time = program_time();
-	CallbackData data = *(CallbackData*) pUserData;
+	struct CzVulkanCallbackData data = *(struct CzVulkanCallbackData*) pUserData;
 
 	g_debugCallbackCount++;
 
@@ -304,7 +318,7 @@ VkBool32 debug_callback(
 			data.line);
 	}
 
-	const char* path = CLTZ_DEBUG_LOG_NAME;
+	const char* path = g_debugLogPath;
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
@@ -356,14 +370,14 @@ static void log_allocation_callback(
 void* allocation_callback(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 {
 	double time = program_time();
-	CallbackData data = *(CallbackData*) pUserData;
+	struct CzVulkanCallbackData data = *(struct CzVulkanCallbackData*) pUserData;
 
 	void* memory = size ? aligned_malloc(size, alignment) : NULL;
 
 	g_allocCount++;
 	g_totalAllocSize += size;
 
-	const char* path = g_config.allocLogPath;
+	const char* path = g_allocLogPath;
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
@@ -420,7 +434,7 @@ void* reallocation_callback(
 	void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 {
 	double time = program_time();
-	CallbackData data = *(CallbackData*) pUserData;
+	struct CzVulkanCallbackData data = *(struct CzVulkanCallbackData*) pUserData;
 
 	size_t originalSize = 0;
 	void* memory = NULL;
@@ -441,7 +455,7 @@ void* reallocation_callback(
 	g_totalAllocSize -= originalSize;
 	g_totalAllocSize += size;
 
-	const char* path = g_config.allocLogPath;
+	const char* path = g_allocLogPath;
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
@@ -487,7 +501,7 @@ static void log_free_callback(
 void free_callback(void* pUserData, void* pMemory)
 {
 	double time = program_time();
-	CallbackData data = *(CallbackData*) pUserData;
+	struct CzVulkanCallbackData data = *(struct CzVulkanCallbackData*) pUserData;
 
 	size_t size = 0;
 
@@ -499,7 +513,7 @@ void free_callback(void* pUserData, void* pMemory)
 	g_freeCount++;
 	g_totalAllocSize -= size;
 
-	const char* path = g_config.allocLogPath;
+	const char* path = g_allocLogPath;
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
@@ -541,11 +555,11 @@ void internal_allocation_callback(
 	void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope)
 {
 	double time = program_time();
-	CallbackData data = *(CallbackData*) pUserData;
+	struct CzVulkanCallbackData data = *(struct CzVulkanCallbackData*) pUserData;
 
 	g_internalAllocCount++;
 
-	const char* path = g_config.allocLogPath;
+	const char* path = g_allocLogPath;
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
@@ -589,11 +603,11 @@ void internal_free_callback(
 	void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope)
 {
 	double time = program_time();
-	CallbackData data = *(CallbackData*) pUserData;
+	struct CzVulkanCallbackData data = *(struct CzVulkanCallbackData*) pUserData;
 
 	g_internalFreeCount++;
 
-	const char* path = g_config.allocLogPath;
+	const char* path = g_allocLogPath;
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
@@ -792,22 +806,6 @@ void log_vkinit_failure(int line, VkResult res)
 		"Vulkan failure at line %d (%.3fms)\n"
 		"Failed function call 'volkInitialize' with %s\n",
 		line, time, sRes);
-}
-
-void log_vkvers_failure(int line, uint32_t res)
-{
-	double time = program_time();
-
-	uint32_t variant = VK_API_VERSION_VARIANT(res);
-	uint32_t major = VK_API_VERSION_MAJOR(res);
-	uint32_t minor = VK_API_VERSION_MINOR(res);
-	uint32_t patch = VK_API_VERSION_PATCH(res);
-
-	log_error(
-		stderr,
-		"Vulkan failure at line %d (%.3fms)\n"
-		"Failed function call 'volkGetInstanceVersion' with %" PRIu32 ".%" PRIu32 ".%" PRIu32 ".%" PRIu32 "\n",
-		line, time, variant, major, minor, patch);
 }
 
 void log_vulkan_failure(int line, VkResult res, const char* func)

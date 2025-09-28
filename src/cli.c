@@ -16,12 +16,10 @@
  */
 
 #include "cli.h"
-#include "debug.h"
-#include "dyarray.h"
-#include "dyqueue.h"
+#include "dynamic.h"
 
 
-typedef union CliData
+union CliData
 {
 	char c;
 	const char* s;
@@ -32,32 +30,32 @@ typedef union CliData
 	long long ll;
 	unsigned long ul;
 	unsigned long long ull;
-} CliData;
+};
 
-typedef struct CliOption
+struct CliOption
 {
 	char fullName[CLTZ_CLI_MAX_OPTION_LENGTH];
 	char shortName;
 
-	CltzCliCallback callback;
-	CltzCliDatatype type;
-} CliOption;
+	CzCliCallback callback;
+	enum CzCliDatatype type;
+};
 
-typedef struct CliCallbackData
+struct CliCallbackData
 {
-	CltzCliCallback callback;
-	CltzCliDatatype type;
-	CliData data;
-} CliCallbackData;
+	CzCliCallback callback;
+	enum CzCliDatatype type;
+	union CliData data;
+};
 
-typedef struct CltzCli_T
+struct CzCli_
 {
 	DyArray options;
 	void* config;
-} CltzCli_T;
+};
 
 
-void cltzCliDestroy(CltzCli cli)
+void czCliDestroy(struct CzCli_* cli)
 {
 	if NOEXPECT (!cli) { return; }
 
@@ -65,13 +63,13 @@ void cltzCliDestroy(CltzCli cli)
 	free(cli);
 }
 
-CltzCli cltzCliCreate(void* config, size_t count)
+struct CzCli_* czCliCreate(void* config, size_t count)
 {
-	size_t allocSize = sizeof(CltzCli_T);
-	CltzCli cli = malloc(allocSize);
+	size_t allocSize = sizeof(struct CzCli_);
+	struct CzCli_* cli = malloc(allocSize);
 	if NOEXPECT (!cli) { MALLOC_FAILURE(cli, allocSize); return NULL; }
 
-	size_t elmSize = sizeof(CliOption);
+	size_t elmSize = sizeof(struct CliOption);
 	size_t elmCount = count;
 
 	DyArray options = dyarray_create(elmSize, elmCount);
@@ -83,23 +81,23 @@ CltzCli cltzCliCreate(void* config, size_t count)
 	return cli;
 }
 
-static void cltzCliParseArg(CltzCliDatatype type, const char* option, const char* arg, CliData* result)
+static void czCliParseArg(enum CzCliDatatype type, const char* option, const char* arg, union CliData* result)
 {
 	char* end = NULL;
 
 	switch (type) {
-	case CLTZ_CLI_DATATYPE_NONE:
+	case CZ_CLI_DATATYPE_NONE:
 		break;
 
-	case CLTZ_CLI_DATATYPE_CHAR:
+	case CZ_CLI_DATATYPE_CHAR:
 		result->c = *arg;
 		break;
 
-	case CLTZ_CLI_DATATYPE_STRING:
+	case CZ_CLI_DATATYPE_STRING:
 		result->s = arg;
 		break;
 
-	case CLTZ_CLI_DATATYPE_FLOAT:;
+	case CZ_CLI_DATATYPE_FLOAT:;
 		float f = strtof(arg, &end);
 		if (*end) { 
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %f", arg, option, (double) f);
@@ -108,7 +106,7 @@ static void cltzCliParseArg(CltzCliDatatype type, const char* option, const char
 		result->f = f;
 		break;
 
-	case CLTZ_CLI_DATATYPE_DOUBLE:;
+	case CZ_CLI_DATATYPE_DOUBLE:;
 		double d = strtod(arg, &end);
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %f", arg, option, d);
@@ -117,7 +115,7 @@ static void cltzCliParseArg(CltzCliDatatype type, const char* option, const char
 		result->d = d;
 		break;
 
-	case CLTZ_CLI_DATATYPE_LDOUBLE:;
+	case CZ_CLI_DATATYPE_LDOUBLE:;
 		long double ld = strtold(arg, &end);
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %Lf", arg, option, ld);
@@ -126,7 +124,7 @@ static void cltzCliParseArg(CltzCliDatatype type, const char* option, const char
 		result->ld = ld;
 		break;
 
-	case CLTZ_CLI_DATATYPE_LONG:;
+	case CZ_CLI_DATATYPE_LONG:;
 		long l = strtol(arg, &end, 0);
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %ld", arg, option, l);
@@ -135,7 +133,7 @@ static void cltzCliParseArg(CltzCliDatatype type, const char* option, const char
 		result->l = l;
 		break;
 
-	case CLTZ_CLI_DATATYPE_LLONG:;
+	case CZ_CLI_DATATYPE_LLONG:;
 		long long ll = strtoll(arg, &end, 0);
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %lld", arg, option, ll);
@@ -144,7 +142,7 @@ static void cltzCliParseArg(CltzCliDatatype type, const char* option, const char
 		result->ll = ll;
 		break;
 
-	case CLTZ_CLI_DATATYPE_ULONG:;
+	case CZ_CLI_DATATYPE_ULONG:;
 		unsigned long ul = strtoul(arg, &end, 0);
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %lu", arg, option, ul);
@@ -153,7 +151,7 @@ static void cltzCliParseArg(CltzCliDatatype type, const char* option, const char
 		result->ul = ul;
 		break;
 
-	case CLTZ_CLI_DATATYPE_ULLONG:;
+	case CZ_CLI_DATATYPE_ULLONG:;
 		unsigned long long ull = strtoull(arg, &end, 0);
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %llu", arg, option, ull);
@@ -168,9 +166,9 @@ static void cltzCliParseArg(CltzCliDatatype type, const char* option, const char
 	}
 }
 
-bool cltzCliParse(CltzCli cli, int argc, char** argv)
+bool czCliParse(struct CzCli_* cli, int argc, char** argv)
 {
-	size_t elmSize = sizeof(CliCallbackData);
+	size_t elmSize = sizeof(struct CliCallbackData);
 	DyQueue callbacks = dyqueue_create(elmSize);
 	if NOEXPECT (!callbacks) { return false; }
 
@@ -178,26 +176,26 @@ bool cltzCliParse(CltzCli cli, int argc, char** argv)
 	size_t optionCount = dyarray_size(options);
 	void* config = cli->config;
 
-	CliCallbackData callbackData = {0};
-	CltzCliDatatype argType = CLTZ_CLI_DATATYPE_NONE;
+	struct CliCallbackData callbackData = {0};
+	enum CzCliDatatype argType = CZ_CLI_DATATYPE_NONE;
 	const char* optionName = NULL;
 
 	for (int i = 1; i < argc; i++) {
 		const char* arg = argv[i];
 
 		if (argType) {
-			cltzCliParseArg(argType, optionName, arg, &callbackData.data);
+			czCliParseArg(argType, optionName, arg, &callbackData.data);
 
 			bool bres = dyqueue_enqueue(callbacks, &callbackData);
 			if NOEXPECT (!bres) { dyqueue_destroy(callbacks); return false; }
 
-			argType = CLTZ_CLI_DATATYPE_NONE;
+			argType = CZ_CLI_DATATYPE_NONE;
 			optionName = NULL;
 		}
 
 		else if (!strncmp(arg, "--", 2)) {
 			for (size_t j = 0; j < optionCount; j++) {
-				CliOption option;
+				struct CliOption option;
 				dyarray_get(options, &option, j);
 
 				if (!strncmp(arg + 2, option.fullName, CLTZ_CLI_MAX_OPTION_LENGTH)) {
@@ -206,7 +204,7 @@ bool cltzCliParse(CltzCli cli, int argc, char** argv)
 
 					callbackData.callback = option.callback;
 					callbackData.type = option.type;
-					callbackData.data = (CliData) {0};
+					callbackData.data = (union CliData) {0};
 
 					break;
 				}
@@ -227,12 +225,12 @@ bool cltzCliParse(CltzCli cli, int argc, char** argv)
 				if (argType) {
 					log_warning(stdout, "Ignoring incomplete option -%c", arg[j - 1]);
 
-					argType = CLTZ_CLI_DATATYPE_NONE;
+					argType = CZ_CLI_DATATYPE_NONE;
 					optionName = NULL;
 				}
 
 				for (size_t k = 0; k < optionCount; k++) {
-					CliOption option;
+					struct CliOption option;
 					dyarray_get(options, &option, k);
 
 					if (arg[j] == option.shortName) {
@@ -241,7 +239,7 @@ bool cltzCliParse(CltzCli cli, int argc, char** argv)
 
 						callbackData.callback = option.callback;
 						callbackData.type = option.type;
-						callbackData.data = (CliData) {0};
+						callbackData.data = (union CliData) {0};
 
 						break;
 					}
@@ -280,9 +278,9 @@ bool cltzCliParse(CltzCli cli, int argc, char** argv)
 	return true;
 }
 
-bool cltzCliAdd(CltzCli cli, char option, const char* name, CltzCliDatatype type, CltzCliCallback callback)
+bool czCliAdd(struct CzCli_* cli, char option, const char* name, enum CzCliDatatype type, CzCliCallback callback)
 {
-	CliOption newOption = {0};
+	struct CliOption newOption = {0};
 
 	size_t length = strlen(name);
 	if NOEXPECT (length > CLTZ_CLI_MAX_OPTION_LENGTH) { return false; }

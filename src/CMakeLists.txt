@@ -22,9 +22,11 @@ target_link_libraries(cltz
 target_sources(cltz
 	PRIVATE
 		cli.c
+		config.c
 		gpu.c
 		main.c
 	PRIVATE FILE_SET HEADERS FILES
 		cli.h
+		config.h
 		gpu.h
 )

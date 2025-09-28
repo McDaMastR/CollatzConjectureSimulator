@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "defs.h"
+#include "common.h"
 
 
 /**
@@ -25,7 +25,7 @@
  * 
  * @brief A dynamically sized record of dynamic memory allocations.
  */
-typedef struct DyRecord_T* DyRecord;
+typedef struct DyRecord_* DyRecord;
 
 /**
  * @relates DyRecord
@@ -57,14 +57,13 @@ void dyrecord_destroy(DyRecord record);
  * 
  * @brief Creates a new dynamic record.
  * 
- * Creates an empty dynamic record.
+ * Creates an empty dynamic record. Failure can occur if sufficient memory is unable to be allocated.
  * 
  * @return The new dynamic record, or null on failure.
  * 
  * @note Failing to destroy the returned dynamic record will result in a memory leak.
  */
 DyRecord dyrecord_create(void) FREE_FUNC(dyrecord_destroy, 1) USE_RET;
-
 
 /**
  * @memberof DyRecord
@@ -81,13 +80,13 @@ DyRecord dyrecord_create(void) FREE_FUNC(dyrecord_destroy, 1) USE_RET;
  */
 size_t dyrecord_size(DyRecord record) NONNULL_ALL RE_ACCESS(1) USE_RET;
 
-
 /**
  * @memberof DyRecord
  * 
  * @brief Adds an allocation to a dynamic record.
  * 
- * Records the dynamic memory allocation pointed to by @p memory to @p record.
+ * Records the dynamic memory allocation pointed to by @p memory to @p record. Failure can occur if sufficient memory is
+ * unable to be allocated.
  * 
  * @param[in,out] record The dynamic record.
  * @param[in] memory The allocated memory.
@@ -97,7 +96,8 @@ size_t dyrecord_size(DyRecord record) NONNULL_ALL RE_ACCESS(1) USE_RET;
  * @retval false on failure.
  * 
  * @pre @p record is nonnull.
- * @pre @p memory is nonnull and does not overlap in memory with @p record.
+ * @pre @p memory is nonnull.
+ * @pre @p record and @p memory do not overlap in memory.
  * @pre @p callback is nonnull.
  */
 bool dyrecord_add(DyRecord record, void* memory, FreeCallback callback) NONNULL_ALL RW_ACCESS(1) NO_ACCESS(2);
@@ -107,7 +107,8 @@ bool dyrecord_add(DyRecord record, void* memory, FreeCallback callback) NONNULL_
  * 
  * @brief Allocates and adds memory to a dynamic record.
  * 
- * Dynamically allocates memory via @c malloc. The allocation is recorded to @p record.
+ * Dynamically allocates memory via @c malloc. The allocation is recorded to @p record. Failure can occur if sufficient
+ * memory is unable to be allocated.
  * 
  * @param[in,out] record The dynamic record.
  * @param[in] size The size to pass to malloc.
@@ -123,7 +124,8 @@ void* dyrecord_malloc(DyRecord record, size_t size) MALLOC_FUNC NONNULL_ALL ALLO
  * 
  * @brief Allocates and adds zero initialised memory to a dynamic record.
  * 
- * Dynamically allocates memory via @c calloc. The allocation is recorded to @p record.
+ * Dynamically allocates memory via @c calloc. The allocation is recorded to @p record. Failure can occur if sufficient
+ * memory is unable to be allocated.
  * 
  * @param[in,out] record The dynamic record.
  * @param[in] count The count to pass to calloc.

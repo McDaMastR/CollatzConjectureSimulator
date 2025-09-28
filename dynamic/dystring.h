@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "defs.h"
+#include "common.h"
 
 
 /**
@@ -25,7 +25,7 @@
  * 
  * @brief A dynamically sized null-terminated byte string.
  */
-typedef struct DyString_T* DyString;
+typedef struct DyString_* DyString;
 
 
 /**
@@ -47,7 +47,8 @@ void dystring_destroy(DyString string);
  * @brief Creates a new dynamic string.
  * 
  * Creates a dynamic string containing only the null terminator. Memory is preallocated for @p count characters,
- * including the null terminator. All preallocated memory is zero initialised.
+ * including the null terminator. All preallocated memory is zero initialised. Failure can occur if sufficient memory is
+ * unable to be allocated.
  * 
  * @param[in] count The number of characters to preallocate memory for.
  * 
@@ -58,7 +59,6 @@ void dystring_destroy(DyString string);
  * @note Failing to destroy the returned dynamic string will result in a memory leak.
  */
 DyString dystring_create(size_t count) FREE_FUNC(dystring_destroy, 1) USE_RET;
-
 
 /**
  * @memberof DyString
@@ -96,13 +96,13 @@ size_t dystring_length(DyString string) NONNULL_ALL RE_ACCESS(1) USE_RET;
  */
 char* dystring_raw(DyString string) NONNULL_ALL RE_ACCESS(1) NONNULL_RET USE_RET;
 
-
 /**
  * @memberof DyString
  * 
  * @brief Appends a string to a dynamic string.
  * 
- * Lengthens @p string and copies the string pointed to by @p substring into the lengthened end of @p string.
+ * Lengthens @p string and copies the string pointed to by @p substring into the lengthened end of @p string. Failure
+ * can occur if sufficient memory is unable to be allocated.
  * 
  * @param[in,out] string The dynamic string.
  * @param[in] substring The string to copy from.
@@ -110,7 +110,8 @@ char* dystring_raw(DyString string) NONNULL_ALL RE_ACCESS(1) NONNULL_RET USE_RET
  * @return A pointer to the added substring in @p string, or null on failure.
  * 
  * @pre @p string is nonnull.
- * @pre @p substring is nonnull, null-terminated, and does not overlap in memory with @p string.
+ * @pre @p substring is nonnull and null-terminated.
+ * @pre @p string and @p substring do not overlap in memory.
  */
 char* dystring_append(DyString string, const char* substring) NONNULL_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
 
@@ -119,7 +120,8 @@ char* dystring_append(DyString string, const char* substring) NONNULL_ALL NULTST
  * 
  * @brief Prepends a substring to a dynamic string.
  * 
- * Lengthens @p string and copies the string pointed to by @p substring into the lengthened start of @p string.
+ * Lengthens @p string and copies the string pointed to by @p substring into the lengthened start of @p string. Failure
+ * can occur if sufficient memory is unable to be allocated.
  * 
  * @param[in,out] string The dynamic string.
  * @param[in] substring The string to copy from.
@@ -127,7 +129,8 @@ char* dystring_append(DyString string, const char* substring) NONNULL_ALL NULTST
  * @return A pointer to the added substring in @p string, or null on failure.
  * 
  * @pre @p string is nonnull.
- * @pre @p substring is nonnull, null-terminated, and does not overlap in memory with @p string.
+ * @pre @p substring is nonnull and null-terminated.
+ * @pre @p string and @p substring do not overlap in memory.
  */
 char* dystring_prepend(DyString string, const char* substring) NONNULL_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
 
@@ -137,7 +140,7 @@ char* dystring_prepend(DyString string, const char* substring) NONNULL_ALL NULTS
  * @brief Adds a substring to a dynamic string.
  * 
  * Lengthens @p string and copies the string pointed to by @p substring into the lengthened part of @p string at the
- * zero-based position @p index.
+ * zero-based position @p index. Failure can occur if sufficient memory is unable to be allocated.
  * 
  * @param[in,out] string The dynamic string.
  * @param[in] substring The string to copy from.
@@ -146,7 +149,8 @@ char* dystring_prepend(DyString string, const char* substring) NONNULL_ALL NULTS
  * @return A pointer to the added substring in @p string, or null on failure.
  * 
  * @pre @p string is nonnull.
- * @pre @p substring is nonnull, null-terminated, and does not overlap in memory with @p string.
+ * @pre @p substring is nonnull and null-terminated.
+ * @pre @p string and @p substring do not overlap in memory.
  * @pre @p index is less than the length of @p string.
  */
 char* dystring_add(DyString string, const char* substring, size_t index)

@@ -107,14 +107,14 @@ set_target_properties(
 
 target_compile_definitions(cltzCommon
 	PUBLIC
-		CLTZ_NAME="Collatz Conjecture Simulator"
-		CLTZ_EXECUTABLE="$<TARGET_FILE_NAME:cltz>"
-		"CLTZ_COPYRIGHT=\"Copyright (C) 2025 Seth McDonald\"" # The '(C)' causes a syntax error without extra quotes
-		CLTZ_LICENCE="Licence GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>"
+		CZ_NAME="Collatz Conjecture Simulator"
+		CZ_EXECUTABLE="$<TARGET_FILE_NAME:cltz>"
+		"CZ_COPYRIGHT=\"Copyright (C) 2025 Seth McDonald\"" # The '(C)' causes a syntax error without extra quotes
+		CZ_LICENCE="Licence GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>"
 
-		CLTZ_VERSION_MAJOR=${CollatzConjectureSimulator_VERSION_MAJOR}
-		CLTZ_VERSION_MINOR=${CollatzConjectureSimulator_VERSION_MINOR}
-		CLTZ_VERSION_PATCH=${CollatzConjectureSimulator_VERSION_PATCH}
+		CZ_VERSION_MAJOR=${CollatzConjectureSimulator_VERSION_MAJOR}
+		CZ_VERSION_MINOR=${CollatzConjectureSimulator_VERSION_MINOR}
+		CZ_VERSION_PATCH=${CollatzConjectureSimulator_VERSION_PATCH}
 
 		"$<$<NOT:$<CONFIG:DEBUG>>:NDEBUG=1>"
 		"$<$<AND:${USING_EXCESS_WARNINGS},${USING_MINGW}>:__MINGW_MSVC_COMPAT_WARNINGS=1>"
@@ -196,11 +196,10 @@ target_precompile_headers(cltzCommon
 target_sources(cltzCommon
 	PRIVATE
 		debug.c
-		defs.c
 		util.c
 	PUBLIC FILE_SET HEADERS FILES
 		common.h
 		debug.h
-		defs.h
+		def.h
 		util.h
 )

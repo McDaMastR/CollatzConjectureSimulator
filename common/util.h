@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "defs.h"
+#include "def.h"
 
 
 bool fisatty(FILE* stream) USE_RET;
@@ -25,7 +25,7 @@ bool fisatty(FILE* stream) USE_RET;
 char* stime(void) NONNULL_RET USE_RET;
 double program_time(void) USE_RET;
 
-Endianness get_endianness(void) CONST_FUNC USE_RET;
+enum CzEndianness get_endianness(void) CONST_FUNC USE_RET;
 
 uint32_t ceil_pow2(uint32_t x) CONST_FUNC USE_RET;
 uint32_t floor_pow2(uint32_t x) CONST_FUNC USE_RET;

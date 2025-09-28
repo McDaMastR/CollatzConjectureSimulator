@@ -17,38 +17,37 @@
 
 #pragma once
 
-#include "defs.h"
+#include "common.h"
+
+#define CLTZ_CLI_MAX_OPTION_LENGTH 64
 
 
-#define CLTZ_CLI_MAX_OPTION_LENGTH 64ULL
+typedef struct CzCli_* CzCli;
 
+typedef bool (*CzCliCallback)(void* config, void* arg);
 
-typedef struct CltzCli_T* CltzCli;
-
-typedef bool (*CltzCliCallback)(void* config, void* arg);
-
-typedef enum CltzCliDatatype
+enum CzCliDatatype
 {
-	CLTZ_CLI_DATATYPE_NONE    = 0,
-	CLTZ_CLI_DATATYPE_CHAR    = 1,
-	CLTZ_CLI_DATATYPE_STRING  = 2,
-	CLTZ_CLI_DATATYPE_FLOAT   = 3,
-	CLTZ_CLI_DATATYPE_DOUBLE  = 4,
-	CLTZ_CLI_DATATYPE_LDOUBLE = 5,
-	CLTZ_CLI_DATATYPE_LONG    = 6,
-	CLTZ_CLI_DATATYPE_LLONG   = 7,
-	CLTZ_CLI_DATATYPE_ULONG   = 8,
-	CLTZ_CLI_DATATYPE_ULLONG  = 9
-} CltzCliDatatype;
+	CZ_CLI_DATATYPE_NONE    = 0,
+	CZ_CLI_DATATYPE_CHAR    = 1,
+	CZ_CLI_DATATYPE_STRING  = 2,
+	CZ_CLI_DATATYPE_FLOAT   = 3,
+	CZ_CLI_DATATYPE_DOUBLE  = 4,
+	CZ_CLI_DATATYPE_LDOUBLE = 5,
+	CZ_CLI_DATATYPE_LONG    = 6,
+	CZ_CLI_DATATYPE_LLONG   = 7,
+	CZ_CLI_DATATYPE_ULONG   = 8,
+	CZ_CLI_DATATYPE_ULLONG  = 9
+};
 
 
 // TODO Document these functions like the Dy* functions
 
-void cltzCliDestroy(CltzCli cli);
+void czCliDestroy(CzCli cli);
 
-CltzCli cltzCliCreate(void* config, size_t count) FREE_FUNC(cltzCliDestroy, 1) NO_ACCESS(1) USE_RET;
+CzCli czCliCreate(void* config, size_t count) FREE_FUNC(czCliDestroy, 1) NO_ACCESS(1) USE_RET;
 
-bool cltzCliParse(CltzCli cli, int argc, char** argv) NONNULL_ALL;
+bool czCliParse(CzCli cli, int argc, char** argv) NONNULL_ALL;
 
-bool cltzCliAdd(CltzCli cli, char option, const char* name, CltzCliDatatype type, CltzCliCallback callback)
+bool czCliAdd(CzCli cli, char option, const char* name, enum CzCliDatatype type, CzCliCallback callback)
 	NONNULL_ALL NULTSTR_ARG(3);

@@ -19,21 +19,16 @@
 #include "debug.h"
 
 
-#ifdef _MSC_VER
-	#pragma intrinsic(_BitScanReverse)
-#endif
-
-
-typedef struct AlignedInfo
+struct AlignedInfo
 {
 	void* start;
 	size_t size;
-} AlignedInfo;
+};
 
 
 bool fisatty(FILE* stream)
 {
-#if defined(_MSC_VER) || defined(__MINGW32__)
+#if defined(_WIN32)
 	int tty = _isatty(_fileno(stream));
 #else
 	int tty = isatty(fileno(stream));
@@ -54,11 +49,11 @@ double program_time(void)
 	return (double) t * MS_PER_CLOCK;
 }
 
-Endianness get_endianness(void)
+enum CzEndianness get_endianness(void)
 {
 	int x = 1;
 	char c = *(char*) &x;
-	return c ? ENDIANNESS_LITTLE : ENDIANNESS_BIG;
+	return c ? CZ_ENDIANNESS_LITTLE : CZ_ENDIANNESS_BIG;
 }
 
 uint32_t ceil_pow2(uint32_t x)
@@ -296,25 +291,25 @@ void* aligned_malloc(size_t size, size_t alignment)
 	ASSUME((alignment & (alignment - 1)) == 0); // alignment is a power of two
 
 	void* memory;
-	AlignedInfo* info;
+	struct AlignedInfo* info;
 
 #if defined(_WIN32)
-	size_t allocSize = size + sizeof(AlignedInfo);
-	size_t allocAlignment = maxz(alignment, alignof(AlignedInfo));
-	size_t offset = sizeof(AlignedInfo);
+	size_t allocSize = size + sizeof(struct AlignedInfo);
+	size_t allocAlignment = maxz(alignment, alignof(struct AlignedInfo));
+	size_t offset = sizeof(struct AlignedInfo);
 
 	memory = _aligned_offset_malloc(allocSize, allocAlignment, offset);
 	if NOEXPECT (!memory) { return NULL; }
 
 	info = memory;
 #else
-	size_t allocAlignment = maxz(alignment, alignof(AlignedInfo));
-	size_t allocSize = size + maxz(alignment, sizeof(AlignedInfo));
+	size_t allocAlignment = maxz(alignment, alignof(struct AlignedInfo));
+	size_t allocSize = size + maxz(alignment, sizeof(struct AlignedInfo));
 
 	int ires = posix_memalign(&memory, allocAlignment, allocSize);
 	if NOEXPECT (ires) { return NULL; }
 
-	info = (AlignedInfo*) memory + maxz(alignment, sizeof(AlignedInfo)) / sizeof(AlignedInfo) - 1;
+	info = (struct AlignedInfo*) memory + maxz(alignment, sizeof(struct AlignedInfo)) / sizeof(struct AlignedInfo) - 1;
 #endif
 
 	info->start = memory;
@@ -328,29 +323,30 @@ void* aligned_realloc(void* memory, size_t size, size_t alignment)
 	ASSUME(size != 0);
 	ASSUME((alignment & (alignment - 1)) == 0); // alignment is a power of two
 
-	AlignedInfo* info = (AlignedInfo*) memory - 1;
+	struct AlignedInfo* info = (struct AlignedInfo*) memory - 1;
 	void* oldMemory = info->start;
 	size_t oldSize = info->size;
 
 	void* newMemory;
 
 #if defined(_WIN32)
-	size_t allocSize = size + sizeof(AlignedInfo);
-	size_t allocAlignment = maxz(alignment, alignof(AlignedInfo));
-	size_t offset = sizeof(AlignedInfo);
+	size_t allocSize = size + sizeof(struct AlignedInfo);
+	size_t allocAlignment = maxz(alignment, alignof(struct AlignedInfo));
+	size_t offset = sizeof(struct AlignedInfo);
 
 	newMemory = _aligned_offset_realloc(oldMemory, allocSize, allocAlignment, offset);
 	if NOEXPECT (!newMemory) { return NULL; }
 
 	info = newMemory;
 #else
-	size_t allocAlignment = maxz(alignment, alignof(AlignedInfo));
-	size_t allocSize = size + maxz(alignment, sizeof(AlignedInfo));
+	size_t allocAlignment = maxz(alignment, alignof(struct AlignedInfo));
+	size_t allocSize = size + maxz(alignment, sizeof(struct AlignedInfo));
 
 	int ires = posix_memalign(&newMemory, allocAlignment, allocSize);
 	if NOEXPECT (ires) { return NULL; }
 
-	info = (AlignedInfo*) newMemory + maxz(alignment, sizeof(AlignedInfo)) / sizeof(AlignedInfo) - 1;
+	info =
+		(struct AlignedInfo*) newMemory + maxz(alignment, sizeof(struct AlignedInfo)) / sizeof(struct AlignedInfo) - 1;
 
 	void* cpyDest = info + 1;
 	void* cpySrc = memory;
@@ -368,7 +364,7 @@ void* aligned_realloc(void* memory, size_t size, size_t alignment)
 
 void aligned_free(void* memory)
 {
-	AlignedInfo* info = (AlignedInfo*) memory - 1;
+	struct AlignedInfo* info = (struct AlignedInfo*) memory - 1;
 
 #if defined(_WIN32)
 	_aligned_free(info->start);
@@ -379,7 +375,7 @@ void aligned_free(void* memory)
 
 size_t aligned_size(const void* memory)
 {
-	const AlignedInfo* info = (const AlignedInfo*) memory - 1;
+	const struct AlignedInfo* info = (const struct AlignedInfo*) memory - 1;
 	return info->size;
 }
 

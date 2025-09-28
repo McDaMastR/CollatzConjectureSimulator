@@ -17,13 +17,14 @@
 
 #pragma once
 
+#include "common.h"
 #include "dynamic.h"
 
 
 typedef unsigned __int128 StartValue;
 typedef uint16_t StopTime;
 
-typedef struct Gpu
+struct Gpu
 {
 	DyRecord allocRecord;
 
@@ -117,9 +118,9 @@ typedef struct Gpu
 	bool usingShaderInt16;
 	bool usingShaderInt64;
 	bool usingSubgroupSizeControl;
-} Gpu;
+};
 
-typedef struct Position
+struct Position
 {
 	/* 
 	 * Suppose the current longest total stopping time is T. Then val-a-mod-m-off[k] gives the least starting value x
@@ -130,21 +131,21 @@ typedef struct Position
 
 	StartValue curStartValue; // First starting value being checked in the current dispatch.
 	StopTime bestStopTime; // Current longest total stopping time.
-} Position;
+};
 
 
 // If the return type is bool, then the function returns true on success and false elsewise
 
-bool create_instance(Gpu* restrict gpu) NONNULL_ALL;
-bool select_device(Gpu* restrict gpu) NONNULL_ALL;
-bool create_device(Gpu* restrict gpu) NONNULL_ALL;
-bool manage_memory(Gpu* restrict gpu) NONNULL_ALL;
-bool create_buffers(Gpu* restrict gpu) NONNULL_ALL;
-bool create_descriptors(Gpu* restrict gpu) NONNULL_ALL;
-bool create_pipeline(Gpu* restrict gpu) NONNULL_ALL;
-bool create_commands(Gpu* restrict gpu) NONNULL_ALL;
-bool submit_commands(Gpu* restrict gpu) NONNULL_ALL;
-bool destroy_gpu(Gpu* restrict gpu) NONNULL_ALL;
+bool create_instance(struct Gpu* restrict gpu) NONNULL_ALL;
+bool select_device(struct Gpu* restrict gpu) NONNULL_ALL;
+bool create_device(struct Gpu* restrict gpu) NONNULL_ALL;
+bool manage_memory(struct Gpu* restrict gpu) NONNULL_ALL;
+bool create_buffers(struct Gpu* restrict gpu) NONNULL_ALL;
+bool create_descriptors(struct Gpu* restrict gpu) NONNULL_ALL;
+bool create_pipeline(struct Gpu* restrict gpu) NONNULL_ALL;
+bool create_commands(struct Gpu* restrict gpu) NONNULL_ALL;
+bool submit_commands(struct Gpu* restrict gpu) NONNULL_ALL;
+bool destroy_gpu(struct Gpu* restrict gpu) NONNULL_ALL;
 
 bool capture_pipeline(VkDevice device, VkPipeline pipeline);
 
@@ -158,7 +159,7 @@ void write_inbuffer(
 
 void read_outbuffer(
 	const StopTime* restrict mappedOutBuffer,
-	Position* restrict position,
+	struct Position* restrict position,
 	DyArray bestStartValues,
 	DyArray bestStopTimes,
 	uint32_t valuesPerInout) NONNULL_ALL;

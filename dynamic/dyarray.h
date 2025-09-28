@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "defs.h"
+#include "common.h"
 
 
 /**
@@ -25,7 +25,7 @@
  * 
  * @brief A dynamically sized array.
  */
-typedef struct DyArray_T* DyArray;
+typedef struct DyArray_* DyArray;
 
 
 /**
@@ -47,7 +47,7 @@ void dyarray_destroy(DyArray array);
  * @brief Creates a new dynamic array.
  * 
  * Creates an empty dynamic array. If @p count is nonzero, memory is preallocated for @p count elements. Any
- * preallocated memory is not initialised.
+ * preallocated memory is not initialised. Failure can occur if sufficient memory is unable to be allocated.
  * 
  * @param[in] size The number of bytes per element.
  * @param[in] count The number of elements to preallocate memory for.
@@ -59,7 +59,6 @@ void dyarray_destroy(DyArray array);
  * @note Failing to destroy the returned dynamic array will result in a memory leak.
  */
 DyArray dyarray_create(size_t size, size_t count) FREE_FUNC(dyarray_destroy, 1) USE_RET;
-
 
 /**
  * @memberof DyArray
@@ -93,7 +92,6 @@ size_t dyarray_size(DyArray array) NONNULL_ALL RE_ACCESS(1) USE_RET;
  */
 void* dyarray_raw(DyArray array) NONNULL_ALL RE_ACCESS(1) USE_RET;
 
-
 /**
  * @memberof DyArray
  * 
@@ -106,7 +104,8 @@ void* dyarray_raw(DyArray array) NONNULL_ALL RE_ACCESS(1) USE_RET;
  * @param[in] index The index of the element.
  * 
  * @pre @p array is nonnull and nonempty.
- * @pre @p value is nonnull and does not overlap in memory with @p array.
+ * @pre @p value is nonnull.
+ * @pre @p array and @p value do not overlap in memory.
  * @pre @p index is less than the size of @p array.
  */
 void dyarray_get(DyArray array, void* value, size_t index) NONNULL_ALL RE_ACCESS(1) WR_ACCESS(2);
@@ -123,7 +122,8 @@ void dyarray_get(DyArray array, void* value, size_t index) NONNULL_ALL RE_ACCESS
  * @param[in] index The index of the element.
  * 
  * @pre @p array is nonnull and nonempty.
- * @pre @p value is nonnull and does not overlap in memory with @p array.
+ * @pre @p value is nonnull.
+ * @pre @p array and @p value do not overlap in memory.
  * @pre @p index is less than the size of @p array.
  */
 void dyarray_set(DyArray array, const void* value, size_t index) NONNULL_ALL RW_ACCESS(1) RE_ACCESS(2);
@@ -139,7 +139,8 @@ void dyarray_set(DyArray array, const void* value, size_t index) NONNULL_ALL RW_
  * @param[out] value The memory to write the element to.
  * 
  * @pre @p array is nonnull and nonempty.
- * @pre @p value is nonnull and does not overlap in memory with @p array.
+ * @pre @p value is nonnull.
+ * @pre @p array and @p value do not overlap in memory.
  */
 void dyarray_last(DyArray array, void* value) NONNULL_ALL RE_ACCESS(1) WR_ACCESS(2);
 
@@ -154,10 +155,10 @@ void dyarray_last(DyArray array, void* value) NONNULL_ALL RE_ACCESS(1) WR_ACCESS
  * @param[out] value The memory to write the element to.
  * 
  * @pre @p array is nonnull and nonempty.
- * @pre @p value is nonnull and does not overlap in memory with @p array.
+ * @pre @p value is nonnull.
+ * @pre @p array and @p value do not overlap in memory.
  */
 void dyarray_first(DyArray array, void* value) NONNULL_ALL RE_ACCESS(1) WR_ACCESS(2);
-
 
 /**
  * @memberof DyArray
@@ -165,6 +166,7 @@ void dyarray_first(DyArray array, void* value) NONNULL_ALL RE_ACCESS(1) WR_ACCES
  * @brief Appends an element to a dynamic array.
  * 
  * Adds a new element to the end of @p array. The element is initialised as a copy of the value pointed to by @p value.
+ * Failure can occur if sufficient memory is unable to be allocated.
  * 
  * @param[in,out] array The dynamic array.
  * @param[in] value The initialising value.
@@ -172,7 +174,8 @@ void dyarray_first(DyArray array, void* value) NONNULL_ALL RE_ACCESS(1) WR_ACCES
  * @return A pointer to the new element in @p array, or null on failure.
  * 
  * @pre @p array is nonnull.
- * @pre @p value is nonnull and does not overlap in memory with @p array.
+ * @pre @p value is nonnull.
+ * @pre @p array and @p value do not overlap in memory.
  */
 void* dyarray_append(DyArray array, const void* value) NONNULL_ALL RW_ACCESS(1) RE_ACCESS(2);
 
@@ -182,7 +185,7 @@ void* dyarray_append(DyArray array, const void* value) NONNULL_ALL RW_ACCESS(1) 
  * @brief Prepends an element to a dynamic array.
  * 
  * Adds a new element to the start of @p array. The element is initialised as a copy of the value pointed to by
- * @p value.
+ * @p value. Failure can occur if sufficient memory is unable to be allocated.
  * 
  * @param[in,out] array The dynamic array.
  * @param[in] value The initialising value.
@@ -190,7 +193,8 @@ void* dyarray_append(DyArray array, const void* value) NONNULL_ALL RW_ACCESS(1) 
  * @return A pointer to the new element in @p array, or null on failure.
  * 
  * @pre @p array is nonnull.
- * @pre @p value is nonnull and does not overlap in memory with @p array.
+ * @pre @p value is nonnull.
+ * @pre @p array and @p value do not overlap in memory.
  */
 void* dyarray_prepend(DyArray array, const void* value) NONNULL_ALL RW_ACCESS(1) RE_ACCESS(2);
 
@@ -200,7 +204,7 @@ void* dyarray_prepend(DyArray array, const void* value) NONNULL_ALL RW_ACCESS(1)
  * @brief Adds an element to a dynamic array.
  * 
  * Adds a new element to @p array at the zero-based position @p index. The element is initialised as a copy of the value
- * pointed to by @p value.
+ * pointed to by @p value. Failure can occur if sufficient memory is unable to be allocated.
  * 
  * @param[in,out] array The dynamic array.
  * @param[in] value The initialising value.
@@ -209,7 +213,8 @@ void* dyarray_prepend(DyArray array, const void* value) NONNULL_ALL RW_ACCESS(1)
  * @return A pointer to the new element in @p array, or null on failure.
  * 
  * @pre @p array is nonnull.
- * @pre @p value is nonnull and does not overlap in memory with @p array.
+ * @pre @p value is nonnull.
+ * @pre @p array and @p value do not overlap in memory.
  * @pre @p index is less than or equal to the size of @p array.
  */
 void* dyarray_add(DyArray array, const void* value, size_t index) NONNULL_ALL RW_ACCESS(1) RE_ACCESS(2);

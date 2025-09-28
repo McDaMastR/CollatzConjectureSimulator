@@ -17,24 +17,25 @@
 
 #pragma once
 
-#include "defs.h"
+#include "def.h"
 
 
-typedef struct CallbackData
+struct CzVulkanCallbackData
 {
 	const char* func;
 	const char* file;
 	uint64_t line;
-} CallbackData;
+};
 
 
-extern CallbackData g_callbackData;
+extern struct CzVulkanCallbackData czgCallbackData;
 
 
 // Initialisation functions
 
-bool init_debug_logfile(void);
-bool init_alloc_logfile(void);
+bool init_debug_logfile(const char* filename);
+bool init_alloc_logfile(const char* filename);
+bool init_colour_level(enum CzColourLevel level);
 
 
 // General logging functions
@@ -71,7 +72,6 @@ void log_pcancel_failure(int line, int res) COLD_FUNC;
 void log_pjoin_failure(int line, int res) COLD_FUNC;
 
 void log_vkinit_failure(int line, VkResult res) COLD_FUNC;
-void log_vkvers_failure(int line, uint32_t res) COLD_FUNC;
 void log_vulkan_failure(int line, VkResult res, const char* func) COLD_FUNC NONNULL_ALL NULTSTR_ARG(3);
 
 
@@ -120,7 +120,6 @@ VKAPI_ATTR void VKAPI_CALL internal_free_callback(
 #define PJOIN_FAILURE(res)   log_pjoin_failure(__LINE__, (int) (res))
 
 #define VKINIT_FAILURE(res)  log_vkinit_failure(__LINE__, (VkResult) (res))
-#define VKVERS_FAILURE(res)  log_vkvers_failure(__LINE__, (uint32_t) (res))
 #define VULKAN_FAILURE(func) log_vulkan_failure(__LINE__, vkres, #func)
 
 #ifdef NDEBUG
@@ -139,20 +138,20 @@ VKAPI_ATTR void VKAPI_CALL internal_free_callback(
 		}                                       \
 		while (0)
 #else
-	#define VK_CALL(vkfunc, ...)             \
-		do {                                 \
-			g_callbackData.func = #vkfunc;   \
-			g_callbackData.file = FILE_NAME; \
-			g_callbackData.line = __LINE__;  \
-			(vkfunc)(__VA_ARGS__);           \
-		}                                    \
+	#define VK_CALL(vkfunc, ...)              \
+		do {                                  \
+			czgCallbackData.func = #vkfunc;   \
+			czgCallbackData.file = FILE_NAME; \
+			czgCallbackData.line = __LINE__;  \
+			(vkfunc)(__VA_ARGS__);            \
+		}                                     \
 		while (0)
 
 	#define VK_CALLR(vkfunc, ...)               \
 		do {                                    \
-			g_callbackData.func = #vkfunc;      \
-			g_callbackData.file = FILE_NAME;    \
-			g_callbackData.line = __LINE__;     \
+			czgCallbackData.func = #vkfunc;     \
+			czgCallbackData.file = FILE_NAME;   \
+			czgCallbackData.line = __LINE__;    \
 			vkres = (vkfunc)(__VA_ARGS__);      \
 			if NOEXPECT (vkres != VK_SUCCESS) { \
 				VULKAN_FAILURE(vkfunc);         \

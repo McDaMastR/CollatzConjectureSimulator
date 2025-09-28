@@ -15,14 +15,14 @@
  * Simulator. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "defs.h"
+#include "config.h"
 
 
-ProgramConfig g_config = {
+struct CzConfig czgConfig = {
 	.allocLogPath = NULL,
 	.capturePath = NULL,
-	.outputLevel = OUTPUT_LEVEL_DEFAULT,
-	.colourLevel = COLOUR_LEVEL_TTY,
+	.outputLevel = CZ_OUTPUT_LEVEL_DEFAULT,
+	.colourLevel = CZ_COLOUR_LEVEL_TTY,
 	.iterSize = 128,
 	.maxLoops = ULLONG_MAX,
 	.maxMemory = .4f,

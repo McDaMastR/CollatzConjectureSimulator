@@ -16,24 +16,23 @@
  */
 
 #include "dyrecord.h"
-#include "debug.h"
 
 
-typedef struct Node
+struct Node
 {
 	struct Node* next;
 	void* memory;
 	FreeCallback callback;
-} Node;
+};
 
-typedef struct DyRecord_T
+struct DyRecord_
 {
 	size_t count; // Number of nodes
-	Node* top; // Last added node
-} DyRecord_T;
+	struct Node* top; // Last added node
+};
 
 
-void dyrecord_destroy(DyRecord record)
+void dyrecord_destroy(struct DyRecord_* restrict record)
 {
 	if NOEXPECT (!record) { return; }
 
@@ -41,10 +40,10 @@ void dyrecord_destroy(DyRecord record)
 	free(record);
 }
 
-DyRecord dyrecord_create(void)
+struct DyRecord_* dyrecord_create(void)
 {
-	size_t size = sizeof(DyRecord_T);
-	DyRecord record = malloc(size);
+	size_t size = sizeof(struct DyRecord_);
+	struct DyRecord_* record = malloc(size);
 	if NOEXPECT (!record) { MALLOC_FAILURE(record, size); return NULL; }
 
 	record->count = 0;
@@ -53,18 +52,18 @@ DyRecord dyrecord_create(void)
 	return record;
 }
 
-size_t dyrecord_size(DyRecord record)
+size_t dyrecord_size(struct DyRecord_* restrict record)
 {
 	return record->count;
 }
 
-bool dyrecord_add(DyRecord record, void* restrict memory, FreeCallback callback)
+bool dyrecord_add(struct DyRecord_* restrict record, void* restrict memory, FreeCallback callback)
 {
 	size_t count = record->count;
-	Node* top = record->top;
+	struct Node* top = record->top;
 
-	size_t size = sizeof(Node);
-	Node* node = malloc(size);
+	size_t size = sizeof(struct Node);
+	struct Node* node = malloc(size);
 	if NOEXPECT (!node) { MALLOC_FAILURE(node, size); return false; }
 
 	node->next = top;
@@ -77,7 +76,7 @@ bool dyrecord_add(DyRecord record, void* restrict memory, FreeCallback callback)
 	return true;
 }
 
-void* dyrecord_malloc(DyRecord record, size_t size)
+void* dyrecord_malloc(struct DyRecord_* restrict record, size_t size)
 {
 	ASSUME(size != 0);
 
@@ -90,7 +89,7 @@ void* dyrecord_malloc(DyRecord record, size_t size)
 	return memory;
 }
 
-void* dyrecord_calloc(DyRecord record, size_t count, size_t size)
+void* dyrecord_calloc(struct DyRecord_* restrict record, size_t count, size_t size)
 {
 	ASSUME(count != 0);
 	ASSUME(size != 0);
@@ -104,12 +103,12 @@ void* dyrecord_calloc(DyRecord record, size_t count, size_t size)
 	return memory;
 }
 
-void dyrecord_free(DyRecord record)
+void dyrecord_free(struct DyRecord_* restrict record)
 {
-	Node* node = record->top;
+	struct Node* node = record->top;
 
 	while (node) {
-		Node* next = node->next;
+		struct Node* next = node->next;
 		void* memory = node->memory;
 		FreeCallback callback = node->callback;
 

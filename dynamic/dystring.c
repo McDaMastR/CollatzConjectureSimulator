@@ -16,18 +16,17 @@
  */
 
 #include "dystring.h"
-#include "debug.h"
 
 
-typedef struct DyString_T
+struct DyString_
 {
 	size_t length; // Number of characters currently in string, including null terminator
 	size_t capacity; // Number of characters that could fit in allocated memory
-	char* raw; // Raw string
-} DyString_T;
+	char* restrict raw; // Raw string
+};
 
 
-static char* dystring_stretch(DyString string, size_t length)
+static char* dystring_stretch(struct DyString_* restrict string, size_t length)
 {
 	ASSUME(string->capacity != 0);
 	ASSUME(string->raw != NULL);
@@ -57,8 +56,7 @@ static char* dystring_stretch(DyString string, size_t length)
 	return newRaw;
 }
 
-
-void dystring_destroy(DyString string)
+void dystring_destroy(struct DyString_* restrict string)
 {
 	if NOEXPECT (!string) { return; }
 
@@ -66,10 +64,10 @@ void dystring_destroy(DyString string)
 	free(string);
 }
 
-DyString dystring_create(size_t count)
+struct DyString_* dystring_create(size_t count)
 {
-	size_t allocSize = sizeof(DyString_T);
-	DyString string = malloc(allocSize);
+	size_t allocSize = sizeof(struct DyString_);
+	struct DyString_* string = malloc(allocSize);
 	if NOEXPECT (!string) { MALLOC_FAILURE(string, allocSize); return NULL; }
 
 	allocSize = sizeof(char);
@@ -83,17 +81,17 @@ DyString dystring_create(size_t count)
 	return string;
 }
 
-size_t dystring_length(DyString string)
+size_t dystring_length(struct DyString_* restrict string)
 {
 	return string->length;
 }
 
-char* dystring_raw(DyString string)
+char* dystring_raw(struct DyString_* restrict string)
 {
 	return string->raw;
 }
 
-char* dystring_append(DyString string, const char* restrict substring)
+char* dystring_append(struct DyString_* restrict string, const char* restrict substring)
 {
 	ASSUME(string->length != 0);
 	ASSUME(string->capacity != 0);
@@ -119,7 +117,7 @@ char* dystring_append(DyString string, const char* restrict substring)
 	return subRaw;
 }
 
-char* dystring_prepend(DyString string, const char* restrict substring)
+char* dystring_prepend(struct DyString_* restrict string, const char* restrict substring)
 {
 	ASSUME(string->length != 0);
 	ASSUME(string->capacity != 0);
@@ -149,7 +147,7 @@ char* dystring_prepend(DyString string, const char* restrict substring)
 	return subRaw;
 }
 
-char* dystring_add(DyString string, const char* restrict substring, size_t index)
+char* dystring_add(struct DyString_* restrict string, const char* restrict substring, size_t index)
 {
 	ASSUME(string->length != 0);
 	ASSUME(string->capacity != 0);

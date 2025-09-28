@@ -17,7 +17,7 @@
 
 #include "gpu.h"
 #include "cli.h"
-#include "debug.h"
+#include "config.h"
 
 
 static bool version_option_callback(void* data, void* arg)
@@ -26,10 +26,10 @@ static bool version_option_callback(void* data, void* arg)
 	(void) arg;
 
 	printf(
-		CLTZ_NAME " %d.%d.%d\n"
-		CLTZ_COPYRIGHT "\n"
-		CLTZ_LICENCE "\n",
-		CLTZ_VERSION_MAJOR, CLTZ_VERSION_MINOR, CLTZ_VERSION_PATCH);
+		CZ_NAME " %d.%d.%d\n"
+		CZ_COPYRIGHT "\n"
+		CZ_LICENCE "\n",
+		CZ_VERSION_MAJOR, CZ_VERSION_MINOR, CZ_VERSION_PATCH);
 
 	return false;
 }
@@ -40,7 +40,7 @@ static bool help_option_callback(void* data, void* arg)
 	(void) arg;
 
 	printf( // TO MAINTAIN 80 COLUMN LIMIT IN TERMINAL OUTPUT, DO NOT CROSS THIS LINE ---> |
-		"Usage: " CLTZ_EXECUTABLE " [options]...\n"
+		"Usage: " CZ_EXECUTABLE " [options]...\n"
 		"\n"
 		"Legend:\n"
 		"  <arg>                       A single mandatory argument.\n"
@@ -105,8 +105,8 @@ static bool silent_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
-	ProgramConfig* config = (ProgramConfig*) data;
-	config->outputLevel = OUTPUT_LEVEL_SILENT;
+	struct CzConfig* config = (struct CzConfig*) data;
+	config->outputLevel = CZ_OUTPUT_LEVEL_SILENT;
 	return true;
 }
 
@@ -114,8 +114,8 @@ static bool quiet_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
-	ProgramConfig* config = (ProgramConfig*) data;
-	config->outputLevel = OUTPUT_LEVEL_QUIET;
+	struct CzConfig* config = (struct CzConfig*) data;
+	config->outputLevel = CZ_OUTPUT_LEVEL_QUIET;
 	return true;
 }
 
@@ -123,8 +123,8 @@ static bool verbose_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
-	ProgramConfig* config = (ProgramConfig*) data;
-	config->outputLevel = OUTPUT_LEVEL_VERBOSE;
+	struct CzConfig* config = (struct CzConfig*) data;
+	config->outputLevel = CZ_OUTPUT_LEVEL_VERBOSE;
 	return true;
 }
 
@@ -132,8 +132,8 @@ static bool no_colour_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
-	ProgramConfig* config = (ProgramConfig*) data;
-	config->colourLevel = COLOUR_LEVEL_NONE;
+	struct CzConfig* config = (struct CzConfig*) data;
+	config->colourLevel = CZ_COLOUR_LEVEL_NONE;
 	return true;
 }
 
@@ -141,8 +141,8 @@ static bool colour_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
-	ProgramConfig* config = (ProgramConfig*) data;
-	config->colourLevel = COLOUR_LEVEL_TTY;
+	struct CzConfig* config = (struct CzConfig*) data;
+	config->colourLevel = CZ_COLOUR_LEVEL_TTY;
 	return true;
 }
 
@@ -150,8 +150,8 @@ static bool colour_all_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
-	ProgramConfig* config = (ProgramConfig*) data;
-	config->colourLevel = COLOUR_LEVEL_ALL;
+	struct CzConfig* config = (struct CzConfig*) data;
+	config->colourLevel = CZ_COLOUR_LEVEL_ALL;
 	return true;
 }
 
@@ -159,7 +159,7 @@ static bool ext_layers_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
-	ProgramConfig* config = (ProgramConfig*) data;
+	struct CzConfig* config = (struct CzConfig*) data;
 	config->extensionLayers = true;
 	return true;
 }
@@ -168,7 +168,7 @@ static bool profile_layers_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
-	ProgramConfig* config = (ProgramConfig*) data;
+	struct CzConfig* config = (struct CzConfig*) data;
 	config->profileLayers = true;
 	return true;
 }
@@ -177,7 +177,7 @@ static bool validation_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
-	ProgramConfig* config = (ProgramConfig*) data;
+	struct CzConfig* config = (struct CzConfig*) data;
 	config->validationLayers = true;
 	return true;
 }
@@ -186,7 +186,7 @@ static bool int16_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
-	ProgramConfig* config = (ProgramConfig*) data;
+	struct CzConfig* config = (struct CzConfig*) data;
 	config->preferInt16 = true;
 	return true;
 }
@@ -195,7 +195,7 @@ static bool int64_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
-	ProgramConfig* config = (ProgramConfig*) data;
+	struct CzConfig* config = (struct CzConfig*) data;
 	config->preferInt64 = true;
 	return true;
 }
@@ -204,7 +204,7 @@ static bool restart_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
-	ProgramConfig* config = (ProgramConfig*) data;
+	struct CzConfig* config = (struct CzConfig*) data;
 	config->restart = true;
 	return true;
 }
@@ -213,14 +213,14 @@ static bool no_query_benchmarks_option_callback(void* data, void* arg)
 {
 	(void) arg;
 
-	ProgramConfig* config = (ProgramConfig*) data;
+	struct CzConfig* config = (struct CzConfig*) data;
 	config->queryBenchmarks = false;
 	return true;
 }
 
 static bool log_allocations_option_callback(void* data, void* arg)
 {
-	ProgramConfig* config = (ProgramConfig*) data;
+	struct CzConfig* config = (struct CzConfig*) data;
 	const char* allocLogPath = *(const char**) arg;
 
 	config->allocLogPath = allocLogPath;
@@ -229,7 +229,7 @@ static bool log_allocations_option_callback(void* data, void* arg)
 
 static bool capture_pipelines_option_callback(void* data, void* arg)
 {
-	ProgramConfig* config = (ProgramConfig*) data;
+	struct CzConfig* config = (struct CzConfig*) data;
 	const char* capturePath = *(const char**) arg;
 
 	config->capturePath = capturePath;
@@ -238,7 +238,7 @@ static bool capture_pipelines_option_callback(void* data, void* arg)
 
 static bool iter_size_option_callback(void* data, void* arg)
 {
-	ProgramConfig* config = (ProgramConfig*) data;
+	struct CzConfig* config = (struct CzConfig*) data;
 	unsigned long iterSize = *(unsigned long*) arg;
 
 	if (iterSize != 128 && iterSize != 256) {
@@ -252,7 +252,7 @@ static bool iter_size_option_callback(void* data, void* arg)
 
 static bool max_loops_option_callback(void* data, void* arg)
 {
-	ProgramConfig* config = (ProgramConfig*) data;
+	struct CzConfig* config = (struct CzConfig*) data;
 	unsigned long long maxLoops = *(unsigned long long*) arg;
 
 	config->maxLoops = maxLoops;
@@ -261,7 +261,7 @@ static bool max_loops_option_callback(void* data, void* arg)
 
 static bool max_memory_option_callback(void* data, void* arg)
 {
-	ProgramConfig* config = (ProgramConfig*) data;
+	struct CzConfig* config = (struct CzConfig*) data;
 	float maxMemory = *(float*) arg;
 
 	if (maxMemory <= 0 || maxMemory > 1) {
@@ -276,41 +276,41 @@ static bool max_memory_option_callback(void* data, void* arg)
 static bool init_config(int argc, char** argv)
 {
 	size_t optCount = 20;
-	CltzCli cli = cltzCliCreate(&g_config, optCount);
+	CzCli cli = czCliCreate(&czgConfig, optCount);
 	if NOEXPECT (!cli) { return false; }
 
-	cltzCliAdd(cli, 'V', "version", CLTZ_CLI_DATATYPE_NONE, version_option_callback);
-	cltzCliAdd(cli, 'h', "help",    CLTZ_CLI_DATATYPE_NONE, help_option_callback);
+	czCliAdd(cli, 'V', "version", CZ_CLI_DATATYPE_NONE, version_option_callback);
+	czCliAdd(cli, 'h', "help",    CZ_CLI_DATATYPE_NONE, help_option_callback);
 
-	cltzCliAdd(cli, 's', "silent",  CLTZ_CLI_DATATYPE_NONE, silent_option_callback);
-	cltzCliAdd(cli, 'q', "quiet",   CLTZ_CLI_DATATYPE_NONE, quiet_option_callback);
-	cltzCliAdd(cli, 'v', "verbose", CLTZ_CLI_DATATYPE_NONE, verbose_option_callback);
+	czCliAdd(cli, 's', "silent",  CZ_CLI_DATATYPE_NONE, silent_option_callback);
+	czCliAdd(cli, 'q', "quiet",   CZ_CLI_DATATYPE_NONE, quiet_option_callback);
+	czCliAdd(cli, 'v', "verbose", CZ_CLI_DATATYPE_NONE, verbose_option_callback);
 
-	cltzCliAdd(cli, 'n', "no-colour",  CLTZ_CLI_DATATYPE_NONE, no_colour_option_callback);
-	cltzCliAdd(cli, 'c', "colour",     CLTZ_CLI_DATATYPE_NONE, colour_option_callback);
-	cltzCliAdd(cli, 'C', "colour-all", CLTZ_CLI_DATATYPE_NONE, colour_all_option_callback);
+	czCliAdd(cli, 'n', "no-colour",  CZ_CLI_DATATYPE_NONE, no_colour_option_callback);
+	czCliAdd(cli, 'c', "colour",     CZ_CLI_DATATYPE_NONE, colour_option_callback);
+	czCliAdd(cli, 'C', "colour-all", CZ_CLI_DATATYPE_NONE, colour_all_option_callback);
 
-	cltzCliAdd(cli, 'e', "ext-layers",     CLTZ_CLI_DATATYPE_NONE, ext_layers_option_callback);
-	cltzCliAdd(cli, 'p', "profile-layers", CLTZ_CLI_DATATYPE_NONE, profile_layers_option_callback);
-	cltzCliAdd(cli, 'd', "validation",     CLTZ_CLI_DATATYPE_NONE, validation_option_callback);
+	czCliAdd(cli, 'e', "ext-layers",     CZ_CLI_DATATYPE_NONE, ext_layers_option_callback);
+	czCliAdd(cli, 'p', "profile-layers", CZ_CLI_DATATYPE_NONE, profile_layers_option_callback);
+	czCliAdd(cli, 'd', "validation",     CZ_CLI_DATATYPE_NONE, validation_option_callback);
 
-	cltzCliAdd(cli, 'i', "int16", CLTZ_CLI_DATATYPE_NONE, int16_option_callback);
-	cltzCliAdd(cli, 'I', "int64", CLTZ_CLI_DATATYPE_NONE, int64_option_callback);
+	czCliAdd(cli, 'i', "int16", CZ_CLI_DATATYPE_NONE, int16_option_callback);
+	czCliAdd(cli, 'I', "int64", CZ_CLI_DATATYPE_NONE, int64_option_callback);
 
-	cltzCliAdd(cli, 'r',  "restart",             CLTZ_CLI_DATATYPE_NONE, restart_option_callback);
-	cltzCliAdd(cli, 'b',  "no-query-benchmarks", CLTZ_CLI_DATATYPE_NONE, no_query_benchmarks_option_callback);
+	czCliAdd(cli, 'r',  "restart",             CZ_CLI_DATATYPE_NONE, restart_option_callback);
+	czCliAdd(cli, 'b',  "no-query-benchmarks", CZ_CLI_DATATYPE_NONE, no_query_benchmarks_option_callback);
 
-	cltzCliAdd(cli, 0, "log-allocations",   CLTZ_CLI_DATATYPE_STRING, log_allocations_option_callback);
-	cltzCliAdd(cli, 0, "capture-pipelines", CLTZ_CLI_DATATYPE_STRING, capture_pipelines_option_callback);
+	czCliAdd(cli, 0, "log-allocations",   CZ_CLI_DATATYPE_STRING, log_allocations_option_callback);
+	czCliAdd(cli, 0, "capture-pipelines", CZ_CLI_DATATYPE_STRING, capture_pipelines_option_callback);
 
-	cltzCliAdd(cli, 0, "iter-size",  CLTZ_CLI_DATATYPE_ULONG,  iter_size_option_callback);
-	cltzCliAdd(cli, 0, "max-loops",  CLTZ_CLI_DATATYPE_ULLONG, max_loops_option_callback);
-	cltzCliAdd(cli, 0, "max-memory", CLTZ_CLI_DATATYPE_FLOAT,  max_memory_option_callback);
+	czCliAdd(cli, 0, "iter-size",  CZ_CLI_DATATYPE_ULONG,  iter_size_option_callback);
+	czCliAdd(cli, 0, "max-loops",  CZ_CLI_DATATYPE_ULLONG, max_loops_option_callback);
+	czCliAdd(cli, 0, "max-memory", CZ_CLI_DATATYPE_FLOAT,  max_memory_option_callback);
 
-	bool bres = cltzCliParse(cli, argc, argv);
-	if (!bres) { cltzCliDestroy(cli); return false; }
+	bool bres = czCliParse(cli, argc, argv);
+	if NOEXPECT (!bres) { czCliDestroy(cli); return false; }
 
-	cltzCliDestroy(cli);
+	czCliDestroy(cli);
 	return true;
 }
 
@@ -340,7 +340,7 @@ static bool init_env(void)
 	// Prevent system from sleeping, but allow display to sleep
 	CFStringRef type = kIOPMAssertPreventUserIdleSystemSleep;
 	IOPMAssertionLevel level = kIOPMAssertionLevelOn;
-	CFStringRef name = CFSTR(CLTZ_NAME);
+	CFStringRef name = CFSTR(CZ_NAME);
 	IOPMAssertionID id;
 
 	IOReturn iores = IOPMAssertionCreateWithName(type, level, name, &id);
@@ -352,7 +352,7 @@ static bool init_env(void)
 	return true;
 }
 
-static bool init_gpu(Gpu* gpu)
+static bool init_gpu(struct Gpu* gpu)
 {
 	bool bres = create_instance(gpu);
 	if NOEXPECT (!bres) { return false; }
@@ -383,13 +383,16 @@ static bool init_gpu(Gpu* gpu)
 
 int main(int argc, char** argv)
 {
-	Gpu gpu = {0};
+	struct Gpu gpu = {0};
 
 	bool bres = init_env();
-	if (!bres) { return EXIT_FAILURE; }
+	if NOEXPECT (!bres) { return EXIT_FAILURE; }
 
 	bres = init_config(argc, argv);
 	if (!bres) { return EXIT_SUCCESS; }
+
+	bres = init_colour_level(czgConfig.colourLevel);
+	if NOEXPECT (!bres) { return EXIT_FAILURE; }
 
 	bres = init_gpu(&gpu);
 	if NOEXPECT (!bres) { goto err_destroy_gpu; }

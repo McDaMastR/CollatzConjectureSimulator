@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "defs.h"
+#include "common.h"
 #include "dyarray.h"
 #include "dyqueue.h"
 #include "dyrecord.h"

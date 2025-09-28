@@ -235,9 +235,9 @@
 #define VK_KHR_SYNCHRONIZATION_2_LAYER_NAME  "VK_LAYER_KHRONOS_synchronization2"
 #define VK_KHR_TIMELINE_SEMAPHORE_LAYER_NAME "VK_LAYER_KHRONOS_timeline_semaphore"
 
-#define CLTZ_DEBUG_LOG_NAME      "debug.log"
-#define CLTZ_PIPELINE_CACHE_NAME "pipeline_cache.bin"
-#define CLTZ_PROGRESS_FILE_NAME  "position.txt"
+#define CZ_DEBUG_LOG_NAME      "debug.log"
+#define CZ_PIPELINE_CACHE_NAME "pipeline_cache.bin"
+#define CZ_PROGRESS_FILE_NAME  "position.txt"
 
 
 // Helper macros
@@ -261,51 +261,23 @@
 
 // Datatypes
 
-typedef enum Endianness
+enum CzEndianness
 {
-	ENDIANNESS_BIG    = 0,
-	ENDIANNESS_LITTLE = 1
-} Endianness;
+	CZ_ENDIANNESS_BIG    = 0,
+	CZ_ENDIANNESS_LITTLE = 1
+};
 
-typedef enum OutputLevel
+enum CzOutputLevel
 {
-	OUTPUT_LEVEL_SILENT  = 0,
-	OUTPUT_LEVEL_QUIET   = 1,
-	OUTPUT_LEVEL_DEFAULT = 2,
-	OUTPUT_LEVEL_VERBOSE = 3
-} OutputLevel;
+	CZ_OUTPUT_LEVEL_SILENT  = 0,
+	CZ_OUTPUT_LEVEL_QUIET   = 1,
+	CZ_OUTPUT_LEVEL_DEFAULT = 2,
+	CZ_OUTPUT_LEVEL_VERBOSE = 3
+};
 
-typedef enum ColourLevel
+enum CzColourLevel
 {
-	COLOUR_LEVEL_NONE = 0,
-	COLOUR_LEVEL_TTY  = 1,
-	COLOUR_LEVEL_ALL  = 2
-} ColourLevel;
-
-typedef struct ProgramConfig
-{
-	const char* allocLogPath;
-	const char* capturePath;
-
-	OutputLevel outputLevel;
-	ColourLevel colourLevel;
-
-	unsigned long iterSize;
-	unsigned long long maxLoops;
-	float maxMemory;
-
-	bool preferInt16;
-	bool preferInt64;
-
-	bool extensionLayers;
-	bool profileLayers;
-	bool validationLayers;
-
-	bool restart;
-	bool queryBenchmarks;
-} ProgramConfig;
-
-
-// Global variables
-
-extern ProgramConfig g_config;
+	CZ_COLOUR_LEVEL_NONE = 0,
+	CZ_COLOUR_LEVEL_TTY  = 1,
+	CZ_COLOUR_LEVEL_ALL  = 2
+};
