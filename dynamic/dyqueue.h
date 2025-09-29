@@ -15,22 +15,24 @@
  * Simulator. If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file
+ * 
+ * @brief The types and functions for dynamically sized FIFO queues.
+ */
+
 #pragma once
 
 #include "common.h"
 
 
 /**
- * @struct DyQueue
- * 
- * @brief A dynamically sized FIFO queue.
+ * @brief Handle for a dynamically sized FIFO queue.
  */
 typedef struct DyQueue_* DyQueue;
 
 
 /**
- * @memberof DyQueue
- * 
  * @brief Destroys a dynamic queue.
  * 
  * Destroys @p queue and frees all associated memory. If @p queue is null, nothing happens.
@@ -42,8 +44,6 @@ typedef struct DyQueue_* DyQueue;
 void dyqueue_destroy(DyQueue queue);
 
 /**
- * @memberof DyQueue
- * 
  * @brief Creates a new dynamic queue.
  * 
  * Creates an empty dynamic queue. Failure can occur if sufficient memory is unable to be allocated.
@@ -54,13 +54,11 @@ void dyqueue_destroy(DyQueue queue);
  * 
  * @pre @p size is nonzero.
  * 
- * @note Failing to destroy the returned dynamic queue will result in a memory leak.
+ * @note Failing to destroy the returned dynamic queue may result in a memory leak.
  */
 DyQueue dyqueue_create(size_t size) CZ_FREE(dyqueue_destroy, 1) CZ_USE_RET;
 
 /**
- * @memberof DyQueue
- * 
  * @brief Retrieves the size of a dynamic queue.
  * 
  * Retrieves the number of elements in @p queue.
@@ -74,8 +72,6 @@ DyQueue dyqueue_create(size_t size) CZ_FREE(dyqueue_destroy, 1) CZ_USE_RET;
 size_t dyqueue_size(DyQueue queue) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_RET;
 
 /**
- * @memberof DyQueue
- * 
  * @brief Adds an element to a dynamic queue.
  * 
  * Enqueues an element to the back of @p queue. The element is initialised as a copy of the value pointed to by
@@ -93,8 +89,6 @@ size_t dyqueue_size(DyQueue queue) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_US
 bool dyqueue_enqueue(DyQueue queue, const void* value) CZ_NONNULL_ARGS CZ_RW_ACCESS(1) CZ_RE_ACCESS(2);
 
 /**
- * @memberof DyQueue
- * 
  * @brief Removes an element from a dynamic queue.
  * 
  * Dequeues an element from the front of @p queue. The element is copied into the memory pointed to by @p value.

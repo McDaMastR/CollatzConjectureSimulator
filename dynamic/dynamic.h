@@ -15,6 +15,12 @@
  * Simulator. If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file
+ * 
+ * @brief The types and functions for various dynamic structures.
+ */
+
 #pragma once
 
 #include "common.h"
@@ -25,8 +31,6 @@
 
 
 /**
- * @relates DyRecord
- * 
  * @brief FreeCallback compatible version of @ref czFree.
  * 
  * Calls @ref czFree with @p memory. Can be used as the free callback when recording a dynamic allocation to a dynamic
@@ -37,11 +41,9 @@
 void czFree_stub(void* memory);
 
 /**
- * @relates DyRecord
+ * @brief FreeCallback compatible version of @ref dyarray_destroy.
  * 
- * @brief FreeCallback compatible version of @ref DyArray::dyarray_destroy "dyarray_destroy".
- * 
- * Calls DyArray::dyarray_destroy with @p array. Can be used as the free callback when recording a dynamic array to a
+ * Calls @ref dyarray_destroy with @p array. Can be used as the free callback when recording a dynamic array to a
  * dynamic record.
  * 
  * @param[in,out] array The dynamic array.
@@ -49,11 +51,9 @@ void czFree_stub(void* memory);
 void dyarray_destroy_stub(void* array);
 
 /**
- * @relates DyRecord
+ * @brief FreeCallback compatible version of @ref dyqueue_destroy.
  * 
- * @brief FreeCallback compatible version of @ref DyQueue::dyqueue_destroy "dyqueue_destroy".
- * 
- * Calls DyQueue::dyqueue_destroy with @p queue. Can be used as the free callback when recording a dynamic queue to a
+ * Calls @ref dyqueue_destroy with @p queue. Can be used as the free callback when recording a dynamic queue to a
  * dynamic record.
  * 
  * @param[in,out] queue The dynamic queue.
@@ -61,11 +61,9 @@ void dyarray_destroy_stub(void* array);
 void dyqueue_destroy_stub(void* queue);
 
 /**
- * @relates DyRecord
+ * @brief FreeCallback compatible version of @ref dyrecord_destroy.
  * 
- * @brief FreeCallback compatible version of @ref DyRecord::dyrecord_destroy "dyrecord_destroy".
- * 
- * Calls DyRecord::dyrecord_destroy with @p record. Can be used as the free callback when recording a dynamic record to
+ * Calls @ref dyrecord_destroy with @p record. Can be used as the free callback when recording a dynamic record to
  * another dynamic record.
  * 
  * @param[in,out] record The dynamic record.
@@ -73,12 +71,10 @@ void dyqueue_destroy_stub(void* queue);
 void dyrecord_destroy_stub(void* record);
 
 /**
- * @relates DyRecord
+ * @brief FreeCallback compatible version of @ref dystring_destroy.
  * 
- * @brief FreeCallback compatible version of @ref DyString::dystring_destroy "dystring_destroy".
- * 
- * Calls DyString::dystring_destroy with @p string. Can be used as the free callback when recording a dynamic string to
- * a dynamic record.
+ * Calls @ref dystring_destroy with @p string. Can be used as the free callback when recording a dynamic string to a
+ * dynamic record.
  * 
  * @param[in,out] string The dynamic string.
  */

@@ -14,12 +14,11 @@ set(COMPILE_WARNINGS_CLANG
 	-Weverything
 
 	# Warnings OFF
-	-Wno-c++-compat                      -Wno-covered-switch-default
-	-Wno-declaration-after-statement     -Wno-documentation
-	-Wno-gnu-conditional-omitted-operand -Wno-implicit-int-float-conversion
-	-Wno-missing-field-initializers      -Wno-padded
-	-Wno-pre-c11-compat                  -Wno-switch-enum
-	-Wno-unsafe-buffer-usage
+	-Wno-c++-compat                    -Wno-covered-switch-default
+	-Wno-declaration-after-statement   -Wno-gnu-conditional-omitted-operand
+	-Wno-implicit-int-float-conversion -Wno-missing-field-initializers
+	-Wno-padded                        -Wno-pre-c11-compat
+	-Wno-switch-enum                   -Wno-unsafe-buffer-usage
 )
 
 set(COMPILE_WARNINGS_GNU

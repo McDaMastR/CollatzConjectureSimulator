@@ -15,22 +15,24 @@
  * Simulator. If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file
+ * 
+ * @brief The types and functions for dynamically sized arrays.
+ */
+
 #pragma once
 
 #include "common.h"
 
 
 /**
- * @struct DyArray
- * 
- * @brief A dynamically sized array.
+ * @brief Handle for a dynamically sized array.
  */
 typedef struct DyArray_* DyArray;
 
 
 /**
- * @memberof DyArray
- * 
  * @brief Destroys a dynamic array.
  * 
  * Destroys @p array and frees all associated memory. If @p array is null, nothing happens.
@@ -42,8 +44,6 @@ typedef struct DyArray_* DyArray;
 void dyarray_destroy(DyArray array);
 
 /**
- * @memberof DyArray
- * 
  * @brief Creates a new dynamic array.
  * 
  * Creates an empty dynamic array. If @p count is nonzero, memory is preallocated for @p count elements. Any
@@ -56,13 +56,11 @@ void dyarray_destroy(DyArray array);
  * 
  * @pre @p size is nonzero.
  * 
- * @note Failing to destroy the returned dynamic array will result in a memory leak.
+ * @note Failing to destroy the returned dynamic array may result in a memory leak.
  */
 DyArray dyarray_create(size_t size, size_t count) CZ_FREE(dyarray_destroy, 1) CZ_USE_RET;
 
 /**
- * @memberof DyArray
- * 
  * @brief Retrieves the size of a dynamic array.
  * 
  * Retrieves the number of elements in @p array.
@@ -76,8 +74,6 @@ DyArray dyarray_create(size_t size, size_t count) CZ_FREE(dyarray_destroy, 1) CZ
 size_t dyarray_size(DyArray array) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_RET;
 
 /**
- * @memberof DyArray
- * 
  * @brief Retrieves the raw array of a dynamic array.
  * 
  * Retrieves the underlying raw array of @p array.
@@ -93,8 +89,6 @@ size_t dyarray_size(DyArray array) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_US
 void* dyarray_raw(DyArray array) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_RET;
 
 /**
- * @memberof DyArray
- * 
  * @brief Retrieves an element in a dynamic array.
  * 
  * Copies the element in @p array at the zero-based position @p index into the memory pointed to by @p value.
@@ -111,8 +105,6 @@ void* dyarray_raw(DyArray array) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_
 void dyarray_get(DyArray array, void* value, size_t index) CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_WR_ACCESS(2);
 
 /**
- * @memberof DyArray
- * 
  * @brief Sets an element in a dynamic array.
  * 
  * Copies the value pointed to by @p value into the element in @p array at the zero-based position @p index.
@@ -129,8 +121,6 @@ void dyarray_get(DyArray array, void* value, size_t index) CZ_NONNULL_ARGS CZ_RE
 void dyarray_set(DyArray array, const void* value, size_t index) CZ_NONNULL_ARGS CZ_RW_ACCESS(1) CZ_RE_ACCESS(2);
 
 /**
- * @memberof DyArray
- * 
  * @brief Retrieves the last element in a dynamic array.
  * 
  * Copies the last element in @p array into the memory pointed to by @p value.
@@ -145,8 +135,6 @@ void dyarray_set(DyArray array, const void* value, size_t index) CZ_NONNULL_ARGS
 void dyarray_last(DyArray array, void* value) CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_WR_ACCESS(2);
 
 /**
- * @memberof DyArray
- * 
  * @brief Retrieves the first element in a dynamic array.
  * 
  * Copies the first element in @p array into the memory pointed to by @p value.
@@ -161,8 +149,6 @@ void dyarray_last(DyArray array, void* value) CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ
 void dyarray_first(DyArray array, void* value) CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_WR_ACCESS(2);
 
 /**
- * @memberof DyArray
- * 
  * @brief Appends an element to a dynamic array.
  * 
  * Adds a new element to the end of @p array. The element is initialised as a copy of the value pointed to by @p value.
@@ -180,8 +166,6 @@ void dyarray_first(DyArray array, void* value) CZ_NONNULL_ARGS CZ_RE_ACCESS(1) C
 void* dyarray_append(DyArray array, const void* value) CZ_NONNULL_ARGS CZ_RW_ACCESS(1) CZ_RE_ACCESS(2);
 
 /**
- * @memberof DyArray
- * 
  * @brief Prepends an element to a dynamic array.
  * 
  * Adds a new element to the start of @p array. The element is initialised as a copy of the value pointed to by
@@ -199,8 +183,6 @@ void* dyarray_append(DyArray array, const void* value) CZ_NONNULL_ARGS CZ_RW_ACC
 void* dyarray_prepend(DyArray array, const void* value) CZ_NONNULL_ARGS CZ_RW_ACCESS(1) CZ_RE_ACCESS(2);
 
 /**
- * @memberof DyArray
- * 
  * @brief Adds an element to a dynamic array.
  * 
  * Adds a new element to @p array at the zero-based position @p index. The element is initialised as a copy of the value

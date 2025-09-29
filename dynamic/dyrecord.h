@@ -15,21 +15,23 @@
  * Simulator. If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file
+ * 
+ * @brief The types and functions for dynamically sized records of dynamic memory allocations.
+ */
+
 #pragma once
 
 #include "common.h"
 
 
 /**
- * @struct DyRecord
- * 
- * @brief A dynamically sized record of dynamic memory allocations.
+ * @brief Handle for a dynamically sized record of dynamic memory allocations.
  */
 typedef struct DyRecord_* DyRecord;
 
 /**
- * @relates DyRecord
- * 
  * @brief A memory freeing callback.
  * 
  * A user-defined function which frees the allocated memory pointed to by @p memory.
@@ -40,8 +42,6 @@ typedef void (*FreeCallback)(void* memory);
 
 
 /**
- * @memberof DyRecord
- * 
  * @brief Destroys a dynamic record.
  * 
  * Destroys @p record and frees all recorded allocations in a LIFO fashion. If @p record is null, nothing happens.
@@ -53,21 +53,17 @@ typedef void (*FreeCallback)(void* memory);
 void dyrecord_destroy(DyRecord record);
 
 /**
- * @memberof DyRecord
- * 
  * @brief Creates a new dynamic record.
  * 
  * Creates an empty dynamic record. Failure can occur if sufficient memory is unable to be allocated.
  * 
  * @return The new dynamic record, or null on failure.
  * 
- * @note Failing to destroy the returned dynamic record will result in a memory leak.
+ * @note Failing to destroy the returned dynamic record may result in a memory leak.
  */
 DyRecord dyrecord_create(void) CZ_FREE(dyrecord_destroy, 1) CZ_USE_RET;
 
 /**
- * @memberof DyRecord
- * 
  * @brief Retrieves the size of a dynamic record.
  * 
  * Retrieves the number of recorded allocations in @p record.
@@ -81,8 +77,6 @@ DyRecord dyrecord_create(void) CZ_FREE(dyrecord_destroy, 1) CZ_USE_RET;
 size_t dyrecord_size(DyRecord record) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_RET;
 
 /**
- * @memberof DyRecord
- * 
  * @brief Adds an allocation to a dynamic record.
  * 
  * Records the dynamic memory allocation pointed to by @p memory to @p record. Failure can occur if sufficient memory is
@@ -103,8 +97,6 @@ size_t dyrecord_size(DyRecord record) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ
 bool dyrecord_add(DyRecord record, void* memory, FreeCallback callback) CZ_NONNULL_ARGS CZ_RW_ACCESS(1) CZ_NO_ACCESS(2);
 
 /**
- * @memberof DyRecord
- * 
  * @brief Allocates and adds memory to a dynamic record.
  * 
  * Dynamically allocates memory via @c malloc. The allocation is recorded to @p record. Failure can occur if sufficient
@@ -121,8 +113,6 @@ void* dyrecord_malloc(DyRecord record, size_t size)
 	CZ_MALLOC CZ_NONNULL_ARGS CZ_ALLOC_ARG(2) CZ_RW_ACCESS(1) CZ_USE_RET;
 
 /**
- * @memberof DyRecord
- * 
  * @brief Allocates and adds zero initialised memory to a dynamic record.
  * 
  * Dynamically allocates memory via @c calloc. The allocation is recorded to @p record. Failure can occur if sufficient
@@ -140,8 +130,6 @@ void* dyrecord_calloc(DyRecord record, size_t count, size_t size)
 	CZ_MALLOC CZ_NONNULL_ARGS CZ_ALLOC_ARGS(2, 3) CZ_RW_ACCESS(1) CZ_USE_RET;
 
 /**
- * @memberof DyRecord
- * 
  * @brief Frees allocations recorded in a dynamic record.
  * 
  * Frees all recorded allocations in @p record in a LIFO fashion. The recorded allocations are removed from @p record.

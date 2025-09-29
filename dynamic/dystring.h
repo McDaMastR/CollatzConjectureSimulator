@@ -15,22 +15,24 @@
  * Simulator. If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file
+ * 
+ * @brief The types and functions for dynamically sized null-terminated byte strings.
+ */
+
 #pragma once
 
 #include "common.h"
 
 
 /**
- * @struct DyString
- * 
- * @brief A dynamically sized null-terminated byte string.
+ * @brief Handle for a dynamically sized null-terminated byte string.
  */
 typedef struct DyString_* DyString;
 
 
 /**
- * @memberof DyString
- * 
  * @brief Destroys a dynamic string.
  * 
  * Destroys @p string and frees all associated memory. If @p string is null, nothing happens.
@@ -42,8 +44,6 @@ typedef struct DyString_* DyString;
 void dystring_destroy(DyString string);
 
 /**
- * @memberof DyString
- * 
  * @brief Creates a new dynamic string.
  * 
  * Creates a dynamic string containing only the null terminator. Memory is preallocated for @p count characters,
@@ -56,13 +56,11 @@ void dystring_destroy(DyString string);
  * 
  * @pre @p count is nonzero.
  * 
- * @note Failing to destroy the returned dynamic string will result in a memory leak.
+ * @note Failing to destroy the returned dynamic string may result in a memory leak.
  */
 DyString dystring_create(size_t count) CZ_FREE(dystring_destroy, 1) CZ_USE_RET;
 
 /**
- * @memberof DyString
- * 
  * @brief Retrieves the length of a dynamic string.
  * 
  * Retrieves the number of characters in @p string, including the null terminator.
@@ -78,8 +76,6 @@ DyString dystring_create(size_t count) CZ_FREE(dystring_destroy, 1) CZ_USE_RET;
 size_t dystring_length(DyString string) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_RET;
 
 /**
- * @memberof DyString
- * 
  * @brief Retrieves the raw string of a dynamic string.
  * 
  * Retrieves the underlying raw string of @p string.
@@ -97,8 +93,6 @@ size_t dystring_length(DyString string) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) 
 char* dystring_raw(DyString string) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_NONNULL_RET CZ_USE_RET;
 
 /**
- * @memberof DyString
- * 
  * @brief Appends a string to a dynamic string.
  * 
  * Lengthens @p string and copies the string pointed to by @p substring into the lengthened end of @p string. Failure
@@ -117,8 +111,6 @@ char* dystring_append(DyString string, const char* substring)
 	CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RE_ACCESS(2);
 
 /**
- * @memberof DyString
- * 
  * @brief Prepends a substring to a dynamic string.
  * 
  * Lengthens @p string and copies the string pointed to by @p substring into the lengthened start of @p string. Failure
@@ -137,8 +129,6 @@ char* dystring_prepend(DyString string, const char* substring)
 	CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RE_ACCESS(2);
 
 /**
- * @memberof DyString
- * 
  * @brief Adds a substring to a dynamic string.
  * 
  * Lengthens @p string and copies the string pointed to by @p substring into the lengthened part of @p string at the
