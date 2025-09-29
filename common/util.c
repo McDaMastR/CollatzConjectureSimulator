@@ -16,6 +16,7 @@
  */
 
 #include "util.h"
+#include "alloc.h"
 #include "debug.h"
 
 
@@ -117,7 +118,6 @@ bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const c
 
 	VK_CALLR(vkSetDebugUtilsObjectNameEXT, device, &info);
 	if NOEXPECT (vkres) { return false; }
-
 	return true;
 }
 
@@ -178,75 +178,101 @@ bool save_pipeline_cache(VkDevice device, VkPipelineCache cache, const char* fil
 	VK_CALLR(vkGetPipelineCacheData, device, cache, &dataSize, NULL);
 	if NOEXPECT (vkres) { return false; }
 
-	void* data = malloc(dataSize);
-	if NOEXPECT (!data) { MALLOC_FAILURE(data, dataSize); return false; }
+	void* restrict data;
+	struct CzAllocFlags flags = {0};
+
+	enum CzResult czres = czAlloc(&data, dataSize, flags);
+	if NOEXPECT (czres) { return false; }
 
 	VK_CALLR(vkGetPipelineCacheData, device, cache, &dataSize, data);
-	if NOEXPECT (vkres) { free(data); return false; }
+	if NOEXPECT (vkres) { goto err_free_data; }
 
 	bool bres = write_file(filename, data, dataSize);
-	if NOEXPECT (!bres) { free(data); return false; }
+	if NOEXPECT (!bres) { goto err_free_data; }
 
-	free(data);
+	czFree(data);
 	return true;
-}
 
+err_free_data:
+	czFree(data);
+	return false;
+}
 
 bool file_size(const char* filename, size_t* size)
 {
-	const char* mode = "rb";
-	FILE* file = fopen(filename, mode);
-
-	if (!file) {
-		*size = 0;
-		return true;
-	}
+	size_t filesize = 0;
+	FILE* file = fopen(filename, "rb");
+	if (!file) { goto out_write_size; }
 
 	long offset = 0;
-	int origin = SEEK_END;
-
-	int ires = fseek(file, offset, origin);
-	if NOEXPECT (ires) { FSEEK_FAILURE(ires, file, offset, origin); fclose(file); return false; }
+	int ires = fseek(file, offset, SEEK_END);
+	if NOEXPECT (ires) { goto err_close_file; }
 
 	long lres = ftell(file);
-	if NOEXPECT (lres == -1) { FTELL_FAILURE(lres, file); fclose(file); return false; }
+	if NOEXPECT (lres == -1) { goto err_close_file; }
 
+	filesize = (size_t) lres;
 	fclose(file);
-	*size = (size_t) lres;
 
+out_write_size:
+	*size = filesize;
 	return true;
+
+err_close_file:
+	fclose(file);
+	return false;
 }
 
 bool read_file(const char* filename, void* data, size_t size)
 {
 	const char* mode = "rb";
 	FILE* file = fopen(filename, mode);
-	if NOEXPECT (!file) { FOPEN_FAILURE(file, filename, mode); return false; }
+	if NOEXPECT (!file) {
+		FOPEN_FAILURE(file, filename, mode);
+		return false;
+	}
 
 	size_t objSize = sizeof(char);
 	size_t objCount = size;
 
 	size_t sres = fread(data, objSize, objCount, file);
-	if NOEXPECT (sres != size) { FREAD_FAILURE(sres, data, objSize, objCount, file); fclose(file); return false; }
+	if NOEXPECT (sres != size) {
+		FREAD_FAILURE(sres, data, objSize, objCount, file);
+		goto err_close_file;
+	}
 
 	fclose(file);
 	return true;
+
+err_close_file:
+	fclose(file);
+	return false;
 }
 
 bool write_file(const char* filename, const void* data, size_t size)
 {
 	const char* mode = "wb";
 	FILE* file = fopen(filename, mode);
-	if NOEXPECT (!file) { FOPEN_FAILURE(file, filename, mode); return false; }
+	if NOEXPECT (!file) {
+		FOPEN_FAILURE(file, filename, mode);
+		return false;
+	}
 
 	size_t objSize = sizeof(char);
 	size_t objCount = size;
 
 	size_t sres = fwrite(data, objSize, objCount, file);
-	if NOEXPECT (sres != size) { FWRITE_FAILURE(sres, data, objSize, objCount, file); fclose(file); return false; }
+	if NOEXPECT (sres != size) {
+		FWRITE_FAILURE(sres, data, objSize, objCount, file);
+		goto err_close_file;
+	}
 
 	fclose(file);
 	return true;
+
+err_close_file:
+	fclose(file);
+	return false;
 }
 
 bool read_text(const char* filename, const char* format, ...)
@@ -256,15 +282,26 @@ bool read_text(const char* filename, const char* format, ...)
 
 	const char* mode = "r";
 	FILE* file = fopen(filename, mode);
-	if NOEXPECT (!file) { FOPEN_FAILURE(file, filename, mode); va_end(args); return false; }
+	if NOEXPECT (!file) {
+		FOPEN_FAILURE(file, filename, mode);
+		goto err_end_args;
+	}
 
 	int ires = vfscanf(file, format, args);
-	if NOEXPECT (ires == EOF) { FSCANF_FAILURE(ires, file, format); fclose(file); va_end(args); return false; }
+	if NOEXPECT (ires == EOF) {
+		FSCANF_FAILURE(ires, file, format);
+		goto err_close_file;
+	}
 
 	fclose(file);
 	va_end(args);
-
 	return true;
+
+err_close_file:
+	fclose(file);
+err_end_args:
+	va_end(args);
+	return false;
 }
 
 bool write_text(const char* filename, const char* format, ...)
@@ -274,15 +311,26 @@ bool write_text(const char* filename, const char* format, ...)
 
 	const char* mode = "w";
 	FILE* file = fopen(filename, mode);
-	if NOEXPECT (!file) { FOPEN_FAILURE(file, filename, mode); va_end(args); return false; }
+	if NOEXPECT (!file) {
+		FOPEN_FAILURE(file, filename, mode);
+		goto err_end_args;
+	}
 
 	int ires = vfprintf(file, format, args);
-	if NOEXPECT (ires < 0) { FPRINTF_FAILURE(ires, file, format); fclose(file); va_end(args); return false; }
+	if NOEXPECT (ires < 0) {
+		FPRINTF_FAILURE(ires, file, format);
+		goto err_close_file;
+	}
 
 	fclose(file);
 	va_end(args);
-
 	return true;
+
+err_close_file:
+	fclose(file);
+err_end_args:
+	va_end(args);
+	return false;
 }
 
 void* aligned_malloc(size_t size, size_t alignment)
@@ -314,7 +362,6 @@ void* aligned_malloc(size_t size, size_t alignment)
 
 	info->start = memory;
 	info->size = size;
-
 	return info + 1;
 }
 
@@ -358,7 +405,6 @@ void* aligned_realloc(void* memory, size_t size, size_t alignment)
 
 	info->start = newMemory;
 	info->size = size;
-
 	return info + 1;
 }
 
@@ -378,7 +424,6 @@ size_t aligned_size(const void* memory)
 	const struct AlignedInfo* info = (const struct AlignedInfo*) memory - 1;
 	return info->size;
 }
-
 
 #define UINT(sz) uint##sz##_t
 #define UMAX_DEF(sz) UINT(sz) maxu##sz(UINT(sz) x, UINT(sz) y) { return x > y ? x : y; }

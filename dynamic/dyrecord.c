@@ -16,6 +16,7 @@
  */
 
 #include "dyrecord.h"
+#include "dynamic.h"
 
 
 struct Node
@@ -37,18 +38,16 @@ void dyrecord_destroy(struct DyRecord_* restrict record)
 	if NOEXPECT (!record) { return; }
 
 	dyrecord_free(record);
-	free(record);
+	czFree(record);
 }
 
 struct DyRecord_* dyrecord_create(void)
 {
-	size_t size = sizeof(struct DyRecord_);
-	struct DyRecord_* record = malloc(size);
-	if NOEXPECT (!record) { MALLOC_FAILURE(record, size); return NULL; }
+	struct DyRecord_* restrict record = NULL;
+	struct CzAllocFlags flags = {0};
+	flags.zeroInitialise = true;
 
-	record->count = 0;
-	record->top = NULL;
-
+	czAlloc((void* restrict*) &record, sizeof(*record), flags);
 	return record;
 }
 
@@ -62,9 +61,11 @@ bool dyrecord_add(struct DyRecord_* restrict record, void* restrict memory, Free
 	size_t count = record->count;
 	struct Node* top = record->top;
 
-	size_t size = sizeof(struct Node);
-	struct Node* node = malloc(size);
-	if NOEXPECT (!node) { MALLOC_FAILURE(node, size); return false; }
+	struct Node* restrict node;
+	struct CzAllocFlags flags = {0};
+
+	enum CzResult czres = czAlloc((void* restrict*) &node, sizeof(*node), flags);
+	if NOEXPECT (czres) { return false; }
 
 	node->next = top;
 	node->memory = memory;
@@ -72,7 +73,6 @@ bool dyrecord_add(struct DyRecord_* restrict record, void* restrict memory, Free
 
 	record->count = count + 1;
 	record->top = node;
-
 	return true;
 }
 
@@ -80,13 +80,19 @@ void* dyrecord_malloc(struct DyRecord_* restrict record, size_t size)
 {
 	ASSUME(size != 0);
 
-	void* memory = malloc(size);
-	if NOEXPECT (!memory) { MALLOC_FAILURE(memory, size); return NULL; }
+	void* restrict memory;
+	struct CzAllocFlags flags = {0};
 
-	bool bres = dyrecord_add(record, memory, free);
-	if NOEXPECT (!bres) { free(memory); return NULL; }
+	enum CzResult czres = czAlloc(&memory, size, flags);
+	if NOEXPECT (czres) { return NULL; }
 
+	bool bres = dyrecord_add(record, memory, czFree_stub);
+	if NOEXPECT (!bres) { goto err_free_memory; }
 	return memory;
+
+err_free_memory:
+	czFree(memory);
+	return NULL;
 }
 
 void* dyrecord_calloc(struct DyRecord_* restrict record, size_t count, size_t size)
@@ -94,13 +100,20 @@ void* dyrecord_calloc(struct DyRecord_* restrict record, size_t count, size_t si
 	ASSUME(count != 0);
 	ASSUME(size != 0);
 
-	void* memory = calloc(count, size);
-	if NOEXPECT (!memory) { CALLOC_FAILURE(memory, count, size); return NULL; }
+	void* restrict memory;
+	struct CzAllocFlags flags = {0};
+	flags.zeroInitialise = true;
 
-	bool bres = dyrecord_add(record, memory, free);
-	if NOEXPECT (!bres) { free(memory); return NULL; }
+	enum CzResult czres = czAlloc(&memory, size * count, flags);
+	if NOEXPECT (czres) { return NULL; }
 
+	bool bres = dyrecord_add(record, memory, czFree_stub);
+	if NOEXPECT (!bres) { goto err_free_memory; }
 	return memory;
+
+err_free_memory:
+	czFree(memory);
+	return NULL;
 }
 
 void dyrecord_free(struct DyRecord_* restrict record)
@@ -113,8 +126,7 @@ void dyrecord_free(struct DyRecord_* restrict record)
 		FreeCallback callback = node->callback;
 
 		callback(memory);
-		free(node);
-
+		czFree(node);
 		node = next;
 	}
 

@@ -16,6 +16,7 @@
  */
 
 #include "debug.h"
+#include "alloc.h"
 #include "util.h"
 
 
@@ -117,10 +118,12 @@ static bool log_colour(
 		size_t lenPost = strlen(postfix);
 		size_t lenFmt = strlen(fmt);
 
+		char* restrict newFmt;
 		size_t size = lenSgr1 + lenPre + lenFmt + lenPost + lenSgr2 + 1;
+		struct CzAllocFlags flags = {0};
 
-		char* newFmt = malloc(size);
-		if NOEXPECT (!newFmt) { MALLOC_FAILURE(newFmt, size); return false; }
+		enum CzResult czres = czAlloc((void* restrict*) &newFmt, size, flags);
+		if NOEXPECT (czres) { return false; }
 
 		strcpy(newFmt, sgr1);
 		strcpy(newFmt + lenSgr1, prefix);
@@ -129,7 +132,7 @@ static bool log_colour(
 		strcpy(newFmt + lenSgr1 + lenPre + lenFmt + lenPost, sgr2);
 
 		vfprintf(stream, newFmt, args);
-		free(newFmt);
+		czFree(newFmt);
 	}
 	else if (!tty) {
 		fputs(prefix, stream);
@@ -141,17 +144,19 @@ static bool log_colour(
 		size_t lenPost = strlen(postfix);
 		size_t lenFmt = strlen(fmt);
 
+		char* restrict newFmt;
 		size_t size = lenPre + lenFmt + lenPost + 1;
+		struct CzAllocFlags flags = {0};
 
-		char* newFmt = malloc(size);
-		if NOEXPECT (!newFmt) { MALLOC_FAILURE(newFmt, size); return false; }
+		enum CzResult czres = czAlloc((void* restrict*) &newFmt, size, flags);
+		if NOEXPECT (czres) { return false; }
 
 		strcpy(newFmt, prefix);
 		strcpy(newFmt + lenPre, fmt);
 		strcpy(newFmt + lenPre + lenFmt, postfix);
 
 		vfprintf(stream, newFmt, args);
-		free(newFmt);
+		czFree(newFmt);
 	}
 
 	return true;
@@ -204,7 +209,6 @@ bool log_critical(FILE* stream, const char* format, ...)
 	va_end(args);
 	return bres;
 }
-
 
 static void log_debug_callback(
 	FILE* stream,
@@ -331,7 +335,6 @@ VkBool32 debug_callback(
 	fclose(file);
 	return VK_FALSE;
 }
-
 
 static void log_allocation_callback(
 	FILE* stream,
@@ -619,48 +622,6 @@ void internal_free_callback(
 	fclose(file);
 }
 
-
-void log_malloc_failure(int line, void* res, size_t size)
-{
-	double time = program_time();
-
-	log_error(
-		stderr,
-		"Memory failure at line %d (%.3fms)\n"
-		"Failed function call 'malloc' with 0x%016" PRIxPTR "\n"
-		"Arguments:\n"
-		"\tsize = %zu\n",
-		line, time, (uintptr_t) res, size);
-}
-
-void log_calloc_failure(int line, void* res, size_t num, size_t size)
-{
-	double time = program_time();
-
-	log_error(
-		stderr,
-		"Memory failure at line %d (%.3fms)\n"
-		"Failed function call 'calloc' with 0x%016" PRIxPTR "\n"
-		"Arguments:\n"
-		"\tnum  = %zu\n"
-		"\tsize = %zu\n",
-		line, time, (uintptr_t) res, num, size);
-}
-
-void log_realloc_failure(int line, void* res, void* ptr, size_t size)
-{
-	double time = program_time();
-
-	log_error(
-		stderr,
-		"Memory failure at line %d (%.3fms)\n"
-		"Failed function call 'realloc' with 0x%016" PRIxPTR "\n"
-		"Arguments:\n"
-		"\tptr  = 0x%016" PRIxPTR "\n"
-		"\tsize = %zu\n",
-		line, time, (uintptr_t) res, (uintptr_t) ptr, size);
-}
-
 void log_fopen_failure(int line, FILE* res, const char* name, const char* mode)
 {
 	double time = program_time();
@@ -673,34 +634,6 @@ void log_fopen_failure(int line, FILE* res, const char* name, const char* mode)
 		"\tname = %s\n"
 		"\tmode = %s\n",
 		line, time, (uintptr_t) res, name, mode);
-}
-
-void log_fseek_failure(int line, int res, FILE* file, long offset, int origin)
-{
-	double time = program_time();
-
-	log_error(
-		stderr,
-		"IO error at line %d (%.3fms)\n"
-		"Failed function call 'fseek' with %d\n"
-		"Arguments:\n"
-		"\tfile   = 0x%016" PRIxPTR "\n"
-		"\toffset = %ld\n"
-		"\torigin = %d\n",
-		line, time, res, (uintptr_t) file, offset, origin);
-}
-
-void log_ftell_failure(int line, long res, FILE* file)
-{
-	double time = program_time();
-
-	log_error(
-		stderr,
-		"IO error at line %d (%.3fms)\n"
-		"Failed function call 'ftell' with %ld\n"
-		"Arguments:\n"
-		"\tfile = 0x%016" PRIxPTR "\n",
-		line, time, res, (uintptr_t) file);
 }
 
 void log_fread_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file)

@@ -33,52 +33,52 @@ static char* dystring_stretch(struct DyString_* restrict string, size_t length)
 	ASSUME(length != 0);
 
 	size_t capacity = string->capacity;
-	char* raw = string->raw;
-
 	size_t newCapacity = length + capacity / 2;
-
 	if (capacity > newCapacity) {
 		newCapacity = length;
 	}
 
-	char* newRaw = realloc(raw, newCapacity);
-	if NOEXPECT (!newRaw) { REALLOC_FAILURE(newRaw, raw, newCapacity); return NULL; }
+	struct CzAllocFlags flags = {0};
+	flags.zeroInitialise = true;
 
-	void* addedMemory = newRaw + capacity;
-	size_t addedMemorySize = newCapacity - capacity;
+	enum CzResult czres = czRealloc(
+		(void* restrict*) &string->raw, sizeof(char) * capacity, sizeof(char) * newCapacity, flags);
 
-	// realloc doesn't initialise added memory, so we gotta do it ourselves
-	memset(addedMemory, 0, addedMemorySize);
+	if NOEXPECT (czres) { return NULL; }
 
 	string->capacity = newCapacity;
-	string->raw = newRaw;
-
-	return newRaw;
+	return string->raw;
 }
 
 void dystring_destroy(struct DyString_* restrict string)
 {
 	if NOEXPECT (!string) { return; }
 
-	free(string->raw);
-	free(string);
+	czFree(string->raw);
+	czFree(string);
 }
 
 struct DyString_* dystring_create(size_t count)
 {
-	size_t allocSize = sizeof(struct DyString_);
-	struct DyString_* string = malloc(allocSize);
-	if NOEXPECT (!string) { MALLOC_FAILURE(string, allocSize); return NULL; }
+	struct DyString_* restrict string;
+	struct CzAllocFlags strFlags = {0};
 
-	allocSize = sizeof(char);
-	char* raw = calloc(count, allocSize);
-	if NOEXPECT (!raw) { CALLOC_FAILURE(raw, count, allocSize); free(string); return NULL; }
+	enum CzResult czres = czAlloc((void* restrict*) &string, sizeof(*string), strFlags);
+	if NOEXPECT (czres) { return NULL; }
 
-	string->length = 1;
+	struct CzAllocFlags rawFlags = {0};
+	rawFlags.zeroInitialise = true;
+
+	czres = czAlloc((void* restrict*) &string->raw, sizeof(char) * count, rawFlags);
+	if NOEXPECT (czres) { goto err_free_string; }
+
+	string->length = 1; // Start as a single null terminator
 	string->capacity = count;
-	string->raw = raw;
-
 	return string;
+
+err_free_string:
+	czFree(string);
+	return NULL;
 }
 
 size_t dystring_length(struct DyString_* restrict string)
@@ -105,9 +105,8 @@ char* dystring_append(struct DyString_* restrict string, const char* restrict su
 	size_t newLength = length + subLength;
 
 	if (newLength > capacity) {
-		char* newRaw = dystring_stretch(string, newLength);
-		if NOEXPECT (!newRaw) { return NULL; }
-		raw = newRaw;
+		raw = dystring_stretch(string, newLength);
+		if NOEXPECT (!raw) { return NULL; }
 	}
 
 	char* subRaw = raw + length - 1;
@@ -131,9 +130,8 @@ char* dystring_prepend(struct DyString_* restrict string, const char* restrict s
 	size_t newLength = length + subLength;
 
 	if (newLength > capacity) {
-		char* newRaw = dystring_stretch(string, newLength);
-		if NOEXPECT (!newRaw) { return NULL; }
-		raw = newRaw;
+		raw = dystring_stretch(string, newLength);
+		if NOEXPECT (!raw) { return NULL; }
 	}
 
 	char* subRaw = raw;
@@ -161,9 +159,8 @@ char* dystring_add(struct DyString_* restrict string, const char* restrict subst
 	size_t newLength = length + subLength;
 
 	if (newLength > capacity) {
-		char* newRaw = dystring_stretch(string, newLength);
-		if NOEXPECT (!newRaw) { return NULL; }
-		raw = newRaw;
+		raw = dystring_stretch(string, newLength);
+		if NOEXPECT (!raw) { return NULL; }
 	}
 
 	char* subRaw = raw + index;

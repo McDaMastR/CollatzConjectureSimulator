@@ -34,7 +34,7 @@ union CliData
 
 struct CliOption
 {
-	char fullName[CLTZ_CLI_MAX_OPTION_LENGTH];
+	char fullName[CZ_CLI_MAX_OPTION_LENGTH];
 	char shortName;
 
 	CzCliCallback callback;
@@ -60,25 +60,27 @@ void czCliDestroy(struct CzCli_* cli)
 	if NOEXPECT (!cli) { return; }
 
 	dyarray_destroy(cli->options);
-	free(cli);
+	czFree(cli);
 }
 
 struct CzCli_* czCliCreate(void* config, size_t count)
 {
-	size_t allocSize = sizeof(struct CzCli_);
-	struct CzCli_* cli = malloc(allocSize);
-	if NOEXPECT (!cli) { MALLOC_FAILURE(cli, allocSize); return NULL; }
+	struct CzCli_* restrict cli;
+	struct CzAllocFlags flags = {0};
 
-	size_t elmSize = sizeof(struct CliOption);
-	size_t elmCount = count;
+	enum CzResult czres = czAlloc((void* restrict*) &cli, sizeof(*cli), flags);
+	if NOEXPECT (czres) { return NULL; }
 
-	DyArray options = dyarray_create(elmSize, elmCount);
-	if NOEXPECT (!options) { free(cli); return NULL; }
+	DyArray options = dyarray_create(sizeof(struct CliOption), count);
+	if NOEXPECT (!options) { goto err_free_cli; }
 
 	cli->options = options;
 	cli->config = config;
-
 	return cli;
+
+err_free_cli:
+	czFree(cli);
+	return NULL;
 }
 
 static void czCliParseArg(enum CzCliDatatype type, const char* option, const char* arg, union CliData* result)
@@ -102,7 +104,6 @@ static void czCliParseArg(enum CzCliDatatype type, const char* option, const cha
 		if (*end) { 
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %f", arg, option, (double) f);
 		}
-
 		result->f = f;
 		break;
 
@@ -111,7 +112,6 @@ static void czCliParseArg(enum CzCliDatatype type, const char* option, const cha
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %f", arg, option, d);
 		}
-
 		result->d = d;
 		break;
 
@@ -120,7 +120,6 @@ static void czCliParseArg(enum CzCliDatatype type, const char* option, const cha
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %Lf", arg, option, ld);
 		}
-
 		result->ld = ld;
 		break;
 
@@ -129,7 +128,6 @@ static void czCliParseArg(enum CzCliDatatype type, const char* option, const cha
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %ld", arg, option, l);
 		}
-
 		result->l = l;
 		break;
 
@@ -138,7 +136,6 @@ static void czCliParseArg(enum CzCliDatatype type, const char* option, const cha
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %lld", arg, option, ll);
 		}
-
 		result->ll = ll;
 		break;
 
@@ -147,7 +144,6 @@ static void czCliParseArg(enum CzCliDatatype type, const char* option, const cha
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %lu", arg, option, ul);
 		}
-
 		result->ul = ul;
 		break;
 
@@ -156,7 +152,6 @@ static void czCliParseArg(enum CzCliDatatype type, const char* option, const cha
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %llu", arg, option, ull);
 		}
-
 		result->ull = ull;
 		break;
 
@@ -168,8 +163,7 @@ static void czCliParseArg(enum CzCliDatatype type, const char* option, const cha
 
 bool czCliParse(struct CzCli_* cli, int argc, char** argv)
 {
-	size_t elmSize = sizeof(struct CliCallbackData);
-	DyQueue callbacks = dyqueue_create(elmSize);
+	DyQueue callbacks = dyqueue_create(sizeof(struct CliCallbackData));
 	if NOEXPECT (!callbacks) { return false; }
 
 	DyArray options = cli->options;
@@ -187,7 +181,7 @@ bool czCliParse(struct CzCli_* cli, int argc, char** argv)
 			czCliParseArg(argType, optionName, arg, &callbackData.data);
 
 			bool bres = dyqueue_enqueue(callbacks, &callbackData);
-			if NOEXPECT (!bres) { dyqueue_destroy(callbacks); return false; }
+			if NOEXPECT (!bres) { goto err_destroy_callbacks; }
 
 			argType = CZ_CLI_DATATYPE_NONE;
 			optionName = NULL;
@@ -198,21 +192,20 @@ bool czCliParse(struct CzCli_* cli, int argc, char** argv)
 				struct CliOption option;
 				dyarray_get(options, &option, j);
 
-				if (!strncmp(arg + 2, option.fullName, CLTZ_CLI_MAX_OPTION_LENGTH)) {
+				if (!strncmp(arg + 2, option.fullName, CZ_CLI_MAX_OPTION_LENGTH)) {
 					argType = option.type;
 					optionName = arg;
 
 					callbackData.callback = option.callback;
 					callbackData.type = option.type;
 					callbackData.data = (union CliData) {0};
-
 					break;
 				}
 			}
 
 			if (optionName && !argType) {
 				bool bres = dyqueue_enqueue(callbacks, &callbackData);
-				if NOEXPECT (!bres) { dyqueue_destroy(callbacks); return false; }
+				if NOEXPECT (!bres) { goto err_destroy_callbacks; }
 				optionName = NULL;
 			}
 			else if (!optionName) {
@@ -224,7 +217,6 @@ bool czCliParse(struct CzCli_* cli, int argc, char** argv)
 			for (size_t j = 1; arg[j]; j++) {
 				if (argType) {
 					log_warning(stdout, "Ignoring incomplete option -%c", arg[j - 1]);
-
 					argType = CZ_CLI_DATATYPE_NONE;
 					optionName = NULL;
 				}
@@ -240,14 +232,13 @@ bool czCliParse(struct CzCli_* cli, int argc, char** argv)
 						callbackData.callback = option.callback;
 						callbackData.type = option.type;
 						callbackData.data = (union CliData) {0};
-
 						break;
 					}
 				}
 
 				if (optionName && !argType) {
 					bool bres = dyqueue_enqueue(callbacks, &callbackData);
-					if NOEXPECT (!bres) { dyqueue_destroy(callbacks); return false; }
+					if NOEXPECT (!bres) { goto err_destroy_callbacks; }
 					optionName = NULL;
 				}
 				else if (!optionName) {
@@ -270,22 +261,26 @@ bool czCliParse(struct CzCli_* cli, int argc, char** argv)
 	for (size_t i = 0; i < callbackCount; i++) {
 		dyqueue_dequeue(callbacks, &callbackData);
 
-		bool bres = callbackData.callback(config, callbackData.type ? &callbackData.data : NULL);
-		if (!bres) { dyqueue_destroy(callbacks); return false; }
+		void* arg = callbackData.type ? &callbackData.data : NULL;
+		bool bres = callbackData.callback(config, arg);
+		if (!bres) { goto err_destroy_callbacks; }
 	}
 
 	dyqueue_destroy(callbacks);
 	return true;
+
+err_destroy_callbacks:
+	dyqueue_destroy(callbacks);
+	return false;
 }
 
 bool czCliAdd(struct CzCli_* cli, char option, const char* name, enum CzCliDatatype type, CzCliCallback callback)
 {
-	struct CliOption newOption = {0};
-
 	size_t length = strlen(name);
-	if NOEXPECT (length > CLTZ_CLI_MAX_OPTION_LENGTH) { return false; }
+	if NOEXPECT (length > CZ_CLI_MAX_OPTION_LENGTH) { return false; }
 
-	strncpy(newOption.fullName, name, CLTZ_CLI_MAX_OPTION_LENGTH);
+	struct CliOption newOption = {0};
+	strncpy(newOption.fullName, name, CZ_CLI_MAX_OPTION_LENGTH);
 
 	newOption.shortName = option;
 	newOption.callback = callback;
@@ -293,6 +288,5 @@ bool czCliAdd(struct CzCli_* cli, char option, const char* name, enum CzCliDatat
 
 	void* pres = dyarray_append(cli->options, &newOption);
 	if NOEXPECT (!pres) { return false; }
-
 	return true;
 }

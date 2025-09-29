@@ -18,6 +18,11 @@
 #include "dynamic.h"
 
 
+void czFree_stub(void* memory)
+{
+	czFree(memory);
+}
+
 void dyarray_destroy_stub(void* array)
 {
 	dyarray_destroy(array);

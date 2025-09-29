@@ -87,6 +87,18 @@
 	#define PURE_FUNC
 #endif
 
+#if has_attribute(reproducible)
+	#define REPRODUCIBLE_FUNC __attribute__ (( reproducible ))
+#else
+	#define REPRODUCIBLE_FUNC
+#endif
+
+#if has_attribute(unsequenced)
+	#define UNSEQUENCED_FUNC __attribute__ (( unsequenced ))
+#else
+	#define UNSEQUENCED_FUNC
+#endif
+
 #if has_attribute(malloc)
 	#define MALLOC_FUNC __attribute__ (( malloc ))
 #else
@@ -259,25 +271,33 @@
 	while (0)
 
 
-// Datatypes
+// Enumerations
 
 enum CzEndianness
 {
-	CZ_ENDIANNESS_BIG    = 0,
-	CZ_ENDIANNESS_LITTLE = 1
+	CZ_ENDIANNESS_BIG,
+	CZ_ENDIANNESS_LITTLE,
 };
 
 enum CzOutputLevel
 {
-	CZ_OUTPUT_LEVEL_SILENT  = 0,
-	CZ_OUTPUT_LEVEL_QUIET   = 1,
-	CZ_OUTPUT_LEVEL_DEFAULT = 2,
-	CZ_OUTPUT_LEVEL_VERBOSE = 3
+	CZ_OUTPUT_LEVEL_SILENT,
+	CZ_OUTPUT_LEVEL_QUIET,
+	CZ_OUTPUT_LEVEL_DEFAULT,
+	CZ_OUTPUT_LEVEL_VERBOSE,
 };
 
 enum CzColourLevel
 {
-	CZ_COLOUR_LEVEL_NONE = 0,
-	CZ_COLOUR_LEVEL_TTY  = 1,
-	CZ_COLOUR_LEVEL_ALL  = 2
+	CZ_COLOUR_LEVEL_NONE,
+	CZ_COLOUR_LEVEL_TTY,
+	CZ_COLOUR_LEVEL_ALL,
+};
+
+enum CzResult
+{
+	CZ_RESULT_SUCCESS,
+	CZ_RESULT_BAD_POINTER,
+	CZ_RESULT_BAD_SIZE,
+	CZ_RESULT_NO_MEMORY,
 };

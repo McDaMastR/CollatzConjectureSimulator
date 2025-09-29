@@ -36,20 +36,22 @@ void dyqueue_destroy(struct DyQueue_* restrict queue)
 
 	while (node) {
 		next = *node;
-		free(node);
+		czFree(node);
 		node = next;
 	}
 
-	free(queue);
+	czFree(queue);
 }
 
 struct DyQueue_* dyqueue_create(size_t size)
 {
 	ASSUME(size != 0);
 
-	size_t allocSize = sizeof(struct DyQueue_);
-	struct DyQueue_* queue = malloc(allocSize);
-	if NOEXPECT (!queue) { MALLOC_FAILURE(queue, allocSize); return NULL; }
+	struct DyQueue_* restrict queue;
+	struct CzAllocFlags flags = {0};
+
+	enum CzResult czres = czAlloc((void* restrict*) &queue, sizeof(*queue), flags);
+	if NOEXPECT (czres) { return NULL; }
 
 	queue->size = size;
 	queue->count = 0;
@@ -72,9 +74,11 @@ bool dyqueue_enqueue(struct DyQueue_* restrict queue, const void* restrict value
 	size_t count = queue->count;
 	void** tail = queue->tail;
 
-	size_t allocSize = sizeof(void*) + size;
-	void** node = malloc(allocSize);
-	if NOEXPECT (!node) { MALLOC_FAILURE(node, allocSize); return false; }
+	void** restrict node;
+	struct CzAllocFlags flags = {0};
+
+	enum CzResult czres = czAlloc((void* restrict*) &node, sizeof(void*) + size, flags);
+	if NOEXPECT (czres) { return false; }
 
 	*node = NULL;
 
@@ -109,7 +113,7 @@ void dyqueue_dequeue(struct DyQueue_* restrict queue, void* restrict value)
 	void* element = (char*) head + sizeof(void*);
 
 	memcpy(value, element, size);
-	free(head);
+	czFree(head);
 
 	if (count == 1) {
 		queue->tail = node;

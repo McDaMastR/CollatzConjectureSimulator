@@ -33,39 +33,38 @@ static void* dyarray_stretch(struct DyArray_* restrict array)
 
 	size_t size = array->size;
 	size_t capacity = array->capacity;
-	void* raw = array->raw;
 
+	// TODO Deal with overflow *properly*
 	size_t newCapacity = capacity + capacity / 2 + 1;
-
 	if (capacity > newCapacity) {
 		newCapacity = capacity + (SIZE_MAX / size - capacity) / 2 + 1;
 	}
 
-	size_t allocSize = newCapacity * size;
-	void* newRaw = realloc(raw, allocSize);
-	if NOEXPECT (!newRaw) { REALLOC_FAILURE(newRaw, raw, allocSize); return NULL; }
+	struct CzAllocFlags flags = {0};
+	enum CzResult czres = czRealloc(&array->raw, capacity * size, newCapacity * size, flags);
+	if NOEXPECT (czres) { return NULL; }
 
 	array->capacity = newCapacity;
-	array->raw = newRaw;
-
-	return newRaw;
+	return array->raw;
 }
 
 void dyarray_destroy(struct DyArray_* restrict array)
 {
 	if NOEXPECT (!array) { return; }
 
-	free(array->raw);
-	free(array);
+	czFree(array->raw);
+	czFree(array);
 }
 
 struct DyArray_* dyarray_create(size_t size, size_t count)
 {
 	ASSUME(size != 0);
 
-	size_t allocSize = sizeof(struct DyArray_);
-	struct DyArray_* array = malloc(allocSize);
-	if NOEXPECT (!array) { MALLOC_FAILURE(array, allocSize); return NULL; }
+	struct DyArray_* restrict array;
+	struct CzAllocFlags flags = {0};
+
+	enum CzResult czres = czAlloc((void* restrict*) &array, sizeof(*array), flags);
+	if NOEXPECT (czres) { return NULL; }
 
 	array->size = size;
 	array->count = 0;
@@ -73,13 +72,15 @@ struct DyArray_* dyarray_create(size_t size, size_t count)
 	array->raw = NULL;
 
 	if (count) {
-		allocSize = count * size;
-		void* raw = malloc(allocSize);
-		if NOEXPECT (!raw) { MALLOC_FAILURE(raw, allocSize); free(array); return NULL; }
-		array->raw = raw;
+		czres = czAlloc(&array->raw, count * size, flags);
+		if NOEXPECT (czres) { goto err_free_array; }
 	}
 
 	return array;
+
+err_free_array:
+	czFree(array);
+	return NULL;
 }
 
 size_t dyarray_size(struct DyArray_* restrict array)
@@ -152,9 +153,8 @@ void* dyarray_append(struct DyArray_* restrict array, const void* restrict value
 	void* raw = array->raw;
 
 	if (count == capacity) {
-		void* newRaw = dyarray_stretch(array);
-		if NOEXPECT (!newRaw) { return NULL; }
-		raw = newRaw;
+		raw = dyarray_stretch(array);
+		if NOEXPECT (!raw) { return NULL; }
 	}
 
 	void* element = (char*) raw + count * size;
@@ -174,9 +174,8 @@ void* dyarray_prepend(struct DyArray_* restrict array, const void* restrict valu
 	void* raw = array->raw;
 
 	if (count == capacity) {
-		void* newRaw = dyarray_stretch(array);
-		if NOEXPECT (!newRaw) { return NULL; }
-		raw = newRaw;
+		raw = dyarray_stretch(array);
+		if NOEXPECT (!raw) { return NULL; }
 	}
 
 	void* element = raw;
@@ -200,9 +199,8 @@ void* dyarray_add(struct DyArray_* restrict array, const void* restrict value, s
 	void* raw = array->raw;
 
 	if (count == capacity) {
-		void* newRaw = dyarray_stretch(array);
-		if NOEXPECT (!newRaw) { return NULL; }
-		raw = newRaw;
+		raw = dyarray_stretch(array);
+		if NOEXPECT (!raw) { return NULL; }
 	}
 
 	void* element = (char*) raw + index * size;

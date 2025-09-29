@@ -19,7 +19,7 @@
 
 #include "common.h"
 
-#define CLTZ_CLI_MAX_OPTION_LENGTH 64
+#define CZ_CLI_MAX_OPTION_LENGTH 64
 
 
 typedef struct CzCli_* CzCli;
@@ -47,7 +47,7 @@ void czCliDestroy(CzCli cli);
 
 CzCli czCliCreate(void* config, size_t count) FREE_FUNC(czCliDestroy, 1) NO_ACCESS(1) USE_RET;
 
-bool czCliParse(CzCli cli, int argc, char** argv) NONNULL_ALL;
+bool czCliParse(CzCli cli, int argc, char** argv) NONNULL_ALL RE_ACCESS(1) RE_ACCESS(3);
 
 bool czCliAdd(CzCli cli, char option, const char* name, enum CzCliDatatype type, CzCliCallback callback)
-	NONNULL_ALL NULTSTR_ARG(3);
+	NONNULL_ALL NULTSTR_ARG(3) RW_ACCESS(1) RE_ACCESS(3);

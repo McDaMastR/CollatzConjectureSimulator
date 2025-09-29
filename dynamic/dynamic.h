@@ -27,6 +27,18 @@
 /**
  * @relates DyRecord
  * 
+ * @brief FreeCallback compatible version of @ref czFree.
+ * 
+ * Calls @ref czFree with @p memory. Can be used as the free callback when recording a dynamic allocation to a dynamic
+ * record.
+ * 
+ * @param[in,out] memory The dynamic allocation.
+ */
+void czFree_stub(void* memory);
+
+/**
+ * @relates DyRecord
+ * 
  * @brief FreeCallback compatible version of @ref DyArray::dyarray_destroy "dyarray_destroy".
  * 
  * Calls DyArray::dyarray_destroy with @p array. Can be used as the free callback when recording a dynamic array to a

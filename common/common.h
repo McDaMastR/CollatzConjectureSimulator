@@ -20,4 +20,5 @@
 #include "def.h"
 #include "debug.h"
 
+#include "alloc.h"
 #include "util.h"

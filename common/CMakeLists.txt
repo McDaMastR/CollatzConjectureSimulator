@@ -195,9 +195,11 @@ target_precompile_headers(cltzCommon
 
 target_sources(cltzCommon
 	PRIVATE
+		alloc.c
 		debug.c
 		util.c
 	PUBLIC FILE_SET HEADERS FILES
+		alloc.h
 		common.h
 		debug.h
 		def.h

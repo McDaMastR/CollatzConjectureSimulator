@@ -1,0 +1,129 @@
+/* 
+ * Copyright (C) 2025 Seth McDonald
+ * 
+ * This file is part of Collatz Conjecture Simulator.
+ * 
+ * Collatz Conjecture Simulator is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
+ * 
+ * Collatz Conjecture Simulator is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE. See the GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along with Collatz Conjecture
+ * Simulator. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file
+ * 
+ * @brief Easy and cross-platform dynamic memory management.
+ */
+
+#pragma once
+
+#include "def.h"
+
+
+/**
+ * @brief Specifies the behaviour of allocation functions.
+ * 
+ * A set of flags specifying the desired behaviour of @ref czAlloc or @ref czRealloc.
+ */
+struct CzAllocFlags
+{
+	/**
+	 * @brief Whether to zero out any newly allocated memory.
+	 */
+	bool zeroInitialise : 1;
+
+	/**
+	 * @brief Whether to free the allocated memory if the function fails.
+	 */
+	bool freeOnFail : 1;
+};
+
+
+/**
+ * @brief Dynamically allocates a block of memory.
+ * 
+ * Allocates @p size bytes of contiguous memory from the heap and synchronously writes the memory address of the first
+ * byte of the allocation to @p memory. The allocation is aligned to the fundamental alignment of the implementation.
+ * That is, the alignment of the @c max_align_t type (typically 8 or 16 bytes). If @p size is zero, failure occurs. On
+ * failure, the contents of @p memory are unchanged.
+ * 
+ * The members of @p flags can optionally specify the following behaviour.
+ * - If @p flags.zeroInitialise is set, the contents of the allocation are initialised to zero. Otherwise, the contents
+ *   are initially undefined.
+ * - @p flags.freeOnFail is ignored.
+ * 
+ * @param[out] memory The memory to write the address of the allocation to.
+ * @param[in] size The size of the allocation.
+ * @param[in] flags Binary flags describing additional behaviour.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_BAD_SIZE @p size was zero.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * 
+ * @pre @p memory is nonnull.
+ * 
+ * @note On success, failing to free the allocation with @ref czFree may result in a memory leak.
+ */
+enum CzResult czAlloc(void* restrict* memory, size_t size, struct CzAllocFlags flags) HOT_FUNC NONNULL_ALL WR_ACCESS(1);
+
+/**
+ * @brief Extends or trims a dynamically allocated block of memory.
+ * 
+ * Reallocates the contiguous dynamic memory allocation of size @p oldSize whose first byte is located at the memory
+ * address pointed to by @p memory. The new allocation contains @p newSize bytes of contiguous memory from the heap and
+ * is aligned to the fundamental alignment of the implementation. That is, the alignment of the @c max_align_t type
+ * (typically 8 or 16 bytes). The memory address of the first byte of the new allocation is synchronously written to
+ * @p memory.
+ * 
+ * Let @e minSize denote the minimum of @p oldSize and @p newSize, and let @e difSize denote the positive difference of
+ * @p oldSize and @p newSize. The contents of the first @e minSize bytes of the original allocation are preserved in the
+ * first @e minSize bytes of the new allocation. If @p oldSize or @p newSize are zero, failure occurs. On failure, the
+ * contents of @p memory are unchanged.
+ * 
+ * The members of @p flags can optionally specify the following behaviour.
+ * - If @p flags.zeroInitialise is set and @p oldSize is less than @p newSize, the contents of the last @e difSize bytes
+ *   of the new allocation are initialised to zero. Otherwise, the contents are initially undefined.
+ * - If @p flags.freeOnFail is set and failure occurs, the original allocation is freed. Otherwise if failure occurs,
+ *   the original allocation is unchanged.
+ * 
+ * @param[in,out] memory The memory to read the current address of the allocation from, and to write the address of the
+ *   new allocation to.
+ * @param[in] oldSize The current size of the allocation.
+ * @param[in] newSize The size of the new allocation.
+ * @param[in] flags Binary flags describing additional behaviour.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_BAD_SIZE @p oldSize or @p newSize were zero.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * 
+ * @pre @p memory and @p *memory are nonnull.
+ * 
+ * @note On success, or on failure if @p flags.freeOnFail is not set, failing to free the allocation with @ref czFree
+ * may result in a memory leak.
+ * 
+ * @warning On failure if @p flags.freeOnFail is set, any further access of the freed memory will result in undefined
+ * behaviour.
+ */
+enum CzResult czRealloc(void* restrict* memory, size_t oldSize, size_t newSize, struct CzAllocFlags flags)
+	HOT_FUNC NONNULL_ALL RW_ACCESS(1);
+
+/**
+ * @brief Frees a dynamically allocated block of memory.
+ * 
+ * Frees the contiguous dynamic memory allocation whose first byte is located at the memory address @p memory. If
+ * @p memory is null, nothing happens.
+ * 
+ * @param[in,out] memory The address of the allocation.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_BAD_POINTER @p memory was null.
+ * 
+ * @warning On success, any further access of the freed memory will result in undefined behaviour.
+ */
+enum CzResult czFree(void* memory) HOT_FUNC;
