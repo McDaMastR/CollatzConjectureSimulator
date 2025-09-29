@@ -56,7 +56,7 @@ void dyqueue_destroy(DyQueue queue);
  * 
  * @note Failing to destroy the returned dynamic queue will result in a memory leak.
  */
-DyQueue dyqueue_create(size_t size) FREE_FUNC(dyqueue_destroy, 1) USE_RET;
+DyQueue dyqueue_create(size_t size) CZ_FREE(dyqueue_destroy, 1) CZ_USE_RET;
 
 /**
  * @memberof DyQueue
@@ -71,7 +71,7 @@ DyQueue dyqueue_create(size_t size) FREE_FUNC(dyqueue_destroy, 1) USE_RET;
  * 
  * @pre @p queue is nonnull.
  */
-size_t dyqueue_size(DyQueue queue) NONNULL_ALL RE_ACCESS(1) USE_RET;
+size_t dyqueue_size(DyQueue queue) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_RET;
 
 /**
  * @memberof DyQueue
@@ -90,7 +90,7 @@ size_t dyqueue_size(DyQueue queue) NONNULL_ALL RE_ACCESS(1) USE_RET;
  * @pre @p queue is nonnull.
  * @pre @p value is nonnull.
  */
-bool dyqueue_enqueue(DyQueue queue, const void* value) NONNULL_ALL RW_ACCESS(1) RE_ACCESS(2);
+bool dyqueue_enqueue(DyQueue queue, const void* value) CZ_NONNULL_ARGS CZ_RW_ACCESS(1) CZ_RE_ACCESS(2);
 
 /**
  * @memberof DyQueue
@@ -105,4 +105,4 @@ bool dyqueue_enqueue(DyQueue queue, const void* value) NONNULL_ALL RW_ACCESS(1) 
  * @pre @p queue is nonnull and nonempty.
  * @pre @p value is nonnull.
  */
-void dyqueue_dequeue(DyQueue queue, void* value) NONNULL_ALL RW_ACCESS(1) WR_ACCESS(2);
+void dyqueue_dequeue(DyQueue queue, void* value) CZ_NONNULL_ARGS CZ_RW_ACCESS(1) CZ_WR_ACCESS(2);

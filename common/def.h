@@ -34,218 +34,213 @@
 // Check support for optional builtins and attributes
 
 #ifdef __has_builtin
-	#define has_builtin(x) __has_builtin(__builtin_##x)
+	#define CZ_HAS_BUILTIN(x) __has_builtin(__builtin_##x)
 #else
-	#define has_builtin(x) 0
+	#define CZ_HAS_BUILTIN(x) 0
 #endif
 
 #ifdef __has_attribute
-	#define has_attribute(x) __has_attribute(x)
+	#define CZ_HAS_ATTRIBUTE(x) __has_attribute(x)
 #else
-	#define has_attribute(x) 0
+	#define CZ_HAS_ATTRIBUTE(x) 0
 #endif
 
-#if has_builtin(assume)
-	#define ASSUME(x) __builtin_assume (x)
-#elif has_attribute(assume)
-	#define ASSUME(x) __attribute__ (( assume (x) ))
+#if CZ_HAS_BUILTIN(assume)
+	#define CZ_ASSUME(x) __builtin_assume (x)
+#elif CZ_HAS_ATTRIBUTE(assume)
+	#define CZ_ASSUME(x) __attribute__ (( assume (x) ))
 #elif defined(_MSC_VER)
-	#define ASSUME(x) __assume (x)
+	#define CZ_ASSUME(x) __assume (x)
 #else
-	#define ASSUME(x)
+	#define CZ_ASSUME(x)
 #endif
 
-#if has_builtin(expect)
-	#define EXPECT(x)   ( __builtin_expect ((x) ? 1 : 0, 1) )
-	#define NOEXPECT(x) ( __builtin_expect ((x) ? 1 : 0, 0) )
+#if CZ_HAS_BUILTIN(expect)
+	#define CZ_EXPECT(x)   ( __builtin_expect ((x) ? 1 : 0, 1) )
+	#define CZ_NOEXPECT(x) ( __builtin_expect ((x) ? 1 : 0, 0) )
 #else
-	#define EXPECT(x)   (x)
-	#define NOEXPECT(x) (x)
+	#define CZ_EXPECT(x)   (x)
+	#define CZ_NOEXPECT(x) (x)
 #endif
 
-#if has_attribute(hot)
-	#define HOT_FUNC __attribute__ (( hot ))
+#if CZ_HAS_ATTRIBUTE(hot)
+	#define CZ_HOT __attribute__ (( hot ))
 #else
-	#define HOT_FUNC
+	#define CZ_HOT
 #endif
 
-#if has_attribute(cold)
-	#define COLD_FUNC __attribute__ (( cold ))
+#if CZ_HAS_ATTRIBUTE(cold)
+	#define CZ_COLD __attribute__ (( cold ))
 #else
-	#define COLD_FUNC
+	#define CZ_COLD
 #endif
 
-#if has_attribute(const)
-	#define CONST_FUNC __attribute__ (( const ))
+#if CZ_HAS_ATTRIBUTE(const)
+	#define CZ_CONST __attribute__ (( const ))
 #else
-	#define CONST_FUNC
+	#define CZ_CONST
 #endif
 
-#if has_attribute(pure)
-	#define PURE_FUNC __attribute__ (( pure ))
+#if CZ_HAS_ATTRIBUTE(pure)
+	#define CZ_PURE __attribute__ (( pure ))
 #else
-	#define PURE_FUNC
+	#define CZ_PURE
 #endif
 
-#if has_attribute(reproducible)
-	#define REPRODUCIBLE_FUNC __attribute__ (( reproducible ))
+#if CZ_HAS_ATTRIBUTE(reproducible)
+	#define CZ_REPRODUCIBLE __attribute__ (( reproducible ))
 #else
-	#define REPRODUCIBLE_FUNC
+	#define CZ_REPRODUCIBLE
 #endif
 
-#if has_attribute(unsequenced)
-	#define UNSEQUENCED_FUNC __attribute__ (( unsequenced ))
+#if CZ_HAS_ATTRIBUTE(unsequenced)
+	#define CZ_UNSEQUENCED __attribute__ (( unsequenced ))
 #else
-	#define UNSEQUENCED_FUNC
+	#define CZ_UNSEQUENCED
 #endif
 
-#if has_attribute(malloc)
-	#define MALLOC_FUNC __attribute__ (( malloc ))
+#if CZ_HAS_ATTRIBUTE(malloc)
+	#define CZ_MALLOC __attribute__ (( malloc ))
 #else
-	#define MALLOC_FUNC
+	#define CZ_MALLOC
 #endif
 
-#if has_attribute(malloc) && !defined(__clang__)
-	#define FREE_FUNC(func, arg) __attribute__ (( malloc (func, arg) ))
+#if CZ_HAS_ATTRIBUTE(malloc) && !defined(__clang__)
+	#define CZ_FREE(func, arg) __attribute__ (( malloc (func, arg) ))
 #else
-	#define FREE_FUNC(func, arg)
+	#define CZ_FREE(func, arg)
 #endif
 
-#if has_attribute(format)
+#if CZ_HAS_ATTRIBUTE(format)
 	#ifdef __clang__
-		#define PRINTF_FUNC(fmt, args) __attribute__ (( format (printf, fmt, args) ))
-		#define SCANF_FUNC(fmt, args)  __attribute__ (( format (scanf, fmt, args) ))
+		#define CZ_PRINTF(fmt, args) __attribute__ (( format (printf, fmt, args) ))
+		#define CZ_SCANF(fmt, args)  __attribute__ (( format (scanf, fmt, args) ))
 	#else
-		#define PRINTF_FUNC(fmt, args) __attribute__ (( format (gnu_printf, fmt, args) ))
-		#define SCANF_FUNC(fmt, args)  __attribute__ (( format (gnu_scanf, fmt, args) ))
+		#define CZ_PRINTF(fmt, args) __attribute__ (( format (gnu_printf, fmt, args) ))
+		#define CZ_SCANF(fmt, args)  __attribute__ (( format (gnu_scanf, fmt, args) ))
 	#endif
 #else
-	#define PRINTF_FUNC(fmt, args)
-	#define SCANF_FUNC(fmt, args)
+	#define CZ_PRINTF(fmt, args)
+	#define CZ_SCANF(fmt, args)
 #endif
 
-#if has_attribute(nonnull)
-	#define NONNULL_ARGS(...) __attribute__ (( nonnull (__VA_ARGS__) ))
-	#define NONNULL_ALL       __attribute__ (( nonnull ))
+#if CZ_HAS_ATTRIBUTE(nonnull)
+	#define CZ_NONNULL_ARG(...) __attribute__ (( nonnull (__VA_ARGS__) ))
+	#define CZ_NONNULL_ARGS     __attribute__ (( nonnull ))
 #else
-	#define NONNULL_ARGS(...)
-	#define NONNULL_ALL
+	#define CZ_NONNULL_ARG(...)
+	#define CZ_NONNULL_ARGS
 #endif
 
-#if has_attribute(nonnull_if_nonzero)
-	#define NONNULL_NONZERO_ARG(arg1, arg2)        __attribute__ (( nonnull_if_nonzero (arg1, arg2) ))
-	#define NONNULL_NONZERO_ARGS(arg1, arg2, arg3) __attribute__ (( nonnull_if_nonzero (arg1, arg2, arg3) ))
+#if CZ_HAS_ATTRIBUTE(nonnull_if_nonzero)
+	#define CZ_NONNULL_NONZERO_ARG(ptr, arg)         __attribute__ (( nonnull_if_nonzero (ptr, arg) ))
+	#define CZ_NONNULL_NONZERO_ARGS(ptr, arg1, arg2) __attribute__ (( nonnull_if_nonzero (ptr, arg1, arg2) ))
 #else
-	#define NONNULL_NONZERO_ARG(arg1, arg2)
-	#define NONNULL_NONZERO_ARGS(arg1, arg2, arg3)
+	#define CZ_NONNULL_NONZERO_ARG(ptr, arg)
+	#define CZ_NONNULL_NONZERO_ARGS(ptr, arg1, arg2)
 #endif
 
-#if has_attribute(alloc_size)
-	#define ALLOC_ARG(arg)         __attribute__ (( alloc_size (arg) ))
-	#define ALLOC_ARGS(arg1, arg2) __attribute__ (( alloc_size (arg1, arg2) ))
+#if CZ_HAS_ATTRIBUTE(alloc_size)
+	#define CZ_ALLOC_ARG(arg)         __attribute__ (( alloc_size (arg) ))
+	#define CZ_ALLOC_ARGS(arg1, arg2) __attribute__ (( alloc_size (arg1, arg2) ))
 #else
-	#define ALLOC_ARG(arg)
-	#define ALLOC_ARGS(arg1, arg2)
+	#define CZ_ALLOC_ARG(arg)
+	#define CZ_ALLOC_ARGS(arg1, arg2)
 #endif
 
-#if has_attribute(alloc_align)
-	#define ALIGN_ARG(arg) __attribute__ (( alloc_align (arg) ))
+#if CZ_HAS_ATTRIBUTE(alloc_align)
+	#define CZ_ALIGN_ARG(arg) __attribute__ (( alloc_align (arg) ))
 #else
-	#define ALIGN_ARG(arg)
+	#define CZ_ALIGN_ARG(arg)
 #endif
 
-#if has_attribute(null_terminated_string_arg)
-	#define NULTSTR_ARG(arg) __attribute__ (( null_terminated_string_arg (arg) ))
+#if CZ_HAS_ATTRIBUTE(null_terminated_string_arg)
+	#define CZ_NULLTERM_ARG(arg) __attribute__ (( null_terminated_string_arg (arg) ))
 #else
-	#define NULTSTR_ARG(arg)
+	#define CZ_NULLTERM_ARG(arg)
 #endif
 
-#if has_attribute(access)
-	#define NO_ACCESS(arg) __attribute__ (( access (none, arg) ))
-	#define RE_ACCESS(arg) __attribute__ (( access (read_only, arg) ))
-	#define WR_ACCESS(arg) __attribute__ (( access (write_only, arg) ))
-	#define RW_ACCESS(arg) __attribute__ (( access (read_write, arg) ))
+#if CZ_HAS_ATTRIBUTE(access)
+	#define CZ_NO_ACCESS(arg) __attribute__ (( access (none, arg) ))
+	#define CZ_RE_ACCESS(arg) __attribute__ (( access (read_only, arg) ))
+	#define CZ_WR_ACCESS(arg) __attribute__ (( access (write_only, arg) ))
+	#define CZ_RW_ACCESS(arg) __attribute__ (( access (read_write, arg) ))
 #else
-	#define NO_ACCESS(arg)
-	#define RE_ACCESS(arg)
-	#define WR_ACCESS(arg)
-	#define RW_ACCESS(arg)
+	#define CZ_NO_ACCESS(arg)
+	#define CZ_RE_ACCESS(arg)
+	#define CZ_WR_ACCESS(arg)
+	#define CZ_RW_ACCESS(arg)
 #endif
 
-#if has_attribute(returns_nonnull)
-	#define NONNULL_RET __attribute__ (( returns_nonnull ))
+#if CZ_HAS_ATTRIBUTE(returns_nonnull)
+	#define CZ_NONNULL_RET __attribute__ (( returns_nonnull ))
 #else
-	#define NONNULL_RET
+	#define CZ_NONNULL_RET
 #endif
 
-#if has_attribute(warn_unused_result)
-	#define USE_RET __attribute__ (( warn_unused_result ))
+#if CZ_HAS_ATTRIBUTE(warn_unused_result)
+	#define CZ_USE_RET __attribute__ (( warn_unused_result ))
 #else
-	#define USE_RET
+	#define CZ_USE_RET
 #endif
 
 
 // Check support for nonstandard predefined macros
 
 #ifdef __FILE_NAME__
-	#define FILE_NAME __FILE_NAME__
+	#define CZ_FILENAME __FILE_NAME__
 #else
-	#define FILE_NAME __FILE__
+	#define CZ_FILENAME __FILE__
 #endif
 
 
 // ANSI escape codes regarding Select Graphic Rendition (SGR)
 
-#define SGR_RESET      "\033[m"
-#define SGR_BOLD       "\033[1m"
-#define SGR_FAINT      "\033[2m"
-#define SGR_ITALIC     "\033[3m"
-#define SGR_UNDERLINE  "\033[4m"
-#define SGR_SLOW_BLINK "\033[5m"
-#define SGR_FAST_BLINK "\033[6m"
-#define SGR_INVERT     "\033[7m"
-#define SGR_CONCEAL    "\033[8m"
-#define SGR_STRIKE     "\033[9m"
+#define CZ_SGR_RESET      "\033[m"
+#define CZ_SGR_BOLD       "\033[1m"
+#define CZ_SGR_FAINT      "\033[2m"
+#define CZ_SGR_ITALIC     "\033[3m"
+#define CZ_SGR_UNDERLINE  "\033[4m"
+#define CZ_SGR_SLOW_BLINK "\033[5m"
+#define CZ_SGR_FAST_BLINK "\033[6m"
+#define CZ_SGR_INVERT     "\033[7m"
+#define CZ_SGR_CONCEAL    "\033[8m"
+#define CZ_SGR_STRIKE     "\033[9m"
 
-#define SGR_FG_BLACK   "\033[30m"
-#define SGR_FG_RED     "\033[31m"
-#define SGR_FG_GREEN   "\033[32m"
-#define SGR_FG_YELLOW  "\033[33m"
-#define SGR_FG_BLUE    "\033[34m"
-#define SGR_FG_MAGENTA "\033[35m"
-#define SGR_FG_CYAN    "\033[36m"
-#define SGR_FG_WHITE   "\033[37m"
-#define SGR_FG_DEFAULT "\033[39m"
+#define CZ_SGR_FG_BLACK   "\033[30m"
+#define CZ_SGR_FG_RED     "\033[31m"
+#define CZ_SGR_FG_GREEN   "\033[32m"
+#define CZ_SGR_FG_YELLOW  "\033[33m"
+#define CZ_SGR_FG_BLUE    "\033[34m"
+#define CZ_SGR_FG_MAGENTA "\033[35m"
+#define CZ_SGR_FG_CYAN    "\033[36m"
+#define CZ_SGR_FG_WHITE   "\033[37m"
+#define CZ_SGR_FG_DEFAULT "\033[39m"
 
-#define SGR_FG_8BIT(n)        "\033[38;5;" #n "m"
-#define SGR_FG_24BIT(r, g, b) "\033[38;2;" #r ";" #g ";" #b "m"
+#define CZ_SGR_FG_8BIT(n)        "\033[38;5;" #n "m"
+#define CZ_SGR_FG_24BIT(r, g, b) "\033[38;2;" #r ";" #g ";" #b "m"
 
-#define SGR_BG_BLACK   "\033[40m"
-#define SGR_BG_RED     "\033[41m"
-#define SGR_BG_GREEN   "\033[42m"
-#define SGR_BG_YELLOW  "\033[43m"
-#define SGR_BG_BLUE    "\033[44m"
-#define SGR_BG_MAGENTA "\033[45m"
-#define SGR_BG_CYAN    "\033[46m"
-#define SGR_BG_WHITE   "\033[47m"
-#define SGR_BG_DEFAULT "\033[49m"
+#define CZ_SGR_BG_BLACK   "\033[40m"
+#define CZ_SGR_BG_RED     "\033[41m"
+#define CZ_SGR_BG_GREEN   "\033[42m"
+#define CZ_SGR_BG_YELLOW  "\033[43m"
+#define CZ_SGR_BG_BLUE    "\033[44m"
+#define CZ_SGR_BG_MAGENTA "\033[45m"
+#define CZ_SGR_BG_CYAN    "\033[46m"
+#define CZ_SGR_BG_WHITE   "\033[47m"
+#define CZ_SGR_BG_DEFAULT "\033[49m"
 
-#define SGR_BG_8BIT(n)        "\033[48;5;" #n "m"
-#define SGR_BG_24BIT(r, g, b) "\033[48;2;" #r ";" #g ";" #b "m"
+#define CZ_SGR_BG_8BIT(n)        "\033[48;5;" #n "m"
+#define CZ_SGR_BG_24BIT(r, g, b) "\033[48;2;" #r ";" #g ";" #b "m"
 
 
 // Useful values
 
-#define KIB_SIZE ( UINT64_C(1) << 10 )
-#define MIB_SIZE ( UINT64_C(1) << 20 )
-#define GIB_SIZE ( UINT64_C(1) << 30 )
+#define CZ_KIB_SIZE ( UINT64_C(1) << 10 )
+#define CZ_MIB_SIZE ( UINT64_C(1) << 20 )
+#define CZ_GIB_SIZE ( UINT64_C(1) << 30 )
 
-#define MS_PER_CLOCK ( 1000.0 / CLOCKS_PER_SEC )
-
-#define VK_KHR_PROFILES_LAYER_NAME           "VK_LAYER_KHRONOS_profiles"
-#define VK_KHR_VALIDATION_LAYER_NAME         "VK_LAYER_KHRONOS_validation"
-#define VK_KHR_SYNCHRONIZATION_2_LAYER_NAME  "VK_LAYER_KHRONOS_synchronization2"
-#define VK_KHR_TIMELINE_SEMAPHORE_LAYER_NAME "VK_LAYER_KHRONOS_timeline_semaphore"
+#define CZ_MS_PER_CLOCK ( 1000.0 / CLOCKS_PER_SEC )
 
 #define CZ_DEBUG_LOG_NAME      "debug.log"
 #define CZ_PIPELINE_CACHE_NAME "pipeline_cache.bin"
@@ -254,20 +249,20 @@
 
 // Helper macros
 
-#define NEWLINE() putchar('\n')
+#define CZ_NEWLINE() putchar('\n')
 
-#define ARRAY_SIZE(a) ( sizeof(a) / sizeof(*(a)) )
+#define CZ_ARRAY_SIZE(a) ( sizeof(a) / sizeof(*(a)) )
 
-#define INT128_UPPER(x) ( (uint64_t) ((x) >> 64) )
-#define INT128_LOWER(x) ( (uint64_t) ((x) & ~UINT64_C(0)) )
+#define CZ_UINT128_UPPER(x) ( (uint64_t) ((x) >> 64) )
+#define CZ_UINT128_LOWER(x) ( (uint64_t) ((x) & ~UINT64_C(0)) )
 
-#define INT128(upper, lower) ( (StartValue) (upper) << 64 | (StartValue) (lower) )
+#define CZ_UINT128(upper, lower) ( (StartValue) (upper) << 64 | (StartValue) (lower) )
 
-#define PNEXT_ADD(p, s)   \
-	do {                  \
-		*(p) = &(s);      \
-		(p) = &(s).pNext; \
-	}                     \
+#define CZ_PNEXT_ADD(p, s) \
+	do {                   \
+		*(p) = &(s);       \
+		(p) = &(s).pNext;  \
+	}                      \
 	while (0)
 
 

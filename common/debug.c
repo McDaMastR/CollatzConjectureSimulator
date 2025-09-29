@@ -49,7 +49,7 @@ bool init_debug_logfile(const char* filename)
 		CZ_VERSION_MAJOR, CZ_VERSION_MINOR, CZ_VERSION_PATCH,
 		sCurrTime, programTime);
 
-	if NOEXPECT (!bres) { return false; }
+	if CZ_NOEXPECT (!bres) { return false; }
 
 	g_debugLogPath = filename;
 	return true;
@@ -69,7 +69,7 @@ bool init_alloc_logfile(const char* filename)
 		CZ_VERSION_MAJOR, CZ_VERSION_MINOR, CZ_VERSION_PATCH,
 		sCurrTime, programTime);
 
-	if NOEXPECT (!bres) { return false; }
+	if CZ_NOEXPECT (!bres) { return false; }
 
 	g_allocLogPath = filename;
 	return true;
@@ -123,7 +123,7 @@ static bool log_colour(
 		struct CzAllocFlags flags = {0};
 
 		enum CzResult czres = czAlloc((void* restrict*) &newFmt, size, flags);
-		if NOEXPECT (czres) { return false; }
+		if CZ_NOEXPECT (czres) { return false; }
 
 		strcpy(newFmt, sgr1);
 		strcpy(newFmt + lenSgr1, prefix);
@@ -149,7 +149,7 @@ static bool log_colour(
 		struct CzAllocFlags flags = {0};
 
 		enum CzResult czres = czAlloc((void* restrict*) &newFmt, size, flags);
-		if NOEXPECT (czres) { return false; }
+		if CZ_NOEXPECT (czres) { return false; }
 
 		strcpy(newFmt, prefix);
 		strcpy(newFmt + lenPre, fmt);
@@ -171,7 +171,7 @@ bool log_debug(FILE* stream, const char* format, ...)
 	va_list args;
 	va_start(args, format);
 
-	bool bres = log_colour(stream, format, SGR_FG_GREEN, SGR_RESET, "Debug: ", "\n", args);
+	bool bres = log_colour(stream, format, CZ_SGR_FG_GREEN, CZ_SGR_RESET, "Debug: ", "\n", args);
 
 	va_end(args);
 	return bres;
@@ -182,7 +182,7 @@ bool log_warning(FILE* stream, const char* format, ...)
 	va_list args;
 	va_start(args, format);
 
-	bool bres = log_colour(stream, format, SGR_FG_YELLOW, SGR_RESET, "Warning: ", "\n", args);
+	bool bres = log_colour(stream, format, CZ_SGR_FG_YELLOW, CZ_SGR_RESET, "Warning: ", "\n", args);
 
 	va_end(args);
 	return bres;
@@ -193,7 +193,7 @@ bool log_error(FILE* stream, const char* format, ...)
 	va_list args;
 	va_start(args, format);
 
-	bool bres = log_colour(stream, format, SGR_FG_RED, SGR_RESET, "Error: ", "\n", args);
+	bool bres = log_colour(stream, format, CZ_SGR_FG_RED, CZ_SGR_RESET, "Error: ", "\n", args);
 
 	va_end(args);
 	return bres;
@@ -204,7 +204,7 @@ bool log_critical(FILE* stream, const char* format, ...)
 	va_list args;
 	va_start(args, format);
 
-	bool bres = log_colour(stream, format, SGR_FG_BLACK SGR_BG_RED, SGR_RESET, "CRITICAL: ", "\n", args);
+	bool bres = log_colour(stream, format, CZ_SGR_FG_WHITE CZ_SGR_BG_RED, CZ_SGR_RESET, "CRITICAL: ", "\n", args);
 
 	va_end(args);
 	return bres;
@@ -326,7 +326,7 @@ VkBool32 debug_callback(
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
-	if NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return VK_FALSE; }
+	if CZ_NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return VK_FALSE; }
 
 	log_debug_callback(
 		file, time, messageSeverity, messageTypes, pCallbackData, g_debugCallbackCount, data.func, data.file,
@@ -350,8 +350,8 @@ static void log_allocation_callback(
 	const void* memory)
 {
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
-	double totalSizeKiB = (double) totalSize / KIB_SIZE;
-	double totalSizeMiB = (double) totalSize / MIB_SIZE;
+	double totalSizeKiB = (double) totalSize / CZ_KIB_SIZE;
+	double totalSizeMiB = (double) totalSize / CZ_MIB_SIZE;
 
 	fprintf(stream, "Allocation callback %" PRIu64 " (%.3fms)\n", allocationCount, time);
 
@@ -384,7 +384,7 @@ void* allocation_callback(void* pUserData, size_t size, size_t alignment, VkSyst
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
-	if NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return memory; }
+	if CZ_NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return memory; }
 
 	log_allocation_callback(
 		file, time, g_allocCount, data.func, data.file, data.line, g_totalAllocSize, size, alignment, allocationScope,
@@ -410,8 +410,8 @@ static void log_reallocation_callback(
 	const void* memory)
 {
 	const char* sAllocationScope = string_VkSystemAllocationScope(allocationScope);
-	double totalSizeKiB = (double) totalSize / KIB_SIZE;
-	double totalSizeMiB = (double) totalSize / MIB_SIZE;
+	double totalSizeKiB = (double) totalSize / CZ_KIB_SIZE;
+	double totalSizeMiB = (double) totalSize / CZ_MIB_SIZE;
 
 	fprintf(stream, "Reallocation callback %" PRIu64 " (%.3fms)\n", reallocationCount, time);
 
@@ -462,7 +462,7 @@ void* reallocation_callback(
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
-	if NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return memory; }
+	if CZ_NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return memory; }
 
 	log_reallocation_callback(
 		file, time, g_reallocCount, data.func, data.file, data.line, g_totalAllocSize, originalSize, size, alignment,
@@ -483,8 +483,8 @@ static void log_free_callback(
 	size_t size,
 	const void* memory)
 {
-	double totalSizeKiB = (double) totalSize / KIB_SIZE;
-	double totalSizeMiB = (double) totalSize / MIB_SIZE;
+	double totalSizeKiB = (double) totalSize / CZ_KIB_SIZE;
+	double totalSizeMiB = (double) totalSize / CZ_MIB_SIZE;
 
 	fprintf(stream, "Free callback %" PRIu64 " (%.3fms)\n", freeCount, time);
 
@@ -520,7 +520,7 @@ void free_callback(void* pUserData, void* pMemory)
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
-	if NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return; }
+	if CZ_NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return; }
 
 	log_free_callback(file, time, g_freeCount, data.func, data.file, data.line, g_totalAllocSize, size, pMemory);
 	fclose(file);
@@ -566,7 +566,7 @@ void internal_allocation_callback(
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
-	if NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return; }
+	if CZ_NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return; }
 
 	log_internal_allocation_callback(
 		file, time, g_internalAllocCount, data.func, data.file, data.line, size, allocationType, allocationScope);
@@ -614,7 +614,7 @@ void internal_free_callback(
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
-	if NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return; }
+	if CZ_NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return; }
 
 	log_internal_free_callback(
 		file, time, g_internalFreeCount, data.func, data.file, data.line, size, allocationType, allocationScope);

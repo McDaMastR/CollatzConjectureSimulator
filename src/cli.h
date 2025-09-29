@@ -45,9 +45,9 @@ enum CzCliDatatype
 
 void czCliDestroy(CzCli cli);
 
-CzCli czCliCreate(void* config, size_t count) FREE_FUNC(czCliDestroy, 1) NO_ACCESS(1) USE_RET;
+CzCli czCliCreate(void* config, size_t count) CZ_FREE(czCliDestroy, 1) CZ_NO_ACCESS(1) CZ_USE_RET;
 
-bool czCliParse(CzCli cli, int argc, char** argv) NONNULL_ALL RE_ACCESS(1) RE_ACCESS(3);
+bool czCliParse(CzCli cli, int argc, char** argv) CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_RE_ACCESS(3);
 
 bool czCliAdd(CzCli cli, char option, const char* name, enum CzCliDatatype type, CzCliCallback callback)
-	NONNULL_ALL NULTSTR_ARG(3) RW_ACCESS(1) RE_ACCESS(3);
+	CZ_NONNULL_ARGS CZ_NULLTERM_ARG(3) CZ_RW_ACCESS(1) CZ_RE_ACCESS(3);

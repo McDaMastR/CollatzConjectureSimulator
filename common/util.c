@@ -47,7 +47,7 @@ char* stime(void)
 double program_time(void)
 {
 	clock_t t = clock();
-	return (double) t * MS_PER_CLOCK;
+	return (double) t * CZ_MS_PER_CLOCK;
 }
 
 enum CzEndianness get_endianness(void)
@@ -59,13 +59,13 @@ enum CzEndianness get_endianness(void)
 
 uint32_t ceil_pow2(uint32_t x)
 {
-	ASSUME(x != 0);
+	CZ_ASSUME(x != 0);
 
-#if has_builtin(stdc_bit_ceil)
+#if CZ_HAS_BUILTIN(stdc_bit_ceil)
 	return __builtin_stdc_bit_ceil(x);
-#elif has_builtin(clz) && UINT32_MAX == UINT_MAX
+#elif CZ_HAS_BUILTIN(clz) && UINT32_MAX == UINT_MAX
 	return x == 1 ? UINT32_C(1) : UINT32_C(2) << (31 - __builtin_clz(x - 1));
-#elif has_builtin(clzl) && UINT32_MAX == ULONG_MAX
+#elif CZ_HAS_BUILTIN(clzl) && UINT32_MAX == ULONG_MAX
 	return x == 1 ? UINT32_C(1) : UINT32_C(2) << (31 - __builtin_clzl(x - 1));
 #elif defined(_WIN32)
 	unsigned long i;
@@ -80,13 +80,13 @@ uint32_t ceil_pow2(uint32_t x)
 
 uint32_t floor_pow2(uint32_t x)
 {
-	ASSUME(x != 0);
+	CZ_ASSUME(x != 0);
 
-#if has_builtin(stdc_bit_floor)
+#if CZ_HAS_BUILTIN(stdc_bit_floor)
 	return __builtin_stdc_bit_floor(x);
-#elif has_builtin(clz) && UINT32_MAX == UINT_MAX
+#elif CZ_HAS_BUILTIN(clz) && UINT32_MAX == UINT_MAX
 	return UINT32_C(1) << (31 - __builtin_clz(x));
-#elif has_builtin(clzl) && UINT32_MAX == ULONG_MAX
+#elif CZ_HAS_BUILTIN(clzl) && UINT32_MAX == ULONG_MAX
 	return UINT32_C(1) << (31 - __builtin_clzl(x));
 #elif defined(_WIN32)
 	unsigned long i;
@@ -101,7 +101,7 @@ uint32_t floor_pow2(uint32_t x)
 
 double get_benchmark(clock_t start, clock_t end)
 {
-	return (double) (end - start) * MS_PER_CLOCK;
+	return (double) (end - start) * CZ_MS_PER_CLOCK;
 }
 
 bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const char* name)
@@ -117,7 +117,7 @@ bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const c
 	if (!vkSetDebugUtilsObjectNameEXT) { return true; }
 
 	VK_CALLR(vkSetDebugUtilsObjectNameEXT, device, &info);
-	if NOEXPECT (vkres) { return false; }
+	if CZ_NOEXPECT (vkres) { return false; }
 	return true;
 }
 
@@ -133,7 +133,7 @@ bool get_buffer_requirements_noext(
 
 	VkBuffer buffer;
 	VK_CALLR(vkCreateBuffer, device, &bufferInfo, NULL, &buffer);
-	if NOEXPECT (vkres) { return false; }
+	if CZ_NOEXPECT (vkres) { return false; }
 
 	VkBufferMemoryRequirementsInfo2 requirementsInfo = {0};
 	requirementsInfo.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2;
@@ -176,19 +176,19 @@ bool save_pipeline_cache(VkDevice device, VkPipelineCache cache, const char* fil
 
 	size_t dataSize;
 	VK_CALLR(vkGetPipelineCacheData, device, cache, &dataSize, NULL);
-	if NOEXPECT (vkres) { return false; }
+	if CZ_NOEXPECT (vkres) { return false; }
 
 	void* restrict data;
 	struct CzAllocFlags flags = {0};
 
 	enum CzResult czres = czAlloc(&data, dataSize, flags);
-	if NOEXPECT (czres) { return false; }
+	if CZ_NOEXPECT (czres) { return false; }
 
 	VK_CALLR(vkGetPipelineCacheData, device, cache, &dataSize, data);
-	if NOEXPECT (vkres) { goto err_free_data; }
+	if CZ_NOEXPECT (vkres) { goto err_free_data; }
 
 	bool bres = write_file(filename, data, dataSize);
-	if NOEXPECT (!bres) { goto err_free_data; }
+	if CZ_NOEXPECT (!bres) { goto err_free_data; }
 
 	czFree(data);
 	return true;
@@ -206,10 +206,10 @@ bool file_size(const char* filename, size_t* size)
 
 	long offset = 0;
 	int ires = fseek(file, offset, SEEK_END);
-	if NOEXPECT (ires) { goto err_close_file; }
+	if CZ_NOEXPECT (ires) { goto err_close_file; }
 
 	long lres = ftell(file);
-	if NOEXPECT (lres == -1) { goto err_close_file; }
+	if CZ_NOEXPECT (lres == -1) { goto err_close_file; }
 
 	filesize = (size_t) lres;
 	fclose(file);
@@ -227,7 +227,7 @@ bool read_file(const char* filename, void* data, size_t size)
 {
 	const char* mode = "rb";
 	FILE* file = fopen(filename, mode);
-	if NOEXPECT (!file) {
+	if CZ_NOEXPECT (!file) {
 		FOPEN_FAILURE(file, filename, mode);
 		return false;
 	}
@@ -236,7 +236,7 @@ bool read_file(const char* filename, void* data, size_t size)
 	size_t objCount = size;
 
 	size_t sres = fread(data, objSize, objCount, file);
-	if NOEXPECT (sres != size) {
+	if CZ_NOEXPECT (sres != size) {
 		FREAD_FAILURE(sres, data, objSize, objCount, file);
 		goto err_close_file;
 	}
@@ -253,7 +253,7 @@ bool write_file(const char* filename, const void* data, size_t size)
 {
 	const char* mode = "wb";
 	FILE* file = fopen(filename, mode);
-	if NOEXPECT (!file) {
+	if CZ_NOEXPECT (!file) {
 		FOPEN_FAILURE(file, filename, mode);
 		return false;
 	}
@@ -262,7 +262,7 @@ bool write_file(const char* filename, const void* data, size_t size)
 	size_t objCount = size;
 
 	size_t sres = fwrite(data, objSize, objCount, file);
-	if NOEXPECT (sres != size) {
+	if CZ_NOEXPECT (sres != size) {
 		FWRITE_FAILURE(sres, data, objSize, objCount, file);
 		goto err_close_file;
 	}
@@ -282,13 +282,13 @@ bool read_text(const char* filename, const char* format, ...)
 
 	const char* mode = "r";
 	FILE* file = fopen(filename, mode);
-	if NOEXPECT (!file) {
+	if CZ_NOEXPECT (!file) {
 		FOPEN_FAILURE(file, filename, mode);
 		goto err_end_args;
 	}
 
 	int ires = vfscanf(file, format, args);
-	if NOEXPECT (ires == EOF) {
+	if CZ_NOEXPECT (ires == EOF) {
 		FSCANF_FAILURE(ires, file, format);
 		goto err_close_file;
 	}
@@ -311,13 +311,13 @@ bool write_text(const char* filename, const char* format, ...)
 
 	const char* mode = "w";
 	FILE* file = fopen(filename, mode);
-	if NOEXPECT (!file) {
+	if CZ_NOEXPECT (!file) {
 		FOPEN_FAILURE(file, filename, mode);
 		goto err_end_args;
 	}
 
 	int ires = vfprintf(file, format, args);
-	if NOEXPECT (ires < 0) {
+	if CZ_NOEXPECT (ires < 0) {
 		FPRINTF_FAILURE(ires, file, format);
 		goto err_close_file;
 	}
@@ -335,8 +335,8 @@ err_end_args:
 
 void* aligned_malloc(size_t size, size_t alignment)
 {
-	ASSUME(size != 0);
-	ASSUME((alignment & (alignment - 1)) == 0); // alignment is a power of two
+	CZ_ASSUME(size != 0);
+	CZ_ASSUME((alignment & (alignment - 1)) == 0); // alignment is a power of two
 
 	void* memory;
 	struct AlignedInfo* info;
@@ -347,7 +347,7 @@ void* aligned_malloc(size_t size, size_t alignment)
 	size_t offset = sizeof(struct AlignedInfo);
 
 	memory = _aligned_offset_malloc(allocSize, allocAlignment, offset);
-	if NOEXPECT (!memory) { return NULL; }
+	if CZ_NOEXPECT (!memory) { return NULL; }
 
 	info = memory;
 #else
@@ -355,7 +355,7 @@ void* aligned_malloc(size_t size, size_t alignment)
 	size_t allocSize = size + maxz(alignment, sizeof(struct AlignedInfo));
 
 	int ires = posix_memalign(&memory, allocAlignment, allocSize);
-	if NOEXPECT (ires) { return NULL; }
+	if CZ_NOEXPECT (ires) { return NULL; }
 
 	info = (struct AlignedInfo*) memory + maxz(alignment, sizeof(struct AlignedInfo)) / sizeof(struct AlignedInfo) - 1;
 #endif
@@ -367,8 +367,8 @@ void* aligned_malloc(size_t size, size_t alignment)
 
 void* aligned_realloc(void* memory, size_t size, size_t alignment)
 {
-	ASSUME(size != 0);
-	ASSUME((alignment & (alignment - 1)) == 0); // alignment is a power of two
+	CZ_ASSUME(size != 0);
+	CZ_ASSUME((alignment & (alignment - 1)) == 0); // alignment is a power of two
 
 	struct AlignedInfo* info = (struct AlignedInfo*) memory - 1;
 	void* oldMemory = info->start;
@@ -382,7 +382,7 @@ void* aligned_realloc(void* memory, size_t size, size_t alignment)
 	size_t offset = sizeof(struct AlignedInfo);
 
 	newMemory = _aligned_offset_realloc(oldMemory, allocSize, allocAlignment, offset);
-	if NOEXPECT (!newMemory) { return NULL; }
+	if CZ_NOEXPECT (!newMemory) { return NULL; }
 
 	info = newMemory;
 #else
@@ -390,7 +390,7 @@ void* aligned_realloc(void* memory, size_t size, size_t alignment)
 	size_t allocSize = size + maxz(alignment, sizeof(struct AlignedInfo));
 
 	int ires = posix_memalign(&newMemory, allocAlignment, allocSize);
-	if NOEXPECT (ires) { return NULL; }
+	if CZ_NOEXPECT (ires) { return NULL; }
 
 	info =
 		(struct AlignedInfo*) newMemory + maxz(alignment, sizeof(struct AlignedInfo)) / sizeof(struct AlignedInfo) - 1;
@@ -443,7 +443,7 @@ UMIN_DEF(64)
 
 uint8_t maxu8v(size_t count, ...)
 {
-	ASSUME(count != 0);
+	CZ_ASSUME(count != 0);
 
 	va_list args;
 	va_start(args, count);
@@ -464,7 +464,7 @@ uint8_t maxu8v(size_t count, ...)
 
 uint8_t minu8v(size_t count, ...)
 {
-	ASSUME(count != 0);
+	CZ_ASSUME(count != 0);
 
 	va_list args;
 	va_start(args, count);
@@ -485,7 +485,7 @@ uint8_t minu8v(size_t count, ...)
 
 uint16_t maxu16v(size_t count, ...)
 {
-	ASSUME(count != 0);
+	CZ_ASSUME(count != 0);
 
 	va_list args;
 	va_start(args, count);
@@ -506,7 +506,7 @@ uint16_t maxu16v(size_t count, ...)
 
 uint16_t minu16v(size_t count, ...)
 {
-	ASSUME(count != 0);
+	CZ_ASSUME(count != 0);
 
 	va_list args;
 	va_start(args, count);
@@ -527,7 +527,7 @@ uint16_t minu16v(size_t count, ...)
 
 uint32_t maxu32v(size_t count, ...)
 {
-	ASSUME(count != 0);
+	CZ_ASSUME(count != 0);
 
 	va_list args;
 	va_start(args, count);
@@ -548,7 +548,7 @@ uint32_t maxu32v(size_t count, ...)
 
 uint32_t minu32v(size_t count, ...)
 {
-	ASSUME(count != 0);
+	CZ_ASSUME(count != 0);
 
 	va_list args;
 	va_start(args, count);
@@ -569,7 +569,7 @@ uint32_t minu32v(size_t count, ...)
 
 uint64_t maxu64v(size_t count, ...)
 {
-	ASSUME(count != 0);
+	CZ_ASSUME(count != 0);
 
 	va_list args;
 	va_start(args, count);
@@ -590,7 +590,7 @@ uint64_t maxu64v(size_t count, ...)
 
 uint64_t minu64v(size_t count, ...)
 {
-	ASSUME(count != 0);
+	CZ_ASSUME(count != 0);
 
 	va_list args;
 	va_start(args, count);

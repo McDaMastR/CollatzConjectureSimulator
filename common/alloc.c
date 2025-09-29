@@ -40,19 +40,19 @@ static void realloc_failure(const void* ptr, size_t size)
 
 enum CzResult czAlloc(void* restrict* restrict memory, size_t size, struct CzAllocFlags flags)
 {
-	if NOEXPECT (!size) { return CZ_RESULT_BAD_SIZE; }
+	if CZ_NOEXPECT (!size) { return CZ_RESULT_BAD_SIZE; }
 
 	void* p;
 	if (flags.zeroInitialise) {
 		p = malloc(size);
-		if NOEXPECT (!p) {
+		if CZ_NOEXPECT (!p) {
 			malloc_failure(size);
 			return CZ_RESULT_NO_MEMORY;
 		}
 	}
 	else {
 		p = calloc(size, sizeof(char));
-		if NOEXPECT (!p) {
+		if CZ_NOEXPECT (!p) {
 			calloc_failure(size, sizeof(char));
 			return CZ_RESULT_NO_MEMORY;
 		}
@@ -64,9 +64,9 @@ enum CzResult czAlloc(void* restrict* restrict memory, size_t size, struct CzAll
 
 enum CzResult czRealloc(void* restrict* restrict memory, size_t oldSize, size_t newSize, struct CzAllocFlags flags)
 {
-	ASSUME(*memory != NULL);
+	CZ_ASSUME(*memory != NULL);
 
-	if NOEXPECT (!oldSize || !newSize) {
+	if CZ_NOEXPECT (!oldSize || !newSize) {
 		if (flags.freeOnFail) {
 			free(*memory);
 		}
@@ -74,7 +74,7 @@ enum CzResult czRealloc(void* restrict* restrict memory, size_t oldSize, size_t 
 	}
 
 	void* p = realloc(*memory, newSize);
-	if NOEXPECT (!p) {
+	if CZ_NOEXPECT (!p) {
 		realloc_failure(*memory, newSize);
 		if (flags.freeOnFail) {
 			free(*memory);
@@ -95,7 +95,7 @@ enum CzResult czRealloc(void* restrict* restrict memory, size_t oldSize, size_t 
 
 enum CzResult czFree(void* restrict memory)
 {
-	if NOEXPECT (!memory) { return CZ_RESULT_BAD_POINTER; }
+	if CZ_NOEXPECT (!memory) { return CZ_RESULT_BAD_POINTER; }
 
 	free(memory);
 	return CZ_RESULT_SUCCESS;

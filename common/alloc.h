@@ -70,7 +70,8 @@ struct CzAllocFlags
  * 
  * @note On success, failing to free the allocation with @ref czFree may result in a memory leak.
  */
-enum CzResult czAlloc(void* restrict* memory, size_t size, struct CzAllocFlags flags) HOT_FUNC NONNULL_ALL WR_ACCESS(1);
+enum CzResult czAlloc(void* restrict* memory, size_t size, struct CzAllocFlags flags)
+	CZ_HOT CZ_NONNULL_ARGS CZ_WR_ACCESS(1);
 
 /**
  * @brief Extends or trims a dynamically allocated block of memory.
@@ -111,7 +112,7 @@ enum CzResult czAlloc(void* restrict* memory, size_t size, struct CzAllocFlags f
  * behaviour.
  */
 enum CzResult czRealloc(void* restrict* memory, size_t oldSize, size_t newSize, struct CzAllocFlags flags)
-	HOT_FUNC NONNULL_ALL RW_ACCESS(1);
+	CZ_HOT CZ_NONNULL_ARGS CZ_RW_ACCESS(1);
 
 /**
  * @brief Frees a dynamically allocated block of memory.
@@ -126,4 +127,4 @@ enum CzResult czRealloc(void* restrict* memory, size_t oldSize, size_t newSize, 
  * 
  * @warning On success, any further access of the freed memory will result in undefined behaviour.
  */
-enum CzResult czFree(void* memory) HOT_FUNC;
+enum CzResult czFree(void* memory) CZ_HOT;

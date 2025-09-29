@@ -58,7 +58,7 @@ void dystring_destroy(DyString string);
  * 
  * @note Failing to destroy the returned dynamic string will result in a memory leak.
  */
-DyString dystring_create(size_t count) FREE_FUNC(dystring_destroy, 1) USE_RET;
+DyString dystring_create(size_t count) CZ_FREE(dystring_destroy, 1) CZ_USE_RET;
 
 /**
  * @memberof DyString
@@ -75,7 +75,7 @@ DyString dystring_create(size_t count) FREE_FUNC(dystring_destroy, 1) USE_RET;
  * 
  * @invariant The length is nonzero.
  */
-size_t dystring_length(DyString string) NONNULL_ALL RE_ACCESS(1) USE_RET;
+size_t dystring_length(DyString string) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_RET;
 
 /**
  * @memberof DyString
@@ -94,7 +94,7 @@ size_t dystring_length(DyString string) NONNULL_ALL RE_ACCESS(1) USE_RET;
  * 
  * @note Adding a substring to @p string may result in the raw string changing memory location.
  */
-char* dystring_raw(DyString string) NONNULL_ALL RE_ACCESS(1) NONNULL_RET USE_RET;
+char* dystring_raw(DyString string) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_NONNULL_RET CZ_USE_RET;
 
 /**
  * @memberof DyString
@@ -113,7 +113,8 @@ char* dystring_raw(DyString string) NONNULL_ALL RE_ACCESS(1) NONNULL_RET USE_RET
  * @pre @p substring is nonnull and null-terminated.
  * @pre @p string and @p substring do not overlap in memory.
  */
-char* dystring_append(DyString string, const char* substring) NONNULL_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
+char* dystring_append(DyString string, const char* substring)
+	CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RE_ACCESS(2);
 
 /**
  * @memberof DyString
@@ -132,7 +133,8 @@ char* dystring_append(DyString string, const char* substring) NONNULL_ALL NULTST
  * @pre @p substring is nonnull and null-terminated.
  * @pre @p string and @p substring do not overlap in memory.
  */
-char* dystring_prepend(DyString string, const char* substring) NONNULL_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
+char* dystring_prepend(DyString string, const char* substring)
+	CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RE_ACCESS(2);
 
 /**
  * @memberof DyString
@@ -154,4 +156,4 @@ char* dystring_prepend(DyString string, const char* substring) NONNULL_ALL NULTS
  * @pre @p index is less than the length of @p string.
  */
 char* dystring_add(DyString string, const char* substring, size_t index)
-	NONNULL_ALL NULTSTR_ARG(2) RW_ACCESS(1) RE_ACCESS(2);
+	CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RE_ACCESS(2);

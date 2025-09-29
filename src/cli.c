@@ -57,7 +57,7 @@ struct CzCli_
 
 void czCliDestroy(struct CzCli_* cli)
 {
-	if NOEXPECT (!cli) { return; }
+	if CZ_NOEXPECT (!cli) { return; }
 
 	dyarray_destroy(cli->options);
 	czFree(cli);
@@ -69,10 +69,10 @@ struct CzCli_* czCliCreate(void* config, size_t count)
 	struct CzAllocFlags flags = {0};
 
 	enum CzResult czres = czAlloc((void* restrict*) &cli, sizeof(*cli), flags);
-	if NOEXPECT (czres) { return NULL; }
+	if CZ_NOEXPECT (czres) { return NULL; }
 
 	DyArray options = dyarray_create(sizeof(struct CliOption), count);
-	if NOEXPECT (!options) { goto err_free_cli; }
+	if CZ_NOEXPECT (!options) { goto err_free_cli; }
 
 	cli->options = options;
 	cli->config = config;
@@ -164,7 +164,7 @@ static void czCliParseArg(enum CzCliDatatype type, const char* option, const cha
 bool czCliParse(struct CzCli_* cli, int argc, char** argv)
 {
 	DyQueue callbacks = dyqueue_create(sizeof(struct CliCallbackData));
-	if NOEXPECT (!callbacks) { return false; }
+	if CZ_NOEXPECT (!callbacks) { return false; }
 
 	DyArray options = cli->options;
 	size_t optionCount = dyarray_size(options);
@@ -181,7 +181,7 @@ bool czCliParse(struct CzCli_* cli, int argc, char** argv)
 			czCliParseArg(argType, optionName, arg, &callbackData.data);
 
 			bool bres = dyqueue_enqueue(callbacks, &callbackData);
-			if NOEXPECT (!bres) { goto err_destroy_callbacks; }
+			if CZ_NOEXPECT (!bres) { goto err_destroy_callbacks; }
 
 			argType = CZ_CLI_DATATYPE_NONE;
 			optionName = NULL;
@@ -205,7 +205,7 @@ bool czCliParse(struct CzCli_* cli, int argc, char** argv)
 
 			if (optionName && !argType) {
 				bool bres = dyqueue_enqueue(callbacks, &callbackData);
-				if NOEXPECT (!bres) { goto err_destroy_callbacks; }
+				if CZ_NOEXPECT (!bres) { goto err_destroy_callbacks; }
 				optionName = NULL;
 			}
 			else if (!optionName) {
@@ -238,7 +238,7 @@ bool czCliParse(struct CzCli_* cli, int argc, char** argv)
 
 				if (optionName && !argType) {
 					bool bres = dyqueue_enqueue(callbacks, &callbackData);
-					if NOEXPECT (!bres) { goto err_destroy_callbacks; }
+					if CZ_NOEXPECT (!bres) { goto err_destroy_callbacks; }
 					optionName = NULL;
 				}
 				else if (!optionName) {
@@ -277,7 +277,7 @@ err_destroy_callbacks:
 bool czCliAdd(struct CzCli_* cli, char option, const char* name, enum CzCliDatatype type, CzCliCallback callback)
 {
 	size_t length = strlen(name);
-	if NOEXPECT (length > CZ_CLI_MAX_OPTION_LENGTH) { return false; }
+	if CZ_NOEXPECT (length > CZ_CLI_MAX_OPTION_LENGTH) { return false; }
 
 	struct CliOption newOption = {0};
 	strncpy(newOption.fullName, name, CZ_CLI_MAX_OPTION_LENGTH);
@@ -287,6 +287,6 @@ bool czCliAdd(struct CzCli_* cli, char option, const char* name, enum CzCliDatat
 	newOption.type = type;
 
 	void* pres = dyarray_append(cli->options, &newOption);
-	if NOEXPECT (!pres) { return false; }
+	if CZ_NOEXPECT (!pres) { return false; }
 	return true;
 }

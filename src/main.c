@@ -277,7 +277,7 @@ static bool init_config(int argc, char** argv)
 {
 	size_t optCount = 20;
 	CzCli cli = czCliCreate(&czgConfig, optCount);
-	if NOEXPECT (!cli) { return false; }
+	if CZ_NOEXPECT (!cli) { return false; }
 
 	czCliAdd(cli, 'V', "version", CZ_CLI_DATATYPE_NONE, version_option_callback);
 	czCliAdd(cli, 'h', "help",    CZ_CLI_DATATYPE_NONE, help_option_callback);
@@ -308,7 +308,7 @@ static bool init_config(int argc, char** argv)
 	czCliAdd(cli, 0, "max-memory", CZ_CLI_DATATYPE_FLOAT,  max_memory_option_callback);
 
 	bool bres = czCliParse(cli, argc, argv);
-	if NOEXPECT (!bres) { czCliDestroy(cli); return false; }
+	if CZ_NOEXPECT (!bres) { czCliDestroy(cli); return false; }
 
 	czCliDestroy(cli);
 	return true;
@@ -321,14 +321,14 @@ static bool init_env(void)
 
 	DWORD mode;
 	BOOL bres = GetConsoleMode(output, &mode);
-	if NOEXPECT (!bres) { return false; }
+	if CZ_NOEXPECT (!bres) { return false; }
 
 	// Enable ANSI escape codes (for pretty coloured output)
 	mode |= ENABLE_PROCESSED_OUTPUT;
 	mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 
 	bres = SetConsoleMode(output, mode);
-	if NOEXPECT (!bres) { return false; }
+	if CZ_NOEXPECT (!bres) { return false; }
 
 	// Prevent system from sleeping, but allow display to sleep
 	EXECUTION_STATE flags = 0;
@@ -344,7 +344,7 @@ static bool init_env(void)
 	IOPMAssertionID id;
 
 	IOReturn iores = IOPMAssertionCreateWithName(type, level, name, &id);
-	if NOEXPECT (iores != kIOReturnSuccess) { return false; }
+	if CZ_NOEXPECT (iores != kIOReturnSuccess) { return false; }
 #elif defined(__unix__)
 	// TODO
 #endif
@@ -355,28 +355,28 @@ static bool init_env(void)
 static bool init_gpu(struct Gpu* gpu)
 {
 	bool bres = create_instance(gpu);
-	if NOEXPECT (!bres) { return false; }
+	if CZ_NOEXPECT (!bres) { return false; }
 
 	bres = select_device(gpu);
-	if NOEXPECT (!bres) { return false; }
+	if CZ_NOEXPECT (!bres) { return false; }
 
 	bres = create_device(gpu);
-	if NOEXPECT (!bres) { return false; }
+	if CZ_NOEXPECT (!bres) { return false; }
 
 	bres = manage_memory(gpu);
-	if NOEXPECT (!bres) { return false; }
+	if CZ_NOEXPECT (!bres) { return false; }
 
 	bres = create_buffers(gpu);
-	if NOEXPECT (!bres) { return false; }
+	if CZ_NOEXPECT (!bres) { return false; }
 
 	bres = create_descriptors(gpu);
-	if NOEXPECT (!bres) { return false; }
+	if CZ_NOEXPECT (!bres) { return false; }
 
 	bres = create_pipeline(gpu);
-	if NOEXPECT (!bres) { return false; }
+	if CZ_NOEXPECT (!bres) { return false; }
 
 	bres = create_commands(gpu);
-	if NOEXPECT (!bres) { return false; }
+	if CZ_NOEXPECT (!bres) { return false; }
 
 	return true;
 }
@@ -386,19 +386,19 @@ int main(int argc, char** argv)
 	struct Gpu gpu = {0};
 
 	bool bres = init_env();
-	if NOEXPECT (!bres) { return EXIT_FAILURE; }
+	if CZ_NOEXPECT (!bres) { return EXIT_FAILURE; }
 
 	bres = init_config(argc, argv);
 	if (!bres) { return EXIT_SUCCESS; }
 
 	bres = init_colour_level(czgConfig.colourLevel);
-	if NOEXPECT (!bres) { return EXIT_FAILURE; }
+	if CZ_NOEXPECT (!bres) { return EXIT_FAILURE; }
 
 	bres = init_gpu(&gpu);
-	if NOEXPECT (!bres) { goto err_destroy_gpu; }
+	if CZ_NOEXPECT (!bres) { goto err_destroy_gpu; }
 
 	bres = submit_commands(&gpu);
-	if NOEXPECT (!bres) { goto err_destroy_gpu; }
+	if CZ_NOEXPECT (!bres) { goto err_destroy_gpu; }
 
 	destroy_gpu(&gpu);
 	return EXIT_SUCCESS;

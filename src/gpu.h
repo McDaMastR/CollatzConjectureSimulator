@@ -136,33 +136,33 @@ struct Position
 
 // If the return type is bool, then the function returns true on success and false elsewise
 
-bool create_instance(struct Gpu* restrict gpu) NONNULL_ALL;
-bool select_device(struct Gpu* restrict gpu) NONNULL_ALL;
-bool create_device(struct Gpu* restrict gpu) NONNULL_ALL;
-bool manage_memory(struct Gpu* restrict gpu) NONNULL_ALL;
-bool create_buffers(struct Gpu* restrict gpu) NONNULL_ALL;
-bool create_descriptors(struct Gpu* restrict gpu) NONNULL_ALL;
-bool create_pipeline(struct Gpu* restrict gpu) NONNULL_ALL;
-bool create_commands(struct Gpu* restrict gpu) NONNULL_ALL;
-bool submit_commands(struct Gpu* restrict gpu) NONNULL_ALL;
-bool destroy_gpu(struct Gpu* restrict gpu) NONNULL_ALL;
+bool create_instance(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
+bool select_device(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
+bool create_device(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
+bool manage_memory(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
+bool create_buffers(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
+bool create_descriptors(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
+bool create_pipeline(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
+bool create_commands(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
+bool submit_commands(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
+bool destroy_gpu(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
 
-bool capture_pipeline(VkDevice device, VkPipeline pipeline);
+bool capture_pipeline(VkDevice device, VkPipeline pipeline) CZ_NONNULL_ARGS;
 
-void* wait_for_input(void* ptr) NONNULL_ALL;
+void* wait_for_input(void* ptr) CZ_NONNULL_ARGS;
 
 void write_inbuffer(
 	StartValue* restrict mappedInBuffer,
 	StartValue* restrict firstStartValue,
 	uint32_t valuesPerInout,
-	uint32_t valuesPerHeap) NONNULL_ALL;
+	uint32_t valuesPerHeap) CZ_NONNULL_ARGS;
 
 void read_outbuffer(
 	const StopTime* restrict mappedOutBuffer,
 	struct Position* restrict position,
 	DyArray bestStartValues,
 	DyArray bestStopTimes,
-	uint32_t valuesPerInout) NONNULL_ALL;
+	uint32_t valuesPerInout) CZ_NONNULL_ARGS;
 
 void new_high(
 	const StartValue* restrict startValue,
@@ -171,4 +171,4 @@ void new_high(
 	StartValue* restrict val0mod1off,
 	StartValue* restrict val1mod6off,
 	DyArray bestStartValues,
-	DyArray bestStopTimes) NONNULL_ALL;
+	DyArray bestStopTimes) CZ_NONNULL_ARGS;

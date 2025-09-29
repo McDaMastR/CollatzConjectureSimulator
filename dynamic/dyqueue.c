@@ -29,7 +29,7 @@ struct DyQueue_
 
 void dyqueue_destroy(struct DyQueue_* restrict queue)
 {
-	if NOEXPECT (!queue) { return; }
+	if CZ_NOEXPECT (!queue) { return; }
 
 	void** node = queue->head;
 	void* next = NULL;
@@ -45,13 +45,13 @@ void dyqueue_destroy(struct DyQueue_* restrict queue)
 
 struct DyQueue_* dyqueue_create(size_t size)
 {
-	ASSUME(size != 0);
+	CZ_ASSUME(size != 0);
 
 	struct DyQueue_* restrict queue;
 	struct CzAllocFlags flags = {0};
 
 	enum CzResult czres = czAlloc((void* restrict*) &queue, sizeof(*queue), flags);
-	if NOEXPECT (czres) { return NULL; }
+	if CZ_NOEXPECT (czres) { return NULL; }
 
 	queue->size = size;
 	queue->count = 0;
@@ -68,7 +68,7 @@ size_t dyqueue_size(struct DyQueue_* restrict queue)
 
 bool dyqueue_enqueue(struct DyQueue_* restrict queue, const void* restrict value)
 {
-	ASSUME(queue->size != 0);
+	CZ_ASSUME(queue->size != 0);
 
 	size_t size = queue->size;
 	size_t count = queue->count;
@@ -78,7 +78,7 @@ bool dyqueue_enqueue(struct DyQueue_* restrict queue, const void* restrict value
 	struct CzAllocFlags flags = {0};
 
 	enum CzResult czres = czAlloc((void* restrict*) &node, sizeof(void*) + size, flags);
-	if NOEXPECT (czres) { return false; }
+	if CZ_NOEXPECT (czres) { return false; }
 
 	*node = NULL;
 
@@ -100,10 +100,10 @@ bool dyqueue_enqueue(struct DyQueue_* restrict queue, const void* restrict value
 
 void dyqueue_dequeue(struct DyQueue_* restrict queue, void* restrict value)
 {
-	ASSUME(queue->size != 0);
-	ASSUME(queue->count != 0);
-	ASSUME(queue->head != NULL);
-	ASSUME(queue->tail != NULL);
+	CZ_ASSUME(queue->size != 0);
+	CZ_ASSUME(queue->count != 0);
+	CZ_ASSUME(queue->head != NULL);
+	CZ_ASSUME(queue->tail != NULL);
 
 	size_t size = queue->size;
 	size_t count = queue->count;

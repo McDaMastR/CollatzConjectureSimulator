@@ -63,7 +63,7 @@ void dyrecord_destroy(DyRecord record);
  * 
  * @note Failing to destroy the returned dynamic record will result in a memory leak.
  */
-DyRecord dyrecord_create(void) FREE_FUNC(dyrecord_destroy, 1) USE_RET;
+DyRecord dyrecord_create(void) CZ_FREE(dyrecord_destroy, 1) CZ_USE_RET;
 
 /**
  * @memberof DyRecord
@@ -78,7 +78,7 @@ DyRecord dyrecord_create(void) FREE_FUNC(dyrecord_destroy, 1) USE_RET;
  * 
  * @pre @p record is nonnull.
  */
-size_t dyrecord_size(DyRecord record) NONNULL_ALL RE_ACCESS(1) USE_RET;
+size_t dyrecord_size(DyRecord record) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_RET;
 
 /**
  * @memberof DyRecord
@@ -100,7 +100,7 @@ size_t dyrecord_size(DyRecord record) NONNULL_ALL RE_ACCESS(1) USE_RET;
  * @pre @p record and @p memory do not overlap in memory.
  * @pre @p callback is nonnull.
  */
-bool dyrecord_add(DyRecord record, void* memory, FreeCallback callback) NONNULL_ALL RW_ACCESS(1) NO_ACCESS(2);
+bool dyrecord_add(DyRecord record, void* memory, FreeCallback callback) CZ_NONNULL_ARGS CZ_RW_ACCESS(1) CZ_NO_ACCESS(2);
 
 /**
  * @memberof DyRecord
@@ -117,7 +117,8 @@ bool dyrecord_add(DyRecord record, void* memory, FreeCallback callback) NONNULL_
  * 
  * @pre @p record is nonnull.
  */
-void* dyrecord_malloc(DyRecord record, size_t size) MALLOC_FUNC NONNULL_ALL ALLOC_ARG(2) RW_ACCESS(1) USE_RET;
+void* dyrecord_malloc(DyRecord record, size_t size)
+	CZ_MALLOC CZ_NONNULL_ARGS CZ_ALLOC_ARG(2) CZ_RW_ACCESS(1) CZ_USE_RET;
 
 /**
  * @memberof DyRecord
@@ -136,7 +137,7 @@ void* dyrecord_malloc(DyRecord record, size_t size) MALLOC_FUNC NONNULL_ALL ALLO
  * @pre @p record is nonnull.
  */
 void* dyrecord_calloc(DyRecord record, size_t count, size_t size)
-	MALLOC_FUNC NONNULL_ALL ALLOC_ARGS(2, 3) RW_ACCESS(1) USE_RET;
+	CZ_MALLOC CZ_NONNULL_ARGS CZ_ALLOC_ARGS(2, 3) CZ_RW_ACCESS(1) CZ_USE_RET;
 
 /**
  * @memberof DyRecord
@@ -150,4 +151,4 @@ void* dyrecord_calloc(DyRecord record, size_t count, size_t size)
  * 
  * @pre @p record is nonnull.
  */
-void dyrecord_free(DyRecord record) NONNULL_ALL RW_ACCESS(1);
+void dyrecord_free(DyRecord record) CZ_NONNULL_ARGS CZ_RW_ACCESS(1);
