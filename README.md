@@ -212,13 +212,14 @@ licence should be [included](COPYING) with Collatz Conjecture Simulator. Otherwi
 [GNU website](https://www.gnu.org/licenses/gpl-3.0.html).
 
 The building of Collatz Conjecture Simulator is dependent on a number of external works, each with their own licence or
-licences. The below table lists each such work with its corresponding licence or licences.
+licences. The below table lists each such work with its corresponding licence or licences, in alphabetical order.
 
 | Work                     | Licences        |
 | ------------------------ | --------------- |
 | volk                     | MIT             |
-| Vulkan-Headers           | MIT, Apache-2.0 |
+| Vulkan-Headers           | Apache-2.0, MIT |
 | Vulkan-Utility-Libraries | Apache-2.0      |
+| whereami                 | MIT, WTFPLv2    |
 
 ### Artificial Intelligence
 

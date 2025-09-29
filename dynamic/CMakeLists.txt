@@ -1,4 +1,4 @@
-add_library(cltzDynamic)
+add_library(cltzDynamic OBJECT)
 
 set_target_properties(
 	cltzDynamic

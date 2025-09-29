@@ -1,4 +1,4 @@
-add_library(cltzCommon)
+add_library(cltzCommon OBJECT)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -140,9 +140,10 @@ target_compile_options(cltzCommon
 target_link_libraries(cltzCommon
 	PUBLIC
 		# Required libraries
+		Threads::Threads
 		volk::volk
 		Vulkan::UtilityHeaders
-		Threads::Threads
+		wai::wai
 
 		# OS-specific libraries
 		"$<${USING_APPLE}:${LINK_LIBRARIES_APPLE}>"
