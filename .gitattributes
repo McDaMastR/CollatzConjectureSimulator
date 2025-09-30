@@ -1,0 +1,25 @@
+# Default
+* text=auto
+
+# C
+*.c text eol=lf diff=cpp
+*.h text eol=lf diff=cpp
+
+# GLSL
+*.glsl text eol=lf diff
+*.vert text eol=lf diff
+*.tesc text eol=lf diff
+*.tese text eol=lf diff
+*.geom text eol=lf diff
+*.frag text eol=lf diff
+*.comp text eol=lf diff
+*.mesh text eol=lf diff
+*.task text eol=lf diff
+
+# Text
+*.md text eol=lf diff=markdown
+*.txt text eol=lf diff
+.git* text eol=lf diff
+
+# Misc
+COPYING text eol=lf diff
