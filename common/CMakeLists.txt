@@ -3,11 +3,11 @@ add_library(cltzCommon OBJECT)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
-option(EXCESS_WARNINGS "Whether to compile the program with potentially excessive warnings" OFF)
-option(STATIC_ANALYSIS "Whether to perform static analysis on the program during compilation" OFF)
+option(CLTZ_EXCESS_WARNINGS "Whether to compile the program with potentially excessive warnings" OFF)
+option(CLTZ_STATIC_ANALYSIS "Whether to perform static analysis on the program during compilation" OFF)
 
-set(USING_EXCESS_WARNINGS "$<BOOL:${EXCESS_WARNINGS}>")
-set(USING_STATIC_ANALYSIS "$<BOOL:${STATIC_ANALYSIS}>")
+set(USING_EXCESS_WARNINGS "$<BOOL:${CLTZ_EXCESS_WARNINGS}>")
+set(USING_STATIC_ANALYSIS "$<BOOL:${CLTZ_STATIC_ANALYSIS}>")
 
 set(COMPILE_WARNINGS_CLANG
 	# Warnings ON
@@ -67,39 +67,35 @@ set(COMPILE_WARNINGS_MSVC
 )
 
 set(LINK_LIBRARIES_APPLE
-	"$<LINK_LIBRARY:FRAMEWORK,CoreFoundation>"
-	"$<LINK_LIBRARY:FRAMEWORK,IOKit>"
+	$<LINK_LIBRARY:FRAMEWORK,CoreFoundation>
+	$<LINK_LIBRARY:FRAMEWORK,IOKit>
 )
 
 set(LINK_LIBRARIES_WIN32
-	"Pathcch"
-	"Shlwapi"
+	Pathcch
+	Shlwapi
 )
 
 set(INCLUDE_HEADERS_APPLE
-	"<CoreFoundation/CoreFoundation.h$<ANGLE-R>"
-	"<IOKit/pwr_mgt/IOPMLib.h$<ANGLE-R>"
+	<CoreFoundation/CoreFoundation.h$<ANGLE-R>
+	<IOKit/pwr_mgt/IOPMLib.h$<ANGLE-R>
 )
 
 set(INCLUDE_HEADERS_UNIX
-	"<sys/stat.h$<ANGLE-R>"
-	"<unistd.h$<ANGLE-R>"
+	<sys/stat.h$<ANGLE-R>
+	<unistd.h$<ANGLE-R>
 )
 
 set(INCLUDE_HEADERS_WIN32
-	"<intrin.h$<ANGLE-R>"
-	"<io.h$<ANGLE-R>"
-	"<pathcch.h$<ANGLE-R>"
-	"<shlwapi.h$<ANGLE-R>"
-	"<windows.h$<ANGLE-R>"
+	<intrin.h$<ANGLE-R>
+	<io.h$<ANGLE-R>
+	<pathcch.h$<ANGLE-R>
+	<shlwapi.h$<ANGLE-R>
+	<windows.h$<ANGLE-R>
 )
 
-set_target_properties(
-	cltzCommon
-
-	PROPERTIES
-
-	C_STANDARD 11
+set_target_properties(cltzCommon PROPERTIES
+	C_STANDARD 17
 	C_STANDARD_REQUIRED ON
 	C_EXTENSIONS ON
 )
@@ -107,7 +103,7 @@ set_target_properties(
 target_compile_definitions(cltzCommon
 	PUBLIC
 		CZ_NAME="Collatz Conjecture Simulator"
-		CZ_EXECUTABLE="$<TARGET_FILE_NAME:cltz>"
+		CZ_EXECUTABLE="$<TARGET_FILE_NAME:cltzExe>"
 		"CZ_COPYRIGHT=\"Copyright (C) 2025 Seth McDonald\"" # The '(C)' causes a syntax error without extra quotes
 		CZ_LICENCE="Licence GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>"
 
@@ -115,26 +111,26 @@ target_compile_definitions(cltzCommon
 		CZ_VERSION_MINOR=${CollatzConjectureSimulator_VERSION_MINOR}
 		CZ_VERSION_PATCH=${CollatzConjectureSimulator_VERSION_PATCH}
 
-		"$<$<NOT:$<CONFIG:DEBUG>>:NDEBUG=1>"
-		"$<$<AND:${USING_EXCESS_WARNINGS},${USING_MINGW}>:__MINGW_MSVC_COMPAT_WARNINGS=1>"
-		"$<${USING_WIN32}:_CRT_SECURE_NO_WARNINGS=1>"
+		$<$<NOT:$<CONFIG:DEBUG>>:NDEBUG=1>
+		$<$<AND:${USING_EXCESS_WARNINGS},${USING_MINGW}>:__MINGW_MSVC_COMPAT_WARNINGS=1>
+		$<${USING_WIN32}:_CRT_SECURE_NO_WARNINGS=1>
 )
 
 target_compile_options(cltzCommon
 	PUBLIC
-		"$<$<C_COMPILER_ID:MSVC>:/Oi>"
+		$<$<C_COMPILER_ID:MSVC>:/Oi>
 
-		"$<$<AND:$<C_COMPILER_ID:AppleClang,Clang,GNU>,$<CONFIG:DEBUG>>:-Og;-g>"
-		"$<$<AND:$<C_COMPILER_ID:AppleClang,Clang,GNU>,$<CONFIG:RELEASE>>:-O3>"
-		"$<$<AND:$<C_COMPILER_ID:AppleClang,Clang,GNU>,$<CONFIG:MINSIZEREL>>:-Os>"
-		"$<$<AND:$<C_COMPILER_ID:AppleClang,Clang,GNU>,$<CONFIG:RELWITHDEBINFO>>:-O2;-g>"
+		$<$<AND:$<C_COMPILER_ID:AppleClang,Clang,GNU>,$<CONFIG:DEBUG>>:-Og;-g>
+		$<$<AND:$<C_COMPILER_ID:AppleClang,Clang,GNU>,$<CONFIG:RELEASE>>:-O3>
+		$<$<AND:$<C_COMPILER_ID:AppleClang,Clang,GNU>,$<CONFIG:MINSIZEREL>>:-Os>
+		$<$<AND:$<C_COMPILER_ID:AppleClang,Clang,GNU>,$<CONFIG:RELWITHDEBINFO>>:-O2;-g>
 
-		"$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:AppleClang,Clang>>:${COMPILE_WARNINGS_CLANG}>"
-		"$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:GNU>>:${COMPILE_WARNINGS_GNU}>"
-		"$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:MSVC>>:${COMPILE_WARNINGS_MSVC}>"
+		$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:AppleClang,Clang>>:${COMPILE_WARNINGS_CLANG}>
+		$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:GNU>>:${COMPILE_WARNINGS_GNU}>
+		$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:MSVC>>:${COMPILE_WARNINGS_MSVC}>
 
-		"$<$<AND:${USING_STATIC_ANALYSIS},$<C_COMPILER_ID:GNU>>:-fanalyzer>"
-		"$<$<AND:${USING_STATIC_ANALYSIS},$<C_COMPILER_ID:MSVC>>:/analyze>"
+		$<$<AND:${USING_STATIC_ANALYSIS},$<C_COMPILER_ID:GNU>>:-fanalyzer>
+		$<$<AND:${USING_STATIC_ANALYSIS},$<C_COMPILER_ID:MSVC>>:/analyze>
 )
 
 target_link_libraries(cltzCommon
@@ -146,8 +142,8 @@ target_link_libraries(cltzCommon
 		wai::wai
 
 		# OS-specific libraries
-		"$<${USING_APPLE}:${LINK_LIBRARIES_APPLE}>"
-		"$<${USING_WIN32}:${LINK_LIBRARIES_WIN32}>" # TODO Check this links on Windows
+		$<${USING_APPLE}:${LINK_LIBRARIES_APPLE}>
+		$<${USING_WIN32}:${LINK_LIBRARIES_WIN32}> # TODO Check this links on Windows
 )
 
 target_precompile_headers(cltzCommon
@@ -188,9 +184,9 @@ target_precompile_headers(cltzCommon
 		<pthread.h>
 
 		# OS-specific headers
-		"$<${USING_APPLE}:${INCLUDE_HEADERS_APPLE}>"
-		"$<${USING_UNIX}:${INCLUDE_HEADERS_UNIX}>"
-		"$<${USING_WIN32}:${INCLUDE_HEADERS_WIN32}>"
+		$<${USING_APPLE}:${INCLUDE_HEADERS_APPLE}>
+		$<${USING_UNIX}:${INCLUDE_HEADERS_UNIX}>
+		$<${USING_WIN32}:${INCLUDE_HEADERS_WIN32}>
 )
 
 target_sources(cltzCommon

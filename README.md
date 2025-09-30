@@ -61,22 +61,26 @@ The general environment and system requirements that must be met for Collatz Con
 correctly are listed below. The full requirements of the GPU are given in
 [device_requirements.md](device_requirements.md).
 
+- [C](https://en.wikipedia.org/wiki/C_(programming_language))17.
+  - `_Atomic` (Optional C11 feature)
+  - `__int128` (GNU C extension)
 - [CMake](https://cmake.org) 3.24.
-- [pthreads](https://en.wikipedia.org/wiki/Pthreads).
 - [glslang](https://github.com/KhronosGroup/glslang).
+- [pthreads](https://en.wikipedia.org/wiki/Pthreads).
 - [SPIR-V Tools](https://github.com/KhronosGroup/SPIRV-Tools).
   - `spirv-link`
   - `spirv-opt`
   - `spirv-dis`
-- [C](https://en.wikipedia.org/wiki/C_(programming_language))11.
-  - `_Atomic` (Optional C11 feature)
-  - `__int128` (GNU C extension)
 - [Vulkan](https://www.vulkan.org) 1.1.
   - `VK_KHR_copy_commands2`
   - `VK_KHR_maintenance6`
   - `VK_KHR_map_memory2`
   - `VK_KHR_synchronization2`
   - `VK_KHR_timeline_semaphore`
+
+In addition, the platform must be capable of using either little-endian or big-endian byte order consistently for all
+memory accesses and operations the program performs. That is, the computer should not switch between the two byte orders
+in its execution of the program.
 
 ## Building and Running
 
@@ -92,12 +96,12 @@ Several options can be specified to customise the build system by appending `-D 
 
 - `CMAKE_BUILD_TYPE` specifies the build variant and can be set to _Debug_, _Release_, _MinSizeRel_, or
   _RelWithDebInfo_. If not set, it defaults to _Debug_.
-- `EXCESS_WARNINGS` specifies whether to compile the program with a potentially excessive amount of warnings, and
+- `CLTZ_EXCESS_WARNINGS` specifies whether to compile the program with a potentially excessive amount of warnings, and
   defaults to _OFF_.
-- `STATIC_ANALYSIS` specifies whether to statically analyse the program during compilation, and defaults to _OFF_.
-- `DEBUG_SHADERS` specifies whether to include debug information in generated SPIR-V, and defaults to _OFF_.
-- `OPTIMISE_SHADERS` specifies whether to optimise generated SPIR-V using `spirv-opt`, and defaults to _ON_.
-- `DISASSEMBLE_SHADERS` specifies whether to disassemble generated SPIR-V using `spirv-dis`, and defaults to _OFF_.
+- `CLTZ_STATIC_ANALYSIS` specifies whether to statically analyse the program during compilation, and defaults to _OFF_.
+- `CLTZ_DEBUG_SHADERS` specifies whether to include debug information in generated SPIR-V, and defaults to _OFF_.
+- `CLTZ_OPTIMISE_SHADERS` specifies whether to optimise generated SPIR-V using `spirv-opt`, and defaults to _ON_.
+- `CLTZ_DISASSEMBLE_SHADERS` specifies whether to disassemble generated SPIR-V using `spirv-dis`, and defaults to _OFF_.
 
 Once the above command has finished, a `build` directory will have been created containing the build system. To now
 build Collatz Conjecture Simulator, execute the following command.
@@ -107,7 +111,7 @@ cmake --build build
 ```
 
 By default, only the executable will be built. To instead build the SPIR-V, add `--target spirv`. To build both, also
-add `--target cltz`. To specify the build configuration, add `--config CONFIG` (only applies for multi-config
+add `--target cltzExe`. To specify the build configuration, add `--config CONFIG` (only applies for multi-config
 generators).
 
 The above command will create a `bin` directory containing the SPIR-V and executable. If built in debug, the executable

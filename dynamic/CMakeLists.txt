@@ -1,11 +1,7 @@
 add_library(cltzDynamic OBJECT)
 
-set_target_properties(
-	cltzDynamic
-
-	PROPERTIES
-
-	C_STANDARD 11
+set_target_properties(cltzDynamic PROPERTIES
+	C_STANDARD 17
 	C_STANDARD_REQUIRED ON
 	C_EXTENSIONS ON
 )

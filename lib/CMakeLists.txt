@@ -10,6 +10,17 @@ add_subdirectory(volk EXCLUDE_FROM_ALL)
 add_library(whereami STATIC EXCLUDE_FROM_ALL)
 add_library(wai::wai ALIAS whereami)
 
+set_target_properties(whereami PROPERTIES
+	C_STANDARD 17
+	C_STANDARD_REQUIRED OFF
+	C_EXTENSIONS ON
+)
+
+target_compile_options(whereami PRIVATE
+	$<$<C_COMPILER_ID:AppleClang,Clang,GNU>:-O3>
+	$<$<C_COMPILER_ID:MSVC>:/O2>
+)
+
 set(WAI_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/whereami/src)
 target_include_directories(whereami PUBLIC ${WAI_SOURCE_DIR})
 target_sources(whereami PRIVATE ${WAI_SOURCE_DIR}/whereami.c)
