@@ -256,7 +256,7 @@
 #define CZ_UINT128_UPPER(x) ( (uint64_t) ((x) >> 64) )
 #define CZ_UINT128_LOWER(x) ( (uint64_t) ((x) & ~UINT64_C(0)) )
 
-#define CZ_UINT128(upper, lower) ( (StartValue) (upper) << 64 | (StartValue) (lower) )
+#define CZ_UINT128(upper, lower) ( (unsigned __int128) (upper) << 64 | (unsigned __int128) (lower) )
 
 #define CZ_PNEXT_ADD(p, s) \
 	do {                   \
