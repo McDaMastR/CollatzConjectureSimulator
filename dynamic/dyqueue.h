@@ -25,12 +25,10 @@
 
 #include "common.h"
 
-
 /**
  * @brief Handle for a dynamically sized FIFO queue.
  */
 typedef struct DyQueue_* DyQueue;
-
 
 /**
  * @brief Destroys a dynamic queue.
@@ -56,7 +54,8 @@ void dyqueue_destroy(DyQueue queue);
  * 
  * @note Failing to destroy the returned dynamic queue may result in a memory leak.
  */
-DyQueue dyqueue_create(size_t size) CZ_FREE(dyqueue_destroy, 1) CZ_USE_RET;
+CZ_FREE(dyqueue_destroy, 1) CZ_USE_RET
+DyQueue dyqueue_create(size_t size);
 
 /**
  * @brief Retrieves the size of a dynamic queue.
@@ -69,7 +68,8 @@ DyQueue dyqueue_create(size_t size) CZ_FREE(dyqueue_destroy, 1) CZ_USE_RET;
  * 
  * @pre @p queue is nonnull.
  */
-size_t dyqueue_size(DyQueue queue) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_RET;
+CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_RET
+size_t dyqueue_size(DyQueue queue);
 
 /**
  * @brief Adds an element to a dynamic queue.
@@ -86,7 +86,8 @@ size_t dyqueue_size(DyQueue queue) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_US
  * @pre @p queue is nonnull.
  * @pre @p value is nonnull.
  */
-bool dyqueue_enqueue(DyQueue queue, const void* value) CZ_NONNULL_ARGS CZ_RW_ACCESS(1) CZ_RE_ACCESS(2);
+CZ_NONNULL_ARGS CZ_RW_ACCESS(1) CZ_RE_ACCESS(2)
+bool dyqueue_enqueue(DyQueue queue, const void* value);
 
 /**
  * @brief Removes an element from a dynamic queue.
@@ -99,4 +100,5 @@ bool dyqueue_enqueue(DyQueue queue, const void* value) CZ_NONNULL_ARGS CZ_RW_ACC
  * @pre @p queue is nonnull and nonempty.
  * @pre @p value is nonnull.
  */
-void dyqueue_dequeue(DyQueue queue, void* value) CZ_NONNULL_ARGS CZ_RW_ACCESS(1) CZ_WR_ACCESS(2);
+CZ_NONNULL_ARGS CZ_RW_ACCESS(1) CZ_WR_ACCESS(2)
+void dyqueue_dequeue(DyQueue queue, void* value);

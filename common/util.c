@@ -19,13 +19,11 @@
 #include "alloc.h"
 #include "debug.h"
 
-
 struct AlignedInfo
 {
 	void* start;
 	size_t size;
 };
-
 
 bool fisatty(FILE* stream)
 {

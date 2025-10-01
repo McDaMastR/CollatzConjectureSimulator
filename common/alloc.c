@@ -19,7 +19,6 @@
 #include "debug.h"
 #include "util.h"
 
-
 static void malloc_failure(size_t size)
 {
 	double t = program_time();

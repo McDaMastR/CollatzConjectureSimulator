@@ -17,14 +17,12 @@
 
 #include "dystring.h"
 
-
 struct DyString_
 {
 	size_t length; // Number of characters currently in string, including null terminator
 	size_t capacity; // Number of characters that could fit in allocated memory
 	char* restrict raw; // Raw string
 };
-
 
 static char* dystring_stretch(struct DyString_* restrict string, size_t length)
 {

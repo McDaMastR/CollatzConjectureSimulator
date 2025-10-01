@@ -18,7 +18,6 @@
 #include "dyrecord.h"
 #include "dynamic.h"
 
-
 struct Node
 {
 	struct Node* next;
@@ -31,7 +30,6 @@ struct DyRecord_
 	size_t count; // Number of nodes
 	struct Node* top; // Last added node
 };
-
 
 void dyrecord_destroy(struct DyRecord_* restrict record)
 {

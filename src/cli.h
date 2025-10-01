@@ -21,9 +21,7 @@
 
 #define CZ_CLI_MAX_OPTION_LENGTH 64
 
-
 typedef struct CzCli_* CzCli;
-
 typedef bool (*CzCliCallback)(void* config, void* arg);
 
 enum CzCliDatatype
@@ -40,14 +38,15 @@ enum CzCliDatatype
 	CZ_CLI_DATATYPE_ULLONG  = 9
 };
 
-
 // TODO Document these functions like the Dy* functions
 
 void czCliDestroy(CzCli cli);
 
-CzCli czCliCreate(void* config, size_t count) CZ_FREE(czCliDestroy, 1) CZ_NO_ACCESS(1) CZ_USE_RET;
+CZ_FREE(czCliDestroy, 1) CZ_NO_ACCESS(1) CZ_USE_RET
+CzCli czCliCreate(void* config, size_t count);
 
-bool czCliParse(CzCli cli, int argc, char** argv) CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_RE_ACCESS(3);
+CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_RE_ACCESS(3)
+bool czCliParse(CzCli cli, int argc, char** argv);
 
-bool czCliAdd(CzCli cli, char option, const char* name, enum CzCliDatatype type, CzCliCallback callback)
-	CZ_NONNULL_ARGS CZ_NULLTERM_ARG(3) CZ_RW_ACCESS(1) CZ_RE_ACCESS(3);
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(3) CZ_RW_ACCESS(1) CZ_RE_ACCESS(3)
+bool czCliAdd(CzCli cli, char option, const char* name, enum CzCliDatatype type, CzCliCallback callback);

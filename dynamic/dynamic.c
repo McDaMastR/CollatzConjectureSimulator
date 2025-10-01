@@ -17,7 +17,6 @@
 
 #include "dynamic.h"
 
-
 void czFree_stub(void* memory)
 {
 	czFree(memory);

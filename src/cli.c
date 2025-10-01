@@ -18,7 +18,6 @@
 #include "cli.h"
 #include "dynamic.h"
 
-
 union CliData
 {
 	char c;
@@ -53,7 +52,6 @@ struct CzCli_
 	DyArray options;
 	void* config;
 };
-
 
 void czCliDestroy(struct CzCli_* cli)
 {

@@ -19,7 +19,6 @@
 
 #include "common.h"
 
-
 struct CzConfig
 {
 	const char* allocLogPath;

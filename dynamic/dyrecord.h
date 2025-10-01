@@ -25,7 +25,6 @@
 
 #include "common.h"
 
-
 /**
  * @brief Handle for a dynamically sized record of dynamic memory allocations.
  */
@@ -39,7 +38,6 @@ typedef struct DyRecord_* DyRecord;
  * @param[in,out] memory The dynamically allocated memory.
  */
 typedef void (*FreeCallback)(void* memory);
-
 
 /**
  * @brief Destroys a dynamic record.
@@ -61,7 +59,8 @@ void dyrecord_destroy(DyRecord record);
  * 
  * @note Failing to destroy the returned dynamic record may result in a memory leak.
  */
-DyRecord dyrecord_create(void) CZ_FREE(dyrecord_destroy, 1) CZ_USE_RET;
+CZ_FREE(dyrecord_destroy, 1) CZ_USE_RET
+DyRecord dyrecord_create(void);
 
 /**
  * @brief Retrieves the size of a dynamic record.
@@ -74,7 +73,8 @@ DyRecord dyrecord_create(void) CZ_FREE(dyrecord_destroy, 1) CZ_USE_RET;
  * 
  * @pre @p record is nonnull.
  */
-size_t dyrecord_size(DyRecord record) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_RET;
+CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_RET
+size_t dyrecord_size(DyRecord record);
 
 /**
  * @brief Adds an allocation to a dynamic record.
@@ -94,7 +94,8 @@ size_t dyrecord_size(DyRecord record) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ
  * @pre @p record and @p memory do not overlap in memory.
  * @pre @p callback is nonnull.
  */
-bool dyrecord_add(DyRecord record, void* memory, FreeCallback callback) CZ_NONNULL_ARGS CZ_RW_ACCESS(1) CZ_NO_ACCESS(2);
+CZ_NONNULL_ARGS CZ_RW_ACCESS(1) CZ_NO_ACCESS(2)
+bool dyrecord_add(DyRecord record, void* memory, FreeCallback callback);
 
 /**
  * @brief Allocates and adds memory to a dynamic record.
@@ -109,8 +110,8 @@ bool dyrecord_add(DyRecord record, void* memory, FreeCallback callback) CZ_NONNU
  * 
  * @pre @p record is nonnull.
  */
-void* dyrecord_malloc(DyRecord record, size_t size)
-	CZ_MALLOC CZ_NONNULL_ARGS CZ_ALLOC_ARG(2) CZ_RW_ACCESS(1) CZ_USE_RET;
+CZ_MALLOC CZ_NONNULL_ARGS CZ_ALLOC_ARG(2) CZ_RW_ACCESS(1) CZ_USE_RET
+void* dyrecord_malloc(DyRecord record, size_t size);
 
 /**
  * @brief Allocates and adds zero initialised memory to a dynamic record.
@@ -126,8 +127,8 @@ void* dyrecord_malloc(DyRecord record, size_t size)
  * 
  * @pre @p record is nonnull.
  */
-void* dyrecord_calloc(DyRecord record, size_t count, size_t size)
-	CZ_MALLOC CZ_NONNULL_ARGS CZ_ALLOC_ARGS(2, 3) CZ_RW_ACCESS(1) CZ_USE_RET;
+CZ_MALLOC CZ_NONNULL_ARGS CZ_ALLOC_ARGS(2, 3) CZ_RW_ACCESS(1) CZ_USE_RET
+void* dyrecord_calloc(DyRecord record, size_t count, size_t size);
 
 /**
  * @brief Frees allocations recorded in a dynamic record.
@@ -139,4 +140,5 @@ void* dyrecord_calloc(DyRecord record, size_t count, size_t size)
  * 
  * @pre @p record is nonnull.
  */
-void dyrecord_free(DyRecord record) CZ_NONNULL_ARGS CZ_RW_ACCESS(1);
+CZ_NONNULL_ARGS CZ_RW_ACCESS(1)
+void dyrecord_free(DyRecord record);

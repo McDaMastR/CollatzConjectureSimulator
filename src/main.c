@@ -19,7 +19,6 @@
 #include "cli.h"
 #include "config.h"
 
-
 static bool version_option_callback(void* data, void* arg)
 {
 	(void) data;

@@ -17,7 +17,6 @@
 
 #include "dyarray.h"
 
-
 struct DyArray_
 {
 	size_t size; // Number of bytes per element
@@ -25,7 +24,6 @@ struct DyArray_
 	size_t capacity; // Number of elements that could fit in allocated memory
 	void* restrict raw; // Raw array
 };
-
 
 static void* dyarray_stretch(struct DyArray_* restrict array)
 {

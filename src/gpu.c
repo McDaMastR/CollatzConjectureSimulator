@@ -18,7 +18,6 @@
 #include "gpu.h"
 #include "config.h"
 
-
 bool create_instance(struct Gpu* restrict gpu)
 {
 	VkResult vkres;

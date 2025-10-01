@@ -17,7 +17,6 @@
 
 #include "config.h"
 
-
 struct CzConfig czgConfig = {
 	.allocLogPath = NULL,
 	.capturePath = NULL,

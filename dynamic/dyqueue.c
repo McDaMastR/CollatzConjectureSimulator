@@ -17,7 +17,6 @@
 
 #include "dyqueue.h"
 
-
 struct DyQueue_
 {
 	size_t size; // Number of bytes per element
@@ -25,7 +24,6 @@ struct DyQueue_
 	void** head; // Head node
 	void** tail; // Tail node
 };
-
 
 void dyqueue_destroy(struct DyQueue_* restrict queue)
 {

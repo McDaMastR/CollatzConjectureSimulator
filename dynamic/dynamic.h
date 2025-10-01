@@ -29,7 +29,6 @@
 #include "dyrecord.h"
 #include "dystring.h"
 
-
 /**
  * @brief FreeCallback compatible version of @ref czFree.
  * 

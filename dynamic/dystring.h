@@ -25,12 +25,10 @@
 
 #include "common.h"
 
-
 /**
  * @brief Handle for a dynamically sized null-terminated byte string.
  */
 typedef struct DyString_* DyString;
-
 
 /**
  * @brief Destroys a dynamic string.
@@ -58,7 +56,8 @@ void dystring_destroy(DyString string);
  * 
  * @note Failing to destroy the returned dynamic string may result in a memory leak.
  */
-DyString dystring_create(size_t count) CZ_FREE(dystring_destroy, 1) CZ_USE_RET;
+CZ_FREE(dystring_destroy, 1) CZ_USE_RET
+DyString dystring_create(size_t count);
 
 /**
  * @brief Retrieves the length of a dynamic string.
@@ -73,7 +72,8 @@ DyString dystring_create(size_t count) CZ_FREE(dystring_destroy, 1) CZ_USE_RET;
  * 
  * @invariant The length is nonzero.
  */
-size_t dystring_length(DyString string) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_RET;
+CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_RET
+size_t dystring_length(DyString string);
 
 /**
  * @brief Retrieves the raw string of a dynamic string.
@@ -90,7 +90,8 @@ size_t dystring_length(DyString string) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) 
  * 
  * @note Adding a substring to @p string may result in the raw string changing memory location.
  */
-char* dystring_raw(DyString string) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_NONNULL_RET CZ_USE_RET;
+CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_NONNULL_RET CZ_USE_RET
+char* dystring_raw(DyString string);
 
 /**
  * @brief Appends a string to a dynamic string.
@@ -107,8 +108,8 @@ char* dystring_raw(DyString string) CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_N
  * @pre @p substring is nonnull and null-terminated.
  * @pre @p string and @p substring do not overlap in memory.
  */
-char* dystring_append(DyString string, const char* substring)
-	CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RE_ACCESS(2);
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RE_ACCESS(2)
+char* dystring_append(DyString string, const char* substring);
 
 /**
  * @brief Prepends a substring to a dynamic string.
@@ -125,8 +126,8 @@ char* dystring_append(DyString string, const char* substring)
  * @pre @p substring is nonnull and null-terminated.
  * @pre @p string and @p substring do not overlap in memory.
  */
-char* dystring_prepend(DyString string, const char* substring)
-	CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RE_ACCESS(2);
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RE_ACCESS(2)
+char* dystring_prepend(DyString string, const char* substring);
 
 /**
  * @brief Adds a substring to a dynamic string.
@@ -145,5 +146,5 @@ char* dystring_prepend(DyString string, const char* substring)
  * @pre @p string and @p substring do not overlap in memory.
  * @pre @p index is less than the length of @p string.
  */
-char* dystring_add(DyString string, const char* substring, size_t index)
-	CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RE_ACCESS(2);
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RE_ACCESS(2)
+char* dystring_add(DyString string, const char* substring, size_t index);

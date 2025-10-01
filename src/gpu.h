@@ -20,7 +20,6 @@
 #include "common.h"
 #include "dynamic.h"
 
-
 typedef unsigned __int128 StartValue;
 typedef uint16_t StopTime;
 
@@ -133,37 +132,60 @@ struct Position
 	StopTime bestStopTime; // Current longest total stopping time.
 };
 
-
 // If the return type is bool, then the function returns true on success and false elsewise
 
-bool create_instance(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
-bool select_device(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
-bool create_device(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
-bool manage_memory(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
-bool create_buffers(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
-bool create_descriptors(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
-bool create_pipeline(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
-bool create_commands(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
-bool submit_commands(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
-bool destroy_gpu(struct Gpu* restrict gpu) CZ_NONNULL_ARGS;
+CZ_NONNULL_ARGS
+bool create_instance(struct Gpu* restrict gpu);
 
-bool capture_pipeline(VkDevice device, VkPipeline pipeline) CZ_NONNULL_ARGS;
+CZ_NONNULL_ARGS
+bool select_device(struct Gpu* restrict gpu);
 
-void* wait_for_input(void* ptr) CZ_NONNULL_ARGS;
+CZ_NONNULL_ARGS
+bool create_device(struct Gpu* restrict gpu);
 
+CZ_NONNULL_ARGS
+bool manage_memory(struct Gpu* restrict gpu);
+
+CZ_NONNULL_ARGS
+bool create_buffers(struct Gpu* restrict gpu);
+
+CZ_NONNULL_ARGS
+bool create_descriptors(struct Gpu* restrict gpu);
+
+CZ_NONNULL_ARGS
+bool create_pipeline(struct Gpu* restrict gpu);
+
+CZ_NONNULL_ARGS
+bool create_commands(struct Gpu* restrict gpu);
+
+CZ_NONNULL_ARGS
+bool submit_commands(struct Gpu* restrict gpu);
+
+CZ_NONNULL_ARGS
+bool destroy_gpu(struct Gpu* restrict gpu);
+
+CZ_NONNULL_ARGS
+bool capture_pipeline(VkDevice device, VkPipeline pipeline);
+
+CZ_NONNULL_ARGS
+void* wait_for_input(void* ptr);
+
+CZ_NONNULL_ARGS
 void write_inbuffer(
 	StartValue* restrict mappedInBuffer,
 	StartValue* restrict firstStartValue,
 	uint32_t valuesPerInout,
-	uint32_t valuesPerHeap) CZ_NONNULL_ARGS;
+	uint32_t valuesPerHeap);
 
+CZ_NONNULL_ARGS
 void read_outbuffer(
 	const StopTime* restrict mappedOutBuffer,
 	struct Position* restrict position,
 	DyArray bestStartValues,
 	DyArray bestStopTimes,
-	uint32_t valuesPerInout) CZ_NONNULL_ARGS;
+	uint32_t valuesPerInout);
 
+CZ_NONNULL_ARGS
 void new_high(
 	const StartValue* restrict startValue,
 	StopTime* restrict curBestTime,
@@ -171,4 +193,4 @@ void new_high(
 	StartValue* restrict val0mod1off,
 	StartValue* restrict val1mod6off,
 	DyArray bestStartValues,
-	DyArray bestStopTimes) CZ_NONNULL_ARGS;
+	DyArray bestStopTimes);

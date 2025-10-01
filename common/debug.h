@@ -19,7 +19,6 @@
 
 #include "def.h"
 
-
 struct CzVulkanCallbackData
 {
 	const char* func;
@@ -27,9 +26,7 @@ struct CzVulkanCallbackData
 	uint64_t line;
 };
 
-
 extern struct CzVulkanCallbackData czgCallbackData;
-
 
 // Initialisation functions
 
@@ -37,56 +34,77 @@ bool init_debug_logfile(const char* filename);
 bool init_alloc_logfile(const char* filename);
 bool init_colour_level(enum CzColourLevel level);
 
-
 // General logging functions
 
-bool log_debug(FILE* stream, const char* format, ...) CZ_PRINTF(2, 3) CZ_NONNULL_ARG(1, 2) CZ_NULLTERM_ARG(2);
-bool log_warning(FILE* stream, const char* format, ...) CZ_PRINTF(2, 3) CZ_NONNULL_ARG(1, 2) CZ_NULLTERM_ARG(2);
-bool log_error(FILE* stream, const char* format, ...) CZ_PRINTF(2, 3) CZ_NONNULL_ARG(1, 2) CZ_NULLTERM_ARG(2);
-bool log_critical(FILE* stream, const char* format, ...) CZ_PRINTF(2, 3) CZ_NONNULL_ARG(1, 2) CZ_NULLTERM_ARG(2);
+CZ_PRINTF(2, 3) CZ_NONNULL_ARG(1, 2) CZ_NULLTERM_ARG(2)
+bool log_debug(FILE* stream, const char* format, ...);
 
+CZ_PRINTF(2, 3) CZ_NONNULL_ARG(1, 2) CZ_NULLTERM_ARG(2)
+bool log_warning(FILE* stream, const char* format, ...);
+
+CZ_PRINTF(2, 3) CZ_NONNULL_ARG(1, 2) CZ_NULLTERM_ARG(2)
+bool log_error(FILE* stream, const char* format, ...);
+
+CZ_PRINTF(2, 3) CZ_NONNULL_ARG(1, 2) CZ_NULLTERM_ARG(2)
+bool log_critical(FILE* stream, const char* format, ...);
 
 // Failure functions
 
-void log_fopen_failure(int line, FILE* res, const char* name, const char* mode)
-	CZ_COLD CZ_NONNULL_ARG(3, 4) CZ_NULLTERM_ARG(3) CZ_NULLTERM_ARG(4) CZ_NO_ACCESS(2);
-void log_fread_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file)
-	CZ_COLD CZ_NO_ACCESS(3) CZ_NO_ACCESS(6);
-void log_fwrite_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file)
-	CZ_COLD CZ_NO_ACCESS(3) CZ_NO_ACCESS(6);
+CZ_COLD CZ_NONNULL_ARG(3, 4) CZ_NULLTERM_ARG(3) CZ_NULLTERM_ARG(4) CZ_NO_ACCESS(2)
+void log_fopen_failure(int line, FILE* res, const char* name, const char* mode);
 
-void log_fscanf_failure(int line, int res, FILE* file, const char* fmt)
-	CZ_COLD CZ_NONNULL_ARG(4) CZ_NULLTERM_ARG(4) CZ_NO_ACCESS(3);
-void log_fprintf_failure(int line, int res, FILE* file, const char* fmt)
-	CZ_COLD CZ_NONNULL_ARG(4) CZ_NULLTERM_ARG(4) CZ_NO_ACCESS(3);
+CZ_COLD CZ_NO_ACCESS(3) CZ_NO_ACCESS(6)
+void log_fread_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file);
 
-void log_pcreate_failure(int line, int res) CZ_COLD;
-void log_pcancel_failure(int line, int res) CZ_COLD;
-void log_pjoin_failure(int line, int res) CZ_COLD;
+CZ_COLD CZ_NO_ACCESS(3) CZ_NO_ACCESS(6)
+void log_fwrite_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file);
 
-void log_vkinit_failure(int line, VkResult res) CZ_COLD;
-void log_vulkan_failure(int line, VkResult res, const char* func) CZ_COLD CZ_NONNULL_ARGS CZ_NULLTERM_ARG(3);
+CZ_COLD CZ_NONNULL_ARG(4) CZ_NULLTERM_ARG(4) CZ_NO_ACCESS(3)
+void log_fscanf_failure(int line, int res, FILE* file, const char* fmt);
 
+CZ_COLD CZ_NONNULL_ARG(4) CZ_NULLTERM_ARG(4) CZ_NO_ACCESS(3)
+void log_fprintf_failure(int line, int res, FILE* file, const char* fmt);
+
+CZ_COLD
+void log_pcreate_failure(int line, int res);
+CZ_COLD
+void log_pcancel_failure(int line, int res);
+CZ_COLD
+void log_pjoin_failure(int line, int res);
+
+CZ_COLD
+void log_vkinit_failure(int line, VkResult res);
+
+CZ_COLD CZ_NONNULL_ARGS CZ_NULLTERM_ARG(3)
+void log_vulkan_failure(int line, VkResult res, const char* func);
 
 // Callback functions
 
-VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
+VKAPI_ATTR CZ_NONNULL_ARG(3)
+VkBool32 VKAPI_CALL debug_callback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT messageTypes,
 	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-	void* pUserData) CZ_NONNULL_ARG(3);
+	void* pUserData);
 
-VKAPI_ATTR void* VKAPI_CALL allocation_callback(
+VKAPI_ATTR
+void* VKAPI_CALL allocation_callback(
 	void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
-VKAPI_ATTR void* VKAPI_CALL reallocation_callback(
+
+VKAPI_ATTR
+void* VKAPI_CALL reallocation_callback(
 	void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
-VKAPI_ATTR void VKAPI_CALL free_callback(void* pUserData, void* pMemory);
 
-VKAPI_ATTR void VKAPI_CALL internal_allocation_callback(
-	void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope);
-VKAPI_ATTR void VKAPI_CALL internal_free_callback(
+VKAPI_ATTR
+void VKAPI_CALL free_callback(void* pUserData, void* pMemory);
+
+VKAPI_ATTR
+void VKAPI_CALL internal_allocation_callback(
 	void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope);
 
+VKAPI_ATTR
+void VKAPI_CALL internal_free_callback(
+	void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope);
 
 // Helper macros
 

@@ -19,7 +19,6 @@
 #include "alloc.h"
 #include "util.h"
 
-
 struct CzVulkanCallbackData czgCallbackData = {.func = "", .file = "", .line = 0};
 
 static const char* g_allocLogPath = NULL;
@@ -33,7 +32,6 @@ static uint64_t g_freeCount = 0;
 static uint64_t g_internalAllocCount = 0;
 static uint64_t g_internalFreeCount = 0;
 static size_t g_totalAllocSize = 0;
-
 
 bool init_debug_logfile(const char* filename)
 {

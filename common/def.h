@@ -17,7 +17,6 @@
 
 #pragma once
 
-
 // Check support for necessary features
 
 #ifdef __STDC_NO_ATOMICS__
@@ -29,7 +28,6 @@
 #elif __SIZEOF_INT128__ != 16
 	#error "Target must support 128-bit integers"
 #endif
-
 
 // Check support for optional builtins and attributes
 
@@ -77,30 +75,40 @@
 
 #if CZ_HAS_ATTRIBUTE(const)
 	#define CZ_CONST __attribute__ (( const ))
+#elif defined(_MSC_VER)
+	#define CZ_PURE __declspec(noalias)
 #else
 	#define CZ_CONST
 #endif
 
 #if CZ_HAS_ATTRIBUTE(pure)
 	#define CZ_PURE __attribute__ (( pure ))
+#elif defined(_MSC_VER)
+	#define CZ_PURE __declspec(noalias)
 #else
 	#define CZ_PURE
 #endif
 
 #if CZ_HAS_ATTRIBUTE(reproducible)
 	#define CZ_REPRODUCIBLE __attribute__ (( reproducible ))
+#elif defined(_MSC_VER)
+	#define CZ_PURE __declspec(noalias)
 #else
 	#define CZ_REPRODUCIBLE
 #endif
 
 #if CZ_HAS_ATTRIBUTE(unsequenced)
 	#define CZ_UNSEQUENCED __attribute__ (( unsequenced ))
+#elif defined(_MSC_VER)
+	#define CZ_PURE __declspec(noalias)
 #else
 	#define CZ_UNSEQUENCED
 #endif
 
 #if CZ_HAS_ATTRIBUTE(malloc)
 	#define CZ_MALLOC __attribute__ (( malloc ))
+#elif defined(_MSC_VER)
+	#define CZ_MALLOC __declspec(allocator)
 #else
 	#define CZ_MALLOC
 #endif
@@ -184,7 +192,6 @@
 	#define CZ_USE_RET
 #endif
 
-
 // Check support for nonstandard predefined macros
 
 #ifdef __FILE_NAME__
@@ -192,7 +199,6 @@
 #else
 	#define CZ_FILENAME __FILE__
 #endif
-
 
 // ANSI escape codes regarding Select Graphic Rendition (SGR)
 
@@ -233,7 +239,6 @@
 #define CZ_SGR_BG_8BIT(n)        "\033[48;5;" #n "m"
 #define CZ_SGR_BG_24BIT(r, g, b) "\033[48;2;" #r ";" #g ";" #b "m"
 
-
 // Useful values
 
 #define CZ_KIB_SIZE ( UINT64_C(1) << 10 )
@@ -245,7 +250,6 @@
 #define CZ_DEBUG_LOG_NAME      "debug.log"
 #define CZ_PIPELINE_CACHE_NAME "pipeline_cache.bin"
 #define CZ_PROGRESS_FILE_NAME  "position.txt"
-
 
 // Helper macros
 
@@ -264,7 +268,6 @@
 		(p) = &(s).pNext;  \
 	}                      \
 	while (0)
-
 
 // Enumerations
 
