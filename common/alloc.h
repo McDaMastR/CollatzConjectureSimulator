@@ -133,12 +133,101 @@ enum CzResult czRealloc(void* restrict* memory, size_t oldSize, size_t newSize, 
 CZ_HOT
 enum CzResult czFree(void* memory);
 
+/**
+ * @brief Dynamically allocates an aligned block of memory.
+ * 
+ * Allocates @p size bytes of contiguous memory from the heap and synchronously writes the memory address of the first
+ * byte of the allocation to @p memory. The byte at the zero-based position @p offset in the allocation is aligned to
+ * @p alignment bytes. If @p size is zero, @p alignment is not a power of two, or @p offset is greater than or equal to
+ * @p size or @p alignment, failure occurs. On failure, the contents of @p memory are unchanged.
+ * 
+ * The members of @p flags can optionally specify the following behaviour.
+ * - If @p flags.zeroInitialise is set, the contents of the allocation are initialised to zero. Otherwise, the contents
+ *   are initially undefined.
+ * - @p flags.freeOnFail is ignored.
+ * 
+ * @param[out] memory The memory to write the address of the allocation to.
+ * @param[in] size The size of the allocation.
+ * @param[in] alignment The alignment of the allocation.
+ * @param[in] offset The index of the aligned byte.
+ * @param[in] flags Binary flags describing additional behaviour.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_BAD_ALIGNMENT @p alignment was not a power of two.
+ * @retval CZ_RESULT_BAD_OFFSET @p offset was greater than or equal to @p size or @p alignment.
+ * @retval CZ_RESULT_BAD_SIZE @p size was zero.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * 
+ * @pre @p memory is nonnull.
+ * 
+ * @note On success, failing to free the allocation with @ref czFreeAlign may result in a memory leak.
+ */
 CZ_NONNULL_ARGS CZ_WR_ACCESS(1)
 enum CzResult czAllocAlign(
 	void* restrict* memory, size_t size, size_t alignment, size_t offset, struct CzAllocFlags flags);
 
+/**
+ * @brief Extends or trims a dynamically allocated and aligned block of memory.
+ * 
+ * Reallocates the contiguous dynamic memory allocation of size @p oldSize whose first byte is located at the memory
+ * address pointed to by @p memory. The new allocation contains @p newSize bytes of contiguous memory from the heap. The
+ * byte at the zero-based position @p offset in the new allocation is aligned to @p alignment bytes. The values of
+ * @p alignment and @p offset need not be the same as the original allocation. The memory address of the first byte of
+ * the new allocation is synchronously written to @p memory.
+ * 
+ * Let @e minSize denote the minimum of @p oldSize and @p newSize, and let @e difSize denote the positive difference of
+ * @p oldSize and @p newSize. The contents of the first @e minSize bytes of the original allocation are preserved in the
+ * first @e minSize bytes of the new allocation. If @p oldSize or @p newSize are zero, @p alignment is not a power of
+ * two, or @p offset is greater than or equal to @p size or @p alignment, failure occurs. On failure, the contents of
+ * @p memory are unchanged.
+ * 
+ * The members of @p flags can optionally specify the following behaviour.
+ * - If @p flags.zeroInitialise is set and @p oldSize is less than @p newSize, the contents of the last @e difSize bytes
+ *   of the new allocation are initialised to zero. Otherwise, the contents are initially undefined.
+ * - If @p flags.freeOnFail is set and failure occurs, the original allocation is freed. Otherwise if failure occurs,
+ *   the original allocation is unchanged.
+ * 
+ * @param[in,out] memory The memory to read the current address of the allocation from, and to write the address of the
+ *   new allocation to.
+ * @param[in] oldSize The current size of the allocation.
+ * @param[in] newSize The size of the new allocation.
+ * @param[in] alignment The alignment of the allocation.
+ * @param[in] offset The index of the aligned byte.
+ * @param[in] flags Binary flags describing additional behaviour.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ALIGNMENT @p alignment was not a power of two.
+ * @retval CZ_RESULT_BAD_OFFSET @p offset was greater than or equal to @p size or @p alignment.
+ * @retval CZ_RESULT_BAD_SIZE @p oldSize or @p newSize were zero.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * 
+ * @pre @p memory and @p *memory are nonnull.
+ * @pre @p *memory was allocated via @ref czAllocAlign or @ref czReallocAlign.
+ * 
+ * @note On success, or on failure if @p flags.freeOnFail is not set, failing to free the allocation with
+ * @ref czFreeAlign may result in a memory leak.
+ * 
+ * @warning On failure if @p flags.freeOnFail is set, any further access of the freed memory will result in undefined
+ * behaviour.
+ */
 CZ_NONNULL_ARGS CZ_RW_ACCESS(1)
 enum CzResult czReallocAlign(
 	void* restrict* memory, size_t oldSize, size_t newSize, size_t alignment, size_t offset, struct CzAllocFlags flags);
 
+/**
+ * @brief Frees a dynamically allocated and aligned block of memory.
+ * 
+ * Frees the contiguous dynamic memory allocation whose first byte is located at the memory address @p memory. If
+ * @p memory is null, nothing happens.
+ * 
+ * @param[in,out] memory The address of the allocation.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_BAD_POINTER @p memory was null.
+ * 
+ * @pre @p memory either is null or was allocated via @ref czAllocAlign or @ref czReallocAlign.
+ * 
+ * @warning On success, any further access of the freed memory will result in undefined behaviour.
+ */
 enum CzResult czFreeAlign(void* memory);
