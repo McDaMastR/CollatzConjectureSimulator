@@ -28,7 +28,8 @@
 /**
  * @brief Specifies the behaviour of allocation functions.
  * 
- * A set of flags specifying the desired behaviour of @ref czAlloc or @ref czRealloc.
+ * A set of flags specifying the desired behaviour of @ref czAlloc, @ref czRealloc, @ref czAllocAlign, or
+ * @ref czReallocAlign.
  */
 struct CzAllocFlags
 {
@@ -98,10 +99,12 @@ enum CzResult czAlloc(void* restrict* memory, size_t size, struct CzAllocFlags f
  * @param[in] flags Binary flags describing additional behaviour.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_SIZE @p oldSize or @p newSize were zero.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
  * @pre @p memory and @p *memory are nonnull.
+ * @pre @p *memory was allocated via @ref czAlloc or @ref czRealloc.
  * 
  * @note On success, or on failure if @p flags.freeOnFail is not set, failing to free the allocation with @ref czFree
  * may result in a memory leak.
@@ -123,7 +126,19 @@ enum CzResult czRealloc(void* restrict* memory, size_t oldSize, size_t newSize, 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_BAD_POINTER @p memory was null.
  * 
+ * @pre @p memory either is null or was allocated via @ref czAlloc or @ref czRealloc.
+ * 
  * @warning On success, any further access of the freed memory will result in undefined behaviour.
  */
 CZ_HOT
 enum CzResult czFree(void* memory);
+
+CZ_NONNULL_ARGS CZ_WR_ACCESS(1)
+enum CzResult czAllocAlign(
+	void* restrict* memory, size_t size, size_t alignment, size_t offset, struct CzAllocFlags flags);
+
+CZ_NONNULL_ARGS CZ_RW_ACCESS(1)
+enum CzResult czReallocAlign(
+	void* restrict* memory, size_t oldSize, size_t newSize, size_t alignment, size_t offset, struct CzAllocFlags flags);
+
+enum CzResult czFreeAlign(void* memory);

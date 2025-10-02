@@ -19,12 +19,6 @@
 #include "alloc.h"
 #include "debug.h"
 
-struct AlignedInfo
-{
-	void* start;
-	size_t size;
-};
-
 bool fisatty(FILE* stream)
 {
 #if defined(_WIN32)
@@ -32,7 +26,6 @@ bool fisatty(FILE* stream)
 #else
 	int tty = isatty(fileno(stream));
 #endif
-
 	return (bool) tty;
 }
 
@@ -58,7 +51,6 @@ enum CzEndianness get_endianness(void)
 uint32_t ceil_pow2(uint32_t x)
 {
 	CZ_ASSUME(x != 0);
-
 #if CZ_HAS_BUILTIN(stdc_bit_ceil)
 	return __builtin_stdc_bit_ceil(x);
 #elif CZ_HAS_BUILTIN(clz) && UINT32_MAX == UINT_MAX
@@ -79,7 +71,6 @@ uint32_t ceil_pow2(uint32_t x)
 uint32_t floor_pow2(uint32_t x)
 {
 	CZ_ASSUME(x != 0);
-
 #if CZ_HAS_BUILTIN(stdc_bit_floor)
 	return __builtin_stdc_bit_floor(x);
 #elif CZ_HAS_BUILTIN(clz) && UINT32_MAX == UINT_MAX
@@ -329,98 +320,6 @@ err_close_file:
 err_end_args:
 	va_end(args);
 	return false;
-}
-
-void* aligned_malloc(size_t size, size_t alignment)
-{
-	CZ_ASSUME(size != 0);
-	CZ_ASSUME((alignment & (alignment - 1)) == 0); // alignment is a power of two
-
-	void* memory;
-	struct AlignedInfo* info;
-
-#if defined(_WIN32)
-	size_t allocSize = size + sizeof(struct AlignedInfo);
-	size_t allocAlignment = maxz(alignment, alignof(struct AlignedInfo));
-	size_t offset = sizeof(struct AlignedInfo);
-
-	memory = _aligned_offset_malloc(allocSize, allocAlignment, offset);
-	if CZ_NOEXPECT (!memory) { return NULL; }
-
-	info = memory;
-#else
-	size_t allocAlignment = maxz(alignment, alignof(struct AlignedInfo));
-	size_t allocSize = size + maxz(alignment, sizeof(struct AlignedInfo));
-
-	int ires = posix_memalign(&memory, allocAlignment, allocSize);
-	if CZ_NOEXPECT (ires) { return NULL; }
-
-	info = (struct AlignedInfo*) memory + maxz(alignment, sizeof(struct AlignedInfo)) / sizeof(struct AlignedInfo) - 1;
-#endif
-
-	info->start = memory;
-	info->size = size;
-	return info + 1;
-}
-
-void* aligned_realloc(void* memory, size_t size, size_t alignment)
-{
-	CZ_ASSUME(size != 0);
-	CZ_ASSUME((alignment & (alignment - 1)) == 0); // alignment is a power of two
-
-	struct AlignedInfo* info = (struct AlignedInfo*) memory - 1;
-	void* oldMemory = info->start;
-	size_t oldSize = info->size;
-
-	void* newMemory;
-
-#if defined(_WIN32)
-	size_t allocSize = size + sizeof(struct AlignedInfo);
-	size_t allocAlignment = maxz(alignment, alignof(struct AlignedInfo));
-	size_t offset = sizeof(struct AlignedInfo);
-
-	newMemory = _aligned_offset_realloc(oldMemory, allocSize, allocAlignment, offset);
-	if CZ_NOEXPECT (!newMemory) { return NULL; }
-
-	info = newMemory;
-#else
-	size_t allocAlignment = maxz(alignment, alignof(struct AlignedInfo));
-	size_t allocSize = size + maxz(alignment, sizeof(struct AlignedInfo));
-
-	int ires = posix_memalign(&newMemory, allocAlignment, allocSize);
-	if CZ_NOEXPECT (ires) { return NULL; }
-
-	info =
-		(struct AlignedInfo*) newMemory + maxz(alignment, sizeof(struct AlignedInfo)) / sizeof(struct AlignedInfo) - 1;
-
-	void* cpyDest = info + 1;
-	void* cpySrc = memory;
-	size_t cpySize = minz(size, oldSize);
-
-	memcpy(cpyDest, cpySrc, cpySize);
-	free(oldMemory);
-#endif
-
-	info->start = newMemory;
-	info->size = size;
-	return info + 1;
-}
-
-void aligned_free(void* memory)
-{
-	struct AlignedInfo* info = (struct AlignedInfo*) memory - 1;
-
-#if defined(_WIN32)
-	_aligned_free(info->start);
-#else
-	free(info->start);
-#endif
-}
-
-size_t aligned_size(const void* memory)
-{
-	const struct AlignedInfo* info = (const struct AlignedInfo*) memory - 1;
-	return info->size;
 }
 
 #define UINT(sz) uint##sz##_t

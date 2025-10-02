@@ -68,18 +68,6 @@ bool read_text(const char* filename, const char* format, ...);
 CZ_PRINTF(2, 3) CZ_NONNULL_ARG(1, 2) CZ_NULLTERM_ARG(1) CZ_NULLTERM_ARG(2) CZ_RE_ACCESS(1) CZ_RE_ACCESS(2)
 bool write_text(const char* filename, const char* format, ...);
 
-CZ_MALLOC CZ_ALLOC_ARG(1) CZ_ALIGN_ARG(2) CZ_USE_RET
-void* aligned_malloc(size_t size, size_t alignment);
-
-CZ_NONNULL_ARGS CZ_ALLOC_ARG(2) CZ_ALIGN_ARG(3) CZ_USE_RET
-void* aligned_realloc(void* memory, size_t size, size_t alignment);
-
-CZ_NONNULL_ARGS
-void aligned_free(void* memory);
-
-CZ_PURE CZ_NONNULL_ARGS CZ_USE_RET CZ_RE_ACCESS(1)
-size_t aligned_size(const void* memory);
-
 // Unsigned integer maximum and minimum functions
 
 CZ_CONST CZ_USE_RET

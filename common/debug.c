@@ -334,6 +334,49 @@ VkBool32 debug_callback(
 	return VK_FALSE;
 }
 
+static void* aligned_malloc(size_t size, size_t alignment)
+{
+	void* memory;
+	size_t allocSize = size + sizeof(size_t);
+	size_t allocAlignment = maxz(alignment, sizeof(size_t));
+	size_t offset = sizeof(size_t) & (alignment - 1);
+	struct CzAllocFlags flags = {0};
+
+	enum CzResult res = czAllocAlign(&memory, allocSize, allocAlignment, offset, flags);
+	if CZ_NOEXPECT (res) { return NULL; }
+
+	*(size_t*) memory = size;
+	return (size_t*) memory + 1;
+}
+
+static void* aligned_realloc(void* memory, size_t size, size_t alignment)
+{
+	memory = (size_t*) memory - 1;
+	size_t oldSize = *(size_t*) memory + sizeof(size_t);
+	size_t newSize = size + sizeof(size_t);
+	size_t allocAlignment = maxz(alignment, sizeof(size_t));
+	size_t offset = sizeof(size_t) & (alignment - 1);
+	struct CzAllocFlags flags = {0};
+
+	enum CzResult res = czReallocAlign(&memory, oldSize, newSize, allocAlignment, offset, flags);
+	if CZ_NOEXPECT (res) { return NULL; }
+
+	*(size_t*) memory = size;
+	return (size_t*) memory + 1;
+}
+
+static void aligned_free(void* memory)
+{
+	memory = (size_t*) memory - 1;
+	czFreeAlign(memory);
+}
+
+static size_t aligned_size(const void* memory)
+{
+	memory = (const size_t*) memory - 1;
+	return *(const size_t*) memory;
+}
+
 static void log_allocation_callback(
 	FILE* stream,
 	double time,
