@@ -29,7 +29,13 @@
 	#error "Target must support 128-bit integers"
 #endif
 
-// Check support for optional builtins and attributes
+// Check support for optional attributes and builtins
+
+#ifdef __has_attribute
+	#define CZ_HAS_ATTRIBUTE(x) __has_attribute(x)
+#else
+	#define CZ_HAS_ATTRIBUTE(x) 0
+#endif
 
 #ifdef __has_builtin
 	#define CZ_HAS_BUILTIN(x) __has_builtin(__builtin_##x)
@@ -37,10 +43,10 @@
 	#define CZ_HAS_BUILTIN(x) 0
 #endif
 
-#ifdef __has_attribute
-	#define CZ_HAS_ATTRIBUTE(x) __has_attribute(x)
+#ifdef __has_include
+	#define CZ_HAS_INCLUDE(x) __has_include(<x>)
 #else
-	#define CZ_HAS_ATTRIBUTE(x) 0
+	#define CZ_HAS_INCLUDE(x) 0
 #endif
 
 #if CZ_HAS_BUILTIN(assume)
@@ -192,6 +198,15 @@
 	#define CZ_USE_RET
 #endif
 
+// Check support for nonstandard (in C17) extensions and features
+
+#if CZ_HAS_INCLUDE(stdcountof.h)
+	#include <stdcountof.h>
+	#define CZ_COUNTOF(a) countof(a)
+#else
+	#define CZ_COUNTOF(a) ( sizeof(a) / sizeof(*(a)) )
+#endif
+
 // Check support for nonstandard predefined macros
 
 #ifdef __FILE_NAME__
@@ -254,8 +269,6 @@
 // Helper macros
 
 #define CZ_NEWLINE() putchar('\n')
-
-#define CZ_ARRAY_SIZE(a) ( sizeof(a) / sizeof(*(a)) )
 
 #define CZ_UINT128_UPPER(x) ( (uint64_t) ((x) >> 64) )
 #define CZ_UINT128_LOWER(x) ( (uint64_t) ((x) & ~UINT64_C(0)) )

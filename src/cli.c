@@ -196,7 +196,7 @@ bool czCliParse(struct CzCli_* cli, int argc, char** argv)
 
 					callbackData.callback = option.callback;
 					callbackData.type = option.type;
-					callbackData.data = (union CliData) {0};
+					memset(&callbackData.data, 0, sizeof(callbackData.data));
 					break;
 				}
 			}
@@ -229,7 +229,7 @@ bool czCliParse(struct CzCli_* cli, int argc, char** argv)
 
 						callbackData.callback = option.callback;
 						callbackData.type = option.type;
-						callbackData.data = (union CliData) {0};
+						memset(&callbackData.data, 0, sizeof(callbackData.data));
 						break;
 					}
 				}

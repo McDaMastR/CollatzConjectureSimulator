@@ -1511,7 +1511,7 @@ bool create_buffers(struct Gpu* restrict gpu)
 		bindBufferMemoryInfos[i][1].memoryOffset = 0;
 	}
 
-	uint32_t bindInfoCount = buffersPerHeap * CZ_ARRAY_SIZE(bindBufferMemoryInfos[0]);
+	uint32_t bindInfoCount = buffersPerHeap * CZ_COUNTOF(bindBufferMemoryInfos[0]);
 	VkBindBufferMemoryInfo* bindInfos = (VkBindBufferMemoryInfo*) bindBufferMemoryInfos;
 
 	VK_CALLR(vkBindBufferMemory2, device, bindInfoCount, bindInfos);
@@ -1606,7 +1606,7 @@ bool create_descriptors(struct Gpu* restrict gpu)
 
 	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo = {0};
 	descriptorSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	descriptorSetLayoutInfo.bindingCount = CZ_ARRAY_SIZE(descriptorSetLayoutBindings);
+	descriptorSetLayoutInfo.bindingCount = CZ_COUNTOF(descriptorSetLayoutBindings);
 	descriptorSetLayoutInfo.pBindings = descriptorSetLayoutBindings;
 
 	VkDescriptorSetLayout descriptorSetLayout;
@@ -1622,7 +1622,7 @@ bool create_descriptors(struct Gpu* restrict gpu)
 	VkDescriptorPoolCreateInfo descriptorPoolInfo = {0};
 	descriptorPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	descriptorPoolInfo.maxSets = inoutsPerHeap;
-	descriptorPoolInfo.poolSizeCount = CZ_ARRAY_SIZE(descriptorPoolSizes);
+	descriptorPoolInfo.poolSizeCount = CZ_COUNTOF(descriptorPoolSizes);
 	descriptorPoolInfo.pPoolSizes = descriptorPoolSizes;
 
 	VkDescriptorPool descriptorPool;
@@ -1682,7 +1682,7 @@ bool create_descriptors(struct Gpu* restrict gpu)
 			writeDescriptorSets[j].dstSet = descriptorSets[j];
 			writeDescriptorSets[j].dstBinding = 0; // Start from this binding in the descriptor set
 			writeDescriptorSets[j].dstArrayElement = 0; // Start from this descriptor in the binding
-			writeDescriptorSets[j].descriptorCount = CZ_ARRAY_SIZE(descriptorBufferInfos[j]);
+			writeDescriptorSets[j].descriptorCount = CZ_COUNTOF(descriptorBufferInfos[j]);
 			writeDescriptorSets[j].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 			writeDescriptorSets[j].pBufferInfo = descriptorBufferInfos[j];
 		}
@@ -1819,7 +1819,7 @@ bool create_pipeline(struct Gpu* restrict gpu)
 
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {0};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = CZ_ARRAY_SIZE(descriptorSetLayouts);
+	pipelineLayoutInfo.setLayoutCount = CZ_COUNTOF(descriptorSetLayouts);
 	pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts;
 
 	VkPipelineLayout pipelineLayout;
@@ -1836,7 +1836,7 @@ bool create_pipeline(struct Gpu* restrict gpu)
 	specialisationMapEntries[0].size = sizeof(specialisationData[0]);
 
 	VkSpecializationInfo specialisationInfo;
-	specialisationInfo.mapEntryCount = CZ_ARRAY_SIZE(specialisationMapEntries);
+	specialisationInfo.mapEntryCount = CZ_COUNTOF(specialisationMapEntries);
 	specialisationInfo.pMapEntries = specialisationMapEntries;
 	specialisationInfo.dataSize = sizeof(specialisationData);
 	specialisationInfo.pData = specialisationData;
@@ -1868,9 +1868,7 @@ bool create_pipeline(struct Gpu* restrict gpu)
 	pipelineInfos[0].layout = pipelineLayout;
 
 	VkPipeline pipeline;
-	VK_CALLR(vkCreateComputePipelines,
-		device, cache, CZ_ARRAY_SIZE(pipelineInfos), pipelineInfos, allocator, &pipeline);
-
+	VK_CALLR(vkCreateComputePipelines, device, cache, CZ_COUNTOF(pipelineInfos), pipelineInfos, allocator, &pipeline);
 	if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->pipeline = pipeline;
 
@@ -3435,7 +3433,7 @@ void read_outbuffer(
 			new_high(&curValue, &bestTime, newBestTime, val0mod1off, val1mod6off, bestStartValues, bestStopTimes);
 		}
 		else {
-			for (uint32_t j = 2; j < CZ_ARRAY_SIZE(val0mod1off); j++) {
+			for (uint32_t j = 2; j < CZ_COUNTOF(val0mod1off); j++) {
 				if (val0mod1off[j - 1] || val0mod1off[j] * 2 != curValue) { continue; }
 
 				val0mod1off[j - 1] = curValue;
@@ -3453,7 +3451,7 @@ void read_outbuffer(
 			val1mod6off[0] = curValue;
 		}
 		else {
-			for (uint32_t j = 1; j < CZ_ARRAY_SIZE(val0mod1off); j++) {
+			for (uint32_t j = 1; j < CZ_COUNTOF(val0mod1off); j++) {
 				if (mappedOutBuffer[i] + j != bestTime) { continue; }
 
 				if (!val0mod1off[j])                      { val0mod1off[j] = curValue; }
@@ -3470,7 +3468,7 @@ void read_outbuffer(
 			new_high(&curValue, &bestTime, newBestTime, val0mod1off, val1mod6off, bestStartValues, bestStopTimes);
 		}
 		else {
-			for (uint32_t j = 3; j < CZ_ARRAY_SIZE(val0mod1off); j++) {
+			for (uint32_t j = 3; j < CZ_COUNTOF(val0mod1off); j++) {
 				if (val0mod1off[j - 2] || val0mod1off[j] * 4 != curValue) { continue; }
 
 				val0mod1off[j - 2] = curValue;
@@ -3481,7 +3479,7 @@ void read_outbuffer(
 		curValue++; // curValue % 8 == 5
 
 		if (curValue % 6 == 1) {
-			for (uint32_t j = 0; j < CZ_ARRAY_SIZE(val0mod1off); j++) {
+			for (uint32_t j = 0; j < CZ_COUNTOF(val0mod1off); j++) {
 				if (val1mod6off[j] || val0mod1off[j] + 1 != curValue) { continue; }
 
 				val1mod6off[j] = curValue;
@@ -3497,7 +3495,7 @@ void read_outbuffer(
 			new_high(&curValue, &bestTime, newBestTime, val0mod1off, val1mod6off, bestStartValues, bestStopTimes);
 		}
 		else {
-			for (uint32_t j = 2; j < CZ_ARRAY_SIZE(val0mod1off); j++) {
+			for (uint32_t j = 2; j < CZ_COUNTOF(val0mod1off); j++) {
 				if (val0mod1off[j - 1] || val0mod1off[j] * 2 != curValue) { continue; }
 
 				val0mod1off[j - 1] = curValue;
@@ -3515,7 +3513,7 @@ void read_outbuffer(
 			val1mod6off[0] = curValue;
 		}
 		else {
-			for (uint32_t j = 1; j < CZ_ARRAY_SIZE(val0mod1off); j++) {
+			for (uint32_t j = 1; j < CZ_COUNTOF(val0mod1off); j++) {
 				if (mappedOutBuffer[i] + j != bestTime) { continue; }
 
 				if (!val0mod1off[j])                      { val0mod1off[j] = curValue; }
@@ -3532,7 +3530,7 @@ void read_outbuffer(
 			new_high(&curValue, &bestTime, newBestTime, val0mod1off, val1mod6off, bestStartValues, bestStopTimes);
 		}
 		else {
-			for (uint32_t j = 4; j < CZ_ARRAY_SIZE(val0mod1off); j++) {
+			for (uint32_t j = 4; j < CZ_COUNTOF(val0mod1off); j++) {
 				if (val0mod1off[j - 3] || val0mod1off[j] * 8 != curValue) { continue; }
 
 				val0mod1off[j - 3] = curValue;
@@ -3542,7 +3540,7 @@ void read_outbuffer(
 
 		curValue++; // curValue % 8 == 1
 
-		for (uint32_t j = 0; j < CZ_ARRAY_SIZE(val0mod1off); j++) {
+		for (uint32_t j = 0; j < CZ_COUNTOF(val0mod1off); j++) {
 			if (!val1mod6off[j] || val1mod6off[j] * 4 != curValue * 3 + 1) { continue; }
 
 			StopTime newBestTime = (StopTime) (bestTime + 3 - j);
