@@ -40,6 +40,7 @@ static void realloc_failure(void* ptr, size_t size)
 	log_error(stderr, "realloc failed with ptr 0x%016" PRIxPTR ", size %zu (%.3fms)", (uintptr_t) ptr, size, t);
 }
 
+#if defined(_WIN32)
 CZ_COLD
 static void recalloc_failure(void* ptr, size_t count, size_t size)
 {
@@ -78,7 +79,9 @@ static void aligned_offset_recalloc_failure(void* ptr, size_t count, size_t size
 		"ptr 0x%016" PRIxPTR ", count %zu, size %zu, alignment %zu, offset %zu (%.3fms)",
 		(uintptr_t) ptr, count, size, alignment, offset, t);
 }
+#endif
 
+#if defined(__APPLE__) || defined(__unix__)
 CZ_COLD
 static void posix_memalign_failure(void** ptr, size_t alignment, size_t size)
 {
@@ -87,6 +90,7 @@ static void posix_memalign_failure(void** ptr, size_t alignment, size_t size)
 		stderr, "posix_memalign failed with ptr 0x%016" PRIxPTR ", alignment %zu, size %zu (%.3fms)",
 		(uintptr_t) ptr, alignment, size, t);
 }
+#endif
 
 enum CzResult czAlloc(void* restrict* restrict memory, size_t size, struct CzAllocFlags flags)
 {
@@ -117,9 +121,13 @@ enum CzResult czRealloc(void* restrict* restrict memory, size_t oldSize, size_t 
 	CZ_ASSUME(*memory != NULL);
 	enum CzResult ret = CZ_RESULT_INTERNAL_ERROR;
 
-	if CZ_NOEXPECT (!oldSize || !newSize) {
+	if CZ_NOEXPECT (!oldSize) {
 		ret = CZ_RESULT_BAD_SIZE;
 		goto err_free_memory;
+	}
+	if CZ_NOEXPECT (!newSize) {
+		czFree(*memory);
+		return CZ_RESULT_SUCCESS;
 	}
 
 	void* p;
@@ -170,9 +178,11 @@ enum CzResult czAllocAlign(
 {
 	if CZ_NOEXPECT (!size)                                     { return CZ_RESULT_BAD_SIZE; }
 	if CZ_NOEXPECT (!alignment || alignment & (alignment - 1)) { return CZ_RESULT_BAD_ALIGNMENT; }
-	if CZ_NOEXPECT (offset >= size || offset >= alignment)     { return CZ_RESULT_BAD_OFFSET; }
+	if CZ_NOEXPECT (offset >= size)                            { return CZ_RESULT_BAD_OFFSET; }
 
 	void* p;
+	offset &= alignment - 1; // Ensure offset < alignment
+
 #if defined(_WIN32)
 	if (flags.zeroInitialise) {
 		// No _aligned_offset_calloc function ???
@@ -192,7 +202,8 @@ enum CzResult czAllocAlign(
 #elif defined(__APPLE__) || defined(__UNIX__)
 	void* raw;
 	size_t allocAlignment = maxz(alignment, sizeof(void*));
-	size_t allocSize = size + allocAlignment + (offset && alignment <= sizeof(void*) ? sizeof(void*) : 0);
+	size_t extraSize = offset && alignment <= sizeof(void*) ? sizeof(void*) : 0;
+	size_t allocSize = size + allocAlignment + extraSize;
 
 	int res = posix_memalign(&raw, allocAlignment, allocSize);
 	if CZ_NOEXPECT (res) {
@@ -200,13 +211,33 @@ enum CzResult czAllocAlign(
 		return CZ_RESULT_NO_MEMORY;
 	}
 
-	p = (char*) raw + allocAlignment - offset + (offset && alignment <= sizeof(void*) ? sizeof(void*) : 0);
+	p = (char*) raw + allocAlignment - offset + extraSize;
 	*((void**) ((uintptr_t) p & ~(sizeof(void*) - 1)) - 1) = raw;
 	if (flags.zeroInitialise) {
 		memset(p, 0, size);
 	}
 #else
-	// TODO
+	size_t allocAlignment = maxz(alignment, sizeof(void*));
+	size_t allocSize = size + allocAlignment * 2;
+	void* raw;
+
+	if (flags.zeroInitialise) {
+		raw = calloc(allocSize, sizeof(char));
+		if CZ_NOEXPECT (!raw) {
+			calloc_failure(allocSize, sizeof(char));
+			return CZ_RESULT_NO_MEMORY;
+		}
+	}
+	else {
+		raw = malloc(allocSize);
+		if CZ_NOEXPECT (!raw) {
+			malloc_failure(allocSize);
+			return CZ_RESULT_NO_MEMORY;
+		}
+	}
+
+	p = (char*) ((uintptr_t) raw & ~(allocAlignment - 1)) + allocAlignment * 2 - offset;
+	*((void**) ((uintptr_t) p & ~(sizeof(void*) - 1)) - 1) = raw;
 #endif
 
 	*memory = p;
@@ -224,20 +255,26 @@ enum CzResult czReallocAlign(
 	CZ_ASSUME(*memory != NULL);
 	enum CzResult ret = CZ_RESULT_INTERNAL_ERROR;
 
-	if CZ_NOEXPECT (!oldSize || !newSize) {
+	if CZ_NOEXPECT (!oldSize) {
 		ret = CZ_RESULT_BAD_SIZE;
 		goto err_free_memory;
+	}
+	if CZ_NOEXPECT (!newSize) {
+		czFreeAlign(*memory);
+		return CZ_RESULT_SUCCESS;
 	}
 	if CZ_NOEXPECT (!alignment || alignment & (alignment - 1)) {
 		ret = CZ_RESULT_BAD_ALIGNMENT;
 		goto err_free_memory;
 	}
-	if CZ_NOEXPECT (offset >= newSize || offset >= alignment) {
+	if CZ_NOEXPECT (offset >= newSize) {
 		ret = CZ_RESULT_BAD_OFFSET;
 		goto err_free_memory;
 	}
 
 	void* p;
+	offset &= alignment - 1; // Ensure offset < alignment
+
 #if defined(_WIN32)
 	if (flags.zeroInitialise) {
 		p = _aligned_offset_recalloc(*memory, newSize, sizeof(char), alignment, offset);
@@ -255,8 +292,7 @@ enum CzResult czReallocAlign(
 			goto err_free_memory;
 		}
 	}
-	goto out_set_memory;
-#endif
+#else
 	struct CzAllocFlags allocFlags = {0};
 	enum CzResult res = czAllocAlign(&p, newSize, alignment, offset, allocFlags);
 	if CZ_NOEXPECT (res) {
@@ -272,8 +308,8 @@ enum CzResult czReallocAlign(
 		size_t addedSize = newSize - oldSize;
 		memset(addedBytes, 0, addedSize);
 	}
+#endif
 
-out_set_memory:
 	*memory = p;
 	return CZ_RESULT_SUCCESS;
 
@@ -289,11 +325,8 @@ enum CzResult czFreeAlign(void* restrict memory)
 	if CZ_NOEXPECT (!memory) { return CZ_RESULT_BAD_POINTER; }
 #if defined(_WIN32)
 	_aligned_free(memory);
-#elif defined(__APPLE__) || defined(__UNIX__)
-	memory = *((void**) ((uintptr_t) memory & ~(sizeof(void*) - 1)) - 1);
-	free(memory);
 #else
-	// TODO
+	free(*((void**) ((uintptr_t) memory & ~(sizeof(void*) - 1)) - 1));
 #endif
 	return CZ_RESULT_SUCCESS;
 }

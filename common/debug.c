@@ -339,7 +339,7 @@ static void* aligned_malloc(size_t size, size_t alignment)
 	void* memory;
 	size_t allocSize = size + sizeof(size_t);
 	size_t allocAlignment = maxz(alignment, sizeof(size_t));
-	size_t offset = sizeof(size_t) & (alignment - 1);
+	size_t offset = sizeof(size_t);
 	struct CzAllocFlags flags = {0};
 
 	enum CzResult res = czAllocAlign(&memory, allocSize, allocAlignment, offset, flags);
@@ -355,7 +355,7 @@ static void* aligned_realloc(void* memory, size_t size, size_t alignment)
 	size_t oldSize = *(size_t*) memory + sizeof(size_t);
 	size_t newSize = size + sizeof(size_t);
 	size_t allocAlignment = maxz(alignment, sizeof(size_t));
-	size_t offset = sizeof(size_t) & (alignment - 1);
+	size_t offset = sizeof(size_t);
 	struct CzAllocFlags flags = {0};
 
 	enum CzResult res = czReallocAlign(&memory, oldSize, newSize, allocAlignment, offset, flags);
