@@ -61,17 +61,18 @@ The general environment and system requirements that must be met for Collatz Con
 correctly are listed below. The full requirements of the GPU are given in
 [device_requirements.md](device_requirements.md).
 
-- [C](https://en.wikipedia.org/wiki/C_(programming_language))17.
-  - `_Atomic` (Optional C11 feature)
-  - `__int128` (GNU C extension)
-- [CMake](https://cmake.org) 3.24.
-- [glslang](https://github.com/KhronosGroup/glslang).
-- [pthreads](https://en.wikipedia.org/wiki/Pthreads).
-- [SPIR-V Tools](https://github.com/KhronosGroup/SPIRV-Tools).
+- [C](https://en.wikipedia.org/wiki/C_(programming_language))17
+  - Atomic operations via the `stdatomic.h` header  (Optional C11 feature)
+  - 128-bit integers via the `__int128` type (GNU C extension)
+  - Conditional expressions with omitted operands (GNU C extension)
+- [CMake](https://cmake.org) 3.24
+- [glslang](https://github.com/KhronosGroup/glslang)
+- [pthreads](https://en.wikipedia.org/wiki/Pthreads)
+- [SPIR-V Tools](https://github.com/KhronosGroup/SPIRV-Tools)
   - `spirv-link`
   - `spirv-opt`
   - `spirv-dis`
-- [Vulkan](https://www.vulkan.org) 1.1.
+- [Vulkan](https://www.vulkan.org) 1.1
   - `VK_KHR_copy_commands2`
   - `VK_KHR_maintenance6`
   - `VK_KHR_map_memory2`
