@@ -50,18 +50,18 @@
 #endif
 
 #if CZ_HAS_BUILTIN(assume)
-	#define CZ_ASSUME(x) __builtin_assume (x)
+	#define CZ_ASSUME(x) __builtin_assume(x)
 #elif CZ_HAS_ATTRIBUTE(assume)
-	#define CZ_ASSUME(x) __attribute__ (( assume (x) ))
+	#define CZ_ASSUME(x) __attribute__ (( assume(x) ))
 #elif defined(_MSC_VER)
-	#define CZ_ASSUME(x) __assume (x)
+	#define CZ_ASSUME(x) __assume(x)
 #else
 	#define CZ_ASSUME(x)
 #endif
 
 #if CZ_HAS_BUILTIN(expect)
-	#define CZ_EXPECT(x)   ( __builtin_expect ((x) ? 1 : 0, 1) )
-	#define CZ_NOEXPECT(x) ( __builtin_expect ((x) ? 1 : 0, 0) )
+	#define CZ_EXPECT(x)   ( __builtin_expect((x) ? 1 : 0, 1) )
+	#define CZ_NOEXPECT(x) ( __builtin_expect((x) ? 1 : 0, 0) )
 #else
 	#define CZ_EXPECT(x)   (x)
 	#define CZ_NOEXPECT(x) (x)
@@ -120,18 +120,18 @@
 #endif
 
 #if CZ_HAS_ATTRIBUTE(malloc) && !defined(__clang__)
-	#define CZ_FREE(func, arg) __attribute__ (( malloc (func, arg) ))
+	#define CZ_FREE(func, arg) __attribute__ (( malloc(func, arg) ))
 #else
 	#define CZ_FREE(func, arg)
 #endif
 
 #if CZ_HAS_ATTRIBUTE(format)
 	#ifdef __clang__
-		#define CZ_PRINTF(fmt, args) __attribute__ (( format (printf, fmt, args) ))
-		#define CZ_SCANF(fmt, args)  __attribute__ (( format (scanf, fmt, args) ))
+		#define CZ_PRINTF(fmt, args) __attribute__ (( format(printf, fmt, args) ))
+		#define CZ_SCANF(fmt, args)  __attribute__ (( format(scanf, fmt, args) ))
 	#else
-		#define CZ_PRINTF(fmt, args) __attribute__ (( format (gnu_printf, fmt, args) ))
-		#define CZ_SCANF(fmt, args)  __attribute__ (( format (gnu_scanf, fmt, args) ))
+		#define CZ_PRINTF(fmt, args) __attribute__ (( format(gnu_printf, fmt, args) ))
+		#define CZ_SCANF(fmt, args)  __attribute__ (( format(gnu_scanf, fmt, args) ))
 	#endif
 #else
 	#define CZ_PRINTF(fmt, args)
@@ -139,7 +139,7 @@
 #endif
 
 #if CZ_HAS_ATTRIBUTE(nonnull)
-	#define CZ_NONNULL_ARG(...) __attribute__ (( nonnull (__VA_ARGS__) ))
+	#define CZ_NONNULL_ARG(...) __attribute__ (( nonnull(__VA_ARGS__) ))
 	#define CZ_NONNULL_ARGS     __attribute__ (( nonnull ))
 #else
 	#define CZ_NONNULL_ARG(...)
@@ -147,38 +147,38 @@
 #endif
 
 #if CZ_HAS_ATTRIBUTE(nonnull_if_nonzero)
-	#define CZ_NONNULL_NONZERO_ARG(ptr, arg)         __attribute__ (( nonnull_if_nonzero (ptr, arg) ))
-	#define CZ_NONNULL_NONZERO_ARGS(ptr, arg1, arg2) __attribute__ (( nonnull_if_nonzero (ptr, arg1, arg2) ))
+	#define CZ_NONNULL_NONZERO_ARG(ptr, arg)         __attribute__ (( nonnull_if_nonzero(ptr, arg) ))
+	#define CZ_NONNULL_NONZERO_ARGS(ptr, arg1, arg2) __attribute__ (( nonnull_if_nonzero(ptr, arg1, arg2) ))
 #else
 	#define CZ_NONNULL_NONZERO_ARG(ptr, arg)
 	#define CZ_NONNULL_NONZERO_ARGS(ptr, arg1, arg2)
 #endif
 
 #if CZ_HAS_ATTRIBUTE(alloc_size)
-	#define CZ_ALLOC_ARG(arg)         __attribute__ (( alloc_size (arg) ))
-	#define CZ_ALLOC_ARGS(arg1, arg2) __attribute__ (( alloc_size (arg1, arg2) ))
+	#define CZ_ALLOC_ARG(arg)         __attribute__ (( alloc_size(arg) ))
+	#define CZ_ALLOC_ARGS(arg1, arg2) __attribute__ (( alloc_size(arg1, arg2) ))
 #else
 	#define CZ_ALLOC_ARG(arg)
 	#define CZ_ALLOC_ARGS(arg1, arg2)
 #endif
 
 #if CZ_HAS_ATTRIBUTE(alloc_align)
-	#define CZ_ALIGN_ARG(arg) __attribute__ (( alloc_align (arg) ))
+	#define CZ_ALIGN_ARG(arg) __attribute__ (( alloc_align(arg) ))
 #else
 	#define CZ_ALIGN_ARG(arg)
 #endif
 
 #if CZ_HAS_ATTRIBUTE(null_terminated_string_arg)
-	#define CZ_NULLTERM_ARG(arg) __attribute__ (( null_terminated_string_arg (arg) ))
+	#define CZ_NULLTERM_ARG(arg) __attribute__ (( null_terminated_string_arg(arg) ))
 #else
 	#define CZ_NULLTERM_ARG(arg)
 #endif
 
 #if CZ_HAS_ATTRIBUTE(access)
-	#define CZ_NO_ACCESS(arg) __attribute__ (( access (none, arg) ))
-	#define CZ_RE_ACCESS(arg) __attribute__ (( access (read_only, arg) ))
-	#define CZ_WR_ACCESS(arg) __attribute__ (( access (write_only, arg) ))
-	#define CZ_RW_ACCESS(arg) __attribute__ (( access (read_write, arg) ))
+	#define CZ_NO_ACCESS(arg) __attribute__ (( access(none, arg) ))
+	#define CZ_RE_ACCESS(arg) __attribute__ (( access(read_only, arg) ))
+	#define CZ_WR_ACCESS(arg) __attribute__ (( access(write_only, arg) ))
+	#define CZ_RW_ACCESS(arg) __attribute__ (( access(read_write, arg) ))
 #else
 	#define CZ_NO_ACCESS(arg)
 	#define CZ_RE_ACCESS(arg)
@@ -196,6 +196,12 @@
 	#define CZ_USE_RET __attribute__ (( warn_unused_result ))
 #else
 	#define CZ_USE_RET
+#endif
+
+#if CZ_HAS_ATTRIBUTE(counted_by)
+	#define CZ_COUNTBY(x) __attribute__ (( counted_by(x) ))
+#else
+	#define CZ_COUNTBY(x)
 #endif
 
 // Check support for nonstandard (in C17) extensions and features

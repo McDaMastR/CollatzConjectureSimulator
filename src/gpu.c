@@ -3133,8 +3133,6 @@ bool destroy_gpu(struct Gpu* restrict gpu)
 {
 	VkInstance instance = volkGetLoadedInstance();
 
-	DyRecord gpuRecord = gpu->allocRecord;
-
 	const VkAllocationCallbacks* allocator = gpu->allocator;
 	const VkBuffer* hostVisibleBuffers = gpu->hostVisibleBuffers;
 	const VkBuffer* deviceLocalBuffers = gpu->deviceLocalBuffers;
@@ -3144,67 +3142,68 @@ bool destroy_gpu(struct Gpu* restrict gpu)
 
 	VkDevice device = gpu->device;
 
-	VkDescriptorSetLayout descriptorSetLayout = gpu->descriptorSetLayout;
-	VkDescriptorPool descriptorPool = gpu->descriptorPool;
-
-	VkShaderModule shaderModule = gpu->shaderModule;
-	VkPipelineCache pipelineCache = gpu->pipelineCache;
-	VkPipelineLayout pipelineLayout = gpu->pipelineLayout;
-	VkPipeline pipeline = gpu->pipeline;
-
-	VkCommandPool initialCmdPool = gpu->initialCmdPool;
-	VkCommandPool computeCmdPool = gpu->computeCmdPool;
-	VkCommandPool transferCmdPool = gpu->transferCmdPool;
-
-	VkQueryPool queryPool = gpu->queryPool;
-
 	uint32_t inoutsPerHeap = gpu->inoutsPerHeap;
 	uint32_t buffersPerHeap = gpu->buffersPerHeap;
 
 	VkResult vkres;
 
 	if (device) {
-		VK_CALL(vkDestroyShaderModule, device, shaderModule, allocator);
-		VK_CALL(vkDestroyPipelineCache, device, pipelineCache, allocator);
-		VK_CALL(vkDestroyPipelineLayout, device, pipelineLayout, allocator);
-		VK_CALL(vkDestroyDescriptorSetLayout, device, descriptorSetLayout, allocator);
+		VK_CALL(vkDestroyShaderModule, device, gpu->shaderModule, allocator);
+		VK_CALL(vkDestroyPipelineCache, device, gpu->pipelineCache, allocator);
+		VK_CALL(vkDestroyPipelineLayout, device, gpu->pipelineLayout, allocator);
+		VK_CALL(vkDestroyDescriptorSetLayout, device, gpu->descriptorSetLayout, allocator);
 
 		// Make sure no command buffers are in the pending state
 		VK_CALLR(vkDeviceWaitIdle, device);
 
-		for (uint32_t i = 0; i < inoutsPerHeap; i++) {
-			VK_CALL(vkDestroySemaphore, device, semaphores[i], allocator);
+		if (semaphores) {
+			for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+				VK_CALL(vkDestroySemaphore, device, semaphores[i], allocator);
+			}
 		}
 
-		VK_CALL(vkDestroyCommandPool, device, initialCmdPool, allocator);
-		VK_CALL(vkDestroyCommandPool, device, computeCmdPool, allocator);
-		VK_CALL(vkDestroyCommandPool, device, transferCmdPool, allocator);
+		VK_CALL(vkDestroyCommandPool, device, gpu->initialCmdPool, allocator);
+		VK_CALL(vkDestroyCommandPool, device, gpu->computeCmdPool, allocator);
+		VK_CALL(vkDestroyCommandPool, device, gpu->transferCmdPool, allocator);
 
-		VK_CALL(vkDestroyPipeline, device, pipeline, allocator);
-		VK_CALL(vkDestroyQueryPool, device, queryPool, allocator);
-		VK_CALL(vkDestroyDescriptorPool, device, descriptorPool, allocator);
+		VK_CALL(vkDestroyPipeline, device, gpu->pipeline, allocator);
+		VK_CALL(vkDestroyQueryPool, device, gpu->queryPool, allocator);
+		VK_CALL(vkDestroyDescriptorPool, device, gpu->descriptorPool, allocator);
 
-		for (uint32_t i = 0; i < buffersPerHeap; i++) {
-			VK_CALL(vkDestroyBuffer, device, hostVisibleBuffers[i], allocator);
-			VK_CALL(vkDestroyBuffer, device, deviceLocalBuffers[i], allocator);
-
-			VK_CALL(vkFreeMemory, device, hostVisibleMemories[i], allocator);
-			VK_CALL(vkFreeMemory, device, deviceLocalMemories[i], allocator);
+		if (hostVisibleBuffers) {
+			for (uint32_t i = 0; i < buffersPerHeap; i++) {
+				VK_CALL(vkDestroyBuffer, device, hostVisibleBuffers[i], allocator);
+			}
+		}
+		if (deviceLocalBuffers) {
+			for (uint32_t i = 0; i < buffersPerHeap; i++) {
+				VK_CALL(vkDestroyBuffer, device, deviceLocalBuffers[i], allocator);
+			}
+		}
+		if (hostVisibleMemories) {
+			for (uint32_t i = 0; i < buffersPerHeap; i++) {
+				VK_CALL(vkFreeMemory, device, hostVisibleMemories[i], allocator);
+			}
+		}
+		if (deviceLocalMemories) {
+			for (uint32_t i = 0; i < buffersPerHeap; i++) {
+				VK_CALL(vkFreeMemory, device, deviceLocalMemories[i], allocator);
+			}
 		}
 
 		VK_CALL(vkDestroyDevice, device, allocator);
 	}
 
 	if (instance) {
-#ifndef NDEBUG
-		VK_CALL(vkDestroyDebugUtilsMessengerEXT, instance, gpu->debugMessenger, allocator);
-#endif
+		if (vkDestroyDebugUtilsMessengerEXT) {
+			VK_CALL(vkDestroyDebugUtilsMessengerEXT, instance, gpu->debugMessenger, allocator);
+		}
+
 		VK_CALL(vkDestroyInstance, instance, allocator);
 	}
 
 	volkFinalize();
-
-	dyrecord_destroy(gpuRecord);
+	dyrecord_destroy(gpu->allocRecord);
 	return true;
 }
 

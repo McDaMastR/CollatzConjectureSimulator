@@ -191,7 +191,7 @@ bool log_error(FILE* stream, const char* format, ...)
 	va_list args;
 	va_start(args, format);
 
-	bool bres = log_colour(stream, format, CZ_SGR_FG_RED, CZ_SGR_RESET, "Error: ", "\n", args);
+	bool bres = log_colour(stream, format, CZ_SGR_BOLD CZ_SGR_FG_RED, CZ_SGR_RESET, "Error: ", "\n", args);
 
 	va_end(args);
 	return bres;

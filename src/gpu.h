@@ -136,31 +136,22 @@ struct Position
 
 CZ_NONNULL_ARGS
 bool create_instance(struct Gpu* restrict gpu);
-
 CZ_NONNULL_ARGS
 bool select_device(struct Gpu* restrict gpu);
-
 CZ_NONNULL_ARGS
 bool create_device(struct Gpu* restrict gpu);
-
 CZ_NONNULL_ARGS
 bool manage_memory(struct Gpu* restrict gpu);
-
 CZ_NONNULL_ARGS
 bool create_buffers(struct Gpu* restrict gpu);
-
 CZ_NONNULL_ARGS
 bool create_descriptors(struct Gpu* restrict gpu);
-
 CZ_NONNULL_ARGS
 bool create_pipeline(struct Gpu* restrict gpu);
-
 CZ_NONNULL_ARGS
 bool create_commands(struct Gpu* restrict gpu);
-
 CZ_NONNULL_ARGS
 bool submit_commands(struct Gpu* restrict gpu);
-
 CZ_NONNULL_ARGS
 bool destroy_gpu(struct Gpu* restrict gpu);
 

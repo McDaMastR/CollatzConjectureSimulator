@@ -179,9 +179,10 @@ target_precompile_headers(cltzCommon
 		<wctype.h>
 
 		# Required libraries' headers
+		<pthread.h>
 		<volk.h>
 		<vulkan/vk_enum_string_helper.h>
-		<pthread.h>
+		<whereami.h>
 
 		# OS-specific headers
 		$<${USING_APPLE}:${INCLUDE_HEADERS_APPLE}>

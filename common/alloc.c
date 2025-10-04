@@ -139,9 +139,16 @@ enum CzResult czRealloc(void* restrict* restrict memory, size_t oldSize, size_t 
 			ret = CZ_RESULT_NO_MEMORY;
 			goto err_free_memory;
 		}
-		goto out_set_memory;
 	}
-#endif
+	else {
+		p = realloc(*memory, newSize);
+		if CZ_NOEXPECT (!p) {
+			realloc_failure(*memory, newSize);
+			ret = CZ_RESULT_NO_MEMORY;
+			goto err_free_memory;
+		}
+	}
+#else
 	p = realloc(*memory, newSize);
 	if CZ_NOEXPECT (!p) {
 		realloc_failure(*memory, newSize);
@@ -154,8 +161,8 @@ enum CzResult czRealloc(void* restrict* restrict memory, size_t oldSize, size_t 
 		size_t addedSize = newSize - oldSize;
 		memset(addedBytes, 0, addedSize);
 	}
+#endif
 
-out_set_memory:
 	*memory = p;
 	return CZ_RESULT_SUCCESS;
 
@@ -199,7 +206,7 @@ enum CzResult czAllocAlign(
 			return CZ_RESULT_NO_MEMORY;
 		}
 	}
-#elif defined(__APPLE__) || defined(__UNIX__)
+#elif defined(__APPLE__) || defined(__unix__)
 	void* raw;
 	size_t allocAlignment = maxz(alignment, sizeof(void*));
 	size_t extraSize = offset && alignment <= sizeof(void*) ? sizeof(void*) : 0;
