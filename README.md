@@ -226,6 +226,18 @@ licences. The below table lists each such work with its corresponding licence or
 | Vulkan-Utility-Libraries | Apache-2.0      |
 | whereami                 | MIT, WTFPLv2    |
 
+Each listed work is provided in the [lib](lib) directory as a git submodule. The licence or licences of each work can be
+obtained by either navigating to the online repository of the work or cloning the respective submodule. The former can
+be achieved by using the respective submodule URL given in the [.gitmodules](.gitmodules) file. The latter can be
+achieved by cloning this repository with the `--recurse-submodules` option.
+
+Additionally, the generic contents of each listed licence can be obtained by following the respective embedded hyperlink
+in the below list, given in alphabetical order.
+
+- [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0)
+- [MIT](https://opensource.org/license/mit)
+- [WTFPLv2](https://wtfpl2.com)
+
 ### Artificial Intelligence
 
 The author of Collatz Conjecture Simulator is not a lawyer, but strongly believes the usage of GPLv3-licensed works in
