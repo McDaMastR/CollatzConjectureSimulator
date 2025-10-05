@@ -69,6 +69,7 @@ struct CzAllocFlags
  * @param[in] flags Binary flags describing additional behaviour.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
@@ -170,6 +171,7 @@ enum CzResult czFree(void* memory);
  * @param[in] flags Binary flags describing additional behaviour.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ALIGNMENT @p alignment was not a power of two.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was greater than or equal to @p size.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
