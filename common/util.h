@@ -19,12 +19,8 @@
 
 #include "def.h"
 
-CZ_PURE CZ_USE_RET
-bool fisatty(FILE* stream);
-
 CZ_NONNULL_RET CZ_USE_RET
 char* stime(void);
-
 CZ_USE_RET
 double program_time(void);
 

@@ -15,11 +15,30 @@
  * Simulator. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include "def.h"
-#include "debug.h"
-
-#include "alloc.h"
 #include "file.h"
-#include "util.h"
+
+enum CzResult czStreamIsTerminal(FILE* restrict stream, bool* restrict istty)
+{
+#if defined(_WIN32)
+	int fd = _fileno(stream);
+	if (fd == -2) {
+		*istty = false;
+		return CZ_RESULT_SUCCESS;
+	}
+
+	intptr_t handle = _get_osfhandle(fd);
+	if (handle == -2) {
+		*istty = false;
+		return CZ_RESULT_SUCCESS;
+	}
+
+	DWORD mode;
+	*istty = (bool) GetConsoleMode((HANDLE) handle, &mode);
+#elif defined(__APPLE__) || defined(__unix__)
+	int fd = fileno(stream);
+	*istty = (bool) isatty(fd);
+#else
+	*istty = false; // Just default to false if can't tell
+#endif
+	return CZ_RESULT_SUCCESS;
+}

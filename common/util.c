@@ -19,16 +19,6 @@
 #include "alloc.h"
 #include "debug.h"
 
-bool fisatty(FILE* stream)
-{
-#if defined(_WIN32)
-	int tty = _isatty(_fileno(stream));
-#else
-	int tty = isatty(fileno(stream));
-#endif
-	return (bool) tty;
-}
-
 char* stime(void)
 {
 	time_t t = time(NULL);

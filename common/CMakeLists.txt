@@ -194,11 +194,13 @@ target_sources(cltzCommon
 	PRIVATE
 		alloc.c
 		debug.c
+		file.c
 		util.c
 	PUBLIC FILE_SET HEADERS FILES
 		alloc.h
 		common.h
 		debug.h
 		def.h
+		file.h
 		util.h
 )

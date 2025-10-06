@@ -17,6 +17,7 @@
 
 #include "debug.h"
 #include "alloc.h"
+#include "file.h"
 #include "util.h"
 
 struct CzVulkanCallbackData czgCallbackData = {.func = "", .file = "", .line = 0};
@@ -92,7 +93,9 @@ static bool log_colour(
 	const char* postfix,
 	va_list args)
 {
-	bool tty = fisatty(stream);
+	bool tty;
+	enum CzResult czres = czStreamIsTerminal(stream, &tty);
+	if CZ_NOEXPECT (czres) { return false; }
 
 	/* 
 	 * Different methods of printing are used depending on whether the stream is a TTY, according to their benchmarked
@@ -117,7 +120,7 @@ static bool log_colour(
 		size_t size = lenSgr1 + lenPre + lenFmt + lenPost + lenSgr2 + 1;
 		struct CzAllocFlags flags = {0};
 
-		enum CzResult czres = czAlloc((void* restrict*) &newFmt, size, flags);
+		czres = czAlloc((void* restrict*) &newFmt, size, flags);
 		if CZ_NOEXPECT (czres) { return false; }
 
 		strcpy(newFmt, sgr1);
@@ -143,7 +146,7 @@ static bool log_colour(
 		size_t size = lenPre + lenFmt + lenPost + 1;
 		struct CzAllocFlags flags = {0};
 
-		enum CzResult czres = czAlloc((void* restrict*) &newFmt, size, flags);
+		czres = czAlloc((void* restrict*) &newFmt, size, flags);
 		if CZ_NOEXPECT (czres) { return false; }
 
 		strcpy(newFmt, prefix);

@@ -265,6 +265,9 @@
 #define CZ_KIB_SIZE ( UINT64_C(1) << 10 )
 #define CZ_MIB_SIZE ( UINT64_C(1) << 20 )
 #define CZ_GIB_SIZE ( UINT64_C(1) << 30 )
+#define CZ_TIB_SIZE ( UINT64_C(1) << 40 )
+#define CZ_PIB_SIZE ( UINT64_C(1) << 50 )
+#define CZ_EIB_SIZE ( UINT64_C(1) << 60 )
 
 #define CZ_MS_PER_CLOCK ( 1000.0 / CLOCKS_PER_SEC )
 
