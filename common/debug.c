@@ -21,17 +21,17 @@
 
 struct CzVulkanCallbackData czgCallbackData = {.func = "", .file = "", .line = 0};
 
-static const char* g_allocLogPath = NULL;
-static const char* g_debugLogPath = NULL;
-static enum CzColourLevel g_colourLevel = CZ_COLOUR_LEVEL_NONE;
+static const char* gAllocLogPath = NULL;
+static const char* gDebugLogPath = NULL;
+static enum CzColourLevel gColourLevel = CZ_COLOUR_LEVEL_NONE;
 
-static uint64_t g_debugCallbackCount = 0;
-static uint64_t g_allocCount = 0;
-static uint64_t g_reallocCount = 0;
-static uint64_t g_freeCount = 0;
-static uint64_t g_internalAllocCount = 0;
-static uint64_t g_internalFreeCount = 0;
-static size_t g_totalAllocSize = 0;
+static uint64_t gDebugCallbackCount = 0;
+static uint64_t gAllocCount = 0;
+static uint64_t gReallocCount = 0;
+static uint64_t gFreeCount = 0;
+static uint64_t gInternalAllocCount = 0;
+static uint64_t gInternalFreeCount = 0;
+static size_t gTotalAllocSize = 0;
 
 bool init_debug_logfile(const char* filename)
 {
@@ -48,8 +48,7 @@ bool init_debug_logfile(const char* filename)
 		sCurrTime, programTime);
 
 	if CZ_NOEXPECT (!bres) { return false; }
-
-	g_debugLogPath = filename;
+	gDebugLogPath = filename;
 	return true;
 }
 
@@ -68,14 +67,13 @@ bool init_alloc_logfile(const char* filename)
 		sCurrTime, programTime);
 
 	if CZ_NOEXPECT (!bres) { return false; }
-
-	g_allocLogPath = filename;
+	gAllocLogPath = filename;
 	return true;
 }
 
 bool init_colour_level(enum CzColourLevel level)
 {
-	g_colourLevel = level;
+	gColourLevel = level;
 	return true;
 }
 
@@ -94,7 +92,6 @@ static bool log_colour(
 	const char* postfix,
 	va_list args)
 {
-	enum CzColourLevel colourLevel = g_colourLevel;
 	bool tty = fisatty(stream);
 
 	/* 
@@ -102,14 +99,14 @@ static bool log_colour(
 	 * speed in each case.
 	 */
 
-	if (colourLevel == CZ_COLOUR_LEVEL_ALL && !tty) {
+	if (gColourLevel == CZ_COLOUR_LEVEL_ALL && !tty) {
 		fputs(sgr1, stream);
 		fputs(prefix, stream);
 		vfprintf(stream, fmt, args);
 		fputs(postfix, stream);
 		fputs(sgr2, stream);
 	}
-	else if ((colourLevel == CZ_COLOUR_LEVEL_ALL || colourLevel == CZ_COLOUR_LEVEL_TTY) && tty) {
+	else if ((gColourLevel == CZ_COLOUR_LEVEL_ALL || gColourLevel == CZ_COLOUR_LEVEL_TTY) && tty) {
 		size_t lenSgr1 = strlen(sgr1);
 		size_t lenSgr2 = strlen(sgr2);
 		size_t lenPre = strlen(prefix);
@@ -307,28 +304,27 @@ VkBool32 debug_callback(
 	double time = program_time();
 	struct CzVulkanCallbackData data = *(struct CzVulkanCallbackData*) pUserData;
 
-	g_debugCallbackCount++;
+	gDebugCallbackCount++;
 
 	if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
 		log_debug_callback(
-			stderr, time, messageSeverity, messageTypes, pCallbackData, g_debugCallbackCount, data.func, data.file,
+			stderr, time, messageSeverity, messageTypes, pCallbackData, gDebugCallbackCount, data.func, data.file,
 			data.line);
 	}
 	else if (messageTypes & ~(VkDebugUtilsMessageTypeFlagsEXT) VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) {
 		log_debug_callback(
-			stdout, time, messageSeverity, messageTypes, pCallbackData, g_debugCallbackCount, data.func, data.file,
+			stdout, time, messageSeverity, messageTypes, pCallbackData, gDebugCallbackCount, data.func, data.file,
 			data.line);
 	}
 
-	const char* path = g_debugLogPath;
+	const char* path = gDebugLogPath;
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
 	if CZ_NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return VK_FALSE; }
 
 	log_debug_callback(
-		file, time, messageSeverity, messageTypes, pCallbackData, g_debugCallbackCount, data.func, data.file,
-		data.line);
+		file, time, messageSeverity, messageTypes, pCallbackData, gDebugCallbackCount, data.func, data.file, data.line);
 
 	fclose(file);
 	return VK_FALSE;
@@ -418,17 +414,17 @@ void* allocation_callback(void* pUserData, size_t size, size_t alignment, VkSyst
 
 	void* memory = size ? aligned_malloc(size, alignment) : NULL;
 
-	g_allocCount++;
-	g_totalAllocSize += size;
+	gAllocCount++;
+	gTotalAllocSize += size;
 
-	const char* path = g_allocLogPath;
+	const char* path = gAllocLogPath;
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
 	if CZ_NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return memory; }
 
 	log_allocation_callback(
-		file, time, g_allocCount, data.func, data.file, data.line, g_totalAllocSize, size, alignment, allocationScope,
+		file, time, gAllocCount, data.func, data.file, data.line, gTotalAllocSize, size, alignment, allocationScope,
 		memory);
 
 	fclose(file);
@@ -495,18 +491,18 @@ void* reallocation_callback(
 		memory = aligned_malloc(size, alignment);
 	}
 
-	g_reallocCount++;
-	g_totalAllocSize -= originalSize;
-	g_totalAllocSize += size;
+	gReallocCount++;
+	gTotalAllocSize -= originalSize;
+	gTotalAllocSize += size;
 
-	const char* path = g_allocLogPath;
+	const char* path = gAllocLogPath;
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
 	if CZ_NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return memory; }
 
 	log_reallocation_callback(
-		file, time, g_reallocCount, data.func, data.file, data.line, g_totalAllocSize, originalSize, size, alignment,
+		file, time, gReallocCount, data.func, data.file, data.line, gTotalAllocSize, originalSize, size, alignment,
 		allocationScope, pOriginal, memory);
 
 	fclose(file);
@@ -554,16 +550,16 @@ void free_callback(void* pUserData, void* pMemory)
 		aligned_free(pMemory);
 	}
 
-	g_freeCount++;
-	g_totalAllocSize -= size;
+	gFreeCount++;
+	gTotalAllocSize -= size;
 
-	const char* path = g_allocLogPath;
+	const char* path = gAllocLogPath;
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
 	if CZ_NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return; }
 
-	log_free_callback(file, time, g_freeCount, data.func, data.file, data.line, g_totalAllocSize, size, pMemory);
+	log_free_callback(file, time, gFreeCount, data.func, data.file, data.line, gTotalAllocSize, size, pMemory);
 	fclose(file);
 }
 
@@ -601,16 +597,16 @@ void internal_allocation_callback(
 	double time = program_time();
 	struct CzVulkanCallbackData data = *(struct CzVulkanCallbackData*) pUserData;
 
-	g_internalAllocCount++;
+	gInternalAllocCount++;
 
-	const char* path = g_allocLogPath;
+	const char* path = gAllocLogPath;
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
 	if CZ_NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return; }
 
 	log_internal_allocation_callback(
-		file, time, g_internalAllocCount, data.func, data.file, data.line, size, allocationType, allocationScope);
+		file, time, gInternalAllocCount, data.func, data.file, data.line, size, allocationType, allocationScope);
 
 	fclose(file);
 }
@@ -649,16 +645,16 @@ void internal_free_callback(
 	double time = program_time();
 	struct CzVulkanCallbackData data = *(struct CzVulkanCallbackData*) pUserData;
 
-	g_internalFreeCount++;
+	gInternalFreeCount++;
 
-	const char* path = g_allocLogPath;
+	const char* path = gAllocLogPath;
 	const char* mode = "a";
 
 	FILE* file = fopen(path, mode);
 	if CZ_NOEXPECT (!file) { FOPEN_FAILURE(file, path, mode); return; }
 
 	log_internal_free_callback(
-		file, time, g_internalFreeCount, data.func, data.file, data.line, size, allocationType, allocationScope);
+		file, time, gInternalFreeCount, data.func, data.file, data.line, size, allocationType, allocationScope);
 
 	fclose(file);
 }
