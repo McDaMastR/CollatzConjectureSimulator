@@ -221,6 +221,7 @@ licences. The below table lists each such work with its corresponding licence or
 
 | Work                     | Licences        |
 | ------------------------ | --------------- |
+| cwalk                    | MIT             |
 | volk                     | MIT             |
 | Vulkan-Headers           | Apache-2.0, MIT |
 | Vulkan-Utility-Libraries | Apache-2.0      |

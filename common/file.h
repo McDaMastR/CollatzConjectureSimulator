@@ -52,7 +52,7 @@ struct CzFileFlags
  * @pre @p istty is nonnull.
  * @pre @p stream and @p istty do not overlap in memory.
  */
-CZ_NONNULL_ARGS CZ_WR_ACCESS(2)
+CZ_REPRODUCIBLE CZ_NONNULL_ARGS CZ_WR_ACCESS(2)
 enum CzResult czStreamIsTerminal(FILE* stream, bool* istty);
 
 /**

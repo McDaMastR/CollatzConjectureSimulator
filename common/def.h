@@ -82,7 +82,7 @@
 #if CZ_HAS_ATTRIBUTE(const)
 	#define CZ_CONST __attribute__ (( const ))
 #elif defined(_MSC_VER)
-	#define CZ_PURE __declspec(noalias)
+	#define CZ_CONST __declspec(noalias)
 #else
 	#define CZ_CONST
 #endif
@@ -98,7 +98,7 @@
 #if CZ_HAS_ATTRIBUTE(reproducible)
 	#define CZ_REPRODUCIBLE __attribute__ (( reproducible ))
 #elif defined(_MSC_VER)
-	#define CZ_PURE __declspec(noalias)
+	#define CZ_REPRODUCIBLE __declspec(noalias)
 #else
 	#define CZ_REPRODUCIBLE
 #endif
@@ -106,7 +106,7 @@
 #if CZ_HAS_ATTRIBUTE(unsequenced)
 	#define CZ_UNSEQUENCED __attribute__ (( unsequenced ))
 #elif defined(_MSC_VER)
-	#define CZ_PURE __declspec(noalias)
+	#define CZ_UNSEQUENCED __declspec(noalias)
 #else
 	#define CZ_UNSEQUENCED
 #endif

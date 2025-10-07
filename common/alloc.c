@@ -275,7 +275,7 @@ enum CzResult czAllocAlign(
 #elif defined(__APPLE__) || defined(__unix__)
 	void* p;
 	size_t allocAlignment = maxz(alignment, sizeof(void*));
-	size_t extraSize = offset && alignment <= sizeof(void*) ? sizeof(void*) : 0;
+	size_t extraSize = (offset && alignment <= sizeof(void*)) ? sizeof(void*) : 0;
 	size_t allocSize = size + allocAlignment + extraSize;
 
 	ret = posix_memalign_wrap(&p, allocAlignment, allocSize);
