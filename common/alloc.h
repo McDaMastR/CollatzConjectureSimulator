@@ -138,7 +138,7 @@ enum CzResult czRealloc(void* restrict* memory, size_t oldSize, size_t newSize, 
  * @param[in,out] memory The address of the allocation.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_BAD_POINTER @p memory was null.
+ * @retval CZ_RESULT_BAD_ADDRESS @p memory was null.
  * 
  * @pre @p memory either is null or was allocated via @ref czAlloc or @ref czRealloc.
  * 
@@ -249,7 +249,7 @@ enum CzResult czReallocAlign(
  * @param[in,out] memory The address of the allocation.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_BAD_POINTER @p memory was null.
+ * @retval CZ_RESULT_BAD_ADDRESS @p memory was null.
  * 
  * @pre @p memory either is null or was allocated via @ref czAllocAlign or @ref czReallocAlign.
  * 

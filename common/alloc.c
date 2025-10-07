@@ -245,7 +245,7 @@ err_free_memory:
 enum CzResult czFree(void* restrict memory)
 {
 	if CZ_NOEXPECT (!memory)
-		return CZ_RESULT_BAD_POINTER;
+		return CZ_RESULT_BAD_ADDRESS;
 
 	free(memory);
 	return CZ_RESULT_SUCCESS;
@@ -373,7 +373,7 @@ err_free_memory:
 enum CzResult czFreeAlign(void* restrict memory)
 {
 	if CZ_NOEXPECT (!memory)
-		return CZ_RESULT_BAD_POINTER;
+		return CZ_RESULT_BAD_ADDRESS;
 
 #if defined(_WIN32)
 	_aligned_free(memory);
