@@ -12,8 +12,12 @@ FetchContent_Declare(VulkanHeaders
 add_subdirectory(Vulkan-Utility-Libraries EXCLUDE_FROM_ALL)
 add_subdirectory(volk)
 
+# cwalk
+add_subdirectory(cwalk)
+add_library(cwalk::cwalk ALIAS cwalk)
+
 # Where Am I?
-add_library(whereami OBJECT)
+add_library(whereami STATIC)
 add_library(wai::wai ALIAS whereami)
 
 set_target_properties(whereami PROPERTIES

@@ -1,4 +1,5 @@
 add_library(cltzCommon OBJECT)
+add_library(cltz::common ALIAS cltzCommon)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -14,11 +15,12 @@ set(COMPILE_WARNINGS_CLANG
 	-Weverything
 
 	# Warnings OFF
-	-Wno-c++-compat                      -Wno-c2y-extensions
-	-Wno-covered-switch-default          -Wno-declaration-after-statement
-	-Wno-gnu-conditional-omitted-operand -Wno-implicit-int-float-conversion
-	-Wno-missing-field-initializers      -Wno-padded
-	-Wno-switch-enum                     -Wno-unsafe-buffer-usage
+	-Wno-bad-function-cast             -Wno-c++-compat
+	-Wno-c2y-extensions                -Wno-covered-switch-default
+	-Wno-declaration-after-statement   -Wno-gnu-conditional-omitted-operand
+	-Wno-implicit-int-float-conversion -Wno-missing-field-initializers
+	-Wno-padded                        -Wno-switch-enum
+	-Wno-unsafe-buffer-usage
 )
 
 set(COMPILE_WARNINGS_GNU
@@ -113,6 +115,9 @@ target_compile_definitions(cltzCommon
 
 		$<$<NOT:$<CONFIG:DEBUG>>:NDEBUG=1>
 		$<$<AND:${USING_EXCESS_WARNINGS},${USING_MINGW}>:__MINGW_MSVC_COMPAT_WARNINGS=1>
+
+		$<${USING_APPLE}:_DARWIN_USE_64_BIT_INODE=1>
+		$<${USING_UNIX}:_FILE_OFFSET_BITS=64;_TIME_BITS=64>
 		$<${USING_WIN32}:_CRT_SECURE_NO_WARNINGS=1>
 )
 
@@ -136,6 +141,7 @@ target_compile_options(cltzCommon
 target_link_libraries(cltzCommon
 	PUBLIC
 		# Required libraries
+		cwalk::cwalk
 		Threads::Threads
 		volk::volk
 		Vulkan::UtilityHeaders
@@ -179,6 +185,7 @@ target_precompile_headers(cltzCommon
 		<wctype.h>
 
 		# Required libraries' headers
+		<cwalk.h>
 		<pthread.h>
 		<volk.h>
 		<vulkan/vk_enum_string_helper.h>

@@ -12,8 +12,8 @@ set_target_properties(cltzExe PROPERTIES
 
 target_link_libraries(cltzExe
 	PRIVATE
-		cltzCommon
-		cltzDynamic
+		cltz::common
+		cltz::dynamic
 )
 
 target_sources(cltzExe
