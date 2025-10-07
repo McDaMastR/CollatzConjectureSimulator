@@ -1758,11 +1758,14 @@ bool create_pipeline(struct Gpu* restrict gpu)
 	}
 
 	size_t shaderSize;
-	bool bres = file_size(shaderName, &shaderSize);
-	if CZ_NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
+	struct CzFileFlags shaderFileFlags = {0};
+	shaderFileFlags.relativeToExe = true;
 
-	if CZ_NOEXPECT (!shaderSize) {
-		log_error(stderr, "Selected shader '%s' not found", shaderName);
+	enum CzResult czres = czFileSize(shaderName, &shaderSize, shaderFileFlags);
+	if CZ_NOEXPECT (czres) {
+		if (czres == CZ_RESULT_NO_FILE) {
+			log_error(stderr, "Selected shader '%s' not found", shaderName);
+		}
 		dyrecord_destroy(localRecord);
 		return false;
 	}
@@ -1770,15 +1773,18 @@ bool create_pipeline(struct Gpu* restrict gpu)
 	uint32_t* shaderCode = dyrecord_malloc(localRecord, shaderSize);
 	if CZ_NOEXPECT (!shaderCode) { dyrecord_destroy(localRecord); return false; }
 
-	bres = read_file(shaderName, shaderCode, shaderSize);
+	bool bres = read_file(shaderName, shaderCode, shaderSize);
 	if CZ_NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 
 	size_t cacheSize;
-	bres = file_size(CZ_PIPELINE_CACHE_NAME, &cacheSize);
-	if CZ_NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
+	struct CzFileFlags cacheFileFlags = {0};
+	cacheFileFlags.relativeToExe = true;
+
+	czres = czFileSize(CZ_PIPELINE_CACHE_NAME, &cacheSize, cacheFileFlags);
+	if CZ_NOEXPECT (czres && czres != CZ_RESULT_NO_FILE) { dyrecord_destroy(localRecord); return false; }
 
 	void* cacheData = NULL;
-	if (cacheSize) {
+	if (czres == CZ_RESULT_SUCCESS) {
 		cacheData = dyrecord_malloc(localRecord, cacheSize);
 		if CZ_NOEXPECT (!cacheData) { dyrecord_destroy(localRecord); return false; }
 
@@ -2529,16 +2535,19 @@ bool submit_commands(struct Gpu* restrict gpu)
 	bres = dyrecord_add(localRecord, bestStopTimes, dyarray_destroy_stub);
 	if CZ_NOEXPECT (!bres) { dyarray_destroy(bestStopTimes); dyrecord_destroy(localRecord); return false; }
 
-	// Check if progress file exists
-	size_t fileSize;
-	bres = file_size(CZ_PROGRESS_FILE_NAME, &fileSize);
-	if CZ_NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
-
+	// Use progress file, if it exists
 	struct Position position = {0};
 	position.val0mod1off[0] = 1;
 	position.curStartValue = 3;
 
-	if (!czgConfig.restart && fileSize) {
+	size_t fileSize;
+	struct CzFileFlags fileFlags = {0};
+	fileFlags.relativeToExe = true;
+
+	enum CzResult czres = czFileSize(CZ_PROGRESS_FILE_NAME, &fileSize, fileFlags);
+	if CZ_NOEXPECT (czres && czres != CZ_RESULT_NO_FILE) { dyrecord_destroy(localRecord); return false; }
+
+	if (!czgConfig.restart && czres == CZ_RESULT_SUCCESS) {
 		uint64_t val0mod1off0Upper, val0mod1off0Lower;
 		uint64_t val0mod1off1Upper, val0mod1off1Lower;
 		uint64_t val0mod1off2Upper, val0mod1off2Lower;

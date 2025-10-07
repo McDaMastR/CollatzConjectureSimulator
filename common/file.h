@@ -30,8 +30,7 @@
  */
 struct CzFileFlags
 {
-	bool relativeToExecutable : 1;
-	bool followSymbolicLinks : 1;
+	bool relativeToExe : 1;
 };
 
 /**
@@ -48,6 +47,49 @@ struct CzFileFlags
  * @param[out] istty The memory to write the result to.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * 
+ * @pre @p stream is nonnull.
+ * @pre @p istty is nonnull.
+ * @pre @p stream and @p istty do not overlap in memory.
  */
 CZ_NONNULL_ARGS CZ_WR_ACCESS(2)
 enum CzResult czStreamIsTerminal(FILE* stream, bool* istty);
+
+/**
+ * @brief Obtains the size of a file.
+ * 
+ * Determines the size of the file located at the filepath @p path and synchronously writes the file size to @p size.
+ * The file size is measured in bytes. If the filepath style of @p path is not POSIX or Windows style, or is unsupported
+ * by the platform, failure occurs. If @p path is an invalid filepath or locates a nonexistent or invalid resource,
+ * failure occurs. If @p path locates a symbolic link, the link is followed. If @p path locates any other non-regular
+ * file resource, such as a pipe or socket, the behaviour is platform dependent. On failure, the contents of @p size are
+ * unchanged.
+ * 
+ * The members of @p flags can optionally specify the following behaviour.
+ * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
+ *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
+ *   working directory of the program.
+ * 
+ * Thread-safety is guaranteed if for any concurrent invocations, the @p path arguments all locate distinct system
+ * resources and the @p size arguments are all nonoverlapping with respect to one another. If multiple @p path arguments
+ * locate the same resource, such as the same file or directory, the behaviour is undefined. If multiple @p size
+ * arguments overlap in memory, the contents of the overlapping memory are undefined.
+ * 
+ * @param[in] path The path to the file.
+ * @param[out] size The memory to write the size to.
+ * @param[in] flags Binary flags describing additional behaviour.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_PATH @p path was an invalid filepath.
+ * @retval CZ_RESULT_NO_FILE The file does not exist.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * 
+ * @pre @p path is nonnull and null-terminated.
+ * @pre @p size is nonnull.
+ * @pre @p path and @p size do not overlap in memory.
+ */
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1) CZ_RE_ACCESS(1) CZ_WR_ACCESS(2)
+enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flags);

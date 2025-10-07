@@ -177,31 +177,6 @@ err_free_data:
 	return false;
 }
 
-bool file_size(const char* filename, size_t* size)
-{
-	size_t filesize = 0;
-	FILE* file = fopen(filename, "rb");
-	if (!file) { goto out_write_size; }
-
-	long offset = 0;
-	int ires = fseek(file, offset, SEEK_END);
-	if CZ_NOEXPECT (ires) { goto err_close_file; }
-
-	long lres = ftell(file);
-	if CZ_NOEXPECT (lres == -1) { goto err_close_file; }
-
-	filesize = (size_t) lres;
-	fclose(file);
-
-out_write_size:
-	*size = filesize;
-	return true;
-
-err_close_file:
-	fclose(file);
-	return false;
-}
-
 bool read_file(const char* filename, void* data, size_t size)
 {
 	const char* mode = "rb";
