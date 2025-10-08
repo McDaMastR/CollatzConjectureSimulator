@@ -222,7 +222,7 @@ enum CzResult czStreamIsTerminal(FILE* restrict stream, bool* restrict istty)
 
 #if defined(_WIN32)
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
-static enum CzResult file_size_win(const char* restrict path, size_t* restrict size)
+static enum CzResult file_size_win32(const char* restrict path, size_t* restrict size)
 {
 	UINT codePage = CP_UTF8;
 	DWORD flags = MB_ERR_INVALID_CHARS;
@@ -264,7 +264,7 @@ out_free_wcstr:
 }
 #elif defined(__APPLE__) || defined(__unix__)
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
-static enum CzResult file_size_unix(const char* restrict path, size_t* restrict size)
+static enum CzResult file_size_posix(const char* restrict path, size_t* restrict size)
 {
 	struct stat st;
 	enum CzResult ret = stat_wrap(path, &st);
@@ -316,7 +316,6 @@ enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struc
 
 		size_t allocSize = (size_t) len + strlen(path);
 		struct CzAllocFlags allocFlags = {0};
-
 		ret = czAlloc((void**) &fullPath, allocSize, allocFlags);
 		if CZ_NOEXPECT (ret)
 			return ret;
@@ -332,9 +331,9 @@ enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struc
 	}
 
 #if defined(_WIN32)
-	ret = file_size_win(realPath, size);
+	ret = file_size_win32(realPath, size);
 #elif defined(__APPLE__) || defined(__unix__)
-	ret = file_size_unix(realPath, size);
+	ret = file_size_posix(realPath, size);
 #else
 	ret = file_size_other(realPath, size);
 #endif
