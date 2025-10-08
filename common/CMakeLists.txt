@@ -1,6 +1,8 @@
 add_library(cltzCommon OBJECT)
 add_library(cltz::common ALIAS cltzCommon)
 
+include(CheckIncludeFile)
+
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
@@ -9,6 +11,9 @@ option(CLTZ_STATIC_ANALYSIS "Whether to perform static analysis on the program d
 
 set(USING_EXCESS_WARNINGS "$<BOOL:${CLTZ_EXCESS_WARNINGS}>")
 set(USING_STATIC_ANALYSIS "$<BOOL:${CLTZ_STATIC_ANALYSIS}>")
+
+check_include_file(aio.h HAVE_AIO_H)
+set(USING_AIO_H "$<BOOL:${HAVE_AIO_H}>")
 
 set(COMPILE_WARNINGS_CLANG
 	# Warnings ON
@@ -68,14 +73,27 @@ set(COMPILE_WARNINGS_MSVC
 	/wd4820 # Don't care about struct padding
 )
 
+set(MACRO_DEFINITIONS_APPLE
+	_DARWIN_C_SOURCE=1
+	_DARWIN_USE_64_BIT_INODE=1
+)
+
+set(MACRO_DEFINITIONS_MINGW
+	$<${USING_EXCESS_WARNINGS}:__MINGW_MSVC_COMPAT_WARNINGS=1>
+)
+
+set(MACRO_DEFINITIONS_UNIX
+	_FILE_OFFSET_BITS=64
+	_TIME_BITS=64
+)
+
+set(MACRO_DEFINITIONS_WIN32
+	_CRT_SECURE_NO_WARNINGS=1
+)
+
 set(LINK_LIBRARIES_APPLE
 	$<LINK_LIBRARY:FRAMEWORK,CoreFoundation>
 	$<LINK_LIBRARY:FRAMEWORK,IOKit>
-)
-
-set(LINK_LIBRARIES_WIN32
-	Pathcch
-	Shlwapi
 )
 
 set(INCLUDE_HEADERS_APPLE
@@ -84,15 +102,16 @@ set(INCLUDE_HEADERS_APPLE
 )
 
 set(INCLUDE_HEADERS_UNIX
-	<sys/stat.h$<ANGLE-R>
+	<fcntl.h$<ANGLE-R>
 	<unistd.h$<ANGLE-R>
+	<sys/mman.h$<ANGLE-R>
+	<sys/stat.h$<ANGLE-R>
+	<sys/types.h$<ANGLE-R>
 )
 
 set(INCLUDE_HEADERS_WIN32
 	<intrin.h$<ANGLE-R>
 	<io.h$<ANGLE-R>
-	<pathcch.h$<ANGLE-R>
-	<shlwapi.h$<ANGLE-R>
 	<windows.h$<ANGLE-R>
 )
 
@@ -114,11 +133,10 @@ target_compile_definitions(cltzCommon
 		CZ_VERSION_PATCH=${CollatzConjectureSimulator_VERSION_PATCH}
 
 		$<$<NOT:$<CONFIG:DEBUG>>:NDEBUG=1>
-		$<$<AND:${USING_EXCESS_WARNINGS},${USING_MINGW}>:__MINGW_MSVC_COMPAT_WARNINGS=1>
-
-		$<${USING_APPLE}:_DARWIN_USE_64_BIT_INODE=1>
-		$<${USING_UNIX}:_FILE_OFFSET_BITS=64;_TIME_BITS=64>
-		$<${USING_WIN32}:_CRT_SECURE_NO_WARNINGS=1>
+		$<${USING_APPLE}:${MACRO_DEFINITIONS_APPLE}>
+		$<${USING_MINGW}:${MACRO_DEFINITIONS_MINGW}>
+		$<${USING_UNIX}:${MACRO_DEFINITIONS_UNIX}>
+		$<${USING_WIN32}:${MACRO_DEFINITIONS_WIN32}>
 )
 
 target_compile_options(cltzCommon
@@ -149,7 +167,6 @@ target_link_libraries(cltzCommon
 
 		# OS-specific libraries
 		$<${USING_APPLE}:${LINK_LIBRARIES_APPLE}>
-		$<${USING_WIN32}:${LINK_LIBRARIES_WIN32}> # TODO Check this links on Windows
 )
 
 target_precompile_headers(cltzCommon
@@ -190,6 +207,9 @@ target_precompile_headers(cltzCommon
 		<volk.h>
 		<vulkan/vk_enum_string_helper.h>
 		<whereami.h>
+
+		# Optional headers
+		$<${USING_AIO_H}:<aio.h$<ANGLE-R>>
 
 		# OS-specific headers
 		$<${USING_APPLE}:${INCLUDE_HEADERS_APPLE}>
