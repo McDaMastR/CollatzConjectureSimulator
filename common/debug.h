@@ -125,7 +125,7 @@ void VKAPI_CALL internal_free_callback(
 #define VKINIT_FAILURE(res)  log_vkinit_failure(__LINE__, (VkResult) (res))
 #define VULKAN_FAILURE(func) log_vulkan_failure(__LINE__, vkres, #func)
 
-#ifdef NDEBUG
+#if defined(NDEBUG)
 	#define VK_CALL(vkfunc, ...)   \
 		do {                       \
 			(vkfunc)(__VA_ARGS__); \

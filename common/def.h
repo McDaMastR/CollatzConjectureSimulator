@@ -19,11 +19,11 @@
 
 // Check support for necessary features
 
-#ifdef __STDC_NO_ATOMICS__
+#if defined(__STDC_NO_ATOMICS__)
 	#error "Compiler must support C11 atomic types and operations"
 #endif
 
-#ifndef __SIZEOF_INT128__
+#if !defined(__SIZEOF_INT128__)
 	#error "Compiler must support GNU C 128-bit integer extension"
 #elif __SIZEOF_INT128__ != 16
 	#error "Target must support 128-bit integers"
@@ -31,19 +31,19 @@
 
 // Check support for optional attributes and builtins
 
-#ifdef __has_attribute
+#if defined(__has_attribute)
 	#define CZ_HAS_ATTRIBUTE(x) __has_attribute(x)
 #else
 	#define CZ_HAS_ATTRIBUTE(x) 0
 #endif
 
-#ifdef __has_builtin
+#if defined(__has_builtin)
 	#define CZ_HAS_BUILTIN(x) __has_builtin(__builtin_##x)
 #else
 	#define CZ_HAS_BUILTIN(x) 0
 #endif
 
-#ifdef __has_include
+#if defined(__has_include)
 	#define CZ_HAS_INCLUDE(x) __has_include(<x>)
 #else
 	#define CZ_HAS_INCLUDE(x) 0
@@ -126,7 +126,7 @@
 #endif
 
 #if CZ_HAS_ATTRIBUTE(format)
-	#ifdef __clang__
+	#if defined(__clang__)
 		#define CZ_PRINTF(fmt, args) __attribute__ (( format(printf, fmt, args) ))
 		#define CZ_SCANF(fmt, args)  __attribute__ (( format(scanf, fmt, args) ))
 	#else
@@ -207,7 +207,6 @@
 // Check support for nonstandard (in C17) extensions and features
 
 #if CZ_HAS_INCLUDE(stdcountof.h)
-	#include <stdcountof.h>
 	#define CZ_COUNTOF(a) countof(a)
 #else
 	#define CZ_COUNTOF(a) ( sizeof(a) / sizeof(*(a)) )
@@ -215,7 +214,7 @@
 
 // Check support for nonstandard predefined macros
 
-#ifdef __FILE_NAME__
+#if defined(__FILE_NAME__)
 	#define CZ_FILENAME __FILE_NAME__
 #else
 	#define CZ_FILENAME __FILE__

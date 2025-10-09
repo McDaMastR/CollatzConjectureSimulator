@@ -12,8 +12,11 @@ option(CLTZ_STATIC_ANALYSIS "Whether to perform static analysis on the program d
 set(USING_EXCESS_WARNINGS "$<BOOL:${CLTZ_EXCESS_WARNINGS}>")
 set(USING_STATIC_ANALYSIS "$<BOOL:${CLTZ_STATIC_ANALYSIS}>")
 
-check_include_file(aio.h HAVE_AIO_H)
-set(USING_AIO_H "$<BOOL:${HAVE_AIO_H}>")
+check_include_file(aio.h        HAVE_AIO_H)
+check_include_file(stdcountof.h HAVE_STDCOUNTOF_H)
+
+set(USING_AIO_H        "$<BOOL:${HAVE_AIO_H}>")
+set(USING_STDCOUNTOF_H "$<BOOL:${HAVE_STDCOUNTOF_H}>")
 
 set(COMPILE_WARNINGS_CLANG
 	# Warnings ON
@@ -210,6 +213,7 @@ target_precompile_headers(cltzCommon
 
 		# Optional headers
 		$<${USING_AIO_H}:<aio.h$<ANGLE-R>>
+		$<${USING_STDCOUNTOF_H}:<stdcountof.h$<ANGLE-R>>
 
 		# OS-specific headers
 		$<${USING_APPLE}:${INCLUDE_HEADERS_APPLE}>
