@@ -168,7 +168,9 @@ bool czCliParse(struct CzCli_* cli, int argc, char** argv)
 	size_t optionCount = dyarray_size(options);
 	void* config = cli->config;
 
-	struct CliCallbackData callbackData = {0};
+	struct CliCallbackData callbackData;
+	memset(&callbackData, 0, sizeof(callbackData)); // To fully zero initialise union member
+
 	enum CzCliDatatype argType = CZ_CLI_DATATYPE_NONE;
 	const char* optionName = NULL;
 

@@ -177,32 +177,6 @@ err_free_data:
 	return false;
 }
 
-bool read_file(const char* filename, void* data, size_t size)
-{
-	const char* mode = "rb";
-	FILE* file = fopen(filename, mode);
-	if CZ_NOEXPECT (!file) {
-		FOPEN_FAILURE(file, filename, mode);
-		return false;
-	}
-
-	size_t objSize = sizeof(char);
-	size_t objCount = size;
-
-	size_t sres = fread(data, objSize, objCount, file);
-	if CZ_NOEXPECT (sres != size) {
-		FREAD_FAILURE(sres, data, objSize, objCount, file);
-		goto err_close_file;
-	}
-
-	fclose(file);
-	return true;
-
-err_close_file:
-	fclose(file);
-	return false;
-}
-
 bool write_file(const char* filename, const void* data, size_t size)
 {
 	const char* mode = "wb";

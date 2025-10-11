@@ -28,7 +28,7 @@ set(COMPILE_WARNINGS_CLANG
 	-Wno-declaration-after-statement   -Wno-gnu-conditional-omitted-operand
 	-Wno-implicit-int-float-conversion -Wno-missing-field-initializers
 	-Wno-padded                        -Wno-switch-enum
-	-Wno-unsafe-buffer-usage
+	-Wno-unsafe-buffer-usage           -Wno-unused-function
 )
 
 set(COMPILE_WARNINGS_GNU
@@ -52,18 +52,19 @@ set(COMPILE_WARNINGS_GNU
 	-Wmissing-variable-declarations -Wnested-externs
 	-Wnull-dereference              -Wold-style-definition
 	-Wopenacc-parallelism           -Wpacked
-	-Wredundant-decls               -Wshadow
-	-Wshift-overflow=2              -Wstack-protector
-	-Wstrict-overflow=5             -Wstrict-prototypes
-	-Wstringop-overflow=4           -Wswitch-default
-	-Wsync-nand                     -Wtrampolines
-	-Wtrivial-auto-var-init         -Wundef
-	-Wunsafe-loop-optimizations     -Wunused-const-variable=2
-	-Wunused-macros                 -Wuse-after-free=3
-	-Wvector-operation-performance  -Wwrite-strings
+	-Wpointer-arith                 -Wredundant-decls
+	-Wshadow                        -Wshift-overflow=2
+	-Wstack-protector               -Wstrict-overflow=5
+	-Wstrict-prototypes             -Wstringop-overflow=4
+	-Wswitch-default                -Wsync-nand
+	-Wtrampolines                   -Wtrivial-auto-var-init
+	-Wundef                         -Wunsafe-loop-optimizations
+	-Wunused-const-variable=2       -Wunused-macros
+	-Wuse-after-free=3              -Wvector-operation-performance
+	-Wwrite-strings
 
 	# Warnings OFF
-	-Wno-missing-field-initializers
+	-Wno-missing-field-initializers -Wno-unused-function
 )
 
 set(COMPILE_WARNINGS_MSVC
@@ -109,7 +110,9 @@ set(INCLUDE_HEADERS_UNIX
 	<unistd.h$<ANGLE-R>
 	<sys/mman.h$<ANGLE-R>
 	<sys/stat.h$<ANGLE-R>
+	<sys/syscall.h$<ANGLE-R>
 	<sys/types.h$<ANGLE-R>
+	<sys/uio.h$<ANGLE-R>
 )
 
 set(INCLUDE_HEADERS_WIN32

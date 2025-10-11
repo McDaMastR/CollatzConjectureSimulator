@@ -1773,8 +1773,9 @@ bool create_pipeline(struct Gpu* restrict gpu)
 	uint32_t* shaderCode = dyrecord_malloc(localRecord, shaderSize);
 	if CZ_NOEXPECT (!shaderCode) { dyrecord_destroy(localRecord); return false; }
 
-	bool bres = read_file(shaderName, shaderCode, shaderSize);
-	if CZ_NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
+	size_t shaderOffset = 0;
+	czres = czReadFile(shaderName, shaderCode, shaderSize, shaderOffset, shaderFileFlags);
+	if CZ_NOEXPECT (czres) { dyrecord_destroy(localRecord); return false; }
 
 	size_t cacheSize;
 	struct CzFileFlags cacheFileFlags = {0};
@@ -1788,8 +1789,9 @@ bool create_pipeline(struct Gpu* restrict gpu)
 		cacheData = dyrecord_malloc(localRecord, cacheSize);
 		if CZ_NOEXPECT (!cacheData) { dyrecord_destroy(localRecord); return false; }
 
-		bres = read_file(CZ_PIPELINE_CACHE_NAME, cacheData, cacheSize);
-		if CZ_NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
+		size_t cacheOffset = 0;
+		czres = czReadFile(CZ_PIPELINE_CACHE_NAME, cacheData, cacheSize, cacheOffset, cacheFileFlags);
+		if CZ_NOEXPECT (czres) { dyrecord_destroy(localRecord); return false; }
 	}
 
 	VkShaderModuleCreateInfo shaderInfo = {0};
@@ -1878,7 +1880,7 @@ bool create_pipeline(struct Gpu* restrict gpu)
 	if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->pipeline = pipeline;
 
-	bres = save_pipeline_cache(device, cache, CZ_PIPELINE_CACHE_NAME);
+	bool bres = save_pipeline_cache(device, cache, CZ_PIPELINE_CACHE_NAME);
 	if CZ_NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 
 	if (computeFamilyTimestampValidBits || transferFamilyTimestampValidBits) {

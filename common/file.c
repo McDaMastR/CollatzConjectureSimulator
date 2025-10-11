@@ -17,8 +17,66 @@
 
 #include "file.h"
 #include "alloc.h"
-#include "debug.h"
-#include "util.h"
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_NULLTERM_ARG(3)
+static enum CzResult fopen_wrap(FILE* restrict* stream, const char* path, const char* mode)
+{
+	FILE* f = fopen(path, mode);
+	if CZ_EXPECT (f) {
+		*stream = f;
+		return CZ_RESULT_SUCCESS;
+	}
+	return CZ_RESULT_NO_FILE;
+}
+
+CZ_NONNULL_ARGS
+static enum CzResult fclose_wrap(FILE* stream)
+{
+	int r = fclose(stream);
+	return r ? CZ_RESULT_INTERNAL_ERROR : CZ_RESULT_SUCCESS;
+}
+
+CZ_NONNULL_ARGS
+static enum CzResult fseek_wrap(FILE* stream, long offset, int origin)
+{
+	int r = fseek(stream, offset, origin);
+	return r ? CZ_RESULT_INTERNAL_ERROR : CZ_RESULT_SUCCESS;
+}
+
+CZ_NONNULL_ARGS
+static enum CzResult ftell_wrap(long* pos, FILE* stream)
+{
+	long r = ftell(stream);
+	if CZ_EXPECT (r != -1) {
+		*pos = r;
+		return CZ_RESULT_SUCCESS;
+	}
+	return CZ_RESULT_INTERNAL_ERROR;
+}
+
+CZ_NONNULL_ARGS
+static enum CzResult fread_wrap(void* buffer, size_t size, size_t count, FILE* stream)
+{
+	CZ_ASSUME(size != 0);
+	CZ_ASSUME(count != 0);
+
+	long pos;
+	enum CzResult ret = ftell_wrap(&pos, stream);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	size_t r = fread(buffer, size, count, stream);
+	int eof = feof(stream);
+	int err = ferror(stream);
+
+	if CZ_EXPECT (r && !err)
+		return CZ_RESULT_SUCCESS;
+	if (!r && !pos && eof) // File was empty
+		return CZ_RESULT_NO_FILE;
+	if (!r && pos && eof) // File was at EOF before reading
+		return CZ_RESULT_BAD_OFFSET;
+	return CZ_RESULT_INTERNAL_ERROR; // Who knows what happened
+}
 
 CZ_NULLTERM_ARG(2)
 static enum CzResult getExecutablePath_wrap(int* length, char* out, int capacity, int* dirnameLength)
@@ -29,88 +87,68 @@ static enum CzResult getExecutablePath_wrap(int* length, char* out, int capacity
 			*length = l;
 		return CZ_RESULT_SUCCESS;
 	}
-
-	double t = program_time();
-	log_error(
-		stderr,
-		"wai_getExecutablePath failed with "
-		"out 0x%016" PRIxPTR ", capacity %d, dirnameLength 0x%016" PRIxPTR " (%.3fms)",
-		(uintptr_t) out, capacity, (uintptr_t) dirnameLength, t);
-
 	return CZ_RESULT_INTERNAL_ERROR;
 }
 
-#if !defined(_WIN32) && !defined(__APPLE__) && !defined(__unix__)
-CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_NULLTERM_ARG(3)
-static enum CzResult fopen_wrap(FILE** restrict stream, const char* restrict path, const char* restrict mode)
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2)
+static enum CzResult alloc_abspath_from_relpath_to_exe(char* restrict* restrict absPath, const char* restrict relPath)
 {
-	FILE* f = fopen(path, mode);
-	if CZ_EXPECT (f) {
-		*stream = f;
-		return CZ_RESULT_SUCCESS;
+	int pathLen;
+	enum CzResult ret = getExecutablePath_wrap(&pathLen, NULL, 0, NULL);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	char* path;
+	size_t pathSize = (size_t) pathLen + strlen(relPath);
+	struct CzAllocFlags flags = {0};
+
+	ret = czAlloc((void**) &path, pathSize, flags);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	int dirLen;
+	ret = getExecutablePath_wrap(&pathLen, path, pathLen, &dirLen);
+	if CZ_NOEXPECT (ret) {
+		czFree(path);
+		return ret;
 	}
 
-	double t = program_time();
-	log_error(stderr, "fopen failed with path '%s', mode '%s' (%.3fms)", path, mode, t);
-	return CZ_RESULT_NO_FILE;
+	path[dirLen] = 0;
+	cwk_path_get_absolute(path, relPath, path, pathSize);
+	*absPath = path;
+	return CZ_RESULT_SUCCESS;
 }
-
-CZ_NONNULL_ARGS
-static enum CzResult fclose_wrap(FILE* restrict stream)
-{
-	int r = fclose(stream);
-	if CZ_EXPECT (!r)
-		return CZ_RESULT_SUCCESS;
-
-	double t = program_time();
-	log_error(stderr, "fclose failed with stream 0x%016" PRIxPTR " (%.3fms)", (uintptr_t) stream, t);
-	return CZ_RESULT_INTERNAL_ERROR;
-}
-
-CZ_NONNULL_ARGS
-static enum CzResult fseek_wrap(FILE* restrict stream, long offset, int origin)
-{
-	int r = fseek(stream, offset, origin);
-	if CZ_EXPECT (!r)
-		return CZ_RESULT_SUCCESS;
-
-	double t = program_time();
-	log_error(
-		stderr, "fseek failed with stream 0x%016" PRIxPTR ", offset %ld, origin %d (%.3fms)",
-		(uintptr_t) stream, offset, origin, t);
-
-	return CZ_RESULT_INTERNAL_ERROR;
-}
-
-CZ_NONNULL_ARGS
-static enum CzResult ftell_wrap(long* restrict pos, FILE* restrict stream)
-{
-	long r = ftell(stream);
-	if CZ_EXPECT (r != -1) {
-		*pos = r;
-		return CZ_RESULT_SUCCESS;
-	}
-
-	double t = program_time();
-	log_error(stderr, "ftell failed with stream 0x%016" PRIxPTR " (%.3fms)", (uintptr_t) stream, t);
-	return CZ_RESULT_INTERNAL_ERROR;
-}
-#endif
 
 #if defined(_WIN32)
 CZ_NONNULL_ARG(1, 4) CZ_NULLTERM_ARG(4)
 static enum CzResult MultiByteToWideChar_wrap(
-	int* restrict size, UINT codePage, DWORD flags, LPCCH mbString, int mbSize, LPWSTR wcString, int wcSize)
+	int* size, UINT codePage, DWORD flags, LPCCH mbStr, int mbSize, LPWSTR wcStr, int wcSize)
 {
-	int s = MultiByteToWideChar(codePage, flags, mbString, mbSize, wcString, wcSize);
+	int s = MultiByteToWideChar(codePage, flags, mbStr, mbSize, wcStr, wcSize);
 	if CZ_EXPECT (s) {
 		*size = s;
 		return CZ_RESULT_SUCCESS;
 	}
 
+	// General strategy for Windows API error handling: its documentation is shit, so just guess and check a bunch
 	switch (GetLastError()) {
-	case ERROR_NO_UNICODE_TRANSLATION:
+	case ERROR_INVALID_ADDRESS:
+		return CZ_RESULT_BAD_ADDRESS;
+	case ERROR_BAD_ARGUMENTS:
+	case ERROR_INVALID_DATA:
+	case ERROR_INVALID_FIELD_IN_PARAMETER_LIST:
+	case ERROR_INVALID_PARAMETER:
 		return CZ_RESULT_BAD_PATH;
+	case ERROR_DEVICE_NO_RESOURCES:
+	case ERROR_NOT_ENOUGH_MEMORY:
+	case ERROR_OUT_OF_STRUCTURES:
+	case ERROR_OUTOFMEMORY:
+		return CZ_RESULT_NO_MEMORY;
+	case ERROR_BAD_COMMAND:
+	case ERROR_CALL_NOT_IMPLEMENTED:
+	case ERROR_DEVICE_FEATURE_NOT_SUPPORTED:
+	case ERROR_NOT_SUPPORTED:
+		return CZ_RESULT_NO_SUPPORT;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -125,51 +163,413 @@ static enum CzResult GetFileAttributesExW_wrap(LPCWSTR path, GET_FILEEX_INFO_LEV
 
 	switch (GetLastError()) {
 	case ERROR_ACCESS_DENIED:
-	case ERROR_DELETE_PENDING:
-	case ERROR_OPERATION_IN_PROGRESS:
-	case ERROR_READ_FAULT:
-	case ERROR_WRITE_FAULT:
+	case ERROR_DYNLINK_FROM_INVALID_RING:
+	case ERROR_FORMS_AUTH_REQUIRED:
+	case ERROR_NETWORK_ACCESS_DENIED:
 	case ERROR_WRITE_PROTECT:
 		return CZ_RESULT_BAD_ACCESS;
+	case ERROR_INVALID_ADDRESS:
+		return CZ_RESULT_BAD_ADDRESS;
+	case ERROR_ALREADY_ASSIGNED:
+	case ERROR_BAD_DEV_TYPE:
 	case ERROR_BAD_FILE_TYPE:
+	case ERROR_BAD_PIPE:
+	case ERROR_BROKEN_PIPE:
 	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
 	case ERROR_DIRECTORY_NOT_SUPPORTED:
+	case ERROR_EA_FILE_CORRUPT:
+	case ERROR_EA_LIST_INCONSISTENT:
+	case ERROR_EA_TABLE_FULL:
 	case ERROR_FILE_TOO_LARGE:
+	case ERROR_INVALID_EA_HANDLE:
+	case ERROR_INVALID_EA_NAME:
+	case ERROR_NO_DATA:
+	case ERROR_NO_MORE_ITEMS:
 	case ERROR_NOT_ALLOWED_ON_SYSTEM_FILE:
+	case ERROR_PIPE_LOCAL:
+	case ERROR_PIPE_NOT_CONNECTED:
 	case ERROR_RESIDENT_FILE_NOT_SUPPORTED:
+	case ERROR_VIRUS_DELETED:
+	case ERROR_VIRUS_INFECTED:
 		return CZ_RESULT_BAD_FILE;
+	case ERROR_BAD_ARGUMENTS:
 	case ERROR_BAD_DEVICE_PATH:
+	case ERROR_BAD_NET_NAME:
 	case ERROR_BAD_PATHNAME:
 	case ERROR_BUFFER_OVERFLOW:
 	case ERROR_DIR_NOT_ROOT:
 	case ERROR_DIRECTORY:
 	case ERROR_FILENAME_EXCED_RANGE:
+	case ERROR_INVALID_DATA:
+	case ERROR_INVALID_DRIVE:
+	case ERROR_INVALID_FIELD_IN_PARAMETER_LIST:
 	case ERROR_INVALID_NAME:
+	case ERROR_INVALID_PARAMETER:
 	case ERROR_LABEL_TOO_LONG:
 	case ERROR_META_EXPANSION_TOO_LONG:
 	case ERROR_PATH_NOT_FOUND:
 	case ERROR_SHORT_NAMES_NOT_ENABLED_ON_VOLUME:
 		return CZ_RESULT_BAD_PATH;
+	case ERROR_BUSY:
+	case ERROR_DELETE_PENDING:
+	case ERROR_DRIVE_LOCKED:
+	case ERROR_FILE_CHECKED_OUT:
+	case ERROR_LOCK_VIOLATION:
+	case ERROR_LOCKED:
+	case ERROR_NETWORK_BUSY:
+	case ERROR_NOT_READY:
+	case ERROR_OPERATION_IN_PROGRESS:
+	case ERROR_PATH_BUSY:
+	case ERROR_PIPE_BUSY:
+	case ERROR_REDIR_PAUSED:
+	case ERROR_SHARING_PAUSED:
+	case ERROR_SHARING_VIOLATION:
+		return CZ_RESULT_IN_USE;
+	case ERROR_BAD_NETPATH:
+	case ERROR_BAD_UNIT:
 	case ERROR_DEV_NOT_EXIST:
+	case ERROR_DEVICE_UNREACHABLE:
 	case ERROR_FILE_NOT_FOUND:
+	case ERROR_MOD_NOT_FOUND:
+	case ERROR_REM_NOT_LIST:
+	case ERROR_NETNAME_DELETED:
+	case ERROR_PROC_NOT_FOUND:
 		return CZ_RESULT_NO_FILE;
 	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_DISK_FULL:
 	case ERROR_DISK_RESOURCES_EXHAUSTED:
-	case ERROR_IS_JOIN_PATH:
+	case ERROR_DISK_TOO_FRAGMENTED:
+	case ERROR_HANDLE_DISK_FULL:
 	case ERROR_NOT_ENOUGH_MEMORY:
 	case ERROR_OUT_OF_STRUCTURES:
 	case ERROR_OUTOFMEMORY:
 		return CZ_RESULT_NO_MEMORY;
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_REQ_NOT_ACCEP:
+	case ERROR_SHARING_BUFFER_EXCEEDED:
+	case ERROR_TOO_MANY_DESCRIPTORS:
+	case ERROR_TOO_MANY_MODULES:
+	case ERROR_TOO_MANY_OPEN_FILES:
+		return CZ_RESULT_NO_OPEN;
+	case ERROR_BAD_COMMAND:
+	case ERROR_BAD_DRIVER_LEVEL:
+	case ERROR_BAD_NET_RESP:
+	case ERROR_CALL_NOT_IMPLEMENTED:
+	case ERROR_DEVICE_FEATURE_NOT_SUPPORTED:
+	case ERROR_DEVICE_SUPPORT_IN_PROGRESS:
+	case ERROR_EAS_NOT_SUPPORTED:
+	case ERROR_FILE_LEVEL_TRIM_NOT_SUPPORTED:
+	case ERROR_NOT_REDUNDANT_STORAGE:
+	case ERROR_NOT_SUPPORTED:
+		return CZ_RESULT_NO_SUPPORT;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
+}
+
+CZ_NONNULL_ARG(1, 2) CZ_NULLTERM_ARG(2)
+static enum CzResult CreateFileW_wrap(
+	HANDLE* file,
+	LPCWSTR path,
+	DWORD desiredAccess,
+	DWORD shareMode,
+	LPSECURITY_ATTRIBUTES securityAttributes,
+	DWORD creationDisposition,
+	DWORD flagsAndAttributes,
+	HANDLE templateFile)
+{
+	HANDLE h = CreateFileW(
+		path, desiredAccess, shareMode, securityAttributes, creationDisposition, flagsAndAttributes, templateFile);
+
+	if CZ_EXPECT (h != INVALID_HANDLE_VALUE) {
+		*file = h;
+		return CZ_RESULT_SUCCESS;
+	}
+
+	switch (GetLastError()) {
+	case ERROR_ACCESS_DENIED:
+	case ERROR_DYNLINK_FROM_INVALID_RING:
+	case ERROR_FORMS_AUTH_REQUIRED:
+	case ERROR_NETWORK_ACCESS_DENIED:
+	case ERROR_READ_FAULT:
+	case ERROR_WRITE_FAULT:
+	case ERROR_WRITE_PROTECT:
+		return CZ_RESULT_BAD_ACCESS;
+	case ERROR_INVALID_ADDRESS:
+		return CZ_RESULT_BAD_ADDRESS;
+	case ERROR_ALREADY_ASSIGNED:
+	case ERROR_ALREADY_EXISTS:
+	case ERROR_BAD_DEV_TYPE:
+	case ERROR_BAD_FILE_TYPE:
+	case ERROR_BAD_PIPE:
+	case ERROR_BROKEN_PIPE:
+	case ERROR_CANNOT_MAKE:
+	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
+	case ERROR_CURRENT_DIRECTORY:
+	case ERROR_DIR_NOT_EMPTY:
+	case ERROR_DIRECTORY_NOT_SUPPORTED:
+	case ERROR_EA_FILE_CORRUPT:
+	case ERROR_EA_LIST_INCONSISTENT:
+	case ERROR_EA_TABLE_FULL:
+	case ERROR_FILE_EXISTS:
+	case ERROR_FILE_TOO_LARGE:
+	case ERROR_INVALID_EA_HANDLE:
+	case ERROR_INVALID_EA_NAME:
+	case ERROR_NO_DATA:
+	case ERROR_NO_MORE_ITEMS:
+	case ERROR_NOT_ALLOWED_ON_SYSTEM_FILE:
+	case ERROR_OPEN_FAILED:
+	case ERROR_PIPE_LOCAL:
+	case ERROR_PIPE_NOT_CONNECTED:
+	case ERROR_RESIDENT_FILE_NOT_SUPPORTED:
+	case ERROR_SEEK_ON_DEVICE:
+	case ERROR_VIRUS_DELETED:
+	case ERROR_VIRUS_INFECTED:
+		return CZ_RESULT_BAD_FILE;
+	case ERROR_BAD_ARGUMENTS:
+	case ERROR_BAD_DEVICE_PATH:
+	case ERROR_BAD_NET_NAME:
+	case ERROR_BAD_PATHNAME:
+	case ERROR_BUFFER_OVERFLOW:
+	case ERROR_DIR_NOT_ROOT:
+	case ERROR_DIRECTORY:
+	case ERROR_FILENAME_EXCED_RANGE:
+	case ERROR_INVALID_DATA:
+	case ERROR_INVALID_DRIVE:
+	case ERROR_INVALID_FIELD_IN_PARAMETER_LIST:
+	case ERROR_INVALID_NAME:
+	case ERROR_INVALID_PARAMETER:
+	case ERROR_LABEL_TOO_LONG:
+	case ERROR_META_EXPANSION_TOO_LONG:
+	case ERROR_PATH_NOT_FOUND:
+	case ERROR_SHORT_NAMES_NOT_ENABLED_ON_VOLUME:
+		return CZ_RESULT_BAD_PATH;
+	case ERROR_BUSY:
+	case ERROR_DELETE_PENDING:
+	case ERROR_DRIVE_LOCKED:
+	case ERROR_FILE_CHECKED_OUT:
+	case ERROR_LOCK_VIOLATION:
+	case ERROR_LOCKED:
+	case ERROR_NETWORK_BUSY:
+	case ERROR_NOT_READY:
+	case ERROR_OPERATION_IN_PROGRESS:
+	case ERROR_PATH_BUSY:
+	case ERROR_PIPE_BUSY:
+	case ERROR_REDIR_PAUSED:
+	case ERROR_SHARING_PAUSED:
+	case ERROR_SHARING_VIOLATION:
+		return CZ_RESULT_IN_USE;
+	case ERROR_BAD_NETPATH:
+	case ERROR_BAD_UNIT:
+	case ERROR_DEV_NOT_EXIST:
+	case ERROR_DEVICE_UNREACHABLE:
+	case ERROR_FILE_NOT_FOUND:
+	case ERROR_HANDLE_EOF:
+	case ERROR_MOD_NOT_FOUND:
+	case ERROR_NETNAME_DELETED:
+	case ERROR_PROC_NOT_FOUND:
+	case ERROR_REM_NOT_LIST:
+		return CZ_RESULT_NO_FILE;
+	case ERROR_DEVICE_NO_RESOURCES:
+	case ERROR_DISK_FULL:
+	case ERROR_DISK_RESOURCES_EXHAUSTED:
+	case ERROR_DISK_TOO_FRAGMENTED:
+	case ERROR_HANDLE_DISK_FULL:
+	case ERROR_NOT_ENOUGH_MEMORY:
+	case ERROR_OUT_OF_STRUCTURES:
+	case ERROR_OUTOFMEMORY:
+		return CZ_RESULT_NO_MEMORY;
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_REQ_NOT_ACCEP:
+	case ERROR_SHARING_BUFFER_EXCEEDED:
+	case ERROR_TOO_MANY_DESCRIPTORS:
+	case ERROR_TOO_MANY_MODULES:
+	case ERROR_TOO_MANY_OPEN_FILES:
+		return CZ_RESULT_NO_OPEN;
+	case ERROR_ATOMIC_LOCKS_NOT_SUPPORTED:
+	case ERROR_BAD_COMMAND:
+	case ERROR_BAD_DRIVER_LEVEL:
+	case ERROR_BAD_NET_RESP:
+	case ERROR_CALL_NOT_IMPLEMENTED:
+	case ERROR_DEVICE_FEATURE_NOT_SUPPORTED:
+	case ERROR_DEVICE_SUPPORT_IN_PROGRESS:
+	case ERROR_EAS_NOT_SUPPORTED:
+	case ERROR_FILE_LEVEL_TRIM_NOT_SUPPORTED:
+	case ERROR_NOT_REDUNDANT_STORAGE:
+	case ERROR_NOT_SUPPORTED:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+}
+
+CZ_NONNULL_ARGS
+static enum CzResult CloseHandle_wrap(HANDLE handle)
+{
+	BOOL r = CloseHandle(handle);
+	if CZ_EXPECT (r)
+		return CZ_RESULT_SUCCESS;
+
+	switch (GetLastError()) {
+	case ERROR_BUSY:
+	case ERROR_DRIVE_LOCKED:
+	case ERROR_FILE_CHECKED_OUT:
+	case ERROR_LOCKED:
+	case ERROR_NOT_READY:
+	case ERROR_OPERATION_IN_PROGRESS:
+		return CZ_RESULT_IN_USE;
+	case ERROR_DEVICE_NO_RESOURCES:
+	case ERROR_DISK_FULL:
+	case ERROR_DISK_RESOURCES_EXHAUSTED:
+	case ERROR_DISK_TOO_FRAGMENTED:
+	case ERROR_HANDLE_DISK_FULL:
+	case ERROR_NOT_ENOUGH_MEMORY:
+	case ERROR_OUT_OF_STRUCTURES:
+	case ERROR_OUTOFMEMORY:
+		return CZ_RESULT_NO_MEMORY;
+	case ERROR_BAD_COMMAND:
+	case ERROR_CALL_NOT_IMPLEMENTED:
+	case ERROR_DEVICE_FEATURE_NOT_SUPPORTED:
+	case ERROR_DEVICE_SUPPORT_IN_PROGRESS:
+	case ERROR_NOT_SUPPORTED:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+}
+
+CZ_NONNULL_ARG(1, 2)
+static enum CzResult ReadFile_wrap(
+	HANDLE file, LPVOID buffer, DWORD numberOfBytesToRead, LPDWORD numberOfBytesRead, LPOVERLAPPED overlapped)
+{
+	SetLastError(ERROR_SUCCESS);
+	BOOL r = ReadFile(file, buffer, numberOfBytesToRead, numberOfBytesRead, overlapped);
+	DWORD err = GetLastError();
+	if CZ_EXPECT (r && !err)
+		return CZ_RESULT_SUCCESS;
+
+	if (err == ERROR_HANDLE_EOF) {
+		if (!overlapped)
+			return CZ_RESULT_NO_FILE;
+
+		ULARGE_INTEGER offset;
+		offset.LowPart = overlapped->Offset;
+		offset.HighPart = overlapped->OffsetHigh;
+		return offset.QuadPart ? CZ_RESULT_BAD_OFFSET : CZ_RESULT_NO_FILE;
+	}
+
+	switch (err) {
+	case ERROR_IO_PENDING:
+	case ERROR_MORE_DATA:
+		return CZ_RESULT_SUCCESS;
+	case ERROR_ACCESS_DENIED:
+	case ERROR_NETWORK_ACCESS_DENIED:
+		return CZ_RESULT_BAD_ACCESS;
+	case ERROR_INSUFFICIENT_BUFFER:
+	case ERROR_INVALID_ADDRESS:
+		return CZ_RESULT_BAD_ADDRESS;
+	case ERROR_ALREADY_ASSIGNED:
+	case ERROR_BAD_DEV_TYPE:
+	case ERROR_BAD_FILE_TYPE:
+	case ERROR_BAD_PIPE:
+	case ERROR_BAD_UNIT:
+	case ERROR_BROKEN_PIPE:
+	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
+	case ERROR_DEV_NOT_EXIST:
+	case ERROR_DEVICE_UNREACHABLE:
+	case ERROR_DIRECTORY_NOT_SUPPORTED:
+	case ERROR_EA_FILE_CORRUPT:
+	case ERROR_EA_LIST_INCONSISTENT:
+	case ERROR_EA_TABLE_FULL:
+	case ERROR_FILE_TOO_LARGE:
+	case ERROR_INVALID_DATA:
+	case ERROR_NO_DATA:
+	case ERROR_NOT_ALLOWED_ON_SYSTEM_FILE:
+	case ERROR_PIPE_LOCAL:
+	case ERROR_PIPE_NOT_CONNECTED:
+	case ERROR_RESIDENT_FILE_NOT_SUPPORTED:
+	case ERROR_SEEK_ON_DEVICE:
+	case ERROR_VIRUS_DELETED:
+	case ERROR_VIRUS_INFECTED:
+		return CZ_RESULT_BAD_FILE;
+	case ERROR_BAD_ARGUMENTS:
+	case ERROR_INVALID_FIELD_IN_PARAMETER_LIST:
+	case ERROR_INVALID_PARAMETER:
+	case ERROR_NEGATIVE_SEEK:
+	case ERROR_OFFSET_ALIGNMENT_VIOLATION:
+		return CZ_RESULT_BAD_OFFSET;
+	case ERROR_BUSY:
+	case ERROR_DRIVE_LOCKED:
+	case ERROR_FILE_CHECKED_OUT:
+	case ERROR_LOCK_VIOLATION:
+	case ERROR_LOCKED:
+	case ERROR_NETWORK_BUSY:
+	case ERROR_NOT_READY:
+	case ERROR_OPERATION_IN_PROGRESS:
+	case ERROR_PIPE_BUSY:
+	case ERROR_REDIR_PAUSED:
+	case ERROR_SHARING_PAUSED:
+	case ERROR_SHARING_VIOLATION:
+		return CZ_RESULT_IN_USE;
+	case ERROR_OPERATION_ABORTED:
+		return CZ_RESULT_INTERRUPT;
+	case ERROR_NO_MORE_ITEMS:
+		return CZ_RESULT_NO_FILE;
+	case ERROR_DEVICE_NO_RESOURCES:
+	case ERROR_DISK_FULL:
+	case ERROR_DISK_RESOURCES_EXHAUSTED:
+	case ERROR_DISK_TOO_FRAGMENTED:
+	case ERROR_HANDLE_DISK_FULL:
+	case ERROR_NOT_ENOUGH_MEMORY:
+	case ERROR_OUT_OF_STRUCTURES:
+	case ERROR_OUTOFMEMORY:
+		return CZ_RESULT_NO_MEMORY;
+	case ERROR_ATOMIC_LOCKS_NOT_SUPPORTED:
+	case ERROR_BAD_COMMAND:
+	case ERROR_CALL_NOT_IMPLEMENTED:
+	case ERROR_DEVICE_FEATURE_NOT_SUPPORTED:
+	case ERROR_DEVICE_SUPPORT_IN_PROGRESS:
+	case ERROR_EAS_NOT_SUPPORTED:
+	case ERROR_NOT_REDUNDANT_STORAGE:
+	case ERROR_NOT_SUPPORTED:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+}
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2)
+static enum CzResult alloc_utf16_from_utf8(wchar_t* restrict* restrict utf16, const char* restrict utf8)
+{
+	unsigned int codePage = CP_UTF8;
+	unsigned long flags = MB_ERR_INVALID_CHARS;
+	const char* mbStr = utf8;
+	int mbSize = -1; // utf8 is null-terminated
+	wchar_t* wcStr = NULL;
+	int wcSize = 0; // first get required length of utf16
+
+	enum CzResult ret = MultiByteToWideChar_wrap(&wcSize, codePage, flags, mbStr, mbSize, wcStr, wcSize);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	size_t allocSize = (size_t) wcSize * sizeof(wchar_t);
+	struct CzAllocFlags allocFlags = {0};
+	ret = czAlloc((void**) &wcStr, allocSize, allocFlags);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = MultiByteToWideChar_wrap(&wcSize, codePage, flags, mbStr, mbSize, wcStr, wcSize);
+	if CZ_EXPECT (!ret)
+		*utf16 = wcStr;
+	else
+		czFree(wcStr);
+	return ret;
 }
 #endif
 
 #if defined(__APPLE__) || defined(__unix__)
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
-static enum CzResult stat_wrap(const char* restrict path, struct stat* restrict st)
+static enum CzResult stat_wrap(const char* path, struct stat* st)
 {
 	int r = stat(path, st);
 	if CZ_EXPECT (!r)
@@ -178,6 +578,8 @@ static enum CzResult stat_wrap(const char* restrict path, struct stat* restrict 
 	switch (errno) {
 	case EACCES:
 		return CZ_RESULT_BAD_ACCESS;
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
 	case ELOOP:
@@ -186,17 +588,202 @@ static enum CzResult stat_wrap(const char* restrict path, struct stat* restrict 
 		return CZ_RESULT_BAD_PATH;
 	case ENOENT:
 		return CZ_RESULT_NO_FILE;
+#if defined(__unix__)
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
+#endif
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 }
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2)
+static enum CzResult open_wrap(int* fd, const char* path, int flags, mode_t mode)
+{
+	int f = open(path, flags, mode);
+	if CZ_EXPECT (f != -1) {
+		*fd = f;
+		return CZ_RESULT_SUCCESS;
+	}
+
+#if defined(__APPLE__)
+	switch (errno) {
+	case EACCES:
+	case EROFS:
+		return CZ_RESULT_BAD_ACCESS;
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
+	case EDEADLK:
+	case EEXIST:
+	case EISDIR:
+	case ENOTCAPABLE:
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_FILE;
+	case EILSEQ:
+	case ELOOP:
+	case ENAMETOOLONG:
+	case ENOTDIR:
+		return CZ_RESULT_BAD_PATH;
+	case EAGAIN:
+	case ETXTBSY:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOENT:
+	case ENXIO:
+		return CZ_RESULT_NO_FILE;
+	case EMFILE:
+	case ENFILE:
+		return CZ_RESULT_NO_OPEN;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EOPNOTSUPP:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif defined(__unix__)
+	// EAGAIN and EWOULDBLOCK may be same value - can't use both in switch statement
+	if (errno == EAGAIN || errno == EWOULDBLOCK)
+		return CZ_RESULT_IN_USE;
+
+	switch (errno) {
+	case EACCES:
+	case EPERM:
+	case EROFS:
+		return CZ_RESULT_BAD_ACCESS;
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
+	case EEXIST:
+	case EFBIG:
+	case EISDIR:
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_FILE;
+	case EINVAL:
+	case ELOOP:
+	case ENAMETOOLONG:
+	case ENOTDIR:
+		return CZ_RESULT_BAD_PATH;
+	case EBUSY:
+	case ETXTBSY:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENODEV:
+	case ENOENT:
+	case ENXIO:
+		return CZ_RESULT_NO_FILE;
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EMFILE:
+	case ENFILE:
+		return CZ_RESULT_NO_OPEN;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	case EOPNOTSUPP:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#endif
+}
+
+static enum CzResult close_wrap(int fd)
+{
+	int r = close(fd);
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+#if defined(__APPLE__)
+	switch (errno) {
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif defined(__unix__)
+	switch (errno) {
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#endif
+}
+
+CZ_NONNULL_ARGS
+static enum CzResult pread_wrap(int fd, void* buffer, size_t size, off_t offset)
+{
+	ssize_t r = pread(fd, buffer, size, offset);
+	if CZ_EXPECT (r > 0)
+		return CZ_RESULT_SUCCESS;
+	if (!r)
+		return offset ? CZ_RESULT_BAD_OFFSET : CZ_RESULT_NO_FILE;
+
+#if defined(__APPLE__)
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
+	case EDEADLK:
+	case EISDIR:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EINVAL:
+		return CZ_RESULT_BAD_OFFSET;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENXIO:
+	case ESTALE:
+		return CZ_RESULT_NO_FILE;
+	case ENOBUFS:
+	case ENOMEM:
+		return CZ_RESULT_NO_MEMORY;
+	case ETIMEDOUT:
+		return CZ_RESULT_TIMEOUT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif defined(__unix__)
+	// EAGAIN and EWOULDBLOCK may be same value - can't use both in switch statement
+	if (errno == EAGAIN || errno == EWOULDBLOCK)
+		return CZ_RESULT_IN_USE;
+
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
+	case EINVAL:
+	case EISDIR:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case ENXIO:
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_OFFSET;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#endif
+}
 #endif
 
-enum CzResult czStreamIsTerminal(FILE* restrict stream, bool* restrict istty)
-{
 #if defined(_WIN32)
+CZ_NONNULL_ARGS
+static enum CzResult stream_is_tty_win32(FILE* restrict stream, bool* restrict istty)
+{
 	int fd = _fileno(stream);
 	if (fd == -2) {
 		*istty = false;
@@ -211,80 +798,88 @@ enum CzResult czStreamIsTerminal(FILE* restrict stream, bool* restrict istty)
 
 	DWORD mode;
 	*istty = (bool) GetConsoleMode((HANDLE) handle, &mode);
-#elif defined(__APPLE__) || defined(__unix__)
+	return CZ_RESULT_SUCCESS;
+}
+#endif
+
+#if defined(__APPLE__) || defined(__unix__)
+CZ_NONNULL_ARGS
+static enum CzResult stream_is_tty_posix(FILE* restrict stream, bool* restrict istty)
+{
 	int fd = fileno(stream);
 	*istty = (bool) isatty(fd);
-#else
-	*istty = false; // Just default to false if can't tell
-#endif
 	return CZ_RESULT_SUCCESS;
+}
+#endif
+
+CZ_NONNULL_ARGS
+static enum CzResult stream_is_tty_other(FILE* restrict stream, bool* restrict istty)
+{
+	(void) stream;
+	(void) istty;
+	return CZ_RESULT_NO_SUPPORT;
+}
+
+enum CzResult czStreamIsTerminal(FILE* restrict stream, bool* restrict istty)
+{
+#if defined(_WIN32)
+	return stream_is_tty_win32(stream, istty);
+#elif defined(__APPLE__) || defined(__unix__)
+	return stream_is_tty_posix(stream, istty);
+#else
+	return stream_is_tty_other(stream, istty);
+#endif
 }
 
 #if defined(_WIN32)
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
 static enum CzResult file_size_win32(const char* restrict path, size_t* restrict size)
 {
-	UINT codePage = CP_UTF8;
-	DWORD flags = MB_ERR_INVALID_CHARS;
-	LPCCH mbStr = path;
-	int mbStrLen = -1; // mbStr is null-terminated
-	LPWSTR wcStr = NULL;
-	int wcStrLen = 0;
-
-	enum CzResult ret = MultiByteToWideChar_wrap(&wcStrLen, codePage, flags, mbStr, mbStrLen, wcStr, wcStrLen);
+	wchar_t* restrict wcPath;
+	enum CzResult ret = alloc_utf16_from_utf8(&wcPath, path);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
-	size_t allocSize = (size_t) wcStrLen * sizeof(WCHAR);
-	struct CzAllocFlags allocFlags = {0};
-	ret = czAlloc((void**) &wcStr, allocSize, allocFlags);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	ret = MultiByteToWideChar_wrap(&wcStrLen, codePage, flags, mbStr, mbStrLen, wcStr, wcStrLen);
-	if CZ_NOEXPECT (ret)
-		goto out_free_wcstr;
-
-	LPCWSTR wcPath = wcStr;
-	GET_FILEEX_INFO_LEVELS infoLevel = GetFileExInfoStandard;
 	WIN32_FILE_ATTRIBUTE_DATA attr;
-
-	ret = GetFileAttributesExW_wrap(wcPath, infoLevel, &attr);
+	ret = GetFileAttributesExW_wrap(wcPath, GetFileExInfoStandard, &attr);
 	if CZ_NOEXPECT (ret)
-		goto out_free_wcstr;
+		goto err_free_wcpath;
 
-	LARGE_INTEGER fileSize;
-	fileSize.HighPart = attr.nFileSizeHigh;
+	ULARGE_INTEGER fileSize;
 	fileSize.LowPart = attr.nFileSizeLow;
+	fileSize.HighPart = attr.nFileSizeHigh;
 
 	*size = (size_t) fileSize.QuadPart;
-out_free_wcstr:
-	czFree(wcStr);
+err_free_wcpath:
+	czFree(wcPath);
 	return ret;
 }
-#elif defined(__APPLE__) || defined(__unix__)
+#endif
+
+#if defined(__APPLE__) || defined(__unix__)
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
 static enum CzResult file_size_posix(const char* restrict path, size_t* restrict size)
 {
 	struct stat st;
 	enum CzResult ret = stat_wrap(path, &st);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	*size = (size_t) st.st_size;
+	if CZ_EXPECT (!ret)
+		*size = (size_t) st.st_size;
 	return ret;
 }
-#else
+#endif
+
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
 static enum CzResult file_size_other(const char* restrict path, size_t* restrict size)
 {
-	FILE* file;
-	enum CzResult ret = fopen_wrap(&file, path, "rb");
+	FILE* restrict file;
+	const char* mode = "rb";
+	enum CzResult ret = fopen_wrap(&file, path, mode);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
 	long offset = 0;
-	ret = fseek_wrap(file, offset, SEEK_END); // Binary streams not guaranteed to support SEEK_END
+	int origin = SEEK_END; // Binary streams not guaranteed to support SEEK_END
+	ret = fseek_wrap(file, offset, origin);
 	if CZ_NOEXPECT (ret)
 		goto err_close_file;
 
@@ -293,40 +888,26 @@ static enum CzResult file_size_other(const char* restrict path, size_t* restrict
 	if CZ_NOEXPECT (ret)
 		goto err_close_file;
 
-	*size = (size_t) pos;
-	return fclose_wrap(file);
+	ret = fclose_wrap(file);
+	if CZ_EXPECT (!ret)
+		*size = (size_t) pos;
+	return ret;
 
 err_close_file:
 	fclose_wrap(file);
 	return ret;
 }
-#endif
 
 enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struct CzFileFlags flags)
 {
-	enum CzResult ret = CZ_RESULT_SUCCESS;
+	enum CzResult ret = CZ_RESULT_INTERNAL_ERROR;
 	const char* realPath = path;
 	char* fullPath = NULL;
 
 	if (flags.relativeToExe && cwk_path_is_relative(path)) {
-		int len;
-		ret = getExecutablePath_wrap(&len, fullPath, 0, NULL);
+		ret = alloc_abspath_from_relpath_to_exe(&fullPath, path);
 		if CZ_NOEXPECT (ret)
 			return ret;
-
-		size_t allocSize = (size_t) len + strlen(path);
-		struct CzAllocFlags allocFlags = {0};
-		ret = czAlloc((void**) &fullPath, allocSize, allocFlags);
-		if CZ_NOEXPECT (ret)
-			return ret;
-
-		int dirLen;
-		ret = getExecutablePath_wrap(&len, fullPath, len, &dirLen);
-		if CZ_NOEXPECT (ret)
-			goto out_free_fullpath;
-
-		fullPath[dirLen] = 0;
-		cwk_path_get_absolute(fullPath, path, fullPath, allocSize);
 		realPath = fullPath;
 	}
 
@@ -338,7 +919,144 @@ enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struc
 	ret = file_size_other(realPath, size);
 #endif
 
-out_free_fullpath:
+	czFree(fullPath);
+	return ret;
+}
+
+#if defined(_WIN32)
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult read_file_win32(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
+{
+	CZ_ASSUME(size != 0);
+
+	wchar_t* restrict wcPath;
+	enum CzResult ret = alloc_utf16_from_utf8(&wcPath, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	HANDLE file;
+	DWORD access = GENERIC_READ;
+	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_DELETE;
+	LPSECURITY_ATTRIBUTES security = NULL;
+	DWORD disposition = OPEN_EXISTING;
+	DWORD flags = 0;
+	HANDLE template = NULL;
+
+	ret = CreateFileW_wrap(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	if CZ_NOEXPECT (ret)
+		goto err_free_wcpath;
+
+	for (size_t i = 0; i < size; i += UINT32_MAX) {
+		DWORD readSize = (DWORD) ((size - i) & UINT32_MAX);
+		ULARGE_INTEGER readOffset = {.QuadPart = offset + i};
+
+		OVERLAPPED overlapped = {0};
+		overlapped.Offset = readOffset.LowPart;
+		overlapped.OffsetHigh = readOffset.HighPart;
+
+		ret = ReadFile_wrap(file, buffer, readSize, NULL, &overlapped);
+		if CZ_NOEXPECT (ret)
+			goto err_close_file;
+	}
+
+	czFree(wcPath);
+	return CloseHandle_wrap(file);
+
+err_close_file:
+	CloseHandle_wrap(file);
+err_free_wcpath:
+	czFree(wcPath);
+	return ret;
+}
+#endif
+
+#if defined(__APPLE__) || defined(__unix__)
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult read_file_posix(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
+{
+	CZ_ASSUME(size != 0);
+
+	int fd;
+	int flags = O_RDONLY | O_NOCTTY;
+	mode_t mode = 0;
+
+	enum CzResult ret = open_wrap(&fd, path, flags, mode);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+#if defined(__APPLE__)
+	size_t maxSize = INT_MAX;
+#elif defined(__unix__)
+	size_t maxSize = SSIZE_MAX;
+#endif
+	for (size_t i = 0; i < size; i += maxSize) {
+		void* readBuffer = (char*) buffer + i;
+		size_t readSize = (size - i) & maxSize;
+		off_t readOffset = (off_t) (offset + i);
+
+		ret = pread_wrap(fd, readBuffer, readSize, readOffset);
+		if CZ_NOEXPECT (ret) {
+			close_wrap(fd);
+			return ret;
+		}
+	}
+
+	return close_wrap(fd);
+}
+#endif
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult read_file_other(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
+{
+	CZ_ASSUME(size != 0);
+
+	FILE* restrict file;
+	const char* mode = "rb";
+	enum CzResult ret = fopen_wrap(&file, path, mode);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	int origin = SEEK_SET;
+	ret = fseek_wrap(file, (long) offset, origin);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	ret = fread_wrap(buffer, sizeof(char), size, file);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	return fclose_wrap(file);
+
+err_close_file:
+	fclose_wrap(file);
+	return ret;
+}
+
+enum CzResult czReadFile(
+	const char* restrict path, void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+
+	enum CzResult ret = CZ_RESULT_INTERNAL_ERROR;
+	const char* realPath = path;
+	char* fullPath = NULL;
+
+	if (flags.relativeToExe && cwk_path_is_relative(path)) {
+		ret = alloc_abspath_from_relpath_to_exe(&fullPath, path);
+		if CZ_NOEXPECT (ret)
+			return ret;
+		realPath = fullPath;
+	}
+
+#if defined(_WIN32)
+	ret = read_file_win32(realPath, buffer, size, offset);
+#elif defined(__APPLE__) || defined(__unix__)
+	ret = read_file_posix(realPath, buffer, size, offset);
+#else
+	ret = read_file_other(realPath, buffer, size, offset);
+#endif
+
 	czFree(fullPath);
 	return ret;
 }

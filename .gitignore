@@ -6,5 +6,7 @@ doc
 test
 
 # Files
+*.bin
+*.log
 .DS_Store
 Doxyfile
