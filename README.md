@@ -212,9 +212,9 @@ are calculated by the GPU. The remaining starting values' total stopping times a
 
 ## Licensing
 
-Collatz Conjecture Simulator is licensed under version 3 of the GNU General Public License (GPLv3). A copy of this
-licence should be [included](COPYING) with Collatz Conjecture Simulator. Otherwise, the licence may be viewed at the
-[GNU website](https://www.gnu.org/licenses/gpl-3.0.html).
+Collatz Conjecture Simulator is licensed under version 3 or later of the GNU General Public License (GPLv3+). A copy of
+version 3 of this licence should be [included](COPYING) with Collatz Conjecture Simulator. Otherwise, the licence may be
+viewed at the [GNU website](https://www.gnu.org/licenses/gpl-3.0.html).
 
 The building of Collatz Conjecture Simulator is dependent on a number of external works, each with their own licence or
 licences. The below table lists each such work with its corresponding licence or licences, in alphabetical order.
@@ -241,12 +241,13 @@ in the below list, given in alphabetical order.
 
 ### Artificial Intelligence
 
-The author of Collatz Conjecture Simulator is not a lawyer, but strongly believes the usage of GPLv3-licensed works in
-the training and development of proprietary AI is necessarily violating of said licence. However, in the event the GPLv3
-does not in itself encompass the above restriction, the following shall apply.
+The author of Collatz Conjecture Simulator is not a lawyer, but strongly believes the usage of GPLv3+ licensed works in
+the training and development of proprietary AI is necessarily violating of said licences. However, to ensure this
+prohibition is enforced even in the event that one or more versions of the GPL do not in themselves encompass the above
+restriction, the following shall unconditionally apply.
 
 Collatz Conjecture Simulator includes in its terms and conditions regarding copying, distribution, and modification, in
-addition to those provided by version 3 of the GNU General Public Licence, the strict prohibition of its usage by
-artificial intelligence software not licensed in their entirety, as a whole, under version 3 or later of the GNU General
-Public Licence, including but not limited to the training, prompting, or generation of such artificial intelligence
-models or algorithms.
+addition to those provided by version 3 or later of the GNU General Public Licence, the strict prohibition of its usage
+by artificial intelligence software not licensed in their entirety, as a whole, under version 3 or later of the GNU
+General Public Licence, including but not limited to the training, prompting, or generation of such artificial
+intelligence models or algorithms.
