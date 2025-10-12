@@ -17,6 +17,7 @@
 
 #include "file.h"
 #include "alloc.h"
+#include "util.h"
 
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_NULLTERM_ARG(3)
 static enum CzResult fopen_wrap(FILE* restrict* stream, const char* path, const char* mode)
@@ -57,9 +58,6 @@ static enum CzResult ftell_wrap(long* pos, FILE* stream)
 CZ_NONNULL_ARGS
 static enum CzResult fread_wrap(void* buffer, size_t size, size_t count, FILE* stream)
 {
-	CZ_ASSUME(size != 0);
-	CZ_ASSUME(count != 0);
-
 	long pos;
 	enum CzResult ret = ftell_wrap(&pos, stream);
 	if CZ_NOEXPECT (ret)
@@ -69,13 +67,21 @@ static enum CzResult fread_wrap(void* buffer, size_t size, size_t count, FILE* s
 	int eof = feof(stream);
 	int err = ferror(stream);
 
-	if CZ_EXPECT (r && !err)
+	if CZ_EXPECT ((r || !size || !count) && !err)
 		return CZ_RESULT_SUCCESS;
 	if (!r && !pos && eof) // File was empty
 		return CZ_RESULT_NO_FILE;
 	if (!r && pos && eof) // File was at EOF before reading
 		return CZ_RESULT_BAD_OFFSET;
 	return CZ_RESULT_INTERNAL_ERROR; // Who knows what happened
+}
+
+CZ_NONNULL_ARGS
+static enum CzResult fwrite_wrap(const void* buffer, size_t size, size_t count, FILE* stream)
+{
+	size_t r = fwrite(buffer, size, count, stream);
+	int err = ferror(stream);
+	return ((r == count || !size) && !err) ? CZ_RESULT_SUCCESS : CZ_RESULT_INTERNAL_ERROR;
 }
 
 CZ_NULLTERM_ARG(2)
@@ -645,10 +651,6 @@ static enum CzResult open_wrap(int* fd, const char* path, int flags, mode_t mode
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif defined(__unix__)
-	// EAGAIN and EWOULDBLOCK may be same value - can't use both in switch statement
-	if (errno == EAGAIN || errno == EWOULDBLOCK)
-		return CZ_RESULT_IN_USE;
-
 	switch (errno) {
 	case EACCES:
 	case EPERM:
@@ -666,8 +668,12 @@ static enum CzResult open_wrap(int* fd, const char* path, int flags, mode_t mode
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
+	case EAGAIN:
 	case EBUSY:
 	case ETXTBSY:
+#if EAGAIN != EWOULDBLOCK
+	case EWOULDBLOCK:
+#endif
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
@@ -697,25 +703,18 @@ static enum CzResult close_wrap(int fd)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
-#if defined(__APPLE__)
 	switch (errno) {
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	default:
-		return CZ_RESULT_INTERNAL_ERROR;
-	}
-#elif defined(__unix__)
-	switch (errno) {
-	case EINTR:
-		return CZ_RESULT_INTERRUPT;
+#if defined(__unix__)
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
+#endif
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#endif
 }
 
 CZ_NONNULL_ARGS
@@ -755,10 +754,6 @@ static enum CzResult pread_wrap(int fd, void* buffer, size_t size, off_t offset)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif defined(__unix__)
-	// EAGAIN and EWOULDBLOCK may be same value - can't use both in switch statement
-	if (errno == EAGAIN || errno == EWOULDBLOCK)
-		return CZ_RESULT_IN_USE;
-
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
@@ -771,6 +766,11 @@ static enum CzResult pread_wrap(int fd, void* buffer, size_t size, off_t offset)
 	case ENXIO:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
+	case EAGAIN:
+#if EAGAIN != EWOULDBLOCK
+	case EWOULDBLOCK:
+#endif
+		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	default:
@@ -1056,6 +1056,179 @@ enum CzResult czReadFile(
 #else
 	ret = read_file_other(realPath, buffer, size, offset);
 #endif
+
+	czFree(fullPath);
+	return ret;
+}
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult write_file_other(const char* restrict path, const void* restrict buffer, size_t size)
+{
+	CZ_ASSUME(size != 0);
+
+	FILE* restrict file;
+	const char* mode = "wb";
+	enum CzResult ret = fopen_wrap(&file, path, mode);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = fwrite_wrap(buffer, sizeof(char), size, file);
+	if CZ_NOEXPECT (ret) {
+		fclose_wrap(file);
+		return ret;
+	}
+	return fclose_wrap(file);
+}
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult append_file_other(const char* restrict path, const void* restrict buffer, size_t size)
+{
+	CZ_ASSUME(size != 0);
+
+	FILE* restrict file;
+	const char* mode = "ab";
+	enum CzResult ret = fopen_wrap(&file, path, mode);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = fwrite_wrap(buffer, sizeof(char), size, file);
+	if CZ_NOEXPECT (ret) {
+		fclose_wrap(file);
+		return ret;
+	}
+	return fclose_wrap(file);
+}
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult overwrite_file_other(
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
+{
+	CZ_ASSUME(size != 0);
+
+	size_t fileSize;
+	enum CzResult ret = file_size_other(path, &fileSize);
+	if (ret == CZ_RESULT_NO_FILE)
+		return offset ? CZ_RESULT_BAD_OFFSET : write_file_other(path, buffer, size);
+	if CZ_NOEXPECT (ret)
+		return ret;
+	if CZ_NOEXPECT (offset > fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if (offset == fileSize)
+		return append_file_other(path, buffer, size);
+
+	void* restrict contents;
+	size_t contentsSize = maxz(fileSize, size + offset);
+	struct CzAllocFlags flags = {0};
+
+	ret = czAlloc(&contents, contentsSize, flags);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (offset) {
+		void* readBuffer = contents;
+		size_t readSize = offset;
+		size_t readOffset = 0;
+
+		ret = read_file_other(path, readBuffer, readSize, readOffset);
+		if CZ_NOEXPECT (ret)
+			goto err_free_contents;
+	}
+
+	void* copyDest = (char*) contents + offset;
+	memcpy(copyDest, buffer, size);
+
+	if (size + offset < fileSize) {
+		void* readBuffer = (char*) contents + offset + size;
+		size_t readSize = fileSize - size - offset;
+		size_t readOffset = size + offset;
+
+		ret = read_file_other(path, readBuffer, readSize, readOffset);
+		if CZ_NOEXPECT (ret)
+			goto err_free_contents;
+	}
+
+	ret = write_file_other(path, contents, contentsSize);
+err_free_contents:
+	czFree(contents);
+	return ret;
+}
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult insert_file_other(
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
+{
+	CZ_ASSUME(size != 0);
+
+	size_t fileSize;
+	enum CzResult ret = file_size_other(path, &fileSize);
+	if (ret == CZ_RESULT_NO_FILE)
+		return offset ? CZ_RESULT_BAD_OFFSET : write_file_other(path, buffer, size);
+	if CZ_NOEXPECT (ret)
+		return ret;
+	if CZ_NOEXPECT (offset > fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if (offset == fileSize)
+		return append_file_other(path, buffer, size);
+
+	void* restrict contents;
+	size_t contentsSize = fileSize + size;
+	struct CzAllocFlags flags = {0};
+
+	ret = czAlloc(&contents, contentsSize, flags);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (offset) {
+		void* readBuffer = contents;
+		size_t readSize = offset;
+		size_t readOffset = 0;
+
+		ret = read_file_other(path, readBuffer, readSize, readOffset);
+		if CZ_NOEXPECT (ret)
+			goto err_free_contents;
+	}
+
+	void* copyDest = (char*) contents + offset;
+	memcpy(copyDest, buffer, size);
+
+	void* readBuffer = (char*) contents + offset + size;
+	size_t readSize = fileSize - offset;
+	size_t readOffset = offset;
+
+	ret = read_file_other(path, readBuffer, readSize, readOffset);
+	if CZ_EXPECT (!ret)
+		ret = write_file_other(path, contents, contentsSize);
+
+err_free_contents:
+	czFree(contents);
+	return ret;
+}
+
+enum CzResult czWriteFile(
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+
+	enum CzResult ret = CZ_RESULT_INTERNAL_ERROR;
+	const char* realPath = path;
+	char* fullPath = NULL;
+
+	if (flags.relativeToExe && cwk_path_is_relative(path)) {
+		ret = alloc_abspath_from_relpath_to_exe(&fullPath, path);
+		if CZ_NOEXPECT (ret)
+			return ret;
+		realPath = fullPath;
+	}
+
+	if (flags.truncateFile)
+		ret = write_file_other(realPath, buffer, size);
+	else if (offset == CZ_EOF)
+		ret = append_file_other(realPath, buffer, size);
+	else if (flags.overwriteFile)
+		ret = overwrite_file_other(realPath, buffer, size, offset);
+	else
+		ret = insert_file_other(realPath, buffer, size, offset);
 
 	czFree(fullPath);
 	return ret;

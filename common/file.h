@@ -26,6 +26,13 @@
 #include "def.h"
 
 /**
+ * @brief Denotes end-of-file.
+ * 
+ * A value representing end-of-file. Can be used as an offset where explicitly stated.
+ */
+#define CZ_EOF SIZE_MAX
+
+/**
  * @brief Specifies the behaviour of file and IO functions.
  * 
  * A set of flags specifying the desired behaviour of @ref czFileSize, @ref czReadFile, or @ref czWriteFile.
@@ -36,6 +43,16 @@ struct CzFileFlags
 	 * @brief Whether to interpret relative filepaths as relative to the executable.
 	 */
 	bool relativeToExe : 1;
+
+	/**
+	 * @brief Whether to destroy any overwritten file contents.
+	 */
+	bool overwriteFile : 1;
+
+	/**
+	 * @brief Whether to fully truncate the file before any further access.
+	 */
+	bool truncateFile : 1;
 };
 
 /**
@@ -75,6 +92,8 @@ enum CzResult czStreamIsTerminal(FILE* stream, bool* istty);
  * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
  *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
  *   working directory of the program.
+ * - @p flags.overwriteFile is ignored.
+ * - @p flags.truncateFile is ignored.
  * 
  * Thread-safety is guaranteed if for any concurrent invocations, the @p path arguments all locate distinct system
  * resources and the @p size arguments are all nonoverlapping with respect to one another. If multiple @p path arguments
@@ -105,7 +124,7 @@ CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1) CZ_RE_ACCESS(1) CZ_WR_ACCESS(2)
 enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flags);
 
 /**
- * @brief Reads the contents of a file.
+ * @brief Reads from a file.
  * 
  * Reads the contents of the file located at the filepath @p path and synchronously writes the contents to @p buffer. If
  * the filepath style of @p path is not POSIX or Windows style, or is unsupported by the platform, failure occurs. If
@@ -116,18 +135,20 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  * Let @e fileSize denote the size of the file located at @p path as measured in bytes, and let @e minSize denote the
  * minimum of @p size and ( @e fileSize - @p offset ). The file contents read include exactly @e minSize contiguous
  * bytes starting from the byte at the zero-based index @p offset. That is, all bytes whose indices lie within the
- * interval [ @p offset, @e minSize + @p offset - 1 ]. If @p size is zero or @p offset is not less than @e fileSize,
- * failure occurs. On failure, the contents of @p buffer are undefined.
+ * interval [ @p offset, @e minSize + @p offset ). If @p size is zero or @p offset is not less than @e fileSize, failure
+ * occurs. On failure, the contents of @p buffer are undefined.
  * 
  * The members of @p flags can optionally specify the following behaviour.
  * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
  *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
  *   working directory of the program.
+ * - @p flags.overwriteFile is ignored.
+ * - @p flags.truncateFile is ignored.
  * 
- * Thread-safety is guaranteed if for any concurrent invocations, the @p path arguments all locate distinct system
- * resources and the @p buffer arguments are all nonoverlapping with respect to one another. If multiple @p path
- * arguments locate the same resource, such as the same file or directory, the behaviour is undefined. If multiple
- * @p buffer arguments overlap in memory, the contents of the overlapping memory are undefined.
+ * Thread-safety is guaranteed if for any concurrent invocations to @ref czReadFile or @ref czWriteFile, the @p path
+ * arguments all locate distinct system resources and the @p buffer arguments are all nonoverlapping with respect to one
+ * another. If multiple @p path arguments locate the same resource, such as the same file or directory, the behaviour is
+ * undefined. If multiple @p buffer arguments overlap in memory, the contents of the overlapping memory are undefined.
  * 
  * @param[in] path The path to the file.
  * @param[out] buffer The memory to write the file contents to.
@@ -137,7 +158,7 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
- * @retval CZ_RESULT_BAD_ACCESS Permission to read the file was denied.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to read from the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was nonzero and greater than or equal to @e fileSize.
@@ -160,6 +181,58 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1) CZ_RE_ACCESS(1) CZ_WR_ACCESS(2)
 enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t offset, struct CzFileFlags flags);
 
-// TODO
+/**
+ * @brief Writes to a file.
+ * 
+ * Reads the contents of @p buffer and synchronously writes the contents to the file located at the filepath @p path. If
+ * the filepath style of @p path is not POSIX or Windows style, or is unsupported by the platform, failure occurs. If
+ * @p path is an invalid filepath or locates a nonexistent or invalid resource, failure occurs. If @p path locates a
+ * symbolic link, the link is followed recursively. If @p path locates any other non-regular file resource, such as a
+ * directory, pipe, or socket, the behaviour is platform dependent.
+ * 
+ * Let @e fileSize denote the size of the file located at @p path as measured in bytes, and let @e maxSize denote the
+ * maximum of ( @p size + @p offset ) and @e fileSize. The file contents written include exactly @p size contiguous
+ * bytes starting from the byte at the zero-based index @p offset. That is, all bytes whose indices lie within the
+ * interval [ @p offset, @p size + @p offset ). Whether the previous file contents in this interval are preserved is
+ * dependent on @p flags.overwriteFile and @p flags.truncateFile.
+ * 
+ * If @p offset is @e fileSize or @c CZ_EOF, the contents of @p buffer are appended to the file. If @p offset is less
+ * than @e fileSize, @e maxSize is greater than @e fileSize, and @p flags.overwriteFile is set, @e fileSize is increased
+ * to @e maxSize to accommodate the entire contents of @p buffer. If @p size is zero or @p offset is not @c CZ_EOF and
+ * greater than @e fileSize, failure occurs. On failure, the contents of the file are undefined.
+ * 
+ * The members of @p flags can optionally specify the following behaviour.
+ * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
+ *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
+ *   working directory of the program.
+ * - If @p flags.overwriteFile is set, the overwritten file contents are destroyed. Otherwise, the previous file
+ *   contents in the interval [ @p offset, @e fileSize ) are moved to the memory immediately following the newly written
+ *   file contents.
+ * - If @p flags.truncateFile is set, the file is truncated and its contents are destroyed prior to writing the contents
+ *   of @p buffer to it; @p offset and @p flags.overwriteFile are ignored. Otherwise, the file is unaltered prior to
+ *   writing to it.
+ * 
+ * Thread-safety is guaranteed if for any concurrent invocations to @ref czReadFile or @ref czWriteFile, the @p path
+ * arguments all locate distinct system resources and the @p buffer arguments are all nonoverlapping with respect to one
+ * another. If multiple @p path arguments locate the same resource, such as the same file or directory, the behaviour is
+ * undefined. If multiple @p buffer arguments overlap in memory, the contents of the overlapping memory are undefined.
+ * 
+ * @param[in] path The path to the file.
+ * @param[in] buffer The memory to read the new file contents from.
+ * @param[in] size The number of bytes to write.
+ * @param[in] offset The first byte to write to.
+ * @param[in] flags Binary flags describing additional behaviour.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_OFFSET @p offset was not @c CZ_EOF and greater than @e fileSize.
+ * @retval CZ_RESULT_BAD_SIZE @p size was zero.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * 
+ * @pre @p path is nonnull and null-terminated.
+ * @pre @p buffer is nonnull.
+ * @pre @p path and @p buffer do not overlap in memory.
+ * @pre @p size is less than or equal to the size of @p buffer.
+ */
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1) CZ_RE_ACCESS(1) CZ_RE_ACCESS(2)
 enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, size_t offset, struct CzFileFlags flags);

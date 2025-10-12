@@ -18,6 +18,7 @@
 #include "util.h"
 #include "alloc.h"
 #include "debug.h"
+#include "file.h"
 
 char* stime(void)
 {
@@ -158,48 +159,26 @@ bool save_pipeline_cache(VkDevice device, VkPipelineCache cache, const char* fil
 	if CZ_NOEXPECT (vkres) { return false; }
 
 	void* restrict data;
-	struct CzAllocFlags flags = {0};
-
-	enum CzResult czres = czAlloc(&data, dataSize, flags);
+	struct CzAllocFlags allocFlags = {0};
+	enum CzResult czres = czAlloc(&data, dataSize, allocFlags);
 	if CZ_NOEXPECT (czres) { return false; }
 
 	VK_CALLR(vkGetPipelineCacheData, device, cache, &dataSize, data);
 	if CZ_NOEXPECT (vkres) { goto err_free_data; }
 
-	bool bres = write_file(filename, data, dataSize);
-	if CZ_NOEXPECT (!bres) { goto err_free_data; }
+	size_t offset = 0;
+	struct CzFileFlags fileFlags = {0};
+	fileFlags.relativeToExe = true;
+	fileFlags.truncateFile = true;
+
+	czres = czWriteFile(filename, data, dataSize, offset, fileFlags);
+	if CZ_NOEXPECT (czres) { goto err_free_data; }
 
 	czFree(data);
 	return true;
 
 err_free_data:
 	czFree(data);
-	return false;
-}
-
-bool write_file(const char* filename, const void* data, size_t size)
-{
-	const char* mode = "wb";
-	FILE* file = fopen(filename, mode);
-	if CZ_NOEXPECT (!file) {
-		FOPEN_FAILURE(file, filename, mode);
-		return false;
-	}
-
-	size_t objSize = sizeof(char);
-	size_t objCount = size;
-
-	size_t sres = fwrite(data, objSize, objCount, file);
-	if CZ_NOEXPECT (sres != size) {
-		FWRITE_FAILURE(sres, data, objSize, objCount, file);
-		goto err_close_file;
-	}
-
-	fclose(file);
-	return true;
-
-err_close_file:
-	fclose(file);
 	return false;
 }
 

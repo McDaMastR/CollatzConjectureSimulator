@@ -49,9 +49,6 @@ bool get_buffer_requirements_main4(
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(3) CZ_RE_ACCESS(3)
 bool save_pipeline_cache(VkDevice device, VkPipelineCache cache, const char* filename);
 
-CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1) CZ_RE_ACCESS(1) CZ_RE_ACCESS(2)
-bool write_file(const char* filename, const void* data, size_t size);
-
 CZ_SCANF(2, 3) CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1) CZ_NULLTERM_ARG(2) CZ_RE_ACCESS(1) CZ_RE_ACCESS(2)
 bool read_text(const char* filename, const char* format, ...);
 
