@@ -6,11 +6,11 @@ include(CheckIncludeFile)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
-option(CLTZ_EXCESS_WARNINGS "Whether to compile the program with potentially excessive warnings" OFF)
-option(CLTZ_STATIC_ANALYSIS "Whether to perform static analysis on the program during compilation" OFF)
+option(CZ_EXCESS_WARNINGS "Whether to compile the program with potentially excessive warnings" OFF)
+option(CZ_STATIC_ANALYSIS "Whether to perform static analysis on the program during compilation" OFF)
 
-set(USING_EXCESS_WARNINGS "$<BOOL:${CLTZ_EXCESS_WARNINGS}>")
-set(USING_STATIC_ANALYSIS "$<BOOL:${CLTZ_STATIC_ANALYSIS}>")
+set(USING_EXCESS_WARNINGS "$<BOOL:${CZ_EXCESS_WARNINGS}>")
+set(USING_STATIC_ANALYSIS "$<BOOL:${CZ_STATIC_ANALYSIS}>")
 
 check_include_file(aio.h        HAVE_AIO_H)
 check_include_file(stdcountof.h HAVE_STDCOUNTOF_H)

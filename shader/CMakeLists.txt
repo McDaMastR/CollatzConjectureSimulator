@@ -5,19 +5,19 @@ find_program(SPV_LNK_EXE NAMES spirv-link REQUIRED)
 find_program(SPV_OPT_EXE NAMES spirv-opt)
 find_program(SPV_DIS_EXE NAMES spirv-dis)
 
-option(CLTZ_DEBUG_SHADERS       "Whether to compile shaders with debug and nonsemantic information" OFF)
-option(CLTZ_OPTIMISE_SHADERS    "Whether to optimise the compiled shaders for improved performance" ON)
-option(CLTZ_DISASSEMBLE_SHADERS "Whether to disassemble the compiled shaders into SPIR-V assembly" OFF)
+option(CZ_DEBUG_SHADERS       "Whether to compile shaders with debug and nonsemantic information" OFF)
+option(CZ_OPTIMISE_SHADERS    "Whether to optimise the compiled shaders for improved performance" ON)
+option(CZ_DISASSEMBLE_SHADERS "Whether to disassemble the compiled shaders into SPIR-V assembly" OFF)
 
-set(USING_DEBUG_INFO   "$<BOOL:${CLTZ_DEBUG_SHADERS}>")
-set(USING_OPTIMISER    "$<AND:$<BOOL:${CLTZ_OPTIMISE_SHADERS}>,$<BOOL:${SPV_OPT_EXE}>>")
-set(USING_DISASSEMBLER "$<AND:$<BOOL:${CLTZ_DISASSEMBLE_SHADERS}>,$<BOOL:${SPV_DIS_EXE}>>")
+set(USING_DEBUG_INFO   "$<BOOL:${CZ_DEBUG_SHADERS}>")
+set(USING_OPTIMISER    "$<AND:$<BOOL:${CZ_OPTIMISE_SHADERS}>,$<BOOL:${SPV_OPT_EXE}>>")
+set(USING_DISASSEMBLER "$<AND:$<BOOL:${CZ_DISASSEMBLE_SHADERS}>,$<BOOL:${SPV_DIS_EXE}>>")
 
-if(CLTZ_OPTIMISE_SHADERS AND NOT SPV_OPT_EXE)
+if(CZ_OPTIMISE_SHADERS AND NOT SPV_OPT_EXE)
 	message(WARNING "SPIR-V optimiser not found - shaders will not be optimised")
 endif()
 
-if(CLTZ_DISASSEMBLE_SHADERS AND NOT SPV_DIS_EXE)
+if(CZ_DISASSEMBLE_SHADERS AND NOT SPV_DIS_EXE)
 	message(WARNING "SPIR-V disassembler not found - shaders will not be disassembled")
 endif()
 
