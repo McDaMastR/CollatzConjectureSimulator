@@ -1777,7 +1777,7 @@ bool create_pipeline(struct Gpu* restrict gpu)
 	czres = czReadFile(shaderName, shaderCode, shaderSize, shaderOffset, shaderFileFlags);
 	if CZ_NOEXPECT (czres) { dyrecord_destroy(localRecord); return false; }
 
-	size_t cacheSize;
+	size_t cacheSize = 0;
 	struct CzFileFlags cacheFileFlags = {0};
 	cacheFileFlags.relativeToExe = true;
 
@@ -1785,7 +1785,7 @@ bool create_pipeline(struct Gpu* restrict gpu)
 	if CZ_NOEXPECT (czres && czres != CZ_RESULT_NO_FILE) { dyrecord_destroy(localRecord); return false; }
 
 	void* cacheData = NULL;
-	if (czres == CZ_RESULT_SUCCESS) {
+	if (cacheSize) {
 		cacheData = dyrecord_malloc(localRecord, cacheSize);
 		if CZ_NOEXPECT (!cacheData) { dyrecord_destroy(localRecord); return false; }
 

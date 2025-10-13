@@ -19,6 +19,16 @@
 #include "alloc.h"
 #include "util.h"
 
+#if defined(_WIN32)
+	#define MAX_ACCESS_SIZE UINT32_MAX
+#elif defined(__APPLE__)
+	#define MAX_ACCESS_SIZE INT_MAX
+#elif defined(__unix__)
+	#define MAX_ACCESS_SIZE SSIZE_MAX
+#else
+	#define MAX_ACCESS_SIZE SIZE_MAX
+#endif
+
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_NULLTERM_ARG(3)
 static enum CzResult fopen_wrap(FILE* restrict* stream, const char* path, const char* mode)
 {
@@ -571,6 +581,27 @@ static enum CzResult alloc_utf16_from_utf8(wchar_t* restrict* restrict utf16, co
 		czFree(wcStr);
 	return ret;
 }
+
+CZ_NONNULL_ARGS
+static enum CzResult read_section_win32(HANDLE file, void* restrict buffer, size_t size, size_t offset)
+{
+	CZ_ASSUME(size != 0);
+
+	for (size_t i = 0; i < size; i += MAX_ACCESS_SIZE) {
+		LPVOID readBuffer = (PCHAR) buffer + i;
+		DWORD readSize = (DWORD) ((size - i) & MAX_ACCESS_SIZE);
+		ULARGE_INTEGER readOffset = {.QuadPart = offset + i};
+
+		OVERLAPPED overlapped = {0};
+		overlapped.Offset = readOffset.LowPart;
+		overlapped.OffsetHigh = readOffset.HighPart;
+
+		ret = ReadFile_wrap(file, readBuffer, readSize, NULL, &overlapped);
+		if CZ_NOEXPECT (ret)
+			return ret;
+	}
+	return CZ_RESULT_SUCCESS;
+}
 #endif
 
 #if defined(__APPLE__) || defined(__unix__)
@@ -603,6 +634,25 @@ static enum CzResult stat_wrap(const char* path, struct stat* st)
 	}
 }
 
+CZ_NONNULL_ARGS
+static enum CzResult fstat_wrap(int fd, struct stat* st)
+{
+	int r = fstat(fd, st);
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+	switch (errno) {
+#if defined(__APPLE__)
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
+#endif
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_FILE;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+}
+
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2)
 static enum CzResult open_wrap(int* fd, const char* path, int flags, mode_t mode)
 {
@@ -623,6 +673,7 @@ static enum CzResult open_wrap(int* fd, const char* path, int flags, mode_t mode
 	case EEXIST:
 	case EISDIR:
 	case ENOTCAPABLE:
+	case ENXIO:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
 	case EILSEQ:
@@ -636,7 +687,6 @@ static enum CzResult open_wrap(int* fd, const char* path, int flags, mode_t mode
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOENT:
-	case ENXIO:
 		return CZ_RESULT_NO_FILE;
 	case EMFILE:
 	case ENFILE:
@@ -661,9 +711,10 @@ static enum CzResult open_wrap(int* fd, const char* path, int flags, mode_t mode
 	case EEXIST:
 	case EFBIG:
 	case EISDIR:
+	case ENXIO:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
-	case EINVAL:
+	case EILSEQ:
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
@@ -679,7 +730,6 @@ static enum CzResult open_wrap(int* fd, const char* path, int flags, mode_t mode
 		return CZ_RESULT_INTERRUPT;
 	case ENODEV:
 	case ENOENT:
-	case ENXIO:
 		return CZ_RESULT_NO_FILE;
 	case ENOMEM:
 	case ENOSPC:
@@ -689,6 +739,7 @@ static enum CzResult open_wrap(int* fd, const char* path, int flags, mode_t mode
 		return CZ_RESULT_NO_OPEN;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
+	case EINVAL:
 	case EOPNOTSUPP:
 		return CZ_RESULT_NO_SUPPORT;
 	default:
@@ -705,6 +756,9 @@ static enum CzResult close_wrap(int fd)
 
 	switch (errno) {
 	case EINTR:
+#if defined(__unix__)
+	case EINPROGRESS:
+#endif
 		return CZ_RESULT_INTERRUPT;
 #if defined(__unix__)
 	case ENOSPC:
@@ -728,8 +782,6 @@ static enum CzResult pread_wrap(int fd, void* buffer, size_t size, off_t offset)
 
 #if defined(__APPLE__)
 	switch (errno) {
-	case EBADF:
-		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
 	case EDEADLK:
@@ -742,12 +794,13 @@ static enum CzResult pread_wrap(int fd, void* buffer, size_t size, off_t offset)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENXIO:
 	case ESTALE:
 		return CZ_RESULT_NO_FILE;
 	case ENOBUFS:
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
+	case ENXIO:
+		return CZ_RESULT_NO_SUPPORT;
 	case ETIMEDOUT:
 		return CZ_RESULT_TIMEOUT;
 	default:
@@ -755,15 +808,14 @@ static enum CzResult pread_wrap(int fd, void* buffer, size_t size, off_t offset)
 	}
 #elif defined(__unix__)
 	switch (errno) {
-	case EBADF:
+	case EPERM:
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
-	case EINVAL:
 	case EISDIR:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
-	case ENXIO:
+	case EINVAL:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
 	case EAGAIN:
@@ -773,10 +825,192 @@ static enum CzResult pread_wrap(int fd, void* buffer, size_t size, off_t offset)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
+	case ENOBUFS:
+	case ENOMEM:
+		return CZ_RESULT_NO_MEMORY;
+	case ENXIO:
+		return CZ_RESULT_NO_SUPPORT;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #endif
+}
+
+CZ_NONNULL_ARGS
+static enum CzResult write_wrap(int fd, const void* buffer, size_t size)
+{
+	ssize_t r = write(fd, buffer, size);
+	if CZ_EXPECT (r != -1 && (size_t) r == size)
+		return CZ_RESULT_SUCCESS;
+
+#if defined(__APPLE__)
+	switch (errno) {
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
+	case ECONNRESET:
+	case EDEADLK:
+	case EFBIG:
+	case ENETDOWN:
+	case ENETUNREACH:
+	case EPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	case ENXIO:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif defined(__unix__)
+	switch (errno) {
+	case EACCES:
+		return CZ_RESULT_BAD_ACCESS;
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
+	case ECONNRESET:
+	case EDESTADDRREQ:
+	case EFBIG:
+	case EINVAL:
+	case ENETDOWN:
+	case ENETUNREACH:
+	case EPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EAGAIN:
+#if EAGAIN != EWOULDBLOCK
+	case EWOULDBLOCK:
+#endif
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOBUFS:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	case ENXIO:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#endif
+}
+
+CZ_NONNULL_ARGS
+static enum CzResult pwrite_wrap(int fd, const void* buffer, size_t size, off_t offset)
+{
+	ssize_t r = pwrite(fd, buffer, size, offset);
+	if CZ_EXPECT (r != -1 && (size_t) r == size)
+		return CZ_RESULT_SUCCESS;
+
+#if defined(__APPLE__)
+	switch (errno) {
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
+	case ECONNRESET:
+	case EDEADLK:
+	case EFBIG:
+	case ENETDOWN:
+	case ENETUNREACH:
+	case EPIPE:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EINVAL:
+		return CZ_RESULT_BAD_OFFSET;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	case ENXIO:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif defined(__unix__)
+	switch (errno) {
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
+	case EDESTADDRREQ:
+	case EFBIG:
+	case ERANGE:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EINVAL:
+		return CZ_RESULT_BAD_OFFSET;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOBUFS:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	case ENXIO:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#endif
+}
+
+CZ_NONNULL_ARGS
+static enum CzResult read_section_posix(int fd, void* restrict buffer, size_t size, size_t offset)
+{
+	CZ_ASSUME(size != 0);
+
+	for (size_t i = 0; i < size; i += MAX_ACCESS_SIZE) {
+		void* readBuffer = (char*) buffer + i;
+		size_t readSize = (size - i) & MAX_ACCESS_SIZE;
+		off_t readOffset = (off_t) (offset + i);
+
+		enum CzResult ret = pread_wrap(fd, readBuffer, readSize, readOffset);
+		if CZ_NOEXPECT (ret)
+			return ret;
+	}
+	return CZ_RESULT_SUCCESS;
+}
+
+CZ_NONNULL_ARGS
+static enum CzResult write_next_posix(int fd, const void* restrict buffer, size_t size)
+{
+	CZ_ASSUME(size != 0);
+
+	for (size_t i = 0; i < size; i += MAX_ACCESS_SIZE) {
+		const void* writeBuffer = (const char*) buffer + i;
+		size_t writeSize = (size - i) & MAX_ACCESS_SIZE;
+
+		enum CzResult ret = write_wrap(fd, writeBuffer, writeSize);
+		if CZ_NOEXPECT (ret)
+			return ret;
+	}
+	return CZ_RESULT_SUCCESS;
+}
+
+CZ_NONNULL_ARGS
+static enum CzResult write_section_posix(int fd, const void* restrict buffer, size_t size, size_t offset)
+{
+	CZ_ASSUME(size != 0);
+
+	for (size_t i = 0; i < size; i += MAX_ACCESS_SIZE) {
+		const void* writeBuffer = (const char*) buffer + i;
+		size_t writeSize = (size - i) & MAX_ACCESS_SIZE;
+		off_t writeOffset = (off_t) (offset + i);
+
+		enum CzResult ret = pwrite_wrap(fd, writeBuffer, writeSize, writeOffset);
+		if CZ_NOEXPECT (ret)
+			return ret;
+	}
+	return CZ_RESULT_SUCCESS;
 }
 #endif
 
@@ -946,18 +1180,9 @@ static enum CzResult read_file_win32(const char* restrict path, void* restrict b
 	if CZ_NOEXPECT (ret)
 		goto err_free_wcpath;
 
-	for (size_t i = 0; i < size; i += UINT32_MAX) {
-		DWORD readSize = (DWORD) ((size - i) & UINT32_MAX);
-		ULARGE_INTEGER readOffset = {.QuadPart = offset + i};
-
-		OVERLAPPED overlapped = {0};
-		overlapped.Offset = readOffset.LowPart;
-		overlapped.OffsetHigh = readOffset.HighPart;
-
-		ret = ReadFile_wrap(file, buffer, readSize, NULL, &overlapped);
-		if CZ_NOEXPECT (ret)
-			goto err_close_file;
-	}
+	ret = read_section_win32(file, buffer, size, offset);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
 
 	czFree(wcPath);
 	return CloseHandle_wrap(file);
@@ -984,24 +1209,12 @@ static enum CzResult read_file_posix(const char* restrict path, void* restrict b
 	if CZ_NOEXPECT (ret)
 		return ret;
 
-#if defined(__APPLE__)
-	size_t maxSize = INT_MAX;
-#elif defined(__unix__)
-	size_t maxSize = SSIZE_MAX;
-#endif
-	for (size_t i = 0; i < size; i += maxSize) {
-		void* readBuffer = (char*) buffer + i;
-		size_t readSize = (size - i) & maxSize;
-		off_t readOffset = (off_t) (offset + i);
+	ret = read_section_posix(fd, buffer, size, offset);
+	if CZ_EXPECT (!ret)
+		return close_wrap(fd);
 
-		ret = pread_wrap(fd, readBuffer, readSize, readOffset);
-		if CZ_NOEXPECT (ret) {
-			close_wrap(fd);
-			return ret;
-		}
-	}
-
-	return close_wrap(fd);
+	close_wrap(fd);
+	return ret;
 }
 #endif
 
@@ -1061,8 +1274,129 @@ enum CzResult czReadFile(
 	return ret;
 }
 
+#if defined(__APPLE__) || defined(__unix__)
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
-static enum CzResult write_file_other(const char* restrict path, const void* restrict buffer, size_t size)
+static enum CzResult truncate_write_file_posix(const char* restrict path, const void* restrict buffer, size_t size)
+{
+	CZ_ASSUME(size != 0);
+
+	int fd;
+	int flags = O_WRONLY | O_CREAT | O_TRUNC | O_NOCTTY;
+	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
+
+	enum CzResult ret = open_wrap(&fd, path, flags, mode);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = write_next_posix(fd, buffer, size);
+	if CZ_EXPECT (!ret)
+		return close_wrap(fd);
+
+	close_wrap(fd);
+	return ret;
+}
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult append_file_posix(const char* restrict path, const void* restrict buffer, size_t size)
+{
+	CZ_ASSUME(size != 0);
+
+	int fd;
+	int flags = O_WRONLY | O_APPEND | O_CREAT | O_NOCTTY;
+	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
+
+	enum CzResult ret = open_wrap(&fd, path, flags, mode);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = write_next_posix(fd, buffer, size);
+	if CZ_EXPECT (!ret)
+		return close_wrap(fd);
+
+	close_wrap(fd);
+	return ret;
+}
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult overwrite_file_posix(
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
+{
+	CZ_ASSUME(size != 0);
+
+	int fd;
+	int flags = O_WRONLY | O_NOCTTY | (offset ? 0 : O_CREAT);
+	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
+
+	enum CzResult ret = open_wrap(&fd, path, flags, mode);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = write_section_posix(fd, buffer, size, offset);
+	if CZ_EXPECT (!ret)
+		return close_wrap(fd);
+
+	close_wrap(fd);
+	return ret;
+}
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult insert_file_posix(
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
+{
+	CZ_ASSUME(size != 0);
+
+	int fd;
+	int flags = O_RDWR | O_NOCTTY | (offset ? 0 : O_CREAT);
+	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
+
+	enum CzResult ret = open_wrap(&fd, path, flags, mode);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	struct stat st;
+	ret = fstat_wrap(fd, &st);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	size_t fileSize = (size_t) st.st_size;
+	if CZ_NOEXPECT (offset > fileSize) {
+		ret = CZ_RESULT_BAD_OFFSET;
+		goto err_close_file;
+	}
+
+	void* restrict contents = NULL;
+	size_t allocSize = fileSize - offset;
+	struct CzAllocFlags allocFlags = {0};
+
+	ret = czAlloc(&contents, allocSize, allocFlags);
+	if CZ_NOEXPECT (ret && ret != CZ_RESULT_BAD_SIZE)
+		goto err_close_file;
+
+	ret = read_section_posix(fd, contents, allocSize, offset);
+	if CZ_NOEXPECT (ret)
+		goto err_free_contents;
+
+	ret = write_section_posix(fd, buffer, size, offset);
+	if CZ_NOEXPECT (ret)
+		goto err_free_contents;
+
+	ret = write_section_posix(fd, contents, allocSize, offset + size);
+	if CZ_NOEXPECT (ret)
+		goto err_free_contents;
+
+	czFree(contents);
+	return close_wrap(fd);
+
+err_free_contents:
+	czFree(contents);
+err_close_file:
+	close_wrap(fd);
+	return ret;
+}
+#endif
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult truncate_write_file_other(const char* restrict path, const void* restrict buffer, size_t size)
 {
 	CZ_ASSUME(size != 0);
 
@@ -1073,11 +1407,11 @@ static enum CzResult write_file_other(const char* restrict path, const void* res
 		return ret;
 
 	ret = fwrite_wrap(buffer, sizeof(char), size, file);
-	if CZ_NOEXPECT (ret) {
-		fclose_wrap(file);
-		return ret;
-	}
-	return fclose_wrap(file);
+	if CZ_EXPECT (!ret)
+		return fclose_wrap(file);
+
+	fclose_wrap(file);
+	return ret;
 }
 
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
@@ -1108,7 +1442,7 @@ static enum CzResult overwrite_file_other(
 	size_t fileSize;
 	enum CzResult ret = file_size_other(path, &fileSize);
 	if (ret == CZ_RESULT_NO_FILE)
-		return offset ? CZ_RESULT_BAD_OFFSET : write_file_other(path, buffer, size);
+		return offset ? CZ_RESULT_BAD_OFFSET : truncate_write_file_other(path, buffer, size);
 	if CZ_NOEXPECT (ret)
 		return ret;
 	if CZ_NOEXPECT (offset > fileSize)
@@ -1147,7 +1481,7 @@ static enum CzResult overwrite_file_other(
 			goto err_free_contents;
 	}
 
-	ret = write_file_other(path, contents, contentsSize);
+	ret = truncate_write_file_other(path, contents, contentsSize);
 err_free_contents:
 	czFree(contents);
 	return ret;
@@ -1162,7 +1496,7 @@ static enum CzResult insert_file_other(
 	size_t fileSize;
 	enum CzResult ret = file_size_other(path, &fileSize);
 	if (ret == CZ_RESULT_NO_FILE)
-		return offset ? CZ_RESULT_BAD_OFFSET : write_file_other(path, buffer, size);
+		return offset ? CZ_RESULT_BAD_OFFSET : truncate_write_file_other(path, buffer, size);
 	if CZ_NOEXPECT (ret)
 		return ret;
 	if CZ_NOEXPECT (offset > fileSize)
@@ -1197,7 +1531,7 @@ static enum CzResult insert_file_other(
 
 	ret = read_file_other(path, readBuffer, readSize, readOffset);
 	if CZ_EXPECT (!ret)
-		ret = write_file_other(path, contents, contentsSize);
+		ret = truncate_write_file_other(path, contents, contentsSize);
 
 err_free_contents:
 	czFree(contents);
@@ -1221,14 +1555,25 @@ enum CzResult czWriteFile(
 		realPath = fullPath;
 	}
 
+#if defined(__APPLE__) || defined(__unix__)
 	if (flags.truncateFile)
-		ret = write_file_other(realPath, buffer, size);
+		ret = truncate_write_file_posix(realPath, buffer, size);
+	else if (offset == CZ_EOF)
+		ret = append_file_posix(realPath, buffer, size);
+	else if (flags.overwriteFile)
+		ret = overwrite_file_posix(realPath, buffer, size, offset);
+	else
+		ret = insert_file_posix(realPath, buffer, size, offset);
+#else
+	if (flags.truncateFile)
+		ret = truncate_write_file_other(realPath, buffer, size);
 	else if (offset == CZ_EOF)
 		ret = append_file_other(realPath, buffer, size);
 	else if (flags.overwriteFile)
 		ret = overwrite_file_other(realPath, buffer, size, offset);
 	else
 		ret = insert_file_other(realPath, buffer, size, offset);
+#endif
 
 	czFree(fullPath);
 	return ret;

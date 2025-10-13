@@ -109,6 +109,7 @@ set(INCLUDE_HEADERS_UNIX
 	<fcntl.h$<ANGLE-R>
 	<unistd.h$<ANGLE-R>
 	<sys/mman.h$<ANGLE-R>
+	<sys/select.h$<ANGLE-R>
 	<sys/stat.h$<ANGLE-R>
 	<sys/syscall.h$<ANGLE-R>
 	<sys/types.h$<ANGLE-R>

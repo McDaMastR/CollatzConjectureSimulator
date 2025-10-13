@@ -159,7 +159,7 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to read from the file was denied.
- * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
+ * @retval CZ_RESULT_BAD_ADDRESS @p path or @p buffer was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was nonzero and greater than or equal to @e fileSize.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
@@ -186,15 +186,16 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  * 
  * Reads the contents of @p buffer and synchronously writes the contents to the file located at the filepath @p path. If
  * the filepath style of @p path is not POSIX or Windows style, or is unsupported by the platform, failure occurs. If
- * @p path is an invalid filepath or locates a nonexistent or invalid resource, failure occurs. If @p path locates a
- * symbolic link, the link is followed recursively. If @p path locates any other non-regular file resource, such as a
- * directory, pipe, or socket, the behaviour is platform dependent.
+ * @p path is an invalid filepath or locates an invalid resource, failure occurs. If @p path locates a nonexistent
+ * resource, a regular file is created at the location. If @p path locates a symbolic link, the link is followed
+ * recursively. If @p path locates any other non-regular file resource, such as a directory, pipe, or socket, the
+ * behaviour is platform dependent.
  * 
- * Let @e fileSize denote the size of the file located at @p path as measured in bytes, and let @e maxSize denote the
- * maximum of ( @p size + @p offset ) and @e fileSize. The file contents written include exactly @p size contiguous
- * bytes starting from the byte at the zero-based index @p offset. That is, all bytes whose indices lie within the
- * interval [ @p offset, @p size + @p offset ). Whether the previous file contents in this interval are preserved is
- * dependent on @p flags.overwriteFile and @p flags.truncateFile.
+ * Let @e fileSize denote the size of the file located at @p path as measured in bytes if it exists, and zero otherwise.
+ * Let @e maxSize denote the maximum of ( @p size + @p offset ) and @e fileSize. The file contents written include
+ * exactly @p size contiguous bytes starting from the byte at the zero-based index @p offset. That is, all bytes whose
+ * indices lie within the interval [ @p offset, @p size + @p offset ). Whether the previous file contents in this
+ * interval are preserved is dependent on @p flags.overwriteFile and @p flags.truncateFile.
  * 
  * If @p offset is @e fileSize or @c CZ_EOF, the contents of @p buffer are appended to the file. If @p offset is less
  * than @e fileSize, @e maxSize is greater than @e fileSize, and @p flags.overwriteFile is set, @e fileSize is increased
@@ -225,9 +226,17 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to write to the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p path or @p buffer was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was not @c CZ_EOF and greater than @e fileSize.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal or IO cancellation.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_OPEN The maximum number of open files was reached.
+ * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
  * @pre @p path is nonnull and null-terminated.
  * @pre @p buffer is nonnull.
