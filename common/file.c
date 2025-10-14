@@ -94,6 +94,22 @@ static enum CzResult fwrite_wrap(const void* buffer, size_t size, size_t count, 
 	return ((r == count || !size) && !err) ? CZ_RESULT_SUCCESS : CZ_RESULT_INTERNAL_ERROR;
 }
 
+CZ_NONNULL_ARGS
+static enum CzResult fileno_wrap(int* fd, FILE* stream)
+{
+#if defined(_WIN32)
+	*fd = _fileno(stream);
+#elif defined(__APPLE__)
+	*fd = fileno(stream);
+#elif defined(__unix__)
+	int f = fileno(stream);
+	if CZ_NOEXPECT (f == -1)
+		return CZ_RESULT_BAD_STREAM;
+	*fd = f;
+#endif
+	return CZ_RESULT_SUCCESS;
+}
+
 CZ_NULLTERM_ARG(2)
 static enum CzResult getExecutablePath_wrap(int* length, char* out, int capacity, int* dirnameLength)
 {
@@ -168,6 +184,17 @@ static enum CzResult MultiByteToWideChar_wrap(
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
+}
+
+CZ_NONNULL_ARGS
+static enum CzResult get_osfhandle_wrap(intptr_t* handle, int fd)
+{
+	intptr_t h = _get_osfhandle(fd);
+	if CZ_NOEXPECT (h == INVALID_HANDLE_VALUE)
+		return CZ_RESULT_INTERNAL_ERROR;
+
+	*handle = h;
+	return CZ_RESULT_SUCCESS;
 }
 
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
@@ -782,6 +809,17 @@ static enum CzResult write_section_win32(HANDLE file, const void* restrict buffe
 #endif
 
 #if defined(__APPLE__) || defined(__unix__)
+CZ_NONNULL_ARGS
+static enum CzResult isatty_wrap(int* res, int fd)
+{
+	int r = isatty(fd);
+	if CZ_EXPECT (r || errno == ENOTTY) {
+		*res = r;
+		return CZ_RESULT_SUCCESS;
+	}
+	return CZ_RESULT_INTERNAL_ERROR;
+}
+
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
 static enum CzResult stat_wrap(const char* path, struct stat* st)
 {
@@ -1189,20 +1227,26 @@ static enum CzResult write_section_posix(int fd, const void* restrict buffer, si
 CZ_NONNULL_ARGS
 static enum CzResult stream_is_tty_win32(FILE* restrict stream, bool* restrict istty)
 {
-	int fd = _fileno(stream);
+	int fd;
+	enum CzResult ret = fileno_wrap(&fd, stream);
+	if CZ_NOEXPECT (ret)
+		return ret;
 	if (fd == -2) {
-		*istty = false;
-		return CZ_RESULT_SUCCESS;
-	}
+		goto out_not_tty;
 
-	intptr_t handle = _get_osfhandle(fd);
+	intptr_t handle;
+	ret = get_osfhandle_wrap(&handle, fd);
+	if CZ_NOEXPECT (ret)
+		return ret;
 	if (handle == -2) {
-		*istty = false;
-		return CZ_RESULT_SUCCESS;
-	}
+		goto out_not_tty;
 
 	DWORD mode;
-	*istty = (bool) GetConsoleMode((HANDLE) handle, &mode);
+	*istty = (bool) GetConsoleMode((HANDLE) handle, &mode); // Hope failure = not TTY
+	return CZ_RESULT_SUCCESS;
+
+out_not_tty:
+	*istty = false;
 	return CZ_RESULT_SUCCESS;
 }
 #endif
@@ -1211,9 +1255,16 @@ static enum CzResult stream_is_tty_win32(FILE* restrict stream, bool* restrict i
 CZ_NONNULL_ARGS
 static enum CzResult stream_is_tty_posix(FILE* restrict stream, bool* restrict istty)
 {
-	int fd = fileno(stream);
-	*istty = (bool) isatty(fd);
-	return CZ_RESULT_SUCCESS;
+	int fd;
+	enum CzResult ret = fileno_wrap(&fd, stream);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	int tty;
+	ret = isatty_wrap(&tty, fd);
+	if CZ_EXPECT (!ret)
+		*istty = (bool) tty;
+	return ret;
 }
 #endif
 

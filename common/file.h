@@ -71,6 +71,7 @@ struct CzFileFlags
  * @param[out] istty The memory to write the result to.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
  * @pre @p stream is nonnull.
