@@ -60,9 +60,10 @@ struct CzAllocFlags
  *   are initially undefined.
  * - @p flags.freeOnFail is ignored.
  * 
- * Thread-safety is guaranteed if the @p memory arguments of any concurrent invocations to @ref czAlloc, @ref czRealloc,
- * @ref czAllocAlign, or @ref czReallocAlign are all nonoverlapping with respect to one another. If overlap does occur,
- * the contents of the overlapping memory are undefined.
+ * Thread-safety is guaranteed for an invocation @b A to @ref czAlloc if the following conditions are satisfied.
+ * - For any concurrent invocation @b B to @ref czAlloc, @ref czRealloc, @ref czAllocAlign, or @ref czReallocAlign, the
+ *   @p memory arguments of @b A and @b B are nonoverlapping in memory. If overlap does occur, the contents of the
+ *   overlapping memory are undefined.
  * 
  * @param[out] memory The memory to write the address of the allocation to.
  * @param[in] size The size of the allocation.
@@ -100,9 +101,10 @@ enum CzResult czAlloc(void* restrict* memory, size_t size, struct CzAllocFlags f
  * - If @p flags.freeOnFail is set and failure occurs, the original allocation is freed. Otherwise if failure occurs,
  *   the original allocation is unchanged.
  * 
- * Thread-safety is guaranteed if the @p memory arguments of any concurrent invocations to @ref czAlloc, @ref czRealloc,
- * @ref czAllocAlign, or @ref czReallocAlign are all nonoverlapping with respect to one another. If overlap does occur,
- * the contents of the overlapping memory are undefined.
+ * Thread-safety is guaranteed for an invocation @b A to @ref czRealloc if the following conditions are satisfied.
+ * - For any concurrent invocation @b B to @ref czAlloc, @ref czRealloc, @ref czAllocAlign, or @ref czReallocAlign, the
+ *   @p memory arguments of @b A and @b B are nonoverlapping in memory. If overlap does occur, the contents of the
+ *   overlapping memory are undefined.
  * 
  * @param[in,out] memory The memory to read the current address of the allocation from, and to write the address of the
  *   new allocation to.
@@ -160,9 +162,10 @@ enum CzResult czFree(void* memory);
  *   are initially undefined.
  * - @p flags.freeOnFail is ignored.
  * 
- * Thread-safety is guaranteed if the @p memory arguments of any concurrent invocations to @ref czAlloc, @ref czRealloc,
- * @ref czAllocAlign, or @ref czReallocAlign are all nonoverlapping with respect to one another. If overlap does occur,
- * the contents of the overlapping memory are undefined.
+ * Thread-safety is guaranteed for an invocation @b A to @ref czAllocAlign if the following conditions are satisfied.
+ * - For any concurrent invocation @b B to @ref czAlloc, @ref czRealloc, @ref czAllocAlign, or @ref czReallocAlign, the
+ *   @p memory arguments of @b A and @b B are nonoverlapping in memory. If overlap does occur, the contents of the
+ *   overlapping memory are undefined.
  * 
  * @param[out] memory The memory to write the address of the allocation to.
  * @param[in] size The size of the allocation.
@@ -206,9 +209,10 @@ enum CzResult czAllocAlign(
  * - If @p flags.freeOnFail is set and failure occurs, the original allocation is freed. Otherwise if failure occurs,
  *   the original allocation is unchanged.
  * 
- * Thread-safety is guaranteed if the @p memory arguments of any concurrent invocations to @ref czAlloc, @ref czRealloc,
- * @ref czAllocAlign, or @ref czReallocAlign are all nonoverlapping with respect to one another. If overlap does occur,
- * the contents of the overlapping memory are undefined.
+ * Thread-safety is guaranteed for an invocation @b A to @ref czReallocAlign if the following conditions are satisfied.
+ * - For any concurrent invocation @b B to @ref czAlloc, @ref czRealloc, @ref czAllocAlign, or @ref czReallocAlign, the
+ *   @p memory arguments of @b A and @b B are nonoverlapping in memory. If overlap does occur, the contents of the
+ *   overlapping memory are undefined.
  * 
  * @param[in,out] memory The memory to read the current address of the allocation from, and to write the address of the
  *   new allocation to.

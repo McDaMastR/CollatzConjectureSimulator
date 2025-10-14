@@ -62,8 +62,10 @@ struct CzFileFlags
  * result to @p istty. If @p stream does refer to a TTY, @p istty is set to true. Otherwise, @p istty is set to false.
  * If the platform does not support this ability, failure occurs. On failure, the contents of @p istty are unchanged.
  * 
- * Thread-safety is guaranteed if the @p istty arguments of any concurrent invocations are all nonoverlapping with
- * respect to one another. If overlap does occur, the contents of the overlapping memory are undefined.
+ * Thread-safety is guaranteed for an invocation @b A to @ref czStreamIsTerminal if the following conditions are
+ * satisfied.
+ * - For any concurrent invocation @b B to @ref czStreamIsTerminal, the @p istty arguments of @b A and @b B are
+ *   nonoverlapping in memory. If overlap does occur, the contents of the overlapping memory are undefined.
  * 
  * @param[in] stream The open IO stream.
  * @param[out] istty The memory to write the result to.
@@ -95,10 +97,11 @@ enum CzResult czStreamIsTerminal(FILE* stream, bool* istty);
  * - @p flags.overwriteFile is ignored.
  * - @p flags.truncateFile is ignored.
  * 
- * Thread-safety is guaranteed if for any concurrent invocations, the @p path arguments all locate distinct system
- * resources and the @p size arguments are all nonoverlapping with respect to one another. If multiple @p path arguments
- * locate the same resource, such as the same file or directory, the behaviour is undefined. If multiple @p size
- * arguments overlap in memory, the contents of the overlapping memory are undefined.
+ * Thread-safety is guaranteed for an invocation @b A to @ref czFileSize if the following conditions are satisfied.
+ * - For any concurrent invocation @b B to @ref czFileSize, the @p size arguments of @b A and @b B are nonoverlapping in
+ *   memory. If overlap does occur, the contents of the overlapping memory are undefined.
+ * - For any concurrent invocation @b C to @ref czWriteFile, the @p path arguments of @b A and @b C locate distinct
+ *   system resources. If they locate the same resource, the behaviour is undefined.
  * 
  * @param[in] path The path to the file.
  * @param[out] size The memory to write the size to.
@@ -145,10 +148,11 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  * - @p flags.overwriteFile is ignored.
  * - @p flags.truncateFile is ignored.
  * 
- * Thread-safety is guaranteed if for any concurrent invocations to @ref czReadFile or @ref czWriteFile, the @p path
- * arguments all locate distinct system resources and the @p buffer arguments are all nonoverlapping with respect to one
- * another. If multiple @p path arguments locate the same resource, such as the same file or directory, the behaviour is
- * undefined. If multiple @p buffer arguments overlap in memory, the contents of the overlapping memory are undefined.
+ * Thread-safety is guaranteed for an invocation @b A to @ref czReadFile if the following conditions are satisfied.
+ * - For any concurrent invocation @b B to @ref czReadFile, the @p buffer arguments of @b A and @b B are nonoverlapping
+ *   in memory. If overlap does occur, the contents of the overlapping memory are undefined.
+ * - For any concurrent invocation @b C to @ref czWriteFile, the @p path arguments of @b A and @b C locate distinct
+ *   system resources. If they locate the same resource, the behaviour is undefined.
  * 
  * @param[in] path The path to the file.
  * @param[out] buffer The memory to write the file contents to.
@@ -213,10 +217,9 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  *   of @p buffer to it; @p offset and @p flags.overwriteFile are ignored. Otherwise, the file is unaltered prior to
  *   writing to it.
  * 
- * Thread-safety is guaranteed if for any concurrent invocations to @ref czReadFile or @ref czWriteFile, the @p path
- * arguments all locate distinct system resources and the @p buffer arguments are all nonoverlapping with respect to one
- * another. If multiple @p path arguments locate the same resource, such as the same file or directory, the behaviour is
- * undefined. If multiple @p buffer arguments overlap in memory, the contents of the overlapping memory are undefined.
+ * Thread-safety is guaranteed for an invocation @b A to @ref czReadFile if the following conditions are satisfied.
+ * - For any concurrent invocation @b B to @ref czWriteFile, the @p path arguments of @b A and @b B locate distinct
+ *   system resources. If they locate the same resource, the behaviour is undefined.
  * 
  * @param[in] path The path to the file.
  * @param[in] buffer The memory to read the new file contents from.
@@ -244,6 +247,8 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  * @pre @p buffer is nonnull.
  * @pre @p path and @p buffer do not overlap in memory.
  * @pre @p size is less than or equal to the size of @p buffer.
+ * 
+ * @warning Invalid usage can result in permanent loss of file data.
  */
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1) CZ_RE_ACCESS(1) CZ_RE_ACCESS(2)
 enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, size_t offset, struct CzFileFlags flags);
