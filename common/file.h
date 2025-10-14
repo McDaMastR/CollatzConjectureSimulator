@@ -195,7 +195,7 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  * Let @e maxSize denote the maximum of ( @p size + @p offset ) and @e fileSize. The file contents written include
  * exactly @p size contiguous bytes starting from the byte at the zero-based index @p offset. That is, all bytes whose
  * indices lie within the interval [ @p offset, @p size + @p offset ). Whether the previous file contents in this
- * interval are preserved is dependent on @p flags.overwriteFile and @p flags.truncateFile.
+ * interval are preserved is dependent on @p flags.overwriteFile.
  * 
  * If @p offset is @e fileSize or @c CZ_EOF, the contents of @p buffer are appended to the file. If @p offset is less
  * than @e fileSize, @e maxSize is greater than @e fileSize, and @p flags.overwriteFile is set, @e fileSize is increased
@@ -229,10 +229,12 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  * @retval CZ_RESULT_BAD_ACCESS Permission to write to the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path or @p buffer was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
- * @retval CZ_RESULT_BAD_OFFSET @p offset was not @c CZ_EOF and greater than @e fileSize.
+ * @retval CZ_RESULT_BAD_OFFSET The file did exist and @p offset was not @c CZ_EOF and greater than @e fileSize.
+ * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal or IO cancellation.
+ * @retval CZ_RESULT_NO_FILE The file did not exist and @p offset was nonzero and not @c CZ_EOF.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_OPEN The maximum number of open files was reached.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.

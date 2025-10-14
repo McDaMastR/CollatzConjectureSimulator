@@ -283,6 +283,75 @@ static enum CzResult GetFileAttributesExW_wrap(LPCWSTR path, GET_FILEEX_INFO_LEV
 	}
 }
 
+CZ_NONNULL_ARGS
+static enum CzResult GetFileSizeEx_wrap(HANDLE file, PLARGE_INTEGER size)
+{
+	BOOL r = GetFileSizeEx(file, size);
+	if CZ_EXPECT (r)
+		return CZ_RESULT_SUCCESS;
+
+	switch (GetLastError()) {
+	case ERROR_ACCESS_DENIED:
+	case ERROR_NETWORK_ACCESS_DENIED:
+		return CZ_RESULT_BAD_ACCESS;
+	case ERROR_BAD_DEV_TYPE:
+	case ERROR_BAD_FILE_TYPE:
+	case ERROR_BAD_PIPE:
+	case ERROR_BROKEN_PIPE:
+	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
+	case ERROR_DEV_NOT_EXIST:
+	case ERROR_DEVICE_UNREACHABLE:
+	case ERROR_DIRECTORY_NOT_SUPPORTED:
+	case ERROR_EA_FILE_CORRUPT:
+	case ERROR_EA_LIST_INCONSISTENT:
+	case ERROR_EA_TABLE_FULL:
+	case ERROR_FILE_TOO_LARGE:
+	case ERROR_INVALID_DATA:
+	case ERROR_NO_DATA:
+	case ERROR_NO_MORE_ITEMS:
+	case ERROR_NOT_ALLOWED_ON_SYSTEM_FILE:
+	case ERROR_PIPE_LOCAL:
+	case ERROR_PIPE_NOT_CONNECTED:
+	case ERROR_RESIDENT_FILE_NOT_SUPPORTED:
+	case ERROR_VIRUS_DELETED:
+	case ERROR_VIRUS_INFECTED:
+		return CZ_RESULT_BAD_FILE;
+	case ERROR_BUSY:
+	case ERROR_DRIVE_LOCKED:
+	case ERROR_FILE_CHECKED_OUT:
+	case ERROR_LOCK_VIOLATION:
+	case ERROR_LOCKED:
+	case ERROR_NETWORK_BUSY:
+	case ERROR_NOT_READY:
+	case ERROR_OPERATION_IN_PROGRESS:
+	case ERROR_PIPE_BUSY:
+	case ERROR_REDIR_PAUSED:
+	case ERROR_SHARING_PAUSED:
+	case ERROR_SHARING_VIOLATION:
+		return CZ_RESULT_IN_USE;
+	case ERROR_DEVICE_NO_RESOURCES:
+	case ERROR_DISK_FULL:
+	case ERROR_DISK_RESOURCES_EXHAUSTED:
+	case ERROR_DISK_TOO_FRAGMENTED:
+	case ERROR_HANDLE_DISK_FULL:
+	case ERROR_NOT_ENOUGH_MEMORY:
+	case ERROR_OUT_OF_STRUCTURES:
+	case ERROR_OUTOFMEMORY:
+		return CZ_RESULT_NO_MEMORY;
+	case ERROR_BAD_COMMAND:
+	case ERROR_BAD_NET_RESP:
+	case ERROR_CALL_NOT_IMPLEMENTED:
+	case ERROR_DEVICE_FEATURE_NOT_SUPPORTED:
+	case ERROR_DEVICE_SUPPORT_IN_PROGRESS:
+	case ERROR_EAS_NOT_SUPPORTED:
+	case ERROR_NOT_REDUNDANT_STORAGE:
+	case ERROR_NOT_SUPPORTED:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+}
+
 CZ_NONNULL_ARG(1, 2) CZ_NULLTERM_ARG(2)
 static enum CzResult CreateFileW_wrap(
 	HANDLE* file,
@@ -529,8 +598,6 @@ static enum CzResult ReadFile_wrap(
 		return CZ_RESULT_IN_USE;
 	case ERROR_OPERATION_ABORTED:
 		return CZ_RESULT_INTERRUPT;
-	case ERROR_NO_MORE_ITEMS:
-		return CZ_RESULT_NO_FILE;
 	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_DISK_FULL:
 	case ERROR_DISK_RESOURCES_EXHAUSTED:
@@ -542,6 +609,7 @@ static enum CzResult ReadFile_wrap(
 		return CZ_RESULT_NO_MEMORY;
 	case ERROR_ATOMIC_LOCKS_NOT_SUPPORTED:
 	case ERROR_BAD_COMMAND:
+	case ERROR_BAD_NET_RESP:
 	case ERROR_CALL_NOT_IMPLEMENTED:
 	case ERROR_DEVICE_FEATURE_NOT_SUPPORTED:
 	case ERROR_DEVICE_SUPPORT_IN_PROGRESS:
@@ -554,8 +622,94 @@ static enum CzResult ReadFile_wrap(
 	}
 }
 
+CZ_NONNULL_ARG(1, 2)
+static enum CzResult WriteFile_wrap(
+	HANDLE file, LPCVOID buffer, DWORD numberOfBytesToWrite, LPDWORD numberOfBytesWritten, LPOVERLAPPED overlapped)
+{
+	SetLastError(ERROR_SUCCESS);
+	BOOL r = WriteFile(file, buffer, numberOfBytesToWrite, numberOfBytesWritten, overlapped);
+	DWORD err = GetLastError();
+	if CZ_EXPECT (r && !err)
+		return CZ_RESULT_SUCCESS;
+
+	switch (err) {
+	case ERROR_IO_PENDING:
+		return CZ_RESULT_SUCCESS;
+	case ERROR_ACCESS_DENIED:
+	case ERROR_NETWORK_ACCESS_DENIED:
+	case ERROR_WRITE_PROTECT:
+		return CZ_RESULT_BAD_ACCESS;
+	case ERROR_INSUFFICIENT_BUFFER:
+	case ERROR_INVALID_ADDRESS:
+		return CZ_RESULT_BAD_ADDRESS;
+	case ERROR_ALREADY_ASSIGNED:
+	case ERROR_BAD_DEV_TYPE:
+	case ERROR_BAD_FILE_TYPE:
+	case ERROR_BAD_PIPE:
+	case ERROR_BROKEN_PIPE:
+	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
+	case ERROR_DEV_NOT_EXIST:
+	case ERROR_DEVICE_UNREACHABLE:
+	case ERROR_DIRECTORY_NOT_SUPPORTED:
+	case ERROR_EA_FILE_CORRUPT:
+	case ERROR_EA_LIST_INCONSISTENT:
+	case ERROR_EA_TABLE_FULL:
+	case ERROR_FILE_TOO_LARGE:
+	case ERROR_NO_DATA:
+	case ERROR_NOT_ALLOWED_ON_SYSTEM_FILE:
+	case ERROR_PIPE_LOCAL:
+	case ERROR_PIPE_NOT_CONNECTED:
+	case ERROR_RESIDENT_FILE_NOT_SUPPORTED:
+	case ERROR_SEEK_ON_DEVICE:
+	case ERROR_VIRUS_DELETED:
+	case ERROR_VIRUS_INFECTED:
+		return CZ_RESULT_BAD_FILE;
+	case ERROR_BAD_ARGUMENTS:
+	case ERROR_INVALID_FIELD_IN_PARAMETER_LIST:
+	case ERROR_INVALID_PARAMETER:
+	case ERROR_NEGATIVE_SEEK:
+		return CZ_RESULT_BAD_OFFSET;
+	case ERROR_BUSY:
+	case ERROR_DRIVE_LOCKED:
+	case ERROR_FILE_CHECKED_OUT:
+	case ERROR_LOCK_VIOLATION:
+	case ERROR_LOCKED:
+	case ERROR_NETWORK_BUSY:
+	case ERROR_NOT_READY:
+	case ERROR_OPERATION_IN_PROGRESS:
+	case ERROR_PIPE_BUSY:
+	case ERROR_REDIR_PAUSED:
+	case ERROR_SHARING_PAUSED:
+	case ERROR_SHARING_VIOLATION:
+		return CZ_RESULT_IN_USE;
+	case ERROR_OPERATION_ABORTED:
+		return CZ_RESULT_INTERRUPT;
+	case ERROR_DEVICE_NO_RESOURCES:
+	case ERROR_DISK_FULL:
+	case ERROR_DISK_RESOURCES_EXHAUSTED:
+	case ERROR_DISK_TOO_FRAGMENTED:
+	case ERROR_HANDLE_DISK_FULL:
+	case ERROR_NOT_ENOUGH_MEMORY:
+	case ERROR_OUT_OF_STRUCTURES:
+	case ERROR_OUTOFMEMORY:
+		return CZ_RESULT_NO_MEMORY;
+	case ERROR_ATOMIC_LOCKS_NOT_SUPPORTED:
+	case ERROR_BAD_COMMAND:
+	case ERROR_BAD_NET_RESP:
+	case ERROR_CALL_NOT_IMPLEMENTED:
+	case ERROR_DEVICE_SUPPORT_IN_PROGRESS:
+	case ERROR_EAS_NOT_SUPPORTED:
+	case ERROR_DEVICE_FEATURE_NOT_SUPPORTED:
+	case ERROR_NOT_REDUNDANT_STORAGE:
+	case ERROR_NOT_SUPPORTED:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+}
+
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2)
-static enum CzResult alloc_utf16_from_utf8(wchar_t* restrict* restrict utf16, const char* restrict utf8)
+static enum CzResult alloc_utf16_from_utf8_win32(wchar_t* restrict* restrict utf16, const char* restrict utf8)
 {
 	unsigned int codePage = CP_UTF8;
 	unsigned long flags = MB_ERR_INVALID_CHARS;
@@ -585,8 +739,6 @@ static enum CzResult alloc_utf16_from_utf8(wchar_t* restrict* restrict utf16, co
 CZ_NONNULL_ARGS
 static enum CzResult read_section_win32(HANDLE file, void* restrict buffer, size_t size, size_t offset)
 {
-	CZ_ASSUME(size != 0);
-
 	for (size_t i = 0; i < size; i += MAX_ACCESS_SIZE) {
 		LPVOID readBuffer = (PCHAR) buffer + i;
 		DWORD readSize = (DWORD) ((size - i) & MAX_ACCESS_SIZE);
@@ -597,6 +749,31 @@ static enum CzResult read_section_win32(HANDLE file, void* restrict buffer, size
 		overlapped.OffsetHigh = readOffset.HighPart;
 
 		ret = ReadFile_wrap(file, readBuffer, readSize, NULL, &overlapped);
+		if CZ_NOEXPECT (ret)
+			return ret;
+	}
+	return CZ_RESULT_SUCCESS;
+}
+
+CZ_NONNULL_ARGS
+static enum CzResult write_section_win32(HANDLE file, const void* restrict buffer, size_t size, size_t offset)
+{
+	for (size_t i = 0; i < size; i += MAX_ACCESS_SIZE) {
+		LPCVOID writeBuffer = (LPCSTR) buffer + i;
+		DWORD writeSize = (DWORD) ((size - i) & MAX_ACCESS_SIZE);
+		ULARGE_INTEGER writeOffset = {.QuadPart = offset + i};
+
+		OVERLAPPED overlapped = {0};
+		if (offset == CZ_EOF) {
+			overlapped.Offset = UINT32_MAX;
+			overlapped.OffsetHigh = UINT32_MAX;
+		}
+		else {
+			overlapped.Offset = writeOffset.LowPart;
+			overlapped.OffsetHigh = writeOffset.HighPart;
+		}
+
+		ret = WriteFile_wrap(file, writeBuffer, writeSize, NULL, &overlapped);
 		if CZ_NOEXPECT (ret)
 			return ret;
 	}
@@ -966,8 +1143,6 @@ static enum CzResult pwrite_wrap(int fd, const void* buffer, size_t size, off_t 
 CZ_NONNULL_ARGS
 static enum CzResult read_section_posix(int fd, void* restrict buffer, size_t size, size_t offset)
 {
-	CZ_ASSUME(size != 0);
-
 	for (size_t i = 0; i < size; i += MAX_ACCESS_SIZE) {
 		void* readBuffer = (char*) buffer + i;
 		size_t readSize = (size - i) & MAX_ACCESS_SIZE;
@@ -983,8 +1158,6 @@ static enum CzResult read_section_posix(int fd, void* restrict buffer, size_t si
 CZ_NONNULL_ARGS
 static enum CzResult write_next_posix(int fd, const void* restrict buffer, size_t size)
 {
-	CZ_ASSUME(size != 0);
-
 	for (size_t i = 0; i < size; i += MAX_ACCESS_SIZE) {
 		const void* writeBuffer = (const char*) buffer + i;
 		size_t writeSize = (size - i) & MAX_ACCESS_SIZE;
@@ -999,8 +1172,6 @@ static enum CzResult write_next_posix(int fd, const void* restrict buffer, size_
 CZ_NONNULL_ARGS
 static enum CzResult write_section_posix(int fd, const void* restrict buffer, size_t size, size_t offset)
 {
-	CZ_ASSUME(size != 0);
-
 	for (size_t i = 0; i < size; i += MAX_ACCESS_SIZE) {
 		const void* writeBuffer = (const char*) buffer + i;
 		size_t writeSize = (size - i) & MAX_ACCESS_SIZE;
@@ -1070,7 +1241,7 @@ CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
 static enum CzResult file_size_win32(const char* restrict path, size_t* restrict size)
 {
 	wchar_t* restrict wcPath;
-	enum CzResult ret = alloc_utf16_from_utf8(&wcPath, path);
+	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
@@ -1161,19 +1332,17 @@ enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struc
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
 static enum CzResult read_file_win32(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
 {
-	CZ_ASSUME(size != 0);
-
 	wchar_t* restrict wcPath;
-	enum CzResult ret = alloc_utf16_from_utf8(&wcPath, path);
+	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
 	HANDLE file;
 	DWORD access = GENERIC_READ;
-	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_DELETE;
+	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
 	LPSECURITY_ATTRIBUTES security = NULL;
 	DWORD disposition = OPEN_EXISTING;
-	DWORD flags = 0;
+	DWORD flags = FILE_FLAG_SEQUENTIAL_SCAN;
 	HANDLE template = NULL;
 
 	ret = CreateFileW_wrap(&file, wcPath, access, shareMode, security, disposition, flags, template);
@@ -1199,8 +1368,6 @@ err_free_wcpath:
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
 static enum CzResult read_file_posix(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
 {
-	CZ_ASSUME(size != 0);
-
 	int fd;
 	int flags = O_RDONLY | O_NOCTTY;
 	mode_t mode = 0;
@@ -1221,8 +1388,6 @@ static enum CzResult read_file_posix(const char* restrict path, void* restrict b
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
 static enum CzResult read_file_other(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
 {
-	CZ_ASSUME(size != 0);
-
 	FILE* restrict file;
 	const char* mode = "rb";
 	enum CzResult ret = fopen_wrap(&file, path, mode);
@@ -1274,12 +1439,182 @@ enum CzResult czReadFile(
 	return ret;
 }
 
+#if defined(_WIN32)
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult truncate_write_file_win32(const char* restrict path, const void* restrict buffer, size_t size)
+{
+	wchar_t* restrict wcPath;
+	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	HANDLE file;
+	DWORD access = GENERIC_WRITE;
+	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+	LPSECURITY_ATTRIBUTES security = NULL;
+	DWORD disposition = OPEN_EXISTING;
+	DWORD flags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
+	HANDLE template = NULL;
+
+	ret = CreateFileW_wrap(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	if CZ_NOEXPECT (ret)
+		goto err_free_wcpath;
+
+	size_t offset = 0;
+	ret = write_section_win32(file, buffer, size, offset);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	czFree(wcPath);
+	return CloseHandle_wrap(file);
+
+err_close_file:
+	CloseHandle_wrap(file);
+err_free_wcpath:
+	czFree(wcPath);
+	return ret;
+}
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult append_file_win32(const char* restrict path, const void* restrict buffer, size_t size)
+{
+	wchar_t* restrict wcPath;
+	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	HANDLE file;
+	DWORD access = GENERIC_WRITE;
+	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+	LPSECURITY_ATTRIBUTES security = NULL;
+	DWORD disposition = OPEN_ALWAYS;
+	DWORD flags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
+	HANDLE template = NULL;
+
+	ret = CreateFileW_wrap(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	if CZ_NOEXPECT (ret)
+		goto err_free_wcpath;
+
+	size_t offset = CZ_EOF;
+	ret = write_section_win32(file, buffer, size, offset);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	czFree(wcPath);
+	return CloseHandle_wrap(file);
+
+err_close_file:
+	CloseHandle_wrap(file);
+err_free_wcpath:
+	czFree(wcPath);
+	return ret;
+}
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult overwrite_file_win32(
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
+{
+	wchar_t* restrict wcPath;
+	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	HANDLE file;
+	DWORD access = GENERIC_WRITE;
+	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+	LPSECURITY_ATTRIBUTES security = NULL;
+	DWORD disposition = offset ? OPEN_EXISTING : OPEN_ALWAYS;
+	DWORD flags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
+	HANDLE template = NULL;
+
+	ret = CreateFileW_wrap(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	if CZ_NOEXPECT (ret)
+		goto err_free_wcpath;
+
+	ret = write_section_win32(file, buffer, size, offset);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	czFree(wcPath);
+	return CloseHandle_wrap(file);
+
+err_close_file:
+	CloseHandle_wrap(file);
+err_free_wcpath:
+	czFree(wcPath);
+	return ret;
+}
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult insert_file_win32(
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
+{
+	wchar_t* restrict wcPath;
+	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	HANDLE file;
+	DWORD access = GENERIC_READ | GENERIC_WRITE;
+	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+	LPSECURITY_ATTRIBUTES security = NULL;
+	DWORD disposition = offset ? OPEN_EXISTING : OPEN_ALWAYS;
+	DWORD flags = FILE_ATTRIBUTE_NORMAL;
+	HANDLE template = NULL;
+
+	ret = CreateFileW_wrap(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	if CZ_NOEXPECT (ret)
+		goto err_free_wcpath;
+
+	LARGE_INTEGER fileSizeLarge;
+	ret = GetFileSizeEx_wrap(file, &fileSizeLarge);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	size_t fileSize = (size_t) fileSizeLarge.QuadPart;
+	if CZ_NOEXPECT (offset > fileSize) {
+		ret = CZ_RESULT_BAD_OFFSET;
+		goto err_close_file;
+	}
+
+	void* restrict content = NULL;
+	size_t contentSize = fileSize - offset;
+	struct CzAllocFlags allocFlags = {0};
+
+	ret = czAlloc(&content, contentSize, allocFlags);
+	if CZ_NOEXPECT (ret && ret != CZ_RESULT_BAD_SIZE)
+		goto err_close_file;
+
+	ret = read_section_win32(file, content, contentSize, offset);
+	if CZ_NOEXPECT (ret)
+		goto err_free_content;
+
+	ret = write_section_win32(file, buffer, size, offset);
+	if CZ_NOEXPECT (ret)
+		goto err_free_content;
+
+	ret = write_section_win32(file, content, contentSize, offset + size);
+	if CZ_NOEXPECT (ret)
+		goto err_free_content;
+
+	czFree(content);
+	czFree(wcPath);
+	return CloseHandle_wrap(file);
+
+err_free_content:
+	czFree(content);
+err_close_file:
+	CloseHandle_wrap(file);
+err_free_wcpath:
+	czFree(wcPath);
+	return ret;
+}
+#endif
+
 #if defined(__APPLE__) || defined(__unix__)
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
 static enum CzResult truncate_write_file_posix(const char* restrict path, const void* restrict buffer, size_t size)
 {
-	CZ_ASSUME(size != 0);
-
 	int fd;
 	int flags = O_WRONLY | O_CREAT | O_TRUNC | O_NOCTTY;
 	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
@@ -1299,8 +1634,6 @@ static enum CzResult truncate_write_file_posix(const char* restrict path, const 
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
 static enum CzResult append_file_posix(const char* restrict path, const void* restrict buffer, size_t size)
 {
-	CZ_ASSUME(size != 0);
-
 	int fd;
 	int flags = O_WRONLY | O_APPEND | O_CREAT | O_NOCTTY;
 	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
@@ -1321,8 +1654,6 @@ CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
 static enum CzResult overwrite_file_posix(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
 {
-	CZ_ASSUME(size != 0);
-
 	int fd;
 	int flags = O_WRONLY | O_NOCTTY | (offset ? 0 : O_CREAT);
 	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
@@ -1343,8 +1674,6 @@ CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
 static enum CzResult insert_file_posix(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
 {
-	CZ_ASSUME(size != 0);
-
 	int fd;
 	int flags = O_RDWR | O_NOCTTY | (offset ? 0 : O_CREAT);
 	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
@@ -1364,31 +1693,31 @@ static enum CzResult insert_file_posix(
 		goto err_close_file;
 	}
 
-	void* restrict contents = NULL;
-	size_t allocSize = fileSize - offset;
+	void* restrict content = NULL;
+	size_t contentSize = fileSize - offset;
 	struct CzAllocFlags allocFlags = {0};
 
-	ret = czAlloc(&contents, allocSize, allocFlags);
+	ret = czAlloc(&content, contentSize, allocFlags);
 	if CZ_NOEXPECT (ret && ret != CZ_RESULT_BAD_SIZE)
 		goto err_close_file;
 
-	ret = read_section_posix(fd, contents, allocSize, offset);
+	ret = read_section_posix(fd, content, contentSize, offset);
 	if CZ_NOEXPECT (ret)
-		goto err_free_contents;
+		goto err_free_content;
 
 	ret = write_section_posix(fd, buffer, size, offset);
 	if CZ_NOEXPECT (ret)
-		goto err_free_contents;
+		goto err_free_content;
 
-	ret = write_section_posix(fd, contents, allocSize, offset + size);
+	ret = write_section_posix(fd, content, contentSize, offset + size);
 	if CZ_NOEXPECT (ret)
-		goto err_free_contents;
+		goto err_free_content;
 
-	czFree(contents);
+	czFree(content);
 	return close_wrap(fd);
 
-err_free_contents:
-	czFree(contents);
+err_free_content:
+	czFree(content);
 err_close_file:
 	close_wrap(fd);
 	return ret;
@@ -1398,8 +1727,6 @@ err_close_file:
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
 static enum CzResult truncate_write_file_other(const char* restrict path, const void* restrict buffer, size_t size)
 {
-	CZ_ASSUME(size != 0);
-
 	FILE* restrict file;
 	const char* mode = "wb";
 	enum CzResult ret = fopen_wrap(&file, path, mode);
@@ -1417,8 +1744,6 @@ static enum CzResult truncate_write_file_other(const char* restrict path, const 
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
 static enum CzResult append_file_other(const char* restrict path, const void* restrict buffer, size_t size)
 {
-	CZ_ASSUME(size != 0);
-
 	FILE* restrict file;
 	const char* mode = "ab";
 	enum CzResult ret = fopen_wrap(&file, path, mode);
@@ -1437,8 +1762,6 @@ CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
 static enum CzResult overwrite_file_other(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
 {
-	CZ_ASSUME(size != 0);
-
 	size_t fileSize;
 	enum CzResult ret = file_size_other(path, &fileSize);
 	if (ret == CZ_RESULT_NO_FILE)
@@ -1491,8 +1814,6 @@ CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
 static enum CzResult insert_file_other(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
 {
-	CZ_ASSUME(size != 0);
-
 	size_t fileSize;
 	enum CzResult ret = file_size_other(path, &fileSize);
 	if (ret == CZ_RESULT_NO_FILE)
@@ -1555,7 +1876,16 @@ enum CzResult czWriteFile(
 		realPath = fullPath;
 	}
 
-#if defined(__APPLE__) || defined(__unix__)
+#if defined(_WIN32)
+	if (flags.truncateFile)
+		ret = truncate_write_file_win32(realPath, buffer, size);
+	else if (offset == CZ_EOF)
+		ret = append_file_win32(realPath, buffer, size);
+	else if (flags.overwriteFile)
+		ret = overwrite_file_win32(realPath, buffer, size, offset);
+	else
+		ret = insert_file_win32(realPath, buffer, size, offset);
+#elif defined(__APPLE__) || defined(__unix__)
 	if (flags.truncateFile)
 		ret = truncate_write_file_posix(realPath, buffer, size);
 	else if (offset == CZ_EOF)
