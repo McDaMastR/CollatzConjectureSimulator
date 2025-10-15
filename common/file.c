@@ -121,14 +121,9 @@ static enum CzResult fclose_wrap(FILE* stream)
 
 #if defined(__APPLE__)
 	switch (errno) {
-	case ECONNRESET:
 	case EDEADLK:
 	case EFBIG:
-	case ENETDOWN:
-	case ENETUNREACH:
 	case EOVERFLOW:
-	case EPIPE:
-	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
@@ -136,6 +131,11 @@ static enum CzResult fclose_wrap(FILE* stream)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
+	case ECONNRESET:
+	case ENETDOWN:
+	case ENETUNREACH:
+	case EPIPE:
+		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
@@ -148,7 +148,6 @@ static enum CzResult fclose_wrap(FILE* stream)
 #elif defined(__unix__)
 	switch (errno) {
 	case EFBIG:
-	case EPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
@@ -156,6 +155,8 @@ static enum CzResult fclose_wrap(FILE* stream)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
+	case EPIPE:
+		return CZ_RESULT_NO_CONNECTION;
 	case ENOMEM:
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
@@ -180,8 +181,6 @@ static enum CzResult fseek_wrap(FILE* stream, long offset, int origin)
 	switch (errno) {
 	case EDEADLK:
 	case EFBIG:
-	case ENETDOWN:
-	case ENETUNREACH:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EINVAL:
@@ -193,6 +192,11 @@ static enum CzResult fseek_wrap(FILE* stream, long offset, int origin)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
+	case ECONNRESET:
+	case ENETDOWN:
+	case ENETUNREACH:
+	case EPIPE:
+		return CZ_RESULT_NO_CONNECTION;
 	case ENOMEM:
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
@@ -206,7 +210,6 @@ static enum CzResult fseek_wrap(FILE* stream, long offset, int origin)
 #elif defined(__unix__)
 	switch (errno) {
 	case EFBIG:
-	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EINVAL:
@@ -218,6 +221,8 @@ static enum CzResult fseek_wrap(FILE* stream, long offset, int origin)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
+	case EPIPE:
+		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
 	case ENXIO:
@@ -260,6 +265,11 @@ static enum CzResult ftell_wrap(long* pos, FILE* stream)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
+	case ECONNRESET:
+	case ENETDOWN:
+	case ENETUNREACH:
+	case EPIPE:
+		return CZ_RESULT_NO_CONNECTION;
 	case ENOMEM:
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
@@ -337,7 +347,6 @@ static enum CzResult fwrite_wrap(const void* buffer, size_t size, size_t count, 
 #if defined(__unix__)
 	switch (errno) {
 	case EFBIG:
-	case EPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
@@ -345,6 +354,8 @@ static enum CzResult fwrite_wrap(const void* buffer, size_t size, size_t count, 
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
+	case EPIPE:
+		return CZ_RESULT_NO_CONNECTION;
 	case ENOMEM:
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
@@ -355,6 +366,71 @@ static enum CzResult fwrite_wrap(const void* buffer, size_t size, size_t count, 
 	}
 #else
 	return CZ_RESULT_INTERNAL_ERROR;
+#endif
+}
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult remove_wrap(const char* path)
+{
+	int r = remove(path);
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+#if defined(_WIN32)
+	switch (errno) {
+	case EACCES:
+		return CZ_RESULT_BAD_FILE;
+	case ENOENT:
+		return CZ_RESULT_NO_FILE;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif defined(__APPLE__)
+	switch (errno) {
+	case EACCES:
+	case EPERM:
+	case EROFS:
+		return CZ_RESULT_BAD_ACCESS;
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
+	case ENOTEMPTY:
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_FILE;
+	case ELOOP:
+	case ENAMETOOLONG:
+	case ENOTDIR:
+		return CZ_RESULT_BAD_PATH;
+	case EBUSY:
+		return CZ_RESULT_IN_USE;
+	case ENOENT:
+		return CZ_RESULT_NO_FILE;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif defined(__unix__)
+	switch (errno) {
+	case EACCES:
+	case EPERM:
+	case EROFS:
+		return CZ_RESULT_BAD_ACCESS;
+	case EEXIST:
+	case EINVAL:
+	case ENOTEMPTY:
+		return CZ_RESULT_BAD_FILE;
+	case ELOOP:
+	case ENAMETOOLONG:
+	case ENOTDIR:
+		return CZ_RESULT_BAD_PATH;
+	case EBUSY:
+	case ETXTBSY:
+		return CZ_RESULT_IN_USE;
+	case ENOENT:
+		return CZ_RESULT_NO_FILE;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	return CZ_RESULT_BAD_PATH;
 #endif
 }
 
@@ -517,11 +593,9 @@ static enum CzResult GetFileAttributesExW_wrap(LPCWSTR path, GET_FILEEX_INFO_LEV
 	case ERROR_FILE_TOO_LARGE:
 	case ERROR_INVALID_EA_HANDLE:
 	case ERROR_INVALID_EA_NAME:
-	case ERROR_NO_DATA:
 	case ERROR_NO_MORE_ITEMS:
 	case ERROR_NOT_ALLOWED_ON_SYSTEM_FILE:
 	case ERROR_PIPE_LOCAL:
-	case ERROR_PIPE_NOT_CONNECTED:
 	case ERROR_RESIDENT_FILE_NOT_SUPPORTED:
 	case ERROR_VIRUS_DELETED:
 	case ERROR_VIRUS_INFECTED:
@@ -559,13 +633,17 @@ static enum CzResult GetFileAttributesExW_wrap(LPCWSTR path, GET_FILEEX_INFO_LEV
 	case ERROR_SHARING_PAUSED:
 	case ERROR_SHARING_VIOLATION:
 		return CZ_RESULT_IN_USE;
+	case ERROR_NO_DATA:
+	case ERROR_PIPE_NOT_CONNECTED:
+	case ERROR_REQ_NOT_ACCEP:
+	case ERROR_VC_DISCONNECTED:
+		return CZ_RESULT_NO_CONNECTION;
 	case ERROR_BAD_NETPATH:
 	case ERROR_BAD_UNIT:
 	case ERROR_DEV_NOT_EXIST:
 	case ERROR_DEVICE_UNREACHABLE:
 	case ERROR_FILE_NOT_FOUND:
 	case ERROR_MOD_NOT_FOUND:
-	case ERROR_REM_NOT_LIST:
 	case ERROR_NETNAME_DELETED:
 	case ERROR_PROC_NOT_FOUND:
 		return CZ_RESULT_NO_FILE;
@@ -579,7 +657,6 @@ static enum CzResult GetFileAttributesExW_wrap(LPCWSTR path, GET_FILEEX_INFO_LEV
 	case ERROR_OUTOFMEMORY:
 		return CZ_RESULT_NO_MEMORY;
 	case ERROR_NO_MORE_SEARCH_HANDLES:
-	case ERROR_REQ_NOT_ACCEP:
 	case ERROR_SHARING_BUFFER_EXCEEDED:
 	case ERROR_TOO_MANY_DESCRIPTORS:
 	case ERROR_TOO_MANY_MODULES:
@@ -625,11 +702,9 @@ static enum CzResult GetFileSizeEx_wrap(HANDLE file, PLARGE_INTEGER size)
 	case ERROR_EA_TABLE_FULL:
 	case ERROR_FILE_TOO_LARGE:
 	case ERROR_INVALID_DATA:
-	case ERROR_NO_DATA:
 	case ERROR_NO_MORE_ITEMS:
 	case ERROR_NOT_ALLOWED_ON_SYSTEM_FILE:
 	case ERROR_PIPE_LOCAL:
-	case ERROR_PIPE_NOT_CONNECTED:
 	case ERROR_RESIDENT_FILE_NOT_SUPPORTED:
 	case ERROR_VIRUS_DELETED:
 	case ERROR_VIRUS_INFECTED:
@@ -647,6 +722,10 @@ static enum CzResult GetFileSizeEx_wrap(HANDLE file, PLARGE_INTEGER size)
 	case ERROR_SHARING_PAUSED:
 	case ERROR_SHARING_VIOLATION:
 		return CZ_RESULT_IN_USE;
+	case ERROR_NO_DATA:
+	case ERROR_PIPE_NOT_CONNECTED:
+	case ERROR_VC_DISCONNECTED:
+		return CZ_RESULT_NO_CONNECTION;
 	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_DISK_FULL:
 	case ERROR_DISK_RESOURCES_EXHAUSTED:
@@ -718,12 +797,10 @@ static enum CzResult CreateFileW_wrap(
 	case ERROR_FILE_TOO_LARGE:
 	case ERROR_INVALID_EA_HANDLE:
 	case ERROR_INVALID_EA_NAME:
-	case ERROR_NO_DATA:
 	case ERROR_NO_MORE_ITEMS:
 	case ERROR_NOT_ALLOWED_ON_SYSTEM_FILE:
 	case ERROR_OPEN_FAILED:
 	case ERROR_PIPE_LOCAL:
-	case ERROR_PIPE_NOT_CONNECTED:
 	case ERROR_RESIDENT_FILE_NOT_SUPPORTED:
 	case ERROR_SEEK_ON_DEVICE:
 	case ERROR_VIRUS_DELETED:
@@ -762,6 +839,11 @@ static enum CzResult CreateFileW_wrap(
 	case ERROR_SHARING_PAUSED:
 	case ERROR_SHARING_VIOLATION:
 		return CZ_RESULT_IN_USE;
+	case ERROR_NO_DATA:
+	case ERROR_PIPE_NOT_CONNECTED:
+	case ERROR_REQ_NOT_ACCEP:
+	case ERROR_VC_DISCONNECTED:
+		return CZ_RESULT_NO_CONNECTION;
 	case ERROR_BAD_NETPATH:
 	case ERROR_BAD_UNIT:
 	case ERROR_DEV_NOT_EXIST:
@@ -771,7 +853,6 @@ static enum CzResult CreateFileW_wrap(
 	case ERROR_MOD_NOT_FOUND:
 	case ERROR_NETNAME_DELETED:
 	case ERROR_PROC_NOT_FOUND:
-	case ERROR_REM_NOT_LIST:
 		return CZ_RESULT_NO_FILE;
 	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_DISK_FULL:
@@ -783,7 +864,6 @@ static enum CzResult CreateFileW_wrap(
 	case ERROR_OUTOFMEMORY:
 		return CZ_RESULT_NO_MEMORY;
 	case ERROR_NO_MORE_SEARCH_HANDLES:
-	case ERROR_REQ_NOT_ACCEP:
 	case ERROR_SHARING_BUFFER_EXCEEDED:
 	case ERROR_TOO_MANY_DESCRIPTORS:
 	case ERROR_TOO_MANY_MODULES:
@@ -886,10 +966,8 @@ static enum CzResult ReadFile_wrap(
 	case ERROR_EA_TABLE_FULL:
 	case ERROR_FILE_TOO_LARGE:
 	case ERROR_INVALID_DATA:
-	case ERROR_NO_DATA:
 	case ERROR_NOT_ALLOWED_ON_SYSTEM_FILE:
 	case ERROR_PIPE_LOCAL:
-	case ERROR_PIPE_NOT_CONNECTED:
 	case ERROR_RESIDENT_FILE_NOT_SUPPORTED:
 	case ERROR_SEEK_ON_DEVICE:
 	case ERROR_VIRUS_DELETED:
@@ -916,6 +994,10 @@ static enum CzResult ReadFile_wrap(
 		return CZ_RESULT_IN_USE;
 	case ERROR_OPERATION_ABORTED:
 		return CZ_RESULT_INTERRUPT;
+	case ERROR_NO_DATA:
+	case ERROR_PIPE_NOT_CONNECTED:
+	case ERROR_VC_DISCONNECTED:
+		return CZ_RESULT_NO_CONNECTION;
 	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_DISK_FULL:
 	case ERROR_DISK_RESOURCES_EXHAUSTED:
@@ -973,10 +1055,8 @@ static enum CzResult WriteFile_wrap(
 	case ERROR_EA_LIST_INCONSISTENT:
 	case ERROR_EA_TABLE_FULL:
 	case ERROR_FILE_TOO_LARGE:
-	case ERROR_NO_DATA:
 	case ERROR_NOT_ALLOWED_ON_SYSTEM_FILE:
 	case ERROR_PIPE_LOCAL:
-	case ERROR_PIPE_NOT_CONNECTED:
 	case ERROR_RESIDENT_FILE_NOT_SUPPORTED:
 	case ERROR_SEEK_ON_DEVICE:
 	case ERROR_VIRUS_DELETED:
@@ -1002,6 +1082,10 @@ static enum CzResult WriteFile_wrap(
 		return CZ_RESULT_IN_USE;
 	case ERROR_OPERATION_ABORTED:
 		return CZ_RESULT_INTERRUPT;
+	case ERROR_NO_DATA:
+	case ERROR_PIPE_NOT_CONNECTED:
+	case ERROR_VC_DISCONNECTED:
+		return CZ_RESULT_NO_CONNECTION;
 	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_DISK_FULL:
 	case ERROR_DISK_RESOURCES_EXHAUSTED:
@@ -1342,17 +1426,18 @@ static enum CzResult write_wrap(int fd, const void* buffer, size_t size)
 	switch (errno) {
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
-	case ECONNRESET:
 	case EDEADLK:
 	case EFBIG:
-	case ENETDOWN:
-	case ENETUNREACH:
-	case EPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
+	case ECONNRESET:
+	case ENETDOWN:
+	case ENETUNREACH:
+	case EPIPE:
+		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
@@ -1368,13 +1453,9 @@ static enum CzResult write_wrap(int fd, const void* buffer, size_t size)
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
-	case ECONNRESET:
 	case EDESTADDRREQ:
 	case EFBIG:
 	case EINVAL:
-	case ENETDOWN:
-	case ENETUNREACH:
-	case EPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EAGAIN:
 #if EAGAIN != EWOULDBLOCK
@@ -1383,6 +1464,11 @@ static enum CzResult write_wrap(int fd, const void* buffer, size_t size)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
+	case ECONNRESET:
+	case ENETDOWN:
+	case ENETUNREACH:
+	case EPIPE:
+		return CZ_RESULT_NO_CONNECTION;
 	case ENOBUFS:
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
@@ -1407,12 +1493,8 @@ static enum CzResult pwrite_wrap(int fd, const void* buffer, size_t size, off_t 
 	switch (errno) {
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
-	case ECONNRESET:
 	case EDEADLK:
 	case EFBIG:
-	case ENETDOWN:
-	case ENETUNREACH:
-	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EINVAL:
@@ -1421,6 +1503,11 @@ static enum CzResult pwrite_wrap(int fd, const void* buffer, size_t size, off_t 
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
+	case ECONNRESET:
+	case ENETDOWN:
+	case ENETUNREACH:
+	case EPIPE:
+		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
