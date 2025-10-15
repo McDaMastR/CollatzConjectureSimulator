@@ -37,21 +37,197 @@ static enum CzResult fopen_wrap(FILE* restrict* stream, const char* path, const 
 		*stream = f;
 		return CZ_RESULT_SUCCESS;
 	}
+
+#if defined(_WIN32)
+	return (errno == EINVAL) ? CZ_RESULT_BAD_PATH : CZ_RESULT_NO_FILE;
+#elif defined(__APPLE__)
+	switch (errno) {
+	case EACCES:
+	case EROFS:
+		return CZ_RESULT_BAD_ACCESS;
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
+	case EDEADLK:
+	case EEXIST:
+	case EISDIR:
+	case ENOTCAPABLE:
+	case ENXIO:
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_FILE;
+	case EILSEQ:
+	case ELOOP:
+	case ENAMETOOLONG:
+	case ENOTDIR:
+		return CZ_RESULT_BAD_PATH;
+	case EAGAIN:
+	case ETXTBSY:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOENT:
+		return CZ_RESULT_NO_FILE;
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EMFILE:
+	case ENFILE:
+		return CZ_RESULT_NO_OPEN;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	case EOPNOTSUPP:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif defined(__unix__)
+	if (errno == ENOENT)
+		return (mode[0] == 'r') ? CZ_RESULT_NO_FILE : CZ_RESULT_BAD_PATH;
+
+	switch (errno) {
+	case EACCES:
+	case EROFS:
+		return CZ_RESULT_BAD_ACCESS;
+	case EISDIR:
+	case ENXIO:
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_FILE;
+	case ELOOP:
+	case ENAMETOOLONG:
+	case ENOTDIR:
+		return CZ_RESULT_BAD_PATH;
+	case ETXTBSY:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EMFILE:
+	case ENFILE:
+		return CZ_RESULT_NO_OPEN;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
 	return CZ_RESULT_NO_FILE;
+#endif
 }
 
 CZ_NONNULL_ARGS
 static enum CzResult fclose_wrap(FILE* stream)
 {
 	int r = fclose(stream);
-	return r ? CZ_RESULT_INTERNAL_ERROR : CZ_RESULT_SUCCESS;
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+#if defined(__APPLE__)
+	switch (errno) {
+	case ECONNRESET:
+	case EDEADLK:
+	case EFBIG:
+	case ENETDOWN:
+	case ENETUNREACH:
+	case EOVERFLOW:
+	case EPIPE:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	case ENXIO:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif defined(__unix__)
+	switch (errno) {
+	case EFBIG:
+	case EPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case ENXIO:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	return CZ_RESULT_INTERNAL_ERROR;
+#endif
 }
 
 CZ_NONNULL_ARGS
 static enum CzResult fseek_wrap(FILE* stream, long offset, int origin)
 {
 	int r = fseek(stream, offset, origin);
-	return r ? CZ_RESULT_INTERNAL_ERROR : CZ_RESULT_SUCCESS;
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+#if defined(__APPLE__)
+	switch (errno) {
+	case EDEADLK:
+	case EFBIG:
+	case ENETDOWN:
+	case ENETUNREACH:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EINVAL:
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_OFFSET;
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	case ENXIO:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif defined(__unix__)
+	switch (errno) {
+	case EFBIG:
+	case EPIPE:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EINVAL:
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_OFFSET;
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case ENXIO:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	return CZ_RESULT_INTERNAL_ERROR;
+#endif
 }
 
 CZ_NONNULL_ARGS
@@ -62,7 +238,51 @@ static enum CzResult ftell_wrap(long* pos, FILE* stream)
 		*pos = r;
 		return CZ_RESULT_SUCCESS;
 	}
+
+#if defined(_WIN32)
+	switch (errno) {
+	case EBADF:
+	case EINVAL:
+		return CZ_RESULT_BAD_STREAM;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif defined(__APPLE__)
+	switch (errno) {
+	case EDEADLK:
+	case EFBIG:
+	case EOVERFLOW:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	case ENXIO:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif defined(__unix__)
+	switch (errno) {
+	case EOVERFLOW:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
 	return CZ_RESULT_INTERNAL_ERROR;
+#endif
 }
 
 CZ_NONNULL_ARGS
@@ -83,7 +303,27 @@ static enum CzResult fread_wrap(void* buffer, size_t size, size_t count, FILE* s
 		return CZ_RESULT_NO_FILE;
 	if (!r && pos && eof) // File was at EOF before reading
 		return CZ_RESULT_BAD_OFFSET;
-	return CZ_RESULT_INTERNAL_ERROR; // Who knows what happened
+
+#if defined(__unix__)
+	switch (errno) {
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOMEM:
+		return CZ_RESULT_NO_MEMORY;
+	case ENXIO:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	return CZ_RESULT_INTERNAL_ERROR;
+#endif
 }
 
 CZ_NONNULL_ARGS
@@ -91,7 +331,31 @@ static enum CzResult fwrite_wrap(const void* buffer, size_t size, size_t count, 
 {
 	size_t r = fwrite(buffer, size, count, stream);
 	int err = ferror(stream);
-	return ((r == count || !size) && !err) ? CZ_RESULT_SUCCESS : CZ_RESULT_INTERNAL_ERROR;
+	if CZ_EXPECT ((r == count || !size) && !err)
+		return CZ_RESULT_SUCCESS;
+
+#if defined(__unix__)
+	switch (errno) {
+	case EFBIG:
+	case EPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case ENXIO:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	return CZ_RESULT_INTERNAL_ERROR;
+#endif
 }
 
 CZ_NONNULL_ARGS
@@ -99,15 +363,42 @@ static enum CzResult fileno_wrap(int* fd, FILE* stream)
 {
 #if defined(_WIN32)
 	*fd = _fileno(stream);
+	return CZ_RESULT_SUCCESS;
 #elif defined(__APPLE__)
 	*fd = fileno(stream);
+	return CZ_RESULT_SUCCESS;
 #elif defined(__unix__)
 	int f = fileno(stream);
 	if CZ_NOEXPECT (f == -1)
 		return CZ_RESULT_BAD_STREAM;
+
 	*fd = f;
-#endif
 	return CZ_RESULT_SUCCESS;
+#else
+	return CZ_RESULT_NO_SUPPORT;
+#endif
+}
+
+CZ_NONNULL_ARGS
+static enum CzResult isatty_wrap(int* res, int fd)
+{
+#if defined(_WIN32)
+	int r = _isatty(fd);
+	if CZ_NOEXPECT (!r && errno == EBADF)
+		return CZ_RESULT_INTERNAL_ERROR;
+
+	*res = r;
+	return CZ_RESULT_SUCCESS;
+#elif defined(__APPLE__) || defined(__unix__)
+	int r = isatty(fd);
+	if CZ_NOEXPECT (!r && errno != ENOTTY)
+		return CZ_RESULT_INTERNAL_ERROR;
+
+	*res = r;
+	return CZ_RESULT_SUCCESS;
+#else
+	return CZ_RESULT_NO_SUPPORT;
+#endif
 }
 
 CZ_NULLTERM_ARG(2)
@@ -809,17 +1100,6 @@ static enum CzResult write_section_win32(HANDLE file, const void* restrict buffe
 #endif
 
 #if defined(__APPLE__) || defined(__unix__)
-CZ_NONNULL_ARGS
-static enum CzResult isatty_wrap(int* res, int fd)
-{
-	int r = isatty(fd);
-	if CZ_EXPECT (r || errno == ENOTTY) {
-		*res = r;
-		return CZ_RESULT_SUCCESS;
-	}
-	return CZ_RESULT_INTERNAL_ERROR;
-}
-
 CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
 static enum CzResult stat_wrap(const char* path, struct stat* st)
 {
@@ -903,13 +1183,13 @@ static enum CzResult open_wrap(int* fd, const char* path, int flags, mode_t mode
 		return CZ_RESULT_INTERRUPT;
 	case ENOENT:
 		return CZ_RESULT_NO_FILE;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
-	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
 	case EOPNOTSUPP:
 		return CZ_RESULT_NO_SUPPORT;
 	default:
