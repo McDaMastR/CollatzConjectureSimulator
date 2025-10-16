@@ -1,4 +1,4 @@
-add_custom_target(spirv)
+add_custom_target(spirv ALL)
 
 find_program(GLSLANG_EXE NAMES glslang REQUIRED)
 find_program(SPV_LNK_EXE NAMES spirv-link REQUIRED)

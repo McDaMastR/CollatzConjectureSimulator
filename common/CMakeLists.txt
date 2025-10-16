@@ -166,11 +166,13 @@ target_compile_options(cltzCommon
 target_link_libraries(cltzCommon
 	PUBLIC
 		# Required libraries
-		cwalk::cwalk
 		Threads::Threads
-		volk::volk
-		Vulkan::UtilityHeaders
+		cwalk::cwalk
 		wai::wai
+
+		Vulkan::Headers
+		Vulkan::UtilityHeaders
+		volk::volk
 
 		# OS-specific libraries
 		$<${USING_APPLE}:${LINK_LIBRARIES_APPLE}>

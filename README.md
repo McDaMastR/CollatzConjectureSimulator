@@ -103,6 +103,15 @@ Several options can be specified to customise the build system by appending `-D 
 - `CZ_DEBUG_SHADERS` specifies whether to include debug information in generated SPIR-V, and defaults to _OFF_.
 - `CZ_OPTIMISE_SHADERS` specifies whether to optimise generated SPIR-V using `spirv-opt`, and defaults to _ON_.
 - `CZ_DISASSEMBLE_SHADERS` specifies whether to disassemble generated SPIR-V using `spirv-dis`, and defaults to _OFF_.
+- `VULKAN_HEADERS_INSTALL_DIR` specifies the directory in which the `VulkanHeaders` CMake package is installed. If set,
+  the installed header files are included in compilation. Otherwise, the Vulkan-Headers [submodule](lib/Vulkan-Headers)
+  is used instead.
+- `VULKAN_UTILITY_LIBRARIES_INSTALL_DIR` specifies the directory in which the `VulkanUtilityLibraries` CMake package is
+  installed. If set, the installed header files are included in compilation. Otherwise, the Vulkan-Utility-Libraries
+  [submodule](lib/Vulkan-Utility-Libraries) is used instead.
+- `VOLK_INSTALL_DIR` specifies the directory in which the `volk` CMake package is installed. If set, the installed
+  header file is included in compilation and the static library is linked to. Otherwise, the volk [submodule](lib/volk)
+  is used instead.
 
 Once the above command has finished, a `build` directory will have been created containing the build system. To now
 build Collatz Conjecture Simulator, execute the following command.
@@ -111,18 +120,14 @@ build Collatz Conjecture Simulator, execute the following command.
 cmake --build build
 ```
 
-By default, only the executable will be built. To instead build the SPIR-V, add `--target spirv`. To build both, also
-add `--target cltzExe`. To specify the build configuration, add `--config CONFIG` (only applies for multi-config
-generators).
-
 The above command will create a `bin` directory containing the SPIR-V and executable. If built in debug, the executable
 will be named `cltz-dbg`. Otherwise, it will be named `cltz`. The executable can be moved to a different file location,
-but the SPIR-V must also be moved alongside it, else the program will be unable to locate the generated SPIR-V.
+but the generated SPIR-V must also be moved alongside it, else the program will be unable to locate the SPIR-V.
 
 The executable provides a command line interface and uses the initial command line parameters to specify the operation
-of the program. Parameters beginning with a double hyphen (--) reference options. Some options themselves accept a
-parameter, which must be given immediately following the option as the next CLI parameter. To view a comprehensive list
-of options, use the `-h` or `--help` option.
+of the program. Parameters beginning with a hyphen (-) or double hyphen (--) reference options. Some options themselves
+accept a parameter, which must be given immediately following the option as the next CLI parameter. To view a
+comprehensive list of options, use the `-h` or `--help` option.
 
 In most cases, the executable will initiate the program's main loop. If during this process the `Enter` or `Return` keys
 are pressed, the program will break from the main loop and begin to exit. Each iteration of the main loop will output
