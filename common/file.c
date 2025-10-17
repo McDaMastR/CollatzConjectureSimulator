@@ -430,7 +430,7 @@ static enum CzResult remove_wrap(const char* path)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #else
-	return CZ_RESULT_BAD_PATH;
+	return CZ_RESULT_NO_FILE;
 #endif
 }
 
@@ -955,7 +955,6 @@ static enum CzResult ReadFile_wrap(
 	case ERROR_BAD_DEV_TYPE:
 	case ERROR_BAD_FILE_TYPE:
 	case ERROR_BAD_PIPE:
-	case ERROR_BAD_UNIT:
 	case ERROR_BROKEN_PIPE:
 	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
 	case ERROR_DEV_NOT_EXIST:
@@ -1598,14 +1597,14 @@ static enum CzResult stream_is_tty_win32(FILE* restrict stream, bool* restrict i
 	enum CzResult ret = fileno_wrap(&fd, stream);
 	if CZ_NOEXPECT (ret)
 		return ret;
-	if (fd == -2) {
+	if (fd == -2)
 		goto out_not_tty;
 
 	intptr_t handle;
 	ret = get_osfhandle_wrap(&handle, fd);
 	if CZ_NOEXPECT (ret)
 		return ret;
-	if (handle == -2) {
+	if (handle == -2)
 		goto out_not_tty;
 
 	DWORD mode;
@@ -2322,6 +2321,173 @@ enum CzResult czWriteFile(
 	else
 		ret = insert_file_other(realPath, buffer, size, offset);
 #endif
+
+	czFree(fullPath);
+	return ret;
+}
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult truncate_file_other(const char* restrict path)
+{
+	FILE* restrict file;
+	const char* mode = "wb";
+	enum CzResult ret = fopen_wrap(&file, path, mode);
+	if CZ_NOEXPECT (ret)
+		return ret;
+	return fclose_wrap(file);
+}
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult zero_file_end_other(const char* restrict path, size_t size)
+{
+	size_t fileSize;
+	enum CzResult ret = file_size_other(path, &fileSize);
+	if CZ_NOEXPECT (ret)
+		return ret;
+	if CZ_NOEXPECT (!fileSize)
+		return CZ_RESULT_NO_FILE;
+
+	void* restrict zeroed;
+	size_t zeroedSize = minz(size, fileSize);
+	struct CzAllocFlags allocFlags = {0};
+	allocFlags.zeroInitialise = true;
+
+	ret = czAlloc(&zeroed, zeroedSize, allocFlags);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	size_t offset = fileSize - zeroedSize;
+	ret = overwrite_file_other(path, zeroed, zeroedSize, offset);
+	czFree(zeroed);
+	return ret;
+}
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult cut_file_end_other(const char* restrict path, size_t size)
+{
+	size_t fileSize;
+	enum CzResult ret = file_size_other(path, &fileSize);
+	if CZ_NOEXPECT (ret)
+		return ret;
+	if CZ_NOEXPECT (!fileSize)
+		return CZ_RESULT_NO_FILE;
+	if (size >= fileSize)
+		return truncate_file_other(path);
+
+	void* restrict content;
+	size_t contentSize = fileSize - size;
+	struct CzAllocFlags allocFlags = {0};
+
+	ret = czAlloc(&content, contentSize, allocFlags);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	size_t offset = 0;
+	ret = read_file_other(path, content, contentSize, offset);
+	if CZ_EXPECT (!ret)
+		ret = truncate_write_file_other(path, content, contentSize);
+
+	czFree(content);
+	return ret;
+}
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult zero_file_other(const char* restrict path, size_t size, size_t offset)
+{
+	size_t fileSize;
+	enum CzResult ret = file_size_other(path, &fileSize);
+	if CZ_NOEXPECT (ret)
+		return ret;
+	if CZ_NOEXPECT (!fileSize)
+		return CZ_RESULT_NO_FILE;
+	if CZ_NOEXPECT (offset >= fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+
+	void* restrict zeroed;
+	size_t zeroedSize = minz(size, fileSize - offset);
+	struct CzAllocFlags allocFlags = {0};
+	allocFlags.zeroInitialise = true;
+
+	ret = czAlloc(&zeroed, zeroedSize, allocFlags);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = overwrite_file_other(path, zeroed, zeroedSize, offset);
+	czFree(zeroed);
+	return ret;
+}
+
+CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1)
+static enum CzResult cut_file_other(const char* restrict path, size_t size, size_t offset)
+{
+	size_t fileSize;
+	enum CzResult ret = file_size_other(path, &fileSize);
+	if CZ_NOEXPECT (ret)
+		return ret;
+	if CZ_NOEXPECT (!fileSize)
+		return CZ_RESULT_NO_FILE;
+	if CZ_NOEXPECT (offset >= fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if (size >= fileSize && !offset)
+		return truncate_file_other(path);
+
+	void* restrict content;
+	size_t contentSize = maxz(size + offset, fileSize) - size;
+	struct CzAllocFlags allocFlags = {0};
+
+	ret = czAlloc(&content, contentSize, allocFlags);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (offset) {
+		void* readBuffer = content;
+		size_t readSize = offset;
+		size_t readOffset = 0;
+
+		ret = read_file_other(path, readBuffer, readSize, readOffset);
+		if CZ_NOEXPECT (ret)
+			goto err_free_content;
+	}
+	if (fileSize > size + offset) {
+		void* readBuffer = (char*) content + offset;
+		size_t readSize = fileSize - size - offset;
+		size_t readOffset = size + offset;
+
+		ret = read_file_other(path, readBuffer, readSize, readOffset);
+		if CZ_NOEXPECT (ret)
+			goto err_free_content;
+	}
+
+	ret = truncate_write_file_other(path, content, contentSize);
+err_free_content:
+	czFree(content);
+	return ret;
+}
+
+enum CzResult czTrimFile(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+
+	enum CzResult ret = CZ_RESULT_INTERNAL_ERROR;
+	const char* realPath = path;
+	char* fullPath = NULL;
+
+	if (flags.relativeToExe && cwk_path_is_relative(path)) {
+		ret = alloc_abspath_from_relpath_to_exe(&fullPath, path);
+		if CZ_NOEXPECT (ret)
+			return ret;
+		realPath = fullPath;
+	}
+
+	if (offset == CZ_EOF && flags.overwriteFile)
+		ret = zero_file_end_other(realPath, size);
+	else if (offset == CZ_EOF)
+		ret = cut_file_end_other(realPath, size);
+	else if (flags.overwriteFile)
+		ret = zero_file_other(realPath, size, offset);
+	else
+		ret = cut_file_other(realPath, size, offset);
 
 	czFree(fullPath);
 	return ret;
