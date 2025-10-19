@@ -233,6 +233,7 @@ target_sources(cltzCommon
 		debug.c
 		file.c
 		util.c
+		wrap.c
 	PUBLIC FILE_SET HEADERS FILES
 		alloc.h
 		common.h
@@ -240,4 +241,5 @@ target_sources(cltzCommon
 		def.h
 		file.h
 		util.h
+		wrap.h
 )
