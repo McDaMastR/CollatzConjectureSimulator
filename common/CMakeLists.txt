@@ -14,9 +14,11 @@ set(USING_STATIC_ANALYSIS "$<BOOL:${CZ_STATIC_ANALYSIS}>")
 
 check_include_file(aio.h        HAVE_AIO_H)
 check_include_file(stdcountof.h HAVE_STDCOUNTOF_H)
+check_include_file(sys/mman.h   HAVE_SYS_MMAN_H)
 
 set(USING_AIO_H        "$<BOOL:${HAVE_AIO_H}>")
 set(USING_STDCOUNTOF_H "$<BOOL:${HAVE_STDCOUNTOF_H}>")
+set(USING_SYS_MMAN_H   "$<BOOL:${HAVE_SYS_MMAN_H}>")
 
 set(COMPILE_WARNINGS_CLANG
 	# Warnings ON
@@ -108,7 +110,6 @@ set(INCLUDE_HEADERS_APPLE
 set(INCLUDE_HEADERS_UNIX
 	<fcntl.h$<ANGLE-R>
 	<unistd.h$<ANGLE-R>
-	<sys/mman.h$<ANGLE-R>
 	<sys/select.h$<ANGLE-R>
 	<sys/stat.h$<ANGLE-R>
 	<sys/syscall.h$<ANGLE-R>
@@ -220,6 +221,7 @@ target_precompile_headers(cltzCommon
 		# Optional headers
 		$<${USING_AIO_H}:<aio.h$<ANGLE-R>>
 		$<${USING_STDCOUNTOF_H}:<stdcountof.h$<ANGLE-R>>
+		$<${USING_SYS_MMAN_H}:<sys/mman.h$<ANGLE-R>>
 
 		# OS-specific headers
 		$<${USING_APPLE}:${INCLUDE_HEADERS_APPLE}>

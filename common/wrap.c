@@ -735,6 +735,74 @@ enum CzResult czWrap_fstat(int fd, struct stat* st)
 }
 #endif
 
+#if CZ_WRAP_TRUNCATE
+enum CzResult czWrap_truncate(const char* path, off_t size)
+{
+	int r = truncate(path, size);
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+	switch (errno) {
+	case EACCES:
+	case EROFS:
+		return CZ_RESULT_BAD_ACCESS;
+#if defined(__APPLE__)
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
+	case EDEADLK:
+#endif
+	case EISDIR:
+		return CZ_RESULT_BAD_FILE;
+	case ELOOP:
+	case ENAMETOOLONG:
+	case ENOTDIR:
+		return CZ_RESULT_BAD_PATH;
+	case EFBIG:
+	case EINVAL:
+		return CZ_RESULT_BAD_SIZE;
+#if defined(__APPLE__)
+	case ETXTBSY:
+		return CZ_RESULT_IN_USE;
+#endif
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOENT:
+		return CZ_RESULT_NO_FILE;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+}
+#endif
+
+#if CZ_WRAP_FTRUNCATE
+enum CzResult czWrap_ftruncate(int fd, off_t size)
+{
+	int r = ftruncate(fd, size);
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+	switch (errno) {
+#if defined(__APPLE__)
+	case EPERM:
+	case EROFS:
+		return CZ_RESULT_BAD_ACCESS;
+	case EDEADLK:
+	case EINVAL:
+		return CZ_RESULT_BAD_FILE;
+#endif
+	case EFBIG:
+#if !defined(__APPLE__)
+	case EINVAL:
+#endif
+		return CZ_RESULT_BAD_SIZE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+}
+#endif
+
 #if CZ_WRAP_OPEN
 enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 {
@@ -1060,6 +1128,88 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #endif
+}
+#endif
+
+#if CZ_WRAP_MMAP
+enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot, int flags, int fd, off_t offset)
+{
+	void* p = mmap(addr, size, prot, flags, fd, offset);
+	if CZ_EXPECT (p != MAP_FAILED) {
+		*res = p;
+		return CZ_RESULT_SUCCESS;
+	}
+	if (errno == EINVAL)
+		return size ? CZ_RESULT_BAD_ALIGNMENT : CZ_RESULT_BAD_SIZE;
+
+#if defined(__APPLE__)
+	switch (errno) {
+	case ENXIO:
+		return CZ_RESULT_BAD_ADDRESS;
+	case ENODEV:
+		return CZ_RESULT_BAD_FILE;
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_OFFSET;
+	case ENOMEM:
+		return CZ_RESULT_NO_MEMORY;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	switch (errno) {
+	case ENODEV:
+	case ENXIO:
+		return CZ_RESULT_BAD_FILE;
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_OFFSET;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case ENOMEM:
+		return CZ_RESULT_NO_MEMORY;
+	case EMFILE:
+		return CZ_RESULT_NO_OPEN;
+	case ENOTSUP:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#endif
+}
+#endif
+
+#if CZ_WRAP_MUNMAP
+enum CzResult czWrap_munmap(void* addr, size_t size)
+{
+	int r = munmap(addr, size);
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+	if (errno == EINVAL)
+		return size ? CZ_RESULT_BAD_ADDRESS : CZ_RESULT_BAD_SIZE;
+	return CZ_RESULT_INTERNAL_ERROR;
+}
+#endif
+
+#if CZ_WRAP_MSYNC
+enum CzResult czWrap_msync(void* addr, size_t size, int flags)
+{
+	int r = msync(addr, size, flags);
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+	switch (errno) {
+	case ENOMEM:
+		return CZ_RESULT_BAD_ADDRESS;
+	case EINVAL:
+#if defined(__APPLE__)
+		return size ? CZ_RESULT_BAD_ALIGNMENT : CZ_RESULT_BAD_SIZE;
+#else
+		return CZ_RESULT_BAD_ALIGNMENT;
+#endif
+	case EBUSY:
+		return CZ_RESULT_IN_USE;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
 }
 #endif
 
@@ -1467,6 +1617,77 @@ enum CzResult czWrap_CloseHandle(HANDLE handle)
 }
 #endif
 
+#if CZ_WRAP_SET_END_OF_FILE
+enum CzResult czWrap_SetEndOfFile(HANDLE file)
+{
+	BOOL r = SetEndOfFile(file);
+	if CZ_EXPECT (r)
+		return CZ_RESULT_SUCCESS;
+
+	switch (GetLastError()) {
+	case ERROR_BAD_DEV_TYPE:
+	case ERROR_BAD_FILE_TYPE:
+	case ERROR_BAD_PIPE:
+	case ERROR_BROKEN_PIPE:
+	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
+	case ERROR_DEV_NOT_EXIST:
+	case ERROR_DEVICE_UNREACHABLE:
+	case ERROR_DIRECTORY_NOT_SUPPORTED:
+	case ERROR_EA_FILE_CORRUPT:
+	case ERROR_EA_LIST_INCONSISTENT:
+	case ERROR_EA_TABLE_FULL:
+	case ERROR_FILE_TOO_LARGE:
+	case ERROR_INVALID_DATA:
+	case ERROR_NOT_ALLOWED_ON_SYSTEM_FILE:
+	case ERROR_PIPE_LOCAL:
+	case ERROR_RESIDENT_FILE_NOT_SUPPORTED:
+	case ERROR_SEEK_ON_DEVICE:
+	case ERROR_VIRUS_DELETED:
+	case ERROR_VIRUS_INFECTED:
+		return CZ_RESULT_BAD_FILE;
+	case ERROR_BUSY:
+	case ERROR_DELETE_PENDING:
+	case ERROR_DRIVE_LOCKED:
+	case ERROR_FILE_CHECKED_OUT:
+	case ERROR_LOCK_VIOLATION:
+	case ERROR_LOCKED:
+	case ERROR_NETWORK_BUSY:
+	case ERROR_NOT_READY:
+	case ERROR_OPERATION_IN_PROGRESS:
+	case ERROR_PIPE_BUSY:
+	case ERROR_REDIR_PAUSED:
+	case ERROR_SHARING_PAUSED:
+	case ERROR_SHARING_VIOLATION:
+		return CZ_RESULT_IN_USE;
+	case ERROR_NO_DATA:
+	case ERROR_PIPE_NOT_CONNECTED:
+	case ERROR_REQ_NOT_ACCEP:
+	case ERROR_VC_DISCONNECTED:
+		return CZ_RESULT_NO_CONNECTION;
+	case ERROR_DEVICE_NO_RESOURCES:
+	case ERROR_DISK_FULL:
+	case ERROR_DISK_RESOURCES_EXHAUSTED:
+	case ERROR_DISK_TOO_FRAGMENTED:
+	case ERROR_HANDLE_DISK_FULL:
+	case ERROR_NOT_ENOUGH_MEMORY:
+	case ERROR_OUT_OF_STRUCTURES:
+	case ERROR_OUTOFMEMORY:
+		return CZ_RESULT_NO_MEMORY;
+	case ERROR_BAD_COMMAND:
+	case ERROR_BAD_NET_RESP:
+	case ERROR_CALL_NOT_IMPLEMENTED:
+	case ERROR_DEVICE_FEATURE_NOT_SUPPORTED:
+	case ERROR_DEVICE_SUPPORT_IN_PROGRESS:
+	case ERROR_EAS_NOT_SUPPORTED:
+	case ERROR_NOT_REDUNDANT_STORAGE:
+	case ERROR_NOT_SUPPORTED:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+}
+#endif
+
 #if CZ_WRAP_READ_FILE
 enum CzResult czWrap_ReadFile(
 	HANDLE file, LPVOID buffer, DWORD numberOfBytesToRead, LPDWORD numberOfBytesRead, LPOVERLAPPED overlapped)
@@ -1654,6 +1875,117 @@ enum CzResult czWrap_WriteFile(
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
+}
+#endif
+
+#if CZ_WRAP_DELETE_FILE_W
+enum CzResult czWrap_DeleteFileW(LPCWSTR path)
+{
+	BOOL r = DeleteFileW(path);
+	if CZ_EXPECT (r)
+		return CZ_RESULT_SUCCESS;
+
+	switch (GetLastError()) {
+	case ERROR_ACCESS_DENIED:
+	case ERROR_NETWORK_ACCESS_DENIED:
+		return CZ_RESULT_BAD_ACCESS;
+	case ERROR_INVALID_ADDRESS:
+		return CZ_RESULT_BAD_ADDRESS;
+	case ERROR_BAD_DEV_TYPE:
+	case ERROR_BAD_FILE_TYPE:
+	case ERROR_BAD_PIPE:
+	case ERROR_BROKEN_PIPE:
+	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
+	case ERROR_DIRECTORY_NOT_SUPPORTED:
+	case ERROR_EA_FILE_CORRUPT:
+	case ERROR_EA_LIST_INCONSISTENT:
+	case ERROR_EA_TABLE_FULL:
+	case ERROR_FILE_TOO_LARGE:
+	case ERROR_INVALID_EA_NAME:
+	case ERROR_MORE_DATA:
+	case ERROR_NOT_ALLOWED_ON_SYSTEM_FILE:
+	case ERROR_PIPE_LOCAL:
+	case ERROR_RESIDENT_FILE_NOT_SUPPORTED:
+	case ERROR_VIRUS_DELETED:
+	case ERROR_VIRUS_INFECTED:
+		return CZ_RESULT_BAD_FILE;
+	case ERROR_BAD_ARGUMENTS:
+	case ERROR_BAD_DEVICE_PATH:
+	case ERROR_BAD_NET_NAME:
+	case ERROR_BAD_PATHNAME:
+	case ERROR_BUFFER_OVERFLOW:
+	case ERROR_DIR_NOT_ROOT:
+	case ERROR_DIRECTORY:
+	case ERROR_FILENAME_EXCED_RANGE:
+	case ERROR_INVALID_FIELD_IN_PARAMETER_LIST:
+	case ERROR_INVALID_NAME:
+	case ERROR_INVALID_PARAMETER:
+	case ERROR_LABEL_TOO_LONG:
+	case ERROR_META_EXPANSION_TOO_LONG:
+	case ERROR_PATH_NOT_FOUND:
+	case ERROR_SHORT_NAMES_NOT_ENABLED_ON_VOLUME:
+		return CZ_RESULT_BAD_PATH;
+	case ERROR_BUSY:
+	case ERROR_DRIVE_LOCKED:
+	case ERROR_FILE_CHECKED_OUT:
+	case ERROR_LOCK_VIOLATION:
+	case ERROR_LOCKED:
+	case ERROR_NETWORK_BUSY:
+	case ERROR_NOT_READY:
+	case ERROR_OPERATION_IN_PROGRESS:
+	case ERROR_PATH_BUSY:
+	case ERROR_PIPE_BUSY:
+	case ERROR_REDIR_PAUSED:
+	case ERROR_SHARING_PAUSED:
+	case ERROR_SHARING_VIOLATION:
+		return CZ_RESULT_IN_USE;
+	case ERROR_NO_DATA:
+	case ERROR_PIPE_NOT_CONNECTED:
+	case ERROR_REQ_NOT_ACCEP:
+	case ERROR_VC_DISCONNECTED:
+		return CZ_RESULT_NO_CONNECTION;
+	case ERROR_BAD_NETPATH:
+	case ERROR_DEV_NOT_EXIST:
+	case ERROR_DEVICE_UNREACHABLE:
+	case ERROR_FILE_NOT_FOUND:
+	case ERROR_MOD_NOT_FOUND:
+	case ERROR_NETNAME_DELETED:
+	case ERROR_PROC_NOT_FOUND:
+		return CZ_RESULT_NO_FILE;
+	case ERROR_DEVICE_NO_RESOURCES:
+	case ERROR_DISK_FULL:
+	case ERROR_DISK_RESOURCES_EXHAUSTED:
+	case ERROR_DISK_TOO_FRAGMENTED:
+	case ERROR_HANDLE_DISK_FULL:
+	case ERROR_NOT_ENOUGH_MEMORY:
+	case ERROR_OUTOFMEMORY:
+	case ERROR_OUT_OF_STRUCTURES:
+		return CZ_RESULT_NO_MEMORY;
+	case ERROR_BAD_COMMAND:
+	case ERROR_BAD_NET_RESP:
+	case ERROR_CALL_NOT_IMPLEMENTED:
+	case ERROR_DEVICE_FEATURE_NOT_SUPPORTED:
+	case ERROR_DEVICE_SUPPORT_IN_PROGRESS:
+	case ERROR_EAS_NOT_SUPPORTED:
+	case ERROR_NOT_REDUNDANT_STORAGE:
+	case ERROR_NOT_SUPPORTED:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+}
+#endif
+
+#if CZ_WRAP_SYSCONF
+enum CzResult czWrap_sysconf(long* res, int name)
+{
+	errno = 0;
+	long r = sysconf(name);
+	if CZ_EXPECT (r != -1) {
+		*res = r;
+		return CZ_RESULT_SUCCESS;
+	}
+	return errno ? CZ_RESULT_INTERNAL_ERROR : CZ_RESULT_NO_SUPPORT;
 }
 #endif
 

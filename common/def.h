@@ -297,7 +297,7 @@
 	#if defined(_POSIX_VERSION)
 		#define CZ_POSIX_VERSION _POSIX_VERSION
 	#else
-		#define CZ_POSIX_VERSION 0
+		#define CZ_POSIX_VERSION (-1)
 	#endif
 #endif
 
@@ -305,7 +305,23 @@
 	#if defined(_POSIX_ADVISORY_INFO)
 		#define CZ_POSIX_ADVISORY_INFO _POSIX_ADVISORY_INFO
 	#else
-		#define CZ_POSIX_ADVISORY_INFO 0
+		#define CZ_POSIX_ADVISORY_INFO (-1)
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_MAPPED_FILES)
+	#if defined(_POSIX_MAPPED_FILES)
+		#define CZ_POSIX_MAPPED_FILES _POSIX_MAPPED_FILES
+	#else
+		#define CZ_POSIX_MAPPED_FILES (-1)
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_SHARED_MEMORY_OBJECTS)
+	#if defined(_POSIX_SHARED_MEMORY_OBJECTS)
+		#define CZ_POSIX_SHARED_MEMORY_OBJECTS _POSIX_SHARED_MEMORY_OBJECTS
+	#else
+		#define CZ_POSIX_SHARED_MEMORY_OBJECTS (-1)
 	#endif
 #endif
 

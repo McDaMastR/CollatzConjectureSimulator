@@ -702,6 +702,78 @@ enum CzResult czWrap_fstat(int fd, struct stat* st);
 #endif
 
 /**
+ * @def CZ_WRAP_TRUNCATE
+ * 
+ * @brief Specifies whether @c truncate is defined.
+ */
+#if !defined(CZ_WRAP_TRUNCATE)
+	#if CZ_POSIX_VERSION >= 200112L
+		#define CZ_WRAP_TRUNCATE 1
+	#else
+		#define CZ_WRAP_TRUNCATE 0
+	#endif
+#endif
+
+#if CZ_WRAP_TRUNCATE
+/**
+ * @brief Wraps @c truncate.
+ * 
+ * Calls @c truncate with @p path and @p size.
+ * 
+ * @param[in] path The first argument to pass to @c truncate.
+ * @param[in] size The second argument to pass to @c truncate.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to truncate the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
+ * @retval CZ_RESULT_BAD_SIZE @p size was negative or too large.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_FILE The file did not exist.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_TRUNCATE is defined as a nonzero value.
+ */
+enum CzResult czWrap_truncate(const char* path, off_t size);
+#endif
+
+/**
+ * @def CZ_WRAP_FTRUNCATE
+ * 
+ * @brief Specifies whether @c ftruncate is defined.
+ */
+#if !defined(CZ_WRAP_FTRUNCATE)
+	#if CZ_POSIX_VERSION >= 200112L
+		#define CZ_WRAP_FTRUNCATE 1
+	#else
+		#define CZ_WRAP_FTRUNCATE 0
+	#endif
+#endif
+
+#if CZ_WRAP_FTRUNCATE
+/**
+ * @brief Wraps @c ftruncate.
+ * 
+ * Calls @c ftruncate with @p fd and @p size.
+ * 
+ * @param[in,out] fd The first argument to pass to @c ftruncate.
+ * @param[in] size The second argument to pass to @c ftruncate.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to truncate the file was denied.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_SIZE @p size was negative or too large.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_FTRUNCATE is defined as a nonzero value.
+ */
+enum CzResult czWrap_ftruncate(int fd, off_t size);
+#endif
+
+/**
  * @def CZ_WRAP_OPEN
  * 
  * @brief Specifies whether @c open is defined.
@@ -913,6 +985,120 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
  */
 CZ_WR_ACCESS(1)
 enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t size, off_t offset);
+#endif
+
+/**
+ * @def CZ_WRAP_MMAP
+ * 
+ * @brief Specifies whether @c mmap is defined.
+ */
+#if !defined(CZ_WRAP_MMAP)
+	#if CZ_POSIX_MAPPED_FILES >= 200112L || CZ_POSIX_SHARED_MEMORY_OBJECTS >= 200112L
+		#define CZ_WRAP_MMAP 1
+	#else
+		#define CZ_WRAP_MMAP 0
+	#endif
+#endif
+
+#if CZ_WRAP_MMAP
+/**
+ * @brief Wraps @c mmap.
+ * 
+ * Calls @c mmap with @p addr, @p size, @p prot, @p flags, @p fd, and @p offset.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] addr The first argument to pass to @c mmap.
+ * @param[in] size The second argument to pass to @c mmap.
+ * @param[in] prot The third argument to pass to @c mmap.
+ * @param[in] flags The fourth argument to pass to @c mmap.
+ * @param[in] fd The fifth argument to pass to @c mmap.
+ * @param[in] offset The sixth argument to pass to @c mmap.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ADDRESS The address range was invalid for @p fd.
+ * @retval CZ_RESULT_BAD_ALIGNMENT @p addr or @p offset was not page-aligned.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_OFFSET The address range exceeds the maximum offset for @p fd.
+ * @retval CZ_RESULT_BAD_SIZE @p size was zero.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_OPEN The maximum number of mapped files was reached.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @pre @p res is nonnull.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_MMAP is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot, int flags, int fd, off_t offset);
+#endif
+
+/**
+ * @def CZ_WRAP_MUNMAP
+ * 
+ * @brief Specifies whether @c munmap is defined.
+ */
+#if !defined(CZ_WRAP_MUNMAP)
+	#if CZ_POSIX_MAPPED_FILES >= 200112L || CZ_POSIX_SHARED_MEMORY_OBJECTS >= 200112L
+		#define CZ_WRAP_MUNMAP 1
+	#else
+		#define CZ_WRAP_MUNMAP 0
+	#endif
+#endif
+
+#if CZ_WRAP_MUNMAP
+/**
+ * @brief Wraps @c munmap.
+ * 
+ * Calls @c munmap with @p addr and @p size.
+ * 
+ * @param[in,out] addr The first argument to pass to @c munmap.
+ * @param[in] size The second argument to pass to @c munmap.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ADDRESS @p addr was not page-aligned or the address range was invalid.
+ * @retval CZ_RESULT_BAD_SIZE @p size was zero.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_MUNMAP is defined as a nonzero value.
+ */
+enum CzResult czWrap_munmap(void* addr, size_t size);
+#endif
+
+/**
+ * @def CZ_WRAP_MSYNC
+ * 
+ * @brief Specifies whether @c msync is defined.
+ */
+#if !defined(CZ_WRAP_MSYNC)
+	#if CZ_POSIX_MAPPED_FILES >= 200112L
+		#define CZ_WRAP_MSYNC 1
+	#else
+		#define CZ_WRAP_MSYNC 0
+	#endif
+#endif
+
+#if CZ_WRAP_MSYNC
+/**
+ * @brief Wraps @c msync.
+ * 
+ * Calls @c msync with @p addr, @p size, and @p flags.
+ * 
+ * @param[in,out] addr The first argument to pass to @c msync.
+ * @param[in] size The second argument to pass to @c msync.
+ * @param[in] flags The third argument to pass to @c msync.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ADDRESS The address range was invalid or unmapped.
+ * @retval CZ_RESULT_BAD_ALIGNMENT @p addr was not page-aligned.
+ * @retval CZ_RESULT_BAD_SIZE @p size was zero.
+ * @retval CZ_RESULT_IN_USE The address range was locked.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_MSYNC is defined as a nonzero value.
+ */
+enum CzResult czWrap_msync(void* addr, size_t size, int flags);
 #endif
 
 /**
@@ -1160,6 +1346,40 @@ enum CzResult czWrap_CloseHandle(HANDLE handle);
 #endif
 
 /**
+ * @def CZ_WRAP_SET_END_OF_FILE
+ * 
+ * @brief Specifies whether @c SetEndOfFile is defined.
+ */
+#if !defined(CZ_WRAP_SET_END_OF_FILE)
+	#if defined(_WIN32)
+		#define CZ_WRAP_SET_END_OF_FILE 1
+	#else
+		#define CZ_WRAP_SET_END_OF_FILE 0
+	#endif
+#endif
+
+#if CZ_WRAP_SET_END_OF_FILE
+/**
+ * @brief Wraps @c SetEndOfFile.
+ * 
+ * Calls @c SetEndOfFile with @p file.
+ * 
+ * @param[in,out] file The argument to pass to @c SetEndOfFile.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_SET_END_OF_FILE is defined as a nonzero value.
+ */
+enum CzResult czWrap_SetEndOfFile(HANDLE file);
+#endif
+
+/**
  * @def CZ_WRAP_READ_FILE
  * 
  * @brief Specifies whether @c ReadFile is defined.
@@ -1244,6 +1464,79 @@ enum CzResult czWrap_ReadFile(
  */
 enum CzResult czWrap_WriteFile(
 	HANDLE file, LPCVOID buffer, DWORD numberOfBytesToWrite, LPDWORD numberOfBytesWritten, LPOVERLAPPED overlapped);
+#endif
+
+/**
+ * @def CZ_WRAP_DELETE_FILE_W
+ * 
+ * @brief Specifies whether @c DeleteFileW is defined.
+ */
+#if !defined(CZ_WRAP_DELETE_FILE_W)
+	#if defined(_WIN32)
+		#define CZ_WRAP_DELETE_FILE_W 1
+	#else
+		#define CZ_WRAP_DELETE_FILE_W 0
+	#endif
+#endif
+
+#if CZ_WRAP_DELETE_FILE_W
+/**
+ * @brief Wraps @c DeleteFileW.
+ * 
+ * Calls @c DeleteFileW with @p path.
+ * 
+ * @param[in] path The argument to pass to @c DeleteFileW.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to delete the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_FILE The file did not exist.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_DELETE_FILE_W is defined as a nonzero value.
+ */
+enum CzResult czWrap_DeleteFileW(LPCWSTR path);
+#endif
+
+/**
+ * @def CZ_WRAP_SYSCONF
+ * 
+ * @brief Specifies whether @c sysconf is defined.
+ */
+#if !defined(CZ_WRAP_SYSCONF)
+	#if CZ_POSIX_VERSION >= 200112L
+		#define CZ_WRAP_SYSCONF 1
+	#else
+		#define CZ_WRAP_SYSCONF 0
+	#endif
+#endif
+
+#if CZ_WRAP_SYSCONF
+/**
+ * @brief Wraps @c sysconf.
+ * 
+ * Calls @c sysconf with @p name. On success, the returned @c long is synchronously written to @p res. On failure, the
+ * contents of @p res are unchanged.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] name The argument to pass to @c sysconf.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_NO_SUPPORT @p name was unsupported by the platform.
+ * 
+ * @pre @p res is nonnull.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_SYSCONF is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
+enum CzResult czWrap_sysconf(long* res, int name);
 #endif
 
 /**
