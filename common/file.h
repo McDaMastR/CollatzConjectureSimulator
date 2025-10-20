@@ -78,7 +78,7 @@ struct CzFileFlags
  * @pre @p istty is nonnull.
  * @pre @p stream and @p istty do not overlap in memory.
  */
-CZ_REPRODUCIBLE CZ_NONNULL_ARGS CZ_WR_ACCESS(2)
+CZ_REPRODUCIBLE CZ_NONNULL_ARGS() CZ_WR_ACCESS(2)
 enum CzResult czStreamIsTerminal(FILE* stream, bool* istty);
 
 /**
@@ -125,7 +125,7 @@ enum CzResult czStreamIsTerminal(FILE* stream, bool* istty);
  * @pre @p size is nonnull.
  * @pre @p path and @p size do not overlap in memory.
  */
-CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1) CZ_RE_ACCESS(1) CZ_WR_ACCESS(2)
+CZ_NONNULL_ARGS() CZ_NULLTERM_ARG(1) CZ_RD_ACCESS(1) CZ_WR_ACCESS(2)
 enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flags);
 
 /**
@@ -185,7 +185,7 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  * @pre @p path and @p buffer do not overlap in memory.
  * @pre @p size is less than or equal to the size of @p buffer.
  */
-CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1) CZ_RE_ACCESS(1) CZ_WR_ACCESS(2)
+CZ_NONNULL_ARGS() CZ_NULLTERM_ARG(1) CZ_RD_ACCESS(1) CZ_WR_ACCESS(2, 3)
 enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t offset, struct CzFileFlags flags);
 
 /**
@@ -254,7 +254,7 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  * 
  * @warning Invalid usage can result in permanent loss of file data.
  */
-CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1) CZ_RE_ACCESS(1) CZ_RE_ACCESS(2)
+CZ_NONNULL_ARGS() CZ_NULLTERM_ARG(1) CZ_RD_ACCESS(1) CZ_RD_ACCESS(2, 3)
 enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, size_t offset, struct CzFileFlags flags);
 
 /**
@@ -322,5 +322,5 @@ enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, siz
  * 
  * @warning Invalid usage can result in permanent loss of file data.
  */
-CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1) CZ_RE_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_NULLTERM_ARG(1) CZ_RD_ACCESS(1)
 enum CzResult czTrimFile(const char* path, size_t size, size_t offset, struct CzFileFlags flags);

@@ -35,24 +35,24 @@ uint32_t floor_pow2(uint32_t x);
 CZ_CONST CZ_USE_RET
 double get_benchmark(clock_t start, clock_t end);
 
-CZ_NONNULL_ARG(1) CZ_NULLTERM_ARG(4) CZ_RE_ACCESS(4)
+CZ_NONNULL_ARGS(1) CZ_NULLTERM_ARG(4) CZ_RD_ACCESS(4)
 bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const char* name);
 
-CZ_NONNULL_ARGS CZ_WR_ACCESS(4)
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(4)
 bool get_buffer_requirements_noext(
 	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* requirements);
 
-CZ_NONNULL_ARGS CZ_WR_ACCESS(4)
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(4)
 bool get_buffer_requirements_main4(
 	VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryRequirements* requirements);
 
-CZ_NONNULL_ARGS CZ_NULLTERM_ARG(3) CZ_RE_ACCESS(3)
+CZ_NONNULL_ARGS() CZ_NULLTERM_ARG(3) CZ_RD_ACCESS(3)
 bool save_pipeline_cache(VkDevice device, VkPipelineCache cache, const char* filename);
 
-CZ_SCANF(2, 3) CZ_NONNULL_ARGS CZ_NULLTERM_ARG(1) CZ_NULLTERM_ARG(2) CZ_RE_ACCESS(1) CZ_RE_ACCESS(2)
+CZ_SCANF(2, 3) CZ_NONNULL_ARGS() CZ_NULLTERM_ARG(1) CZ_NULLTERM_ARG(2) CZ_RD_ACCESS(1) CZ_RD_ACCESS(2)
 bool read_text(const char* filename, const char* format, ...);
 
-CZ_PRINTF(2, 3) CZ_NONNULL_ARG(1, 2) CZ_NULLTERM_ARG(1) CZ_NULLTERM_ARG(2) CZ_RE_ACCESS(1) CZ_RE_ACCESS(2)
+CZ_PRINTF(2, 3) CZ_NONNULL_ARGS(1, 2) CZ_NULLTERM_ARG(1) CZ_NULLTERM_ARG(2) CZ_RD_ACCESS(1) CZ_RD_ACCESS(2)
 bool write_text(const char* filename, const char* format, ...);
 
 // Unsigned integer maximum and minimum functions

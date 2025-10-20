@@ -48,7 +48,7 @@
  * 
  * @pre @p res is nonnull.
  */
-CZ_NONNULL_ARGS CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
 enum CzResult czWrap_malloc(void* restrict* res, size_t size);
 
 /**
@@ -66,7 +66,7 @@ enum CzResult czWrap_malloc(void* restrict* res, size_t size);
  * 
  * @pre @p res is nonnull.
  */
-CZ_NONNULL_ARGS CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
 enum CzResult czWrap_calloc(void* restrict* res, size_t count, size_t size);
 
 /**
@@ -84,7 +84,7 @@ enum CzResult czWrap_calloc(void* restrict* res, size_t count, size_t size);
  * 
  * @pre @p res is nonnull.
  */
-CZ_NONNULL_ARG(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
 enum CzResult czWrap_realloc(void* restrict* res, void* ptr, size_t size);
 
 /**
@@ -118,7 +118,7 @@ enum CzResult czWrap_realloc(void* restrict* res, void* ptr, size_t size);
  * 
  * @note This function is only defined if @ref CZ_WRAP_REALLOCF is defined as a nonzero value.
  */
-CZ_NONNULL_ARG(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
 enum CzResult czWrap_reallocf(void* restrict* res, void* ptr, size_t size);
 #endif
 
@@ -154,7 +154,7 @@ enum CzResult czWrap_reallocf(void* restrict* res, void* ptr, size_t size);
  * 
  * @note This function is only defined if @ref CZ_WRAP_RECALLOC is defined as a nonzero value.
  */
-CZ_NONNULL_ARG(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
 enum CzResult czWrap_recalloc(void* restrict* res, void* ptr, size_t count, size_t size);
 #endif
 
@@ -164,7 +164,7 @@ enum CzResult czWrap_recalloc(void* restrict* res, void* ptr, size_t count, size
  * @brief Specifies whether @c posix_memalign is defined.
  */
 #if !defined(CZ_WRAP_POSIX_MEMALIGN)
-	#if defined(__APPLE__) || (defined(_POSIX_ADVISORY_INFO) && _POSIX_ADVISORY_INFO >= 200112L)
+	#if defined(__APPLE__) || CZ_POSIX_ADVISORY_INFO >= 200112L
 		#define CZ_WRAP_POSIX_MEMALIGN 1
 	#else
 		#define CZ_WRAP_POSIX_MEMALIGN 0
@@ -193,7 +193,7 @@ enum CzResult czWrap_recalloc(void* restrict* res, void* ptr, size_t count, size
  * 
  * @note This function is only defined if @ref CZ_WRAP_POSIX_MEMALIGN is defined as a nonzero value.
  */
-CZ_NONNULL_ARG(2) CZ_WR_ACCESS(1) CZ_WR_ACCESS(2)
+CZ_NONNULL_ARGS(2) CZ_WR_ACCESS(1) CZ_WR_ACCESS(2)
 enum CzResult czWrap_posix_memalign(int* res, void* restrict* ptr, size_t alignment, size_t size);
 #endif
 
@@ -233,7 +233,7 @@ enum CzResult czWrap_posix_memalign(int* res, void* restrict* ptr, size_t alignm
  * 
  * @note This function is only defined if @ref CZ_WRAP_ALIGNED_OFFSET_MALLOC is defined as a nonzero value.
  */
-CZ_NONNULL_ARGS CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
 enum CzResult czWrap_aligned_offset_malloc(void* restrict* res, size_t size, size_t alignment, size_t offset);
 #endif
 
@@ -274,7 +274,7 @@ enum CzResult czWrap_aligned_offset_malloc(void* restrict* res, size_t size, siz
  * 
  * @note This function is only defined if @ref CZ_WRAP_ALIGNED_OFFSET_REALLOC is defined as a nonzero value.
  */
-CZ_NONNULL_ARG(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
 enum CzResult czWrap_aligned_offset_realloc(
 	void* restrict* res, void* ptr, size_t size, size_t alignment, size_t offset);
 #endif
@@ -317,7 +317,7 @@ enum CzResult czWrap_aligned_offset_realloc(
  * 
  * @note This function is only defined if @ref CZ_WRAP_ALIGNED_OFFSET_RECALLOC is defined as a nonzero value.
  */
-CZ_NONNULL_ARG(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
 enum CzResult czWrap_aligned_offset_recalloc(
 	void* restrict* res, void* ptr, size_t count, size_t size, size_t alignment, size_t offset);
 #endif
@@ -366,7 +366,7 @@ enum CzResult czWrap_madvise(int* res, void* addr, size_t size, int advice);
  * @brief Specifies whether @c posix_madvise is defined.
  */
 #if !defined(CZ_WRAP_POSIX_MADVISE)
-	#if defined(__APPLE__)
+	#if defined(__APPLE__) || CZ_POSIX_ADVISORY_INFO >= 200112L
 		#define CZ_WRAP_POSIX_MADVISE 1
 	#else
 		#define CZ_WRAP_POSIX_MADVISE 0
@@ -425,7 +425,7 @@ enum CzResult czWrap_posix_madvise(int* res, void* addr, size_t size, int advice
  * 
  * @pre @p res is nonnull.
  */
-CZ_NONNULL_ARG(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
 enum CzResult czWrap_fopen(FILE* restrict* res, const char* path, const char* mode);
 
 /**
@@ -493,7 +493,7 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int origin);
  * 
  * @pre @p res is nonnull.
  */
-CZ_NONNULL_ARG(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
 enum CzResult czWrap_ftell(long* res, FILE* stream);
 
 /**
@@ -595,7 +595,7 @@ enum CzResult czWrap_remove(const char* path);
  * 
  * @note This function is only defined if @ref CZ_WRAP_FILENO is defined as a nonzero value.
  */
-CZ_NONNULL_ARG(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
 enum CzResult czWrap_fileno(int* res, FILE* stream);
 #endif
 
@@ -629,7 +629,7 @@ enum CzResult czWrap_fileno(int* res, FILE* stream);
  * 
  * @note This function is only defined if @ref CZ_WRAP_ISATTY is defined as a nonzero value.
  */
-CZ_NONNULL_ARGS CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
 enum CzResult czWrap_isatty(int* res, int fd);
 #endif
 
@@ -744,7 +744,7 @@ enum CzResult czWrap_fstat(int fd, struct stat* st);
  * 
  * @note This function is only defined if @ref CZ_WRAP_OPEN is defined as a nonzero value.
  */
-CZ_NONNULL_ARG(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
 enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode);
 #endif
 
@@ -945,7 +945,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
  * 
  * @note This function is only defined if @ref CZ_WRAP_GET_OSFHANDLE is defined as a nonzero value.
  */
-CZ_NONNULL_ARGS CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
 enum CzResult czWrap_get_osfhandle(intptr_t* res, int fd);
 #endif
 
@@ -1115,7 +1115,7 @@ enum CzResult czWrap_GetFileSizeEx(HANDLE file, PLARGE_INTEGER size);
  * 
  * @note This function is only defined if @ref CZ_WRAP_CREATE_FILE_W is defined as a nonzero value.
  */
-CZ_NONNULL_ARG(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
 enum CzResult czWrap_CreateFileW(
 	LPHANDLE res,
 	LPCWSTR path,

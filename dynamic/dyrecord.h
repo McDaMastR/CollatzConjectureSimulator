@@ -73,7 +73,7 @@ DyRecord dyrecord_create(void);
  * 
  * @pre @p record is nonnull.
  */
-CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_RET
+CZ_PURE CZ_NONNULL_ARGS() CZ_RD_ACCESS(1) CZ_USE_RET
 size_t dyrecord_size(DyRecord record);
 
 /**
@@ -94,7 +94,7 @@ size_t dyrecord_size(DyRecord record);
  * @pre @p record and @p memory do not overlap in memory.
  * @pre @p callback is nonnull.
  */
-CZ_NONNULL_ARGS CZ_RW_ACCESS(1) CZ_NO_ACCESS(2)
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_NO_ACCESS(2)
 bool dyrecord_add(DyRecord record, void* memory, FreeCallback callback);
 
 /**
@@ -110,7 +110,7 @@ bool dyrecord_add(DyRecord record, void* memory, FreeCallback callback);
  * 
  * @pre @p record is nonnull.
  */
-CZ_MALLOC CZ_NONNULL_ARGS CZ_ALLOC_ARG(2) CZ_RW_ACCESS(1) CZ_USE_RET
+CZ_MALLOC CZ_NONNULL_ARGS() CZ_ALLOC_ARGS(2) CZ_RW_ACCESS(1) CZ_USE_RET
 void* dyrecord_malloc(DyRecord record, size_t size);
 
 /**
@@ -127,7 +127,7 @@ void* dyrecord_malloc(DyRecord record, size_t size);
  * 
  * @pre @p record is nonnull.
  */
-CZ_MALLOC CZ_NONNULL_ARGS CZ_ALLOC_ARGS(2, 3) CZ_RW_ACCESS(1) CZ_USE_RET
+CZ_MALLOC CZ_NONNULL_ARGS() CZ_ALLOC_ARGS(2, 3) CZ_RW_ACCESS(1) CZ_USE_RET
 void* dyrecord_calloc(DyRecord record, size_t count, size_t size);
 
 /**
@@ -140,5 +140,5 @@ void* dyrecord_calloc(DyRecord record, size_t count, size_t size);
  * 
  * @pre @p record is nonnull.
  */
-CZ_NONNULL_ARGS CZ_RW_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
 void dyrecord_free(DyRecord record);

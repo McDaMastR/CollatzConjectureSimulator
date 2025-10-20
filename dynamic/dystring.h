@@ -72,7 +72,7 @@ DyString dystring_create(size_t count);
  * 
  * @invariant The length is nonzero.
  */
-CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_RET
+CZ_PURE CZ_NONNULL_ARGS() CZ_RD_ACCESS(1) CZ_USE_RET
 size_t dystring_length(DyString string);
 
 /**
@@ -90,7 +90,7 @@ size_t dystring_length(DyString string);
  * 
  * @note Adding a substring to @p string may result in the raw string changing memory location.
  */
-CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_NONNULL_RET CZ_USE_RET
+CZ_PURE CZ_NONNULL_ARGS() CZ_RD_ACCESS(1) CZ_NONNULL_RET CZ_USE_RET
 char* dystring_raw(DyString string);
 
 /**
@@ -108,7 +108,7 @@ char* dystring_raw(DyString string);
  * @pre @p substring is nonnull and null-terminated.
  * @pre @p string and @p substring do not overlap in memory.
  */
-CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RE_ACCESS(2)
+CZ_NONNULL_ARGS() CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RD_ACCESS(2)
 char* dystring_append(DyString string, const char* substring);
 
 /**
@@ -126,7 +126,7 @@ char* dystring_append(DyString string, const char* substring);
  * @pre @p substring is nonnull and null-terminated.
  * @pre @p string and @p substring do not overlap in memory.
  */
-CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RE_ACCESS(2)
+CZ_NONNULL_ARGS() CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RD_ACCESS(2)
 char* dystring_prepend(DyString string, const char* substring);
 
 /**
@@ -146,5 +146,5 @@ char* dystring_prepend(DyString string, const char* substring);
  * @pre @p string and @p substring do not overlap in memory.
  * @pre @p index is less than the length of @p string.
  */
-CZ_NONNULL_ARGS CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RE_ACCESS(2)
+CZ_NONNULL_ARGS() CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RD_ACCESS(2)
 char* dystring_add(DyString string, const char* substring, size_t index);

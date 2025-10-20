@@ -31,199 +31,282 @@
 
 // Check support for optional attributes and builtins
 
-#if defined(__has_attribute)
-	#define CZ_HAS_ATTRIBUTE(x) __has_attribute(x)
-#else
-	#define CZ_HAS_ATTRIBUTE(x) 0
-#endif
-
-#if defined(__has_builtin)
-	#define CZ_HAS_BUILTIN(x) __has_builtin(__builtin_##x)
-#else
-	#define CZ_HAS_BUILTIN(x) 0
-#endif
-
-#if defined(__has_include)
-	#define CZ_HAS_INCLUDE(x) __has_include(<x>)
-#else
-	#define CZ_HAS_INCLUDE(x) 0
-#endif
-
-#if CZ_HAS_BUILTIN(assume)
-	#define CZ_ASSUME(x) __builtin_assume(x)
-#elif CZ_HAS_ATTRIBUTE(assume)
-	#define CZ_ASSUME(x) __attribute__ (( assume(x) ))
-#elif defined(_MSC_VER)
-	#define CZ_ASSUME(x) __assume(x)
-#else
-	#define CZ_ASSUME(x)
-#endif
-
-#if CZ_HAS_BUILTIN(expect)
-	#define CZ_EXPECT(x)   ( __builtin_expect((x) ? 1 : 0, 1) )
-	#define CZ_NOEXPECT(x) ( __builtin_expect((x) ? 1 : 0, 0) )
-#else
-	#define CZ_EXPECT(x)   (x)
-	#define CZ_NOEXPECT(x) (x)
-#endif
-
-#if CZ_HAS_ATTRIBUTE(hot)
-	#define CZ_HOT __attribute__ (( hot ))
-#else
-	#define CZ_HOT
-#endif
-
-#if CZ_HAS_ATTRIBUTE(cold)
-	#define CZ_COLD __attribute__ (( cold ))
-#else
-	#define CZ_COLD
-#endif
-
-#if CZ_HAS_ATTRIBUTE(const)
-	#define CZ_CONST __attribute__ (( const ))
-#elif defined(_MSC_VER)
-	#define CZ_CONST __declspec(noalias)
-#else
-	#define CZ_CONST
-#endif
-
-#if CZ_HAS_ATTRIBUTE(pure)
-	#define CZ_PURE __attribute__ (( pure ))
-#elif defined(_MSC_VER)
-	#define CZ_PURE __declspec(noalias)
-#else
-	#define CZ_PURE
-#endif
-
-#if CZ_HAS_ATTRIBUTE(reproducible)
-	#define CZ_REPRODUCIBLE __attribute__ (( reproducible ))
-#elif defined(_MSC_VER)
-	#define CZ_REPRODUCIBLE __declspec(noalias)
-#else
-	#define CZ_REPRODUCIBLE
-#endif
-
-#if CZ_HAS_ATTRIBUTE(unsequenced)
-	#define CZ_UNSEQUENCED __attribute__ (( unsequenced ))
-#elif defined(_MSC_VER)
-	#define CZ_UNSEQUENCED __declspec(noalias)
-#else
-	#define CZ_UNSEQUENCED
-#endif
-
-#if CZ_HAS_ATTRIBUTE(malloc)
-	#define CZ_MALLOC __attribute__ (( malloc ))
-#elif defined(_MSC_VER)
-	#define CZ_MALLOC __declspec(allocator)
-#else
-	#define CZ_MALLOC
-#endif
-
-#if CZ_HAS_ATTRIBUTE(malloc) && !defined(__clang__)
-	#define CZ_FREE(func, arg) __attribute__ (( malloc(func, arg) ))
-#else
-	#define CZ_FREE(func, arg)
-#endif
-
-#if CZ_HAS_ATTRIBUTE(format)
-	#if defined(__clang__)
-		#define CZ_PRINTF(fmt, args) __attribute__ (( format(printf, fmt, args) ))
-		#define CZ_SCANF(fmt, args)  __attribute__ (( format(scanf, fmt, args) ))
+#if !defined(CZ_HAS_ATTRIBUTE)
+	#if defined(__has_attribute)
+		#define CZ_HAS_ATTRIBUTE(x) __has_attribute(x)
 	#else
-		#define CZ_PRINTF(fmt, args) __attribute__ (( format(gnu_printf, fmt, args) ))
-		#define CZ_SCANF(fmt, args)  __attribute__ (( format(gnu_scanf, fmt, args) ))
+		#define CZ_HAS_ATTRIBUTE(x) 0
 	#endif
-#else
-	#define CZ_PRINTF(fmt, args)
-	#define CZ_SCANF(fmt, args)
 #endif
 
-#if CZ_HAS_ATTRIBUTE(nonnull)
-	#define CZ_NONNULL_ARG(...) __attribute__ (( nonnull(__VA_ARGS__) ))
-	#define CZ_NONNULL_ARGS     __attribute__ (( nonnull ))
-#else
-	#define CZ_NONNULL_ARG(...)
-	#define CZ_NONNULL_ARGS
+#if !defined(CZ_HAS_BUILTIN)
+	#if defined(__has_builtin)
+		#define CZ_HAS_BUILTIN(x) __has_builtin(__builtin_##x)
+	#else
+		#define CZ_HAS_BUILTIN(x) 0
+	#endif
 #endif
 
-#if CZ_HAS_ATTRIBUTE(nonnull_if_nonzero)
-	#define CZ_NONNULL_NONZERO_ARG(ptr, arg)         __attribute__ (( nonnull_if_nonzero(ptr, arg) ))
-	#define CZ_NONNULL_NONZERO_ARGS(ptr, arg1, arg2) __attribute__ (( nonnull_if_nonzero(ptr, arg1, arg2) ))
-#else
-	#define CZ_NONNULL_NONZERO_ARG(ptr, arg)
-	#define CZ_NONNULL_NONZERO_ARGS(ptr, arg1, arg2)
+#if !defined(CZ_HAS_INCLUDE)
+	#if defined(__has_include)
+		#define CZ_HAS_INCLUDE(x) __has_include(<x>)
+	#else
+		#define CZ_HAS_INCLUDE(x) 0
+	#endif
 #endif
 
-#if CZ_HAS_ATTRIBUTE(alloc_size)
-	#define CZ_ALLOC_ARG(arg)         __attribute__ (( alloc_size(arg) ))
-	#define CZ_ALLOC_ARGS(arg1, arg2) __attribute__ (( alloc_size(arg1, arg2) ))
-#else
-	#define CZ_ALLOC_ARG(arg)
-	#define CZ_ALLOC_ARGS(arg1, arg2)
+#if !defined(CZ_ASSUME)
+	#if CZ_HAS_BUILTIN(assume)
+		#define CZ_ASSUME(x) __builtin_assume(x)
+	#elif CZ_HAS_ATTRIBUTE(assume)
+		#define CZ_ASSUME(x) __attribute__ (( assume(x) ))
+	#elif defined(_MSC_VER)
+		#define CZ_ASSUME(x) __assume(x)
+	#else
+		#define CZ_ASSUME(x)
+	#endif
 #endif
 
-#if CZ_HAS_ATTRIBUTE(alloc_align)
-	#define CZ_ALIGN_ARG(arg) __attribute__ (( alloc_align(arg) ))
-#else
-	#define CZ_ALIGN_ARG(arg)
+#if !defined(CZ_EXPECT)
+	#if CZ_HAS_BUILTIN(expect)
+		#define CZ_EXPECT(x) ( __builtin_expect((x) ? 1 : 0, 1) )
+	#else
+		#define CZ_EXPECT(x) (x)
+	#endif
 #endif
 
-#if CZ_HAS_ATTRIBUTE(null_terminated_string_arg)
-	#define CZ_NULLTERM_ARG(arg) __attribute__ (( null_terminated_string_arg(arg) ))
-#else
-	#define CZ_NULLTERM_ARG(arg)
+#if !defined(CZ_NOEXPECT)
+	#if CZ_HAS_BUILTIN(expect)
+		#define CZ_NOEXPECT(x) ( __builtin_expect((x) ? 1 : 0, 0) )
+	#else
+		#define CZ_NOEXPECT(x) (x)
+	#endif
 #endif
 
-#if CZ_HAS_ATTRIBUTE(access)
-	#define CZ_NO_ACCESS(arg) __attribute__ (( access(none, arg) ))
-	#define CZ_RE_ACCESS(arg) __attribute__ (( access(read_only, arg) ))
-	#define CZ_WR_ACCESS(arg) __attribute__ (( access(write_only, arg) ))
-	#define CZ_RW_ACCESS(arg) __attribute__ (( access(read_write, arg) ))
-#else
-	#define CZ_NO_ACCESS(arg)
-	#define CZ_RE_ACCESS(arg)
-	#define CZ_WR_ACCESS(arg)
-	#define CZ_RW_ACCESS(arg)
+#if !defined(CZ_HOT)
+	#if CZ_HAS_ATTRIBUTE(hot)
+		#define CZ_HOT __attribute__ (( hot ))
+	#else
+		#define CZ_HOT
+	#endif
 #endif
 
-#if CZ_HAS_ATTRIBUTE(returns_nonnull)
-	#define CZ_NONNULL_RET __attribute__ (( returns_nonnull ))
-#else
-	#define CZ_NONNULL_RET
+#if !defined(CZ_COLD)
+	#if CZ_HAS_ATTRIBUTE(cold)
+		#define CZ_COLD __attribute__ (( cold ))
+	#else
+		#define CZ_COLD
+	#endif
 #endif
 
-#if CZ_HAS_ATTRIBUTE(warn_unused_result)
-	#define CZ_USE_RET __attribute__ (( warn_unused_result ))
-#else
-	#define CZ_USE_RET
+#if !defined(CZ_CONST)
+	#if CZ_HAS_ATTRIBUTE(const)
+		#define CZ_CONST __attribute__ (( const ))
+	#elif defined(_MSC_VER)
+		#define CZ_CONST __declspec(noalias)
+	#else
+		#define CZ_CONST
+	#endif
 #endif
 
-#if CZ_HAS_ATTRIBUTE(counted_by)
-	#define CZ_COUNTBY(x) __attribute__ (( counted_by(x) ))
-#else
-	#define CZ_COUNTBY(x)
+#if !defined(CZ_PURE)
+	#if CZ_HAS_ATTRIBUTE(pure)
+		#define CZ_PURE __attribute__ (( pure ))
+	#elif defined(_MSC_VER)
+		#define CZ_PURE __declspec(noalias)
+	#else
+		#define CZ_PURE
+	#endif
+#endif
+
+#if !defined(CZ_REPRODUCIBLE)
+	#if CZ_HAS_ATTRIBUTE(reproducible)
+		#define CZ_REPRODUCIBLE __attribute__ (( reproducible ))
+	#elif defined(_MSC_VER)
+		#define CZ_REPRODUCIBLE __declspec(noalias)
+	#else
+		#define CZ_REPRODUCIBLE
+	#endif
+#endif
+
+#if !defined(CZ_UNSEQUENCED)
+	#if CZ_HAS_ATTRIBUTE(unsequenced)
+		#define CZ_UNSEQUENCED __attribute__ (( unsequenced ))
+	#elif defined(_MSC_VER)
+		#define CZ_UNSEQUENCED __declspec(noalias)
+	#else
+		#define CZ_UNSEQUENCED
+	#endif
+#endif
+
+#if !defined(CZ_MALLOC)
+	#if CZ_HAS_ATTRIBUTE(malloc)
+		#define CZ_MALLOC __attribute__ (( malloc ))
+	#elif defined(_MSC_VER)
+		#define CZ_MALLOC __declspec(allocator)
+	#else
+		#define CZ_MALLOC
+	#endif
+#endif
+
+#if !defined(CZ_FREE)
+	#if CZ_HAS_ATTRIBUTE(malloc) && !defined(__clang__)
+		#define CZ_FREE(func, arg) __attribute__ (( malloc(func, arg) ))
+	#else
+		#define CZ_FREE(func, arg)
+	#endif
+#endif
+
+#if !defined(CZ_PRINTF)
+	#if CZ_HAS_ATTRIBUTE(format) && defined(__clang__)
+		#define CZ_PRINTF(fmt, args) __attribute__ (( format(printf, fmt, args) ))
+	#elif CZ_HAS_ATTRIBUTE(format)
+		#define CZ_PRINTF(fmt, args) __attribute__ (( format(gnu_printf, fmt, args) ))
+	#else
+		#define CZ_PRINTF(fmt, args)
+	#endif
+#endif
+
+#if !defined(CZ_SCANF)
+	#if CZ_HAS_ATTRIBUTE(format) && defined(__clang__)
+		#define CZ_SCANF(fmt, args) __attribute__ (( format(scanf, fmt, args) ))
+	#elif CZ_HAS_ATTRIBUTE(format)
+		#define CZ_SCANF(fmt, args) __attribute__ (( format(gnu_scanf, fmt, args) ))
+	#else
+		#define CZ_SCANF(fmt, args)
+	#endif
+#endif
+
+#if !defined(CZ_NONNULL_ARGS)
+	#if CZ_HAS_ATTRIBUTE(nonnull)
+		#define CZ_NONNULL_ARGS(...) __attribute__ (( nonnull __VA_OPT__((__VA_ARGS__)) ))
+	#else
+		#define CZ_NONNULL_ARGS(...)
+	#endif
+#endif
+
+#if !defined(CZ_NONNULL_NONZERO_ARGS)
+	#if CZ_HAS_ATTRIBUTE(nonnull_if_nonzero)
+		#define CZ_NONNULL_NONZERO_ARGS(ptr, ...) __attribute__ (( nonnull_if_nonzero(ptr, __VA_ARGS__) ))
+	#else
+		#define CZ_NONNULL_NONZERO_ARGS(ptr, ...)
+	#endif
+#endif
+
+#if !defined(CZ_ALLOC_ARGS)
+	#if CZ_HAS_ATTRIBUTE(alloc_size)
+		#define CZ_ALLOC_ARGS(...) __attribute__ (( alloc_size(__VA_ARGS__) ))
+	#else
+		#define CZ_ALLOC_ARGS(...)
+	#endif
+#endif
+
+#if !defined(CZ_ALIGN_ARG)
+	#if CZ_HAS_ATTRIBUTE(alloc_align)
+		#define CZ_ALIGN_ARG(arg) __attribute__ (( alloc_align(arg) ))
+	#else
+		#define CZ_ALIGN_ARG(arg)
+	#endif
+#endif
+
+#if !defined(CZ_NULLTERM_ARG)
+	#if CZ_HAS_ATTRIBUTE(null_terminated_string_arg)
+		#define CZ_NULLTERM_ARG(arg) __attribute__ (( null_terminated_string_arg(arg) ))
+	#else
+		#define CZ_NULLTERM_ARG(arg)
+	#endif
+#endif
+
+#if !defined(CZ_NO_ACCESS)
+	#if CZ_HAS_ATTRIBUTE(access)
+		#define CZ_NO_ACCESS(...) __attribute__ (( access(none, __VA_ARGS__) ))
+	#else
+		#define CZ_NO_ACCESS(...)
+	#endif
+#endif
+
+#if !defined(CZ_RD_ACCESS)
+	#if CZ_HAS_ATTRIBUTE(access)
+		#define CZ_RD_ACCESS(...) __attribute__ (( access(read_only, __VA_ARGS__) ))
+	#else
+		#define CZ_RD_ACCESS(...)
+	#endif
+#endif
+
+#if !defined(CZ_WR_ACCESS)
+	#if CZ_HAS_ATTRIBUTE(access)
+		#define CZ_WR_ACCESS(...) __attribute__ (( access(write_only, __VA_ARGS__) ))
+	#else
+		#define CZ_WR_ACCESS(...)
+	#endif
+#endif
+
+#if !defined(CZ_RW_ACCESS)
+	#if CZ_HAS_ATTRIBUTE(access)
+		#define CZ_RW_ACCESS(...) __attribute__ (( access(read_write, __VA_ARGS__) ))
+	#else
+		#define CZ_RW_ACCESS(...)
+	#endif
+#endif
+
+#if !defined(CZ_NONNULL_RET)
+	#if CZ_HAS_ATTRIBUTE(returns_nonnull)
+		#define CZ_NONNULL_RET __attribute__ (( returns_nonnull ))
+	#else
+		#define CZ_NONNULL_RET
+	#endif
+#endif
+
+#if !defined(CZ_USE_RET)
+	#if CZ_HAS_ATTRIBUTE(warn_unused_result)
+		#define CZ_USE_RET __attribute__ (( warn_unused_result ))
+	#else
+		#define CZ_USE_RET
+	#endif
+#endif
+
+#if !defined(CZ_COUNTBY)
+	#if CZ_HAS_ATTRIBUTE(counted_by)
+		#define CZ_COUNTBY(x) __attribute__ (( counted_by(x) ))
+	#else
+		#define CZ_COUNTBY(x)
+	#endif
 #endif
 
 // Check support for nonstandard (in C17) extensions and features
 
-#if CZ_HAS_INCLUDE(stdcountof.h)
-	#define CZ_COUNTOF(a) countof(a)
-#else
-	#define CZ_COUNTOF(a) ( sizeof(a) / sizeof(*(a)) )
+#if !defined(CZ_COUNTOF)
+	#if CZ_HAS_INCLUDE(stdcountof.h)
+		#define CZ_COUNTOF(a) countof(a)
+	#else
+		#define CZ_COUNTOF(a) ( sizeof(a) / sizeof(*(a)) )
+	#endif
 #endif
 
-// Check support for nonstandard predefined macros
+// Check support for predefined macros
 
-#if defined(_POSIX_VERSION)
-	#define CZ_POSIX_VERSION _POSIX_VERSION
-#else
-	#define CZ_POSIX_VERSION 0
+#if !defined(CZ_FILENAME)
+	#if defined(__FILE_NAME__)
+		#define CZ_FILENAME __FILE_NAME__
+	#else
+		#define CZ_FILENAME __FILE__
+	#endif
 #endif
 
-#if defined(__FILE_NAME__)
-	#define CZ_FILENAME __FILE_NAME__
-#else
-	#define CZ_FILENAME __FILE__
+#if !defined(CZ_POSIX_VERSION)
+	#if defined(_POSIX_VERSION)
+		#define CZ_POSIX_VERSION _POSIX_VERSION
+	#else
+		#define CZ_POSIX_VERSION 0
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_ADVISORY_INFO)
+	#if defined(_POSIX_ADVISORY_INFO)
+		#define CZ_POSIX_ADVISORY_INFO _POSIX_ADVISORY_INFO
+	#else
+		#define CZ_POSIX_ADVISORY_INFO 0
+	#endif
 #endif
 
 // ANSI escape codes regarding Select Graphic Rendition (SGR)

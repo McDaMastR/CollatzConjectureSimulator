@@ -68,7 +68,7 @@ DyQueue dyqueue_create(size_t size);
  * 
  * @pre @p queue is nonnull.
  */
-CZ_PURE CZ_NONNULL_ARGS CZ_RE_ACCESS(1) CZ_USE_RET
+CZ_PURE CZ_NONNULL_ARGS() CZ_RD_ACCESS(1) CZ_USE_RET
 size_t dyqueue_size(DyQueue queue);
 
 /**
@@ -86,7 +86,7 @@ size_t dyqueue_size(DyQueue queue);
  * @pre @p queue is nonnull.
  * @pre @p value is nonnull.
  */
-CZ_NONNULL_ARGS CZ_RW_ACCESS(1) CZ_RE_ACCESS(2)
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_RD_ACCESS(2)
 bool dyqueue_enqueue(DyQueue queue, const void* value);
 
 /**
@@ -100,5 +100,5 @@ bool dyqueue_enqueue(DyQueue queue, const void* value);
  * @pre @p queue is nonnull and nonempty.
  * @pre @p value is nonnull.
  */
-CZ_NONNULL_ARGS CZ_RW_ACCESS(1) CZ_WR_ACCESS(2)
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_WR_ACCESS(2)
 void dyqueue_dequeue(DyQueue queue, void* value);

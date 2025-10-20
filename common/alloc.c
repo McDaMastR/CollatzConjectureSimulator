@@ -38,7 +38,6 @@ enum CzResult czFree(void* restrict memory)
 }
 
 #if defined(_WIN32)
-CZ_NONNULL_ARGS
 static enum CzResult realloc_win32(
 	void* restrict* restrict memory, size_t oldSize, size_t newSize, struct CzAllocFlags flags)
 {
@@ -55,7 +54,6 @@ static enum CzResult realloc_win32(
 #endif
 
 #if defined(__APPLE__)
-CZ_NONNULL_ARGS
 static enum CzResult realloc_apple(
 	void* restrict* restrict memory, size_t oldSize, size_t newSize, struct CzAllocFlags flags)
 {
@@ -78,7 +76,6 @@ static enum CzResult realloc_apple(
 }
 #endif
 
-CZ_NONNULL_ARGS
 static enum CzResult realloc_other(
 	void* restrict* restrict memory, size_t oldSize, size_t newSize, struct CzAllocFlags flags)
 {
@@ -119,7 +116,6 @@ enum CzResult czRealloc(void* restrict* restrict memory, size_t oldSize, size_t 
 }
 
 #if defined(_WIN32)
-CZ_NONNULL_ARGS
 static enum CzResult alloc_align_win32(
 	void* restrict* restrict memory, size_t size, size_t alignment, size_t offset, struct CzAllocFlags flags)
 {
@@ -130,7 +126,6 @@ static enum CzResult alloc_align_win32(
 #endif
 
 #if defined(__APPLE__)
-CZ_NONNULL_ARGS
 static enum CzResult alloc_align_apple(
 	void* restrict* restrict memory, size_t size, size_t alignment, size_t offset, struct CzAllocFlags flags)
 {
@@ -158,7 +153,6 @@ static enum CzResult alloc_align_apple(
 #endif
 
 #if CZ_WRAP_POSIX_MEMALIGN
-CZ_NONNULL_ARGS
 static enum CzResult alloc_align_posix(
 	void* restrict* restrict memory, size_t size, size_t alignment, size_t offset, struct CzAllocFlags flags)
 {
@@ -181,7 +175,6 @@ static enum CzResult alloc_align_posix(
 }
 #endif
 
-CZ_NONNULL_ARGS
 static enum CzResult alloc_align_other(
 	void* restrict* restrict memory, size_t size, size_t alignment, size_t offset, struct CzAllocFlags flags)
 {
@@ -227,14 +220,12 @@ enum CzResult czAllocAlign(
 }
 
 #if defined(_WIN32)
-CZ_NONNULL_ARGS
 static enum CzResult free_align_win32(void* restrict memory)
 {
 	return _aligned_free(memory);
 }
 #endif
 
-CZ_NONNULL_ARGS
 static enum CzResult free_align_other(void* restrict memory)
 {
 	free(*((void**) ((uintptr_t) memory & ~(sizeof(void*) - 1)) - 1));
@@ -253,7 +244,6 @@ enum CzResult czFreeAlign(void* restrict memory)
 }
 
 #if defined(_WIN32)
-CZ_NONNULL_ARGS
 static enum CzResult realloc_align_win32(
 	void* restrict* restrict memory,
 	size_t oldSize,
@@ -275,7 +265,6 @@ static enum CzResult realloc_align_win32(
 #endif
 
 #if defined(__APPLE__)
-CZ_NONNULL_ARGS
 static enum CzResult realloc_align_apple(
 	void* restrict* restrict memory,
 	size_t oldSize,
@@ -308,7 +297,6 @@ static enum CzResult realloc_align_apple(
 #endif
 
 #if CZ_WRAP_POSIX_MEMALIGN
-CZ_NONNULL_ARGS
 static enum CzResult realloc_align_posix(
 	void* restrict* restrict memory,
 	size_t oldSize,
@@ -338,7 +326,6 @@ static enum CzResult realloc_align_posix(
 }
 #endif
 
-CZ_NONNULL_ARGS
 static enum CzResult realloc_align_other(
 	void* restrict* restrict memory,
 	size_t oldSize,

@@ -62,9 +62,10 @@ correctly are listed below. The full requirements of the GPU are given in
 [device_requirements.md](device_requirements.md).
 
 - [C](https://en.wikipedia.org/wiki/C_(programming_language))17
-  - Atomic operations via the `stdatomic.h` header  (Optional C11 feature)
+  - Atomic operations via the `stdatomic.h` header (Optional C feature)
   - 128-bit integers via the `__int128` type (GNU C extension)
   - Conditional expressions with omitted operands (GNU C extension)
+  - Variadic macros with `__VA_OPT__` evaluation (GNU C extension)
 - [CMake](https://cmake.org) 3.24
 - [glslang](https://github.com/KhronosGroup/glslang)
 - [pthreads](https://en.wikipedia.org/wiki/Pthreads)
