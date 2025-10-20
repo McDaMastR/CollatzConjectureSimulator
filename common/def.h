@@ -293,11 +293,91 @@
 	#endif
 #endif
 
+#if !defined(CZ_APPLE)
+	#if defined(__APPLE__) && defined(__MACH__)
+		#define CZ_APPLE 1
+	#else
+		#define CZ_APPLE 0
+	#endif
+#endif
+
+#if !defined(CZ_IOS)
+	#if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+		#define CZ_IOS 1
+	#else
+		#define CZ_IOS 0
+	#endif
+#endif
+
+#if !defined(CZ_MACOS)
+	#if defined(TARGET_OS_OSX) && TARGET_OS_OSX
+		#define CZ_MACOS 1
+	#else
+		#define CZ_MACOS 0
+	#endif
+#endif
+
+#if !defined(CZ_UNIX)
+	#if defined(__unix__) || defined(__unix)
+		#define CZ_UNIX 1
+	#else
+		#define CZ_UNIX 0
+	#endif
+#endif
+
+#if !defined(CZ_LINUX)
+	#if defined(__linux__)
+		#define CZ_LINUX 1
+	#else
+		#define CZ_LINUX 0
+	#endif
+#endif
+
+#if !defined(CZ_GNU_LINUX)
+	#if defined(__gnu_linux__)
+		#define CZ_GNU_LINUX 1
+	#else
+		#define CZ_GNU_LINUX 0
+	#endif
+#endif
+
+#if !defined(CZ_CYGWIN)
+	#if defined(__CYGWIN__)
+		#define CZ_CYGWIN 1
+	#else
+		#define CZ_CYGWIN 0
+	#endif
+#endif
+
+#if !defined(CZ_MINGW)
+	#if defined(__MINGW32__)
+		#define CZ_MINGW 1
+	#else
+		#define CZ_MINGW 0
+	#endif
+#endif
+
+#if !defined(CZ_WINDOWS)
+	#if defined(_WIN32)
+		#define CZ_WINDOWS 1
+	#else
+		#define CZ_WINDOWS 0
+	#endif
+#endif
+
 #if !defined(CZ_POSIX_VERSION)
 	#if defined(_POSIX_VERSION)
 		#define CZ_POSIX_VERSION _POSIX_VERSION
 	#else
 		#define CZ_POSIX_VERSION (-1)
+	#endif
+#endif
+
+#if !defined(CZ_XOPEN_VERSION)
+	#if defined(_XOPEN_VERSION)
+		#define CZ_XOPEN_VERSION _XOPEN_VERSION
+	#else
+		#define CZ_XOPEN_VERSION (-1)
 	#endif
 #endif
 

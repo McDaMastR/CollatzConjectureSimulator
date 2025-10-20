@@ -315,7 +315,7 @@ static bool init_config(int argc, char** argv)
 
 static bool init_env(void)
 {
-#if defined(_WIN32)
+#if CZ_WINDOWS
 	HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
 
 	DWORD mode;
@@ -325,7 +325,6 @@ static bool init_env(void)
 	// Enable ANSI escape codes (for pretty coloured output)
 	mode |= ENABLE_PROCESSED_OUTPUT;
 	mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-
 	bres = SetConsoleMode(output, mode);
 	if CZ_NOEXPECT (!bres) { return false; }
 
@@ -333,9 +332,8 @@ static bool init_env(void)
 	EXECUTION_STATE flags = 0;
 	flags |= ES_CONTINUOUS;
 	flags |= ES_SYSTEM_REQUIRED;
-
 	SetThreadExecutionState(flags);
-#elif defined(__APPLE__)
+#elif CZ_APPLE
 	// Prevent system from sleeping, but allow display to sleep
 	CFStringRef type = kIOPMAssertPreventUserIdleSystemSleep;
 	IOPMAssertionLevel level = kIOPMAssertionLevelOn;
@@ -344,7 +342,7 @@ static bool init_env(void)
 
 	IOReturn iores = IOPMAssertionCreateWithName(type, level, name, &id);
 	if CZ_NOEXPECT (iores != kIOReturnSuccess) { return false; }
-#elif defined(__unix__)
+#else
 	// TODO
 #endif
 

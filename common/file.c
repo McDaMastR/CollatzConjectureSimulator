@@ -20,9 +20,9 @@
 #include "util.h"
 #include "wrap.h"
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 	#define MAX_ACCESS_SIZE UINT32_MAX
-#elif defined(__APPLE__)
+#elif CZ_APPLE
 	#define MAX_ACCESS_SIZE INT_MAX
 #elif CZ_POSIX_VERSION >= 200112L
 	#define MAX_ACCESS_SIZE SSIZE_MAX
@@ -202,7 +202,7 @@ static enum CzResult zero_section_posix(int fd, size_t size, size_t offset)
 		return ret;
 
 	void* zeroed = (char*) memory + (offset & (pageSize - 1));
-#if defined(__APPLE__)
+#if CZ_APPLE
 	ret = czWrap_madvise(NULL, zeroed, size, MADV_ZERO);
 	if (ret)
 		memset(zeroed, 0, size);
@@ -264,7 +264,7 @@ err_unmap_file:
 }
 #endif
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 static enum CzResult stream_is_tty_win32(FILE* restrict stream, bool* restrict istty)
 {
 	int fd;
@@ -316,7 +316,7 @@ static enum CzResult stream_is_tty_other(FILE* restrict stream, bool* restrict i
 
 enum CzResult czStreamIsTerminal(FILE* restrict stream, bool* restrict istty)
 {
-#if defined(_WIN32)
+#if CZ_WINDOWS
 	return stream_is_tty_win32(stream, istty);
 #elif CZ_POSIX_VERSION >= 200112L
 	return stream_is_tty_posix(stream, istty);
@@ -325,7 +325,7 @@ enum CzResult czStreamIsTerminal(FILE* restrict stream, bool* restrict istty)
 #endif
 }
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 static enum CzResult file_size_win32(const char* restrict path, size_t* restrict size)
 {
 	wchar_t* restrict wcPath;
@@ -404,7 +404,7 @@ enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struc
 		realPath = fullPath;
 	}
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 	ret = file_size_win32(realPath, size);
 #elif CZ_POSIX_VERSION >= 200112L
 	ret = file_size_posix(realPath, size);
@@ -416,7 +416,7 @@ enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struc
 	return ret;
 }
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 static enum CzResult read_file_win32(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
 {
 	wchar_t* restrict wcPath;
@@ -512,7 +512,7 @@ enum CzResult czReadFile(
 		realPath = fullPath;
 	}
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 	ret = read_file_win32(realPath, buffer, size, offset);
 #elif CZ_POSIX_VERSION >= 200112L
 	ret = read_file_posix(realPath, buffer, size, offset);
@@ -524,7 +524,7 @@ enum CzResult czReadFile(
 	return ret;
 }
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 static enum CzResult truncate_write_file_win32(const char* restrict path, const void* restrict buffer, size_t size)
 {
 	wchar_t* restrict wcPath;
@@ -560,7 +560,7 @@ err_free_wcpath:
 }
 #endif
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 static enum CzResult append_file_win32(const char* restrict path, const void* restrict buffer, size_t size)
 {
 	wchar_t* restrict wcPath;
@@ -596,7 +596,7 @@ err_free_wcpath:
 }
 #endif
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 static enum CzResult overwrite_file_win32(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
 {
@@ -632,7 +632,7 @@ err_free_wcpath:
 }
 #endif
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 static enum CzResult insert_file_win32(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
 {
@@ -962,7 +962,7 @@ enum CzResult czWriteFile(
 		realPath = fullPath;
 	}
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 	if (flags.truncateFile)
 		ret = truncate_write_file_win32(realPath, buffer, size);
 	else if (offset == CZ_EOF)
@@ -1070,7 +1070,7 @@ err_close_file:
 static enum CzResult zero_file_posix(const char* restrict path, size_t size, size_t offset)
 {
 	int fd;
-#if defined(__APPLE__)
+#if CZ_APPLE
 	int flags = O_WRONLY | O_NOCTTY;
 #else
 	int flags = O_RDWR | O_NOCTTY;

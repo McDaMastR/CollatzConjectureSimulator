@@ -37,7 +37,7 @@ enum CzResult czFree(void* restrict memory)
 	return CZ_RESULT_SUCCESS;
 }
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 static enum CzResult realloc_win32(
 	void* restrict* restrict memory, size_t oldSize, size_t newSize, struct CzAllocFlags flags)
 {
@@ -53,7 +53,7 @@ static enum CzResult realloc_win32(
 }
 #endif
 
-#if defined(__APPLE__)
+#if CZ_APPLE
 static enum CzResult realloc_apple(
 	void* restrict* restrict memory, size_t oldSize, size_t newSize, struct CzAllocFlags flags)
 {
@@ -106,16 +106,16 @@ enum CzResult czRealloc(void* restrict* restrict memory, size_t oldSize, size_t 
 		return CZ_RESULT_SUCCESS;
 	}
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 	return realloc_win32(memory, oldSize, newSize, flags);
-#elif defined(__APPLE__)
+#elif CZ_APPLE
 	return realloc_apple(memory, oldSize, newSize, flags);
 #else
 	return realloc_other(memory, oldSize, newSize, flags);
 #endif
 }
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 static enum CzResult alloc_align_win32(
 	void* restrict* restrict memory, size_t size, size_t alignment, size_t offset, struct CzAllocFlags flags)
 {
@@ -125,7 +125,7 @@ static enum CzResult alloc_align_win32(
 }
 #endif
 
-#if defined(__APPLE__)
+#if CZ_APPLE
 static enum CzResult alloc_align_apple(
 	void* restrict* restrict memory, size_t size, size_t alignment, size_t offset, struct CzAllocFlags flags)
 {
@@ -208,9 +208,9 @@ enum CzResult czAllocAlign(
 
 	offset &= alignment - 1; // Ensure offset < alignment
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 	return alloc_align_win32(memory, size, alignment, offset, flags);
-#elif defined(__APPLE__)
+#elif CZ_APPLE
 	return alloc_align_apple(memory, size, alignment, offset, flags);
 #elif CZ_WRAP_POSIX_MEMALIGN
 	return alloc_align_posix(memory, size, alignment, offset, flags);
@@ -219,7 +219,7 @@ enum CzResult czAllocAlign(
 #endif
 }
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 static enum CzResult free_align_win32(void* restrict memory)
 {
 	return _aligned_free(memory);
@@ -236,14 +236,14 @@ enum CzResult czFreeAlign(void* restrict memory)
 {
 	if CZ_NOEXPECT (!memory)
 		return CZ_RESULT_BAD_ADDRESS;
-#if defined(_WIN32)
+#if CZ_WINDOWS
 	return free_align_win32(memory);
 #else
 	return free_align_other(memory);
 #endif
 }
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 static enum CzResult realloc_align_win32(
 	void* restrict* restrict memory,
 	size_t oldSize,
@@ -264,7 +264,7 @@ static enum CzResult realloc_align_win32(
 }
 #endif
 
-#if defined(__APPLE__)
+#if CZ_APPLE
 static enum CzResult realloc_align_apple(
 	void* restrict* restrict memory,
 	size_t oldSize,
@@ -384,9 +384,9 @@ enum CzResult czReallocAlign(
 
 	offset &= alignment - 1; // Ensure offset < alignment
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 	return realloc_align_win32(memory, oldSize, newSize, alignment, offset, flags);
-#elif defined(__APPLE__)
+#elif CZ_APPLE
 	return realloc_align_apple(memory, oldSize, newSize, alignment, offset, flags);
 #elif CZ_WRAP_POSIX_MEMALIGN
 	return realloc_align_posix(memory, oldSize, newSize, alignment, offset, flags);

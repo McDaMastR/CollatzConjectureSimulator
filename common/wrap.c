@@ -232,7 +232,7 @@ enum CzResult czWrap_posix_madvise(int* res, void* addr, size_t size, int advice
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
-#if defined(__APPLE__)
+#if CZ_APPLE
 	switch (errno) {
 	case EPERM:
 		return CZ_RESULT_BAD_ACCESS;
@@ -261,9 +261,9 @@ enum CzResult czWrap_fopen(FILE* restrict* res, const char* path, const char* mo
 		return CZ_RESULT_SUCCESS;
 	}
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 	return (errno == EINVAL) ? CZ_RESULT_BAD_ADDRESS : CZ_RESULT_NO_FILE;
-#elif defined(__APPLE__)
+#elif CZ_APPLE
 	switch (errno) {
 	case EACCES:
 	case EROFS:
@@ -341,7 +341,7 @@ enum CzResult czWrap_fclose(FILE* stream)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
-#if defined(__APPLE__)
+#if CZ_APPLE
 	switch (errno) {
 	case EDEADLK:
 	case EFBIG:
@@ -398,7 +398,7 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int origin)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
-#if defined(__APPLE__)
+#if CZ_APPLE
 	switch (errno) {
 	case EDEADLK:
 	case EFBIG:
@@ -464,7 +464,7 @@ enum CzResult czWrap_ftell(long* res, FILE* stream)
 		return CZ_RESULT_SUCCESS;
 	}
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 	switch (errno) {
 	case EBADF:
 	case EINVAL:
@@ -472,7 +472,7 @@ enum CzResult czWrap_ftell(long* res, FILE* stream)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif defined(__APPLE__)
+#elif CZ_APPLE
 	switch (errno) {
 	case EDEADLK:
 	case EFBIG:
@@ -590,7 +590,7 @@ enum CzResult czWrap_remove(const char* path)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
-#if defined(_WIN32)
+#if CZ_WINDOWS
 	switch (errno) {
 	case EACCES:
 		return CZ_RESULT_BAD_FILE;
@@ -599,7 +599,7 @@ enum CzResult czWrap_remove(const char* path)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif defined(__APPLE__)
+#elif CZ_APPLE
 	switch (errno) {
 	case EACCES:
 	case EPERM:
@@ -651,9 +651,9 @@ enum CzResult czWrap_remove(const char* path)
 #if CZ_WRAP_FILENO
 enum CzResult czWrap_fileno(int* res, FILE* stream)
 {
-#if defined(_WIN32)
+#if CZ_WINDOWS
 	*res = _fileno(stream);
-#elif defined(__APPLE__)
+#elif CZ_APPLE
 	*res = fileno(stream);
 #else
 	int f = fileno(stream);
@@ -668,7 +668,7 @@ enum CzResult czWrap_fileno(int* res, FILE* stream)
 #if CZ_WRAP_ISATTY
 enum CzResult czWrap_isatty(int* res, int fd)
 {
-#if defined(_WIN32)
+#if CZ_WINDOWS
 	int r = _isatty(fd);
 	if CZ_NOEXPECT (!r && errno == EBADF)
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -705,7 +705,7 @@ enum CzResult czWrap_stat(const char* path, struct stat* st)
 		return CZ_RESULT_BAD_PATH;
 	case ENOENT:
 		return CZ_RESULT_NO_FILE;
-#if !defined(__APPLE__)
+#if !CZ_APPLE
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 #endif
@@ -723,7 +723,7 @@ enum CzResult czWrap_fstat(int fd, struct stat* st)
 		return CZ_RESULT_SUCCESS;
 
 	switch (errno) {
-#if defined(__APPLE__)
+#if CZ_APPLE
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
 #endif
@@ -746,7 +746,7 @@ enum CzResult czWrap_truncate(const char* path, off_t size)
 	case EACCES:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
-#if defined(__APPLE__)
+#if CZ_APPLE
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
 	case EDEADLK:
@@ -760,7 +760,7 @@ enum CzResult czWrap_truncate(const char* path, off_t size)
 	case EFBIG:
 	case EINVAL:
 		return CZ_RESULT_BAD_SIZE;
-#if defined(__APPLE__)
+#if CZ_APPLE
 	case ETXTBSY:
 		return CZ_RESULT_IN_USE;
 #endif
@@ -782,7 +782,7 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 		return CZ_RESULT_SUCCESS;
 
 	switch (errno) {
-#if defined(__APPLE__)
+#if CZ_APPLE
 	case EPERM:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
@@ -791,7 +791,7 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 		return CZ_RESULT_BAD_FILE;
 #endif
 	case EFBIG:
-#if !defined(__APPLE__)
+#if !CZ_APPLE
 	case EINVAL:
 #endif
 		return CZ_RESULT_BAD_SIZE;
@@ -812,7 +812,7 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 		return CZ_RESULT_SUCCESS;
 	}
 
-#if defined(__APPLE__)
+#if CZ_APPLE
 	switch (errno) {
 	case EACCES:
 	case EROFS:
@@ -909,7 +909,7 @@ enum CzResult czWrap_close(int fd)
 	switch (errno) {
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-#if !defined(__APPLE__)
+#if !CZ_APPLE
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
@@ -932,7 +932,7 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
 	if (!r)
 		return offset ? CZ_RESULT_BAD_OFFSET : CZ_RESULT_NO_FILE;
 
-#if defined(__APPLE__)
+#if CZ_APPLE
 	if (errno == EINVAL)
 		return (size > INT_MAX) ? CZ_RESULT_BAD_SIZE : CZ_RESULT_BAD_OFFSET;
 
@@ -1000,7 +1000,7 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 	if CZ_EXPECT (r != -1 && (size_t) r == size)
 		return CZ_RESULT_SUCCESS;
 
-#if defined(__APPLE__)
+#if CZ_APPLE
 	if (errno == EINVAL)
 		return (size > INT_MAX) ? CZ_RESULT_BAD_SIZE : CZ_RESULT_NO_FILE;
 
@@ -1073,7 +1073,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 	if CZ_EXPECT (r != -1 && (size_t) r == size)
 		return CZ_RESULT_SUCCESS;
 
-#if defined(__APPLE__)
+#if CZ_APPLE
 	if (errno == EINVAL)
 		return (size > INT_MAX) ? CZ_RESULT_BAD_SIZE : CZ_RESULT_BAD_OFFSET;
 
@@ -1142,7 +1142,7 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 	if (errno == EINVAL)
 		return size ? CZ_RESULT_BAD_ALIGNMENT : CZ_RESULT_BAD_SIZE;
 
-#if defined(__APPLE__)
+#if CZ_APPLE
 	switch (errno) {
 	case ENXIO:
 		return CZ_RESULT_BAD_ADDRESS;
@@ -1200,7 +1200,7 @@ enum CzResult czWrap_msync(void* addr, size_t size, int flags)
 	case ENOMEM:
 		return CZ_RESULT_BAD_ADDRESS;
 	case EINVAL:
-#if defined(__APPLE__)
+#if CZ_APPLE
 		return size ? CZ_RESULT_BAD_ALIGNMENT : CZ_RESULT_BAD_SIZE;
 #else
 		return CZ_RESULT_BAD_ALIGNMENT;
