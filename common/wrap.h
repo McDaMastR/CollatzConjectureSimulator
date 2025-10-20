@@ -23,11 +23,11 @@
  * A non-comprehensive set of thin wrapper functions to provide consistent error management. These wrappers are intended
  * for use within cz* API implementations rather than for general use.
  * 
- * @note Due to differences in error reporting between various platforms and standards (e.g. MacOS, Windows, POSIX), the
- * documented return values for wrappers are @b not guarantees. That is, if an error occurs in a wrapper function, the
- * wrapper provides no guarantee the corresponding error value will be returned. And in particular, if the platform does
- * not provide any reliable method to identify the type of error that occurred, @c CZ_RESULT_INTERNAL_ERROR will
- * commonly be returned.
+ * @note Due to differences in error reporting between various platforms and standards (e.g. MacOS, Windows, POSIX), as
+ * well as differences in error categorisation compared to this API (@c CzResult enumeration values), the documented
+ * return values for wrappers are @b not guarantees. If an error occurs in a wrapper function, the wrapper provides no
+ * guarantee the corresponding error value will be returned. And in particular, if the platform does not provide any
+ * reliable method to identify the type of error that occurred, @c CZ_RESULT_INTERNAL_ERROR will commonly be returned.
  */
 
 #pragma once
@@ -1407,7 +1407,7 @@ enum CzResult czWrap_SetEndOfFile(HANDLE file);
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to read from the file was denied.
- * @retval CZ_RESULT_BAD_ADDRESS @p buffer or @p numberOfBytesRead was an invalid pointer or @p buffer was too small.
+ * @retval CZ_RESULT_BAD_ADDRESS @p buffer or @p numberOfBytesRead was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was an invalid file offset.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
@@ -1451,7 +1451,7 @@ enum CzResult czWrap_ReadFile(
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to write to the file was denied.
- * @retval CZ_RESULT_BAD_ADDRESS @p buffer or @p numberOfBytesWritten was an invalid pointer or @p buffer was too small.
+ * @retval CZ_RESULT_BAD_ADDRESS @p buffer or @p numberOfBytesWritten was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was an invalid file offset.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
@@ -1502,6 +1502,59 @@ enum CzResult czWrap_WriteFile(
  * @note This function is only defined if @ref CZ_WRAP_DELETE_FILE_W is defined as a nonzero value.
  */
 enum CzResult czWrap_DeleteFileW(LPCWSTR path);
+#endif
+
+/**
+ * @def CZ_WRAP_DEVICE_IO_CONTROL
+ * 
+ * @brief Specifies whether @c DeviceIoControl is defined.
+ */
+#if !defined(CZ_WRAP_DEVICE_IO_CONTROL)
+	#if CZ_WINDOWS
+		#define CZ_WRAP_DEVICE_IO_CONTROL 1
+	#else
+		#define CZ_WRAP_DEVICE_IO_CONTROL 0
+	#endif
+#endif
+
+#if CZ_WRAP_DEVICE_IO_CONTROL
+/**
+ * @brief Wraps @c DeviceIoControl.
+ * 
+ * Calls @c DeviceIoControl with @p device, @p ioControlCode, @p inBuffer, @p inBufferSize, @p outBuffer,
+ * @p outBufferSize, @p bytesReturned, and @p overlapped.
+ * 
+ * @param[in,out] device The first argument to pass to @c DeviceIoControl.
+ * @param[in] ioControlCode The second argument to pass to @c DeviceIoControl.
+ * @param[in] inBuffer The third argument to pass to @c DeviceIoControl.
+ * @param[in] inBufferSize The fourth argument to pass to @c DeviceIoControl.
+ * @param[out] outBuffer The fifth argument to pass to @c DeviceIoControl.
+ * @param[in] outBufferSize The sixth argument to pass to @c DeviceIoControl.
+ * @param[out] bytesReturned The seventh argument to pass to @c DeviceIoControl.
+ * @param[in,out] overlapped The eighth argument to pass to @c DeviceIoControl.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p inBuffer, @p outBuffer, @p bytesReturned, or @p overlapped was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_SIZE @p outBufferSize was too small.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_DEVICE_IO_CONTROL is defined as a nonzero value.
+ */
+enum CzResult czWrap_DeviceIoControl(
+	HANDLE device,
+	DWORD ioControlCode,
+	LPVOID inBuffer,
+	DWORD inBufferSize,
+	LPVOID outBuffer,
+	DWORD outBufferSize,
+	LPDWORD bytesReturned,
+	LPOVERLAPPED overlapped);
 #endif
 
 /**
