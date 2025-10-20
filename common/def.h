@@ -214,6 +214,12 @@
 
 // Check support for nonstandard predefined macros
 
+#if defined(_POSIX_VERSION)
+	#define CZ_POSIX_VERSION _POSIX_VERSION
+#else
+	#define CZ_POSIX_VERSION 0
+#endif
+
 #if defined(__FILE_NAME__)
 	#define CZ_FILENAME __FILE_NAME__
 #else
