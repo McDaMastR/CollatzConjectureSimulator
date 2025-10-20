@@ -180,6 +180,90 @@ static enum CzResult write_section_posix(int fd, const void* restrict buffer, si
 }
 #endif
 
+#if CZ_WRAP_SYSCONF && CZ_WRAP_MMAP && CZ_WRAP_MUNMAP && CZ_WRAP_MSYNC
+static enum CzResult zero_section_posix(int fd, size_t size, size_t offset)
+{
+	long confVal;
+	int confName = _SC_PAGESIZE;
+	enum CzResult ret = czWrap_sysconf(&confVal, confName);
+	if CZ_NOEXPECT (ret)
+		return ret;
+	size_t pageSize = (size_t) confVal;
+
+	void* restrict memory;
+	void* mapAddr = NULL;
+	size_t mapSize = size + (offset & (pageSize - 1));
+	int prot = PROT_WRITE;
+	int mapFlags = MAP_FILE | MAP_SHARED;
+	off_t mapOffset = (off_t) (offset & ~(pageSize - 1));
+
+	ret = czWrap_mmap(&memory, mapAddr, mapSize, prot, mapFlags, fd, mapOffset);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	void* zeroed = (char*) memory + (offset & (pageSize - 1));
+#if defined(__APPLE__)
+	ret = czWrap_madvise(NULL, zeroed, size, MADV_ZERO);
+	if (ret)
+		memset(zeroed, 0, size);
+#else
+	memset(zeroed, 0, size);
+#endif
+
+	int syncFlags = MS_ASYNC;
+	ret = czWrap_msync(memory, mapSize, syncFlags);
+	if CZ_NOEXPECT (ret)
+		goto err_unmap_file;
+
+	return czWrap_munmap(memory, mapSize);
+
+err_unmap_file:
+	czWrap_munmap(memory, mapSize);
+	return ret;
+}
+#endif
+
+#if CZ_WRAP_SYSCONF && CZ_WRAP_MMAP && CZ_WRAP_MUNMAP && CZ_WRAP_MSYNC
+static enum CzResult move_section_posix(int fd, size_t size, size_t srcOffset, size_t dstOffset)
+{
+	long confVal;
+	int confName = _SC_PAGESIZE;
+	enum CzResult ret = czWrap_sysconf(&confVal, confName);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	size_t pageSize = (size_t) confVal;
+	size_t minOffset = minz(srcOffset, dstOffset);
+	size_t maxOffset = maxz(srcOffset, dstOffset);
+
+	void* restrict memory;
+	void* mapAddr = NULL;
+	size_t mapSize = size + maxOffset - (minOffset & ~(pageSize - 1));
+	int prot = PROT_READ | PROT_WRITE;
+	int mapFlags = MAP_FILE | MAP_SHARED;
+	off_t mapOffset = (off_t) (minOffset & ~(pageSize - 1));
+
+	ret = czWrap_mmap(&memory, mapAddr, mapSize, prot, mapFlags, fd, mapOffset);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	void* dst = (char*) memory + (dstOffset - (size_t) mapOffset);
+	void* src = (char*) memory + (srcOffset - (size_t) mapOffset);
+	memmove(dst, src, size);
+
+	int syncFlags = MS_ASYNC;
+	ret = czWrap_msync(memory, mapSize, syncFlags);
+	if CZ_NOEXPECT (ret)
+		goto err_unmap_file;
+
+	return czWrap_munmap(memory, mapSize);
+
+err_unmap_file:
+	czWrap_munmap(memory, mapSize);
+	return ret;
+}
+#endif
+
 #if defined(_WIN32)
 static enum CzResult stream_is_tty_win32(FILE* restrict stream, bool* restrict istty)
 {
@@ -911,6 +995,169 @@ enum CzResult czWriteFile(
 	return ret;
 }
 
+#if CZ_POSIX_MAPPED_FILES >= 200112L
+static enum CzResult zero_file_end_posix(const char* restrict path, size_t size)
+{
+	int fd;
+	int flags = O_WRONLY | O_NOCTTY;
+	mode_t mode = 0;
+
+	enum CzResult ret = czWrap_open(&fd, path, flags, mode);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	struct stat st;
+	ret = czWrap_fstat(fd, &st);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	size_t fileSize = (size_t) st.st_size;
+	if CZ_NOEXPECT (!fileSize) {
+		ret = CZ_RESULT_NO_FILE;
+		goto err_close_file;
+	}
+
+	size_t zeroedSize = minz(size, fileSize);
+	size_t offset = fileSize - zeroedSize;
+	ret = zero_section_posix(fd, zeroedSize, offset);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	return czWrap_close(fd);
+
+err_close_file:
+	czWrap_close(fd);
+	return ret;
+}
+#endif
+
+#if CZ_POSIX_VERSION >= 200112L
+static enum CzResult cut_file_end_posix(const char* restrict path, size_t size)
+{
+	int fd;
+	int flags = O_WRONLY | O_NOCTTY;
+	mode_t mode = 0;
+
+	enum CzResult ret = czWrap_open(&fd, path, flags, mode);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	struct stat st;
+	ret = czWrap_fstat(fd, &st);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	size_t fileSize = (size_t) st.st_size;
+	if CZ_NOEXPECT (!fileSize) {
+		ret = CZ_RESULT_NO_FILE;
+		goto err_close_file;
+	}
+
+	off_t newSize = (off_t) (maxz(size, fileSize) - size);
+	ret = czWrap_ftruncate(fd, newSize);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	return czWrap_close(fd);
+
+err_close_file:
+	czWrap_close(fd);
+	return ret;
+}
+#endif
+
+#if CZ_POSIX_MAPPED_FILES >= 200112L
+static enum CzResult zero_file_posix(const char* restrict path, size_t size, size_t offset)
+{
+	int fd;
+#if defined(__APPLE__)
+	int flags = O_WRONLY | O_NOCTTY;
+#else
+	int flags = O_RDWR | O_NOCTTY;
+#endif
+	mode_t mode = 0;
+
+	enum CzResult ret = czWrap_open(&fd, path, flags, mode);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	struct stat st;
+	ret = czWrap_fstat(fd, &st);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	size_t fileSize = (size_t) st.st_size;
+	if CZ_NOEXPECT (!fileSize) {
+		ret = CZ_RESULT_NO_FILE;
+		goto err_close_file;
+	}
+	if CZ_NOEXPECT (offset >= fileSize) {
+		ret = CZ_RESULT_BAD_OFFSET;
+		goto err_close_file;
+	}
+
+	size_t zeroedSize = minz(size, fileSize - offset);
+	ret = zero_section_posix(fd, zeroedSize, offset);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	return czWrap_close(fd);
+
+err_close_file:
+	czWrap_close(fd);
+	return ret;
+}
+#endif
+
+#if CZ_POSIX_MAPPED_FILES >= 200112L
+static enum CzResult cut_file_posix(const char* restrict path, size_t size, size_t offset)
+{
+	int fd;
+	int flags = O_RDWR | O_NOCTTY;
+	mode_t mode = 0;
+
+	enum CzResult ret = czWrap_open(&fd, path, flags, mode);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	struct stat st;
+	ret = czWrap_fstat(fd, &st);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	size_t fileSize = (size_t) st.st_size;
+	if CZ_NOEXPECT (!fileSize) {
+		ret = CZ_RESULT_NO_FILE;
+		goto err_close_file;
+	}
+	if CZ_NOEXPECT (offset >= fileSize) {
+		ret = CZ_RESULT_BAD_OFFSET;
+		goto err_close_file;
+	}
+
+	if (size + offset < fileSize) {
+		size_t moveSize = fileSize - (size + offset);
+		size_t moveSrc = size + offset;
+		size_t moveDst = offset;
+
+		ret = move_section_posix(fd, moveSize, moveSrc, moveDst);
+		if CZ_NOEXPECT (ret)
+			goto err_close_file;
+	}
+
+	off_t newSize = (off_t) (maxz(size + offset, fileSize) - size);
+	ret = czWrap_ftruncate(fd, newSize);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	return czWrap_close(fd);
+
+err_close_file:
+	czWrap_close(fd);
+	return ret;
+}
+#endif
+
 static enum CzResult truncate_file_other(const char* restrict path)
 {
 	FILE* restrict file;
@@ -1062,6 +1309,16 @@ enum CzResult czTrimFile(const char* restrict path, size_t size, size_t offset, 
 		realPath = fullPath;
 	}
 
+#if CZ_POSIX_MAPPED_FILES >= 200112L
+	if (offset == CZ_EOF && flags.overwriteFile)
+		ret = zero_file_end_posix(realPath, size);
+	else if (offset == CZ_EOF)
+		ret = cut_file_end_posix(realPath, size);
+	else if (flags.overwriteFile)
+		ret = zero_file_posix(realPath, size, offset);
+	else
+		ret = cut_file_posix(realPath, size, offset);
+#else
 	if (offset == CZ_EOF && flags.overwriteFile)
 		ret = zero_file_end_other(realPath, size);
 	else if (offset == CZ_EOF)
@@ -1070,6 +1327,7 @@ enum CzResult czTrimFile(const char* restrict path, size_t size, size_t offset, 
 		ret = zero_file_other(realPath, size, offset);
 	else
 		ret = cut_file_other(realPath, size, offset);
+#endif
 
 	czFree(fullPath);
 	return ret;
