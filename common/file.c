@@ -79,10 +79,14 @@ static enum CzResult alloc_utf16_from_utf8_win32(wchar_t* restrict* restrict utf
 		return ret;
 
 	ret = czWrap_MultiByteToWideChar(&wcSize, codePage, flags, mbStr, mbSize, wcStr, wcSize);
-	if CZ_EXPECT (!ret)
-		*utf16 = wcStr;
-	else
-		czFree(wcStr);
+	if CZ_NOEXPECT (ret)
+		goto err_free_wcstr;
+
+	*utf16 = wcStr;
+	return CZ_RESULT_SUCCESS;
+
+err_free_wcstr:
+	czFree(wcStr);
 	return ret;
 }
 #endif
@@ -337,7 +341,7 @@ err_unmap_file:
 #endif
 
 #if CZ_WINDOWS
-static enum CzResult stream_is_tty_win32(FILE* restrict stream, bool* restrict istty)
+static enum CzResult czStreamIsTerminal_win32(FILE* restrict stream, bool* restrict istty)
 {
 	int fd;
 	enum CzResult ret = czWrap_fileno(&fd, stream);
@@ -364,7 +368,7 @@ out_not_tty:
 #endif
 
 #if CZ_POSIX_VERSION >= 200112L
-static enum CzResult stream_is_tty_posix(FILE* restrict stream, bool* restrict istty)
+static enum CzResult czStreamIsTerminal_posix(FILE* restrict stream, bool* restrict istty)
 {
 	int fd;
 	enum CzResult ret = czWrap_fileno(&fd, stream);
@@ -373,13 +377,15 @@ static enum CzResult stream_is_tty_posix(FILE* restrict stream, bool* restrict i
 
 	int tty;
 	ret = czWrap_isatty(&tty, fd);
-	if CZ_EXPECT (!ret)
-		*istty = (bool) tty;
-	return ret;
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	*istty = (bool) tty;
+	return CZ_RESULT_SUCCESS;
 }
 #endif
 
-static enum CzResult stream_is_tty_other(FILE* restrict stream, bool* restrict istty)
+static enum CzResult czStreamIsTerminal_other(FILE* restrict stream, bool* restrict istty)
 {
 	(void) stream;
 	(void) istty;
@@ -389,50 +395,52 @@ static enum CzResult stream_is_tty_other(FILE* restrict stream, bool* restrict i
 enum CzResult czStreamIsTerminal(FILE* restrict stream, bool* restrict istty)
 {
 #if CZ_WINDOWS
-	return stream_is_tty_win32(stream, istty);
+	return czStreamIsTerminal_win32(stream, istty);
 #elif CZ_POSIX_VERSION >= 200112L
-	return stream_is_tty_posix(stream, istty);
+	return czStreamIsTerminal_posix(stream, istty);
 #else
-	return stream_is_tty_other(stream, istty);
+	return czStreamIsTerminal_other(stream, istty);
 #endif
 }
 
 #if CZ_WINDOWS
-static enum CzResult file_size_win32(const char* restrict path, size_t* restrict size)
+static enum CzResult czFileSize_win32(const char* restrict path, size_t* restrict size)
 {
-	wchar_t* restrict wcPath;
-	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
+	wchar_t* restrict widePath;
+	enum CzResult ret = alloc_utf16_from_utf8_win32(&widePath, path);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
 	WIN32_FILE_ATTRIBUTE_DATA attr;
-	ret = czWrap_GetFileAttributesExW(wcPath, GetFileExInfoStandard, &attr);
+	ret = czWrap_GetFileAttributesExW(widePath, GetFileExInfoStandard, &attr);
 	if CZ_NOEXPECT (ret)
-		goto err_free_wcpath;
+		goto err_free_widepath;
 
 	ULARGE_INTEGER fileSize;
 	fileSize.LowPart = attr.nFileSizeLow;
 	fileSize.HighPart = attr.nFileSizeHigh;
 
 	*size = (size_t) fileSize.QuadPart;
-err_free_wcpath:
-	czFree(wcPath);
+err_free_widepath:
+	czFree(widePath);
 	return ret;
 }
 #endif
 
 #if CZ_POSIX_VERSION >= 200112L
-static enum CzResult file_size_posix(const char* restrict path, size_t* restrict size)
+static enum CzResult czFileSize_posix(const char* restrict path, size_t* restrict size)
 {
 	struct stat st;
 	enum CzResult ret = czWrap_stat(path, &st);
-	if CZ_EXPECT (!ret)
-		*size = (size_t) st.st_size;
-	return ret;
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	*size = (size_t) st.st_size;
+	return CZ_RESULT_SUCCESS;
 }
 #endif
 
-static enum CzResult file_size_other(const char* restrict path, size_t* restrict size)
+static enum CzResult czFileSize_other(const char* restrict path, size_t* restrict size)
 {
 	FILE* restrict file;
 	const char* mode = "rb";
@@ -465,7 +473,7 @@ err_close_file:
 
 enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struct CzFileFlags flags)
 {
-	enum CzResult ret = CZ_RESULT_INTERNAL_ERROR;
+	enum CzResult ret;
 	const char* realPath = path;
 	char* fullPath = NULL;
 
@@ -477,11 +485,11 @@ enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struc
 	}
 
 #if CZ_WINDOWS
-	ret = file_size_win32(realPath, size);
+	ret = czFileSize_win32(realPath, size);
 #elif CZ_POSIX_VERSION >= 200112L
-	ret = file_size_posix(realPath, size);
+	ret = czFileSize_posix(realPath, size);
 #else
-	ret = file_size_other(realPath, size);
+	ret = czFileSize_other(realPath, size);
 #endif
 
 	czFree(fullPath);
@@ -489,10 +497,10 @@ enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struc
 }
 
 #if CZ_WINDOWS
-static enum CzResult read_file_win32(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
+static enum CzResult czReadFile_win32(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
 {
-	wchar_t* restrict wcPath;
-	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
+	wchar_t* restrict widePath;
+	enum CzResult ret = alloc_utf16_from_utf8_win32(&widePath, path);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
@@ -504,27 +512,27 @@ static enum CzResult read_file_win32(const char* restrict path, void* restrict b
 	DWORD flags = FILE_FLAG_SEQUENTIAL_SCAN;
 	HANDLE template = NULL;
 
-	ret = czWrap_CreateFileW(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	ret = czWrap_CreateFileW(&file, widePath, access, shareMode, security, disposition, flags, template);
 	if CZ_NOEXPECT (ret)
-		goto err_free_wcpath;
+		goto err_free_widepath;
 
 	ret = read_section_win32(file, buffer, size, offset);
 	if CZ_NOEXPECT (ret)
 		goto err_close_file;
 
-	czFree(wcPath);
+	czFree(widePath);
 	return czWrap_CloseHandle(file);
 
 err_close_file:
 	czWrap_CloseHandle(file);
-err_free_wcpath:
-	czFree(wcPath);
+err_free_widepath:
+	czFree(widePath);
 	return ret;
 }
 #endif
 
 #if CZ_POSIX_VERSION >= 200112L
-static enum CzResult read_file_posix(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
+static enum CzResult czReadFile_posix(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
 {
 	int fd;
 	int flags = O_RDONLY | O_NOCTTY;
@@ -543,7 +551,7 @@ static enum CzResult read_file_posix(const char* restrict path, void* restrict b
 }
 #endif
 
-static enum CzResult read_file_other(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
+static enum CzResult czReadFile_other(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
 {
 	FILE* restrict file;
 	const char* mode = "rb";
@@ -573,7 +581,7 @@ enum CzResult czReadFile(
 	if CZ_NOEXPECT (!size)
 		return CZ_RESULT_BAD_SIZE;
 
-	enum CzResult ret = CZ_RESULT_INTERNAL_ERROR;
+	enum CzResult ret;
 	const char* realPath = path;
 	char* fullPath = NULL;
 
@@ -585,11 +593,11 @@ enum CzResult czReadFile(
 	}
 
 #if CZ_WINDOWS
-	ret = read_file_win32(realPath, buffer, size, offset);
+	ret = czReadFile_win32(realPath, buffer, size, offset);
 #elif CZ_POSIX_VERSION >= 200112L
-	ret = read_file_posix(realPath, buffer, size, offset);
+	ret = czReadFile_posix(realPath, buffer, size, offset);
 #else
-	ret = read_file_other(realPath, buffer, size, offset);
+	ret = czReadFile_other(realPath, buffer, size, offset);
 #endif
 
 	czFree(fullPath);
@@ -597,13 +605,8 @@ enum CzResult czReadFile(
 }
 
 #if CZ_WINDOWS
-static enum CzResult truncate_write_file_win32(const char* restrict path, const void* restrict buffer, size_t size)
+static enum CzResult truncate_write_file_win32(const wchar_t* restrict path, const void* restrict buffer, size_t size)
 {
-	wchar_t* restrict wcPath;
-	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
 	HANDLE file;
 	DWORD access = GENERIC_WRITE;
 	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
@@ -612,34 +615,26 @@ static enum CzResult truncate_write_file_win32(const char* restrict path, const 
 	DWORD flags = FILE_FLAG_SEQUENTIAL_SCAN;
 	HANDLE template = NULL;
 
-	ret = czWrap_CreateFileW(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	enum CzResult ret = czWrap_CreateFileW(&file, path, access, shareMode, security, disposition, flags, template);
 	if CZ_NOEXPECT (ret)
-		goto err_free_wcpath;
+		return ret;
 
 	size_t offset = 0;
 	ret = write_section_win32(file, buffer, size, offset);
 	if CZ_NOEXPECT (ret)
 		goto err_close_file;
 
-	czFree(wcPath);
 	return czWrap_CloseHandle(file);
 
 err_close_file:
 	czWrap_CloseHandle(file);
-err_free_wcpath:
-	czFree(wcPath);
 	return ret;
 }
 #endif
 
 #if CZ_WINDOWS
-static enum CzResult append_file_win32(const char* restrict path, const void* restrict buffer, size_t size)
+static enum CzResult append_file_win32(const wchar_t* restrict path, const void* restrict buffer, size_t size)
 {
-	wchar_t* restrict wcPath;
-	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
 	HANDLE file;
 	DWORD access = GENERIC_WRITE;
 	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
@@ -648,35 +643,27 @@ static enum CzResult append_file_win32(const char* restrict path, const void* re
 	DWORD flags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
 	HANDLE template = NULL;
 
-	ret = czWrap_CreateFileW(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	enum CzResult ret = czWrap_CreateFileW(&file, path, access, shareMode, security, disposition, flags, template);
 	if CZ_NOEXPECT (ret)
-		goto err_free_wcpath;
+		return ret;
 
 	size_t offset = CZ_EOF;
 	ret = write_section_win32(file, buffer, size, offset);
 	if CZ_NOEXPECT (ret)
 		goto err_close_file;
 
-	czFree(wcPath);
 	return czWrap_CloseHandle(file);
 
 err_close_file:
 	czWrap_CloseHandle(file);
-err_free_wcpath:
-	czFree(wcPath);
 	return ret;
 }
 #endif
 
 #if CZ_WINDOWS
 static enum CzResult overwrite_file_win32(
-	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
+	const wchar_t* restrict path, const void* restrict buffer, size_t size, size_t offset)
 {
-	wchar_t* restrict wcPath;
-	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
 	HANDLE file;
 	DWORD access = GENERIC_WRITE;
 	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
@@ -685,34 +672,26 @@ static enum CzResult overwrite_file_win32(
 	DWORD flags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
 	HANDLE template = NULL;
 
-	ret = czWrap_CreateFileW(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	enum CzResult ret = czWrap_CreateFileW(&file, path, access, shareMode, security, disposition, flags, template);
 	if CZ_NOEXPECT (ret)
-		goto err_free_wcpath;
+		return ret;
 
 	ret = write_section_win32(file, buffer, size, offset);
 	if CZ_NOEXPECT (ret)
 		goto err_close_file;
 
-	czFree(wcPath);
 	return czWrap_CloseHandle(file);
 
 err_close_file:
 	czWrap_CloseHandle(file);
-err_free_wcpath:
-	czFree(wcPath);
 	return ret;
 }
 #endif
 
 #if CZ_WINDOWS
 static enum CzResult insert_file_win32(
-	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
+	const wchar_t* restrict path, const void* restrict buffer, size_t size, size_t offset)
 {
-	wchar_t* restrict wcPath;
-	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
 	HANDLE file;
 	DWORD access = GENERIC_READ | GENERIC_WRITE;
 	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
@@ -721,9 +700,9 @@ static enum CzResult insert_file_win32(
 	DWORD flags = FILE_ATTRIBUTE_NORMAL;
 	HANDLE template = NULL;
 
-	ret = czWrap_CreateFileW(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	enum CzResult ret = czWrap_CreateFileW(&file, path, access, shareMode, security, disposition, flags, template);
 	if CZ_NOEXPECT (ret)
-		goto err_free_wcpath;
+		return ret;
 
 	LARGE_INTEGER fileSizeLarge;
 	ret = czWrap_GetFileSizeEx(file, &fileSizeLarge);
@@ -757,15 +736,12 @@ static enum CzResult insert_file_win32(
 		goto err_free_content;
 
 	czFree(content);
-	czFree(wcPath);
 	return czWrap_CloseHandle(file);
 
 err_free_content:
 	czFree(content);
 err_close_file:
 	czWrap_CloseHandle(file);
-err_free_wcpath:
-	czFree(wcPath);
 	return ret;
 }
 #endif
@@ -921,7 +897,7 @@ static enum CzResult overwrite_file_other(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
 {
 	size_t fileSize;
-	enum CzResult ret = file_size_other(path, &fileSize);
+	enum CzResult ret = czFileSize_other(path, &fileSize);
 	if (ret == CZ_RESULT_NO_FILE)
 		return offset ? CZ_RESULT_BAD_OFFSET : truncate_write_file_other(path, buffer, size);
 	if CZ_NOEXPECT (ret)
@@ -944,7 +920,7 @@ static enum CzResult overwrite_file_other(
 		size_t readSize = offset;
 		size_t readOffset = 0;
 
-		ret = read_file_other(path, readBuffer, readSize, readOffset);
+		ret = czReadFile_other(path, readBuffer, readSize, readOffset);
 		if CZ_NOEXPECT (ret)
 			goto err_free_contents;
 	}
@@ -957,7 +933,7 @@ static enum CzResult overwrite_file_other(
 		size_t readSize = fileSize - size - offset;
 		size_t readOffset = size + offset;
 
-		ret = read_file_other(path, readBuffer, readSize, readOffset);
+		ret = czReadFile_other(path, readBuffer, readSize, readOffset);
 		if CZ_NOEXPECT (ret)
 			goto err_free_contents;
 	}
@@ -972,7 +948,7 @@ static enum CzResult insert_file_other(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
 {
 	size_t fileSize;
-	enum CzResult ret = file_size_other(path, &fileSize);
+	enum CzResult ret = czFileSize_other(path, &fileSize);
 	if (ret == CZ_RESULT_NO_FILE)
 		return offset ? CZ_RESULT_BAD_OFFSET : truncate_write_file_other(path, buffer, size);
 	if CZ_NOEXPECT (ret)
@@ -995,7 +971,7 @@ static enum CzResult insert_file_other(
 		size_t readSize = offset;
 		size_t readOffset = 0;
 
-		ret = read_file_other(path, readBuffer, readSize, readOffset);
+		ret = czReadFile_other(path, readBuffer, readSize, readOffset);
 		if CZ_NOEXPECT (ret)
 			goto err_free_contents;
 	}
@@ -1007,7 +983,7 @@ static enum CzResult insert_file_other(
 	size_t readSize = fileSize - offset;
 	size_t readOffset = offset;
 
-	ret = read_file_other(path, readBuffer, readSize, readOffset);
+	ret = czReadFile_other(path, readBuffer, readSize, readOffset);
 	if CZ_NOEXPECT (ret)
 		goto err_free_contents;
 
@@ -1017,13 +993,62 @@ err_free_contents:
 	return ret;
 }
 
+#if CZ_WINDOWS
+static enum CzResult czWriteFile_win32(
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	wchar_t* restrict widePath;
+	enum CzResult ret = alloc_utf16_from_utf8_win32(&widePath, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (flags.truncateFile)
+		ret = truncate_write_file_win32(widePath, buffer, size);
+	else if (offset == CZ_EOF)
+		ret = append_file_win32(widePath, buffer, size);
+	else if (flags.overwriteFile)
+		ret = overwrite_file_win32(widePath, buffer, size, offset);
+	else
+		ret = insert_file_win32(widePath, buffer, size, offset);
+
+	czFree(widePath);
+	return ret;
+}
+#endif
+
+#if CZ_POSIX_VERSION >= 200112L
+static enum CzResult czWriteFile_posix(
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	if (flags.truncateFile)
+		return truncate_write_file_posix(path, buffer, size);
+	if (offset == CZ_EOF)
+		return append_file_posix(path, buffer, size);
+	if (flags.overwriteFile)
+		return overwrite_file_posix(path, buffer, size, offset);
+	return insert_file_posix(path, buffer, size, offset);
+}
+#endif
+
+static enum CzResult czWriteFile_other(
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	if (flags.truncateFile)
+		return truncate_write_file_other(path, buffer, size);
+	if (offset == CZ_EOF)
+		return append_file_other(path, buffer, size);
+	if (flags.overwriteFile)
+		return overwrite_file_other(path, buffer, size, offset);
+	return insert_file_other(path, buffer, size, offset);
+}
+
 enum CzResult czWriteFile(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
 {
 	if CZ_NOEXPECT (!size)
 		return CZ_RESULT_BAD_SIZE;
 
-	enum CzResult ret = CZ_RESULT_INTERNAL_ERROR;
+	enum CzResult ret;
 	const char* realPath = path;
 	char* fullPath = NULL;
 
@@ -1035,32 +1060,11 @@ enum CzResult czWriteFile(
 	}
 
 #if CZ_WINDOWS
-	if (flags.truncateFile)
-		ret = truncate_write_file_win32(realPath, buffer, size);
-	else if (offset == CZ_EOF)
-		ret = append_file_win32(realPath, buffer, size);
-	else if (flags.overwriteFile)
-		ret = overwrite_file_win32(realPath, buffer, size, offset);
-	else
-		ret = insert_file_win32(realPath, buffer, size, offset);
+	ret = czWriteFile_win32(realPath, buffer, size, offset, flags);
 #elif CZ_POSIX_VERSION >= 200112L
-	if (flags.truncateFile)
-		ret = truncate_write_file_posix(realPath, buffer, size);
-	else if (offset == CZ_EOF)
-		ret = append_file_posix(realPath, buffer, size);
-	else if (flags.overwriteFile)
-		ret = overwrite_file_posix(realPath, buffer, size, offset);
-	else
-		ret = insert_file_posix(realPath, buffer, size, offset);
+	ret = czWriteFile_posix(realPath, buffer, size, offset, flags);
 #else
-	if (flags.truncateFile)
-		ret = truncate_write_file_other(realPath, buffer, size);
-	else if (offset == CZ_EOF)
-		ret = append_file_other(realPath, buffer, size);
-	else if (flags.overwriteFile)
-		ret = overwrite_file_other(realPath, buffer, size, offset);
-	else
-		ret = insert_file_other(realPath, buffer, size, offset);
+	ret = czWriteFile_other(realPath, buffer, size, offset, flags);
 #endif
 
 	czFree(fullPath);
@@ -1068,13 +1072,8 @@ enum CzResult czWriteFile(
 }
 
 #if CZ_WINDOWS
-static enum CzResult zero_file_end_win32(const char* restrict path, size_t size)
+static enum CzResult zero_file_end_win32(const wchar_t* restrict path, size_t size)
 {
-	wchar_t* restrict wcPath;
-	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
 	HANDLE file;
 	DWORD access = GENERIC_READ | GENERIC_WRITE;
 	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
@@ -1083,9 +1082,9 @@ static enum CzResult zero_file_end_win32(const char* restrict path, size_t size)
 	DWORD flags = FILE_FLAG_RANDOM_ACCESS;
 	HANDLE template = NULL;
 
-	ret = czWrap_CreateFileW(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	enum CzResult ret = czWrap_CreateFileW(&file, path, access, shareMode, security, disposition, flags, template);
 	if CZ_NOEXPECT (ret)
-		goto err_free_wcpath;
+		return ret;
 
 	LARGE_INTEGER fileSizeLarge;
 	ret = czWrap_GetFileSizeEx(file, &fileSizeLarge);
@@ -1104,25 +1103,17 @@ static enum CzResult zero_file_end_win32(const char* restrict path, size_t size)
 	if CZ_NOEXPECT (ret)
 		goto err_close_file;
 
-	czFree(wcPath);
 	return czWrap_CloseHandle(file);
 
 err_close_file:
 	czWrap_CloseHandle(file);
-err_free_wcpath:
-	czFree(wcPath);
 	return ret;
 }
 #endif
 
 #if CZ_WINDOWS
-static enum CzResult cut_file_end_win32(const char* restrict path, size_t size)
+static enum CzResult cut_file_end_win32(const wchar_t* restrict path, size_t size)
 {
-	wchar_t* restrict wcPath;
-	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
 	HANDLE file;
 	DWORD access = GENERIC_READ | GENERIC_WRITE;
 	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
@@ -1131,9 +1122,9 @@ static enum CzResult cut_file_end_win32(const char* restrict path, size_t size)
 	DWORD flags = FILE_FLAG_RANDOM_ACCESS;
 	HANDLE template = NULL;
 
-	ret = czWrap_CreateFileW(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	enum CzResult ret = czWrap_CreateFileW(&file, path, access, shareMode, security, disposition, flags, template);
 	if CZ_NOEXPECT (ret)
-		goto err_free_wcpath;
+		return ret;
 
 	LARGE_INTEGER fileSizeLarge;
 	ret = czWrap_GetFileSizeEx(file, &fileSizeLarge);
@@ -1160,25 +1151,17 @@ static enum CzResult cut_file_end_win32(const char* restrict path, size_t size)
 	if CZ_NOEXPECT (ret)
 		goto err_close_file;
 
-	czFree(wcPath);
 	return czWrap_CloseHandle(file);
 
 err_close_file:
 	czWrap_CloseHandle(file);
-err_free_wcpath:
-	czFree(wcPath);
 	return ret;
 }
 #endif
 
 #if CZ_WINDOWS
-static enum CzResult zero_file_win32(const char* restrict path, size_t size, size_t offset)
+static enum CzResult zero_file_win32(const wchar_t* restrict path, size_t size, size_t offset)
 {
-	wchar_t* restrict wcPath;
-	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
 	HANDLE file;
 	DWORD access = GENERIC_READ | GENERIC_WRITE;
 	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
@@ -1187,9 +1170,9 @@ static enum CzResult zero_file_win32(const char* restrict path, size_t size, siz
 	DWORD flags = FILE_FLAG_RANDOM_ACCESS;
 	HANDLE template = NULL;
 
-	ret = czWrap_CreateFileW(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	enum CzResult ret = czWrap_CreateFileW(&file, path, access, shareMode, security, disposition, flags, template);
 	if CZ_NOEXPECT (ret)
-		goto err_free_wcpath;
+		return ret;
 
 	LARGE_INTEGER fileSizeLarge;
 	ret = czWrap_GetFileSizeEx(file, &fileSizeLarge);
@@ -1211,25 +1194,17 @@ static enum CzResult zero_file_win32(const char* restrict path, size_t size, siz
 	if CZ_NOEXPECT (ret)
 		goto err_close_file;
 
-	czFree(wcPath);
 	return czWrap_CloseHandle(file);
 
 err_close_file:
 	czWrap_CloseHandle(file);
-err_free_wcpath:
-	czFree(wcPath);
 	return ret;
 }
 #endif
 
 #if CZ_WINDOWS
-static enum CzResult cut_file_win32(const char* restrict path, size_t size, size_t offset)
+static enum CzResult cut_file_win32(const wchar_t* restrict path, size_t size, size_t offset)
 {
-	wchar_t* restrict wcPath;
-	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
 	HANDLE file;
 	DWORD access = GENERIC_READ | GENERIC_WRITE;
 	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
@@ -1238,9 +1213,9 @@ static enum CzResult cut_file_win32(const char* restrict path, size_t size, size
 	DWORD flags = FILE_FLAG_RANDOM_ACCESS;
 	HANDLE template = NULL;
 
-	ret = czWrap_CreateFileW(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	enum CzResult ret = czWrap_CreateFileW(&file, path, access, shareMode, security, disposition, flags, template);
 	if CZ_NOEXPECT (ret)
-		goto err_free_wcpath;
+		return ret;
 
 	LARGE_INTEGER fileSizeLarge;
 	ret = czWrap_GetFileSizeEx(file, &fileSizeLarge);
@@ -1281,13 +1256,10 @@ static enum CzResult cut_file_win32(const char* restrict path, size_t size, size
 	if CZ_NOEXPECT (ret)
 		goto err_close_file;
 
-	czFree(wcPath);
 	return czWrap_CloseHandle(file);
 
 err_close_file:
 	czWrap_CloseHandle(file);
-err_free_wcpath:
-	czFree(wcPath);
 	return ret;
 }
 #endif
@@ -1468,7 +1440,7 @@ static enum CzResult truncate_file_other(const char* restrict path)
 static enum CzResult zero_file_end_other(const char* restrict path, size_t size)
 {
 	size_t fileSize;
-	enum CzResult ret = file_size_other(path, &fileSize);
+	enum CzResult ret = czFileSize_other(path, &fileSize);
 	if CZ_NOEXPECT (ret)
 		return ret;
 	if CZ_NOEXPECT (!fileSize)
@@ -1492,7 +1464,7 @@ static enum CzResult zero_file_end_other(const char* restrict path, size_t size)
 static enum CzResult cut_file_end_other(const char* restrict path, size_t size)
 {
 	size_t fileSize;
-	enum CzResult ret = file_size_other(path, &fileSize);
+	enum CzResult ret = czFileSize_other(path, &fileSize);
 	if CZ_NOEXPECT (ret)
 		return ret;
 	if CZ_NOEXPECT (!fileSize)
@@ -1509,7 +1481,7 @@ static enum CzResult cut_file_end_other(const char* restrict path, size_t size)
 		return ret;
 
 	size_t offset = 0;
-	ret = read_file_other(path, content, contentSize, offset);
+	ret = czReadFile_other(path, content, contentSize, offset);
 	if CZ_NOEXPECT (ret)
 		goto err_free_content;
 
@@ -1522,7 +1494,7 @@ err_free_content:
 static enum CzResult zero_file_other(const char* restrict path, size_t size, size_t offset)
 {
 	size_t fileSize;
-	enum CzResult ret = file_size_other(path, &fileSize);
+	enum CzResult ret = czFileSize_other(path, &fileSize);
 	if CZ_NOEXPECT (ret)
 		return ret;
 	if CZ_NOEXPECT (!fileSize)
@@ -1547,7 +1519,7 @@ static enum CzResult zero_file_other(const char* restrict path, size_t size, siz
 static enum CzResult cut_file_other(const char* restrict path, size_t size, size_t offset)
 {
 	size_t fileSize;
-	enum CzResult ret = file_size_other(path, &fileSize);
+	enum CzResult ret = czFileSize_other(path, &fileSize);
 	if CZ_NOEXPECT (ret)
 		return ret;
 	if CZ_NOEXPECT (!fileSize)
@@ -1570,7 +1542,7 @@ static enum CzResult cut_file_other(const char* restrict path, size_t size, size
 		size_t readSize = offset;
 		size_t readOffset = 0;
 
-		ret = read_file_other(path, readBuffer, readSize, readOffset);
+		ret = czReadFile_other(path, readBuffer, readSize, readOffset);
 		if CZ_NOEXPECT (ret)
 			goto err_free_content;
 	}
@@ -1579,7 +1551,7 @@ static enum CzResult cut_file_other(const char* restrict path, size_t size, size
 		size_t readSize = fileSize - size - offset;
 		size_t readOffset = size + offset;
 
-		ret = read_file_other(path, readBuffer, readSize, readOffset);
+		ret = czReadFile_other(path, readBuffer, readSize, readOffset);
 		if CZ_NOEXPECT (ret)
 			goto err_free_content;
 	}
@@ -1590,12 +1562,58 @@ err_free_content:
 	return ret;
 }
 
+#if CZ_WINDOWS
+static enum CzResult czTrimFile_win32(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	wchar_t* restrict widePath;
+	enum CzResult ret = alloc_utf16_from_utf8_win32(&widePath, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (offset == CZ_EOF && flags.overwriteFile)
+		ret = zero_file_end_win32(widePath, size);
+	else if (offset == CZ_EOF)
+		ret = cut_file_end_win32(widePath, size);
+	else if (flags.overwriteFile)
+		ret = zero_file_win32(widePath, size, offset);
+	else
+		ret = cut_file_win32(widePath, size, offset);
+
+	czFree(widePath);
+	return ret;
+}
+#endif
+
+#if CZ_POSIX_MAPPED_FILES >= 200112L
+static enum CzResult czTrimFile_posix(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	if (offset == CZ_EOF && flags.overwriteFile)
+		return zero_file_end_posix(path, size);
+	if (offset == CZ_EOF)
+		return cut_file_end_posix(path, size);
+	if (flags.overwriteFile)
+		return zero_file_posix(path, size, offset);
+	return cut_file_posix(path, size, offset);
+}
+#endif
+
+static enum CzResult czTrimFile_other(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	if (offset == CZ_EOF && flags.overwriteFile)
+		return zero_file_end_other(path, size);
+	if (offset == CZ_EOF)
+		return cut_file_end_other(path, size);
+	if (flags.overwriteFile)
+		return zero_file_other(path, size, offset);
+	return cut_file_other(path, size, offset);
+}
+
 enum CzResult czTrimFile(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
 {
 	if CZ_NOEXPECT (!size)
 		return CZ_RESULT_BAD_SIZE;
 
-	enum CzResult ret = CZ_RESULT_INTERNAL_ERROR;
+	enum CzResult ret;
 	const char* realPath = path;
 	char* fullPath = NULL;
 
@@ -1607,32 +1625,11 @@ enum CzResult czTrimFile(const char* restrict path, size_t size, size_t offset, 
 	}
 
 #if CZ_WINDOWS
-	if (offset == CZ_EOF && flags.overwriteFile)
-		ret = zero_file_end_win32(realPath, size);
-	else if (offset == CZ_EOF)
-		ret = cut_file_end_win32(realPath, size);
-	else if (flags.overwriteFile)
-		ret = zero_file_win32(realPath, size, offset);
-	else
-		ret = cut_file_win32(realPath, size, offset);
+	ret = czTrimFile_win32(realPath, size, offset, flags);
 #elif CZ_POSIX_MAPPED_FILES >= 200112L
-	if (offset == CZ_EOF && flags.overwriteFile)
-		ret = zero_file_end_posix(realPath, size);
-	else if (offset == CZ_EOF)
-		ret = cut_file_end_posix(realPath, size);
-	else if (flags.overwriteFile)
-		ret = zero_file_posix(realPath, size, offset);
-	else
-		ret = cut_file_posix(realPath, size, offset);
+	ret = czTrimFile_posix(realPath, size, offset, flags);
 #else
-	if (offset == CZ_EOF && flags.overwriteFile)
-		ret = zero_file_end_other(realPath, size);
-	else if (offset == CZ_EOF)
-		ret = cut_file_end_other(realPath, size);
-	else if (flags.overwriteFile)
-		ret = zero_file_other(realPath, size, offset);
-	else
-		ret = cut_file_other(realPath, size, offset);
+	ret = czTrimFile_other(realPath, size, offset, flags);
 #endif
 
 	czFree(fullPath);
