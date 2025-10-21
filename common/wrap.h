@@ -460,7 +460,7 @@ enum CzResult czWrap_fclose(FILE* stream);
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
- * @retval CZ_RESULT_BAD_OFFSET @p origin was invalid or the resultant file offset would be invalid.
+ * @retval CZ_RESULT_BAD_OFFSET @p origin or the resultant file offset was invalid.
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
@@ -1380,6 +1380,47 @@ enum CzResult czWrap_SetEndOfFile(HANDLE file);
 #endif
 
 /**
+ * @def CZ_WRAP_SET_FILE_POINTER_EX
+ * 
+ * @brief Specifies whether @c SetFilePointerEx is defined.
+ */
+#if !defined(CZ_WRAP_SET_FILE_POINTER_EX)
+	#if CZ_WINDOWS
+		#define CZ_WRAP_SET_FILE_POINTER_EX 1
+	#else
+		#define CZ_WRAP_SET_FILE_POINTER_EX 0
+	#endif
+#endif
+
+#if CZ_WRAP_SET_FILE_POINTER_EX
+/**
+ * @brief Wraps @c SetFilePointerEx.
+ * 
+ * Calls @c SetFilePointerEx with @p file, @p distanceToMove, @p newFilePointer, and @p moveMethod.
+ * 
+ * @param[in,out] file The first argument to pass to @c SetFilePointerEx.
+ * @param[in] distanceToMove The second argument to pass to @c SetFilePointerEx.
+ * @param[out] newFilePointer The third argument to pass to @c SetFilePointerEx.
+ * @param[in] moveMethod The fourth argument to pass to @c SetFilePointerEx.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p newFilePointer was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_OFFSET The resultant file offset was invalid.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_SET_FILE_POINTER_EX is defined as a nonzero value.
+ */
+enum CzResult czWrap_SetFilePointerEx(
+	HANDLE file, LARGE_INTEGER distanceToMove, PLARGE_INTEGER newFilePointer, DWORD moveMethod);
+#endif
+
+/**
  * @def CZ_WRAP_READ_FILE
  * 
  * @brief Specifies whether @c ReadFile is defined.
@@ -1502,6 +1543,210 @@ enum CzResult czWrap_WriteFile(
  * @note This function is only defined if @ref CZ_WRAP_DELETE_FILE_W is defined as a nonzero value.
  */
 enum CzResult czWrap_DeleteFileW(LPCWSTR path);
+#endif
+
+/**
+ * @def CZ_WRAP_CREATE_FILE_MAPPING_W
+ * 
+ * @brief Specifies whether @c CreateFileMappingW is defined.
+ */
+#if !defined(CZ_WRAP_CREATE_FILE_MAPPING_W)
+	#if CZ_WINDOWS
+		#define CZ_WRAP_CREATE_FILE_MAPPING_W 1
+	#else
+		#define CZ_WRAP_CREATE_FILE_MAPPING_W 0
+	#endif
+#endif
+
+#if CZ_WRAP_CREATE_FILE_MAPPING_W
+/**
+ * @brief Wraps @c CreateFileMappingW.
+ * 
+ * Calls @c CreateFileMappingW with @p file, @p fileMappingAttributes, @p protect, @p maximumSizeHigh,
+ * @p maximumSizeLow, and @p name. On success, the returned @c HANDLE is synchronously written to @p res. On failure,
+ * the contents of @p res are unchanged.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] file The first argument to pass to @c CreateFileMappingW.
+ * @param[in] fileMappingAttributes The second argument to pass to @c CreateFileMappingW.
+ * @param[in] protect The third argument to pass to @c CreateFileMappingW.
+ * @param[in] maximumSizeHigh The fourth argument to pass to @c CreateFileMappingW.
+ * @param[in] maximumSizeLow The fifth argument to pass to @c CreateFileMappingW.
+ * @param[in] name The sixth argument to pass to @c CreateFileMappingW.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to create a mapping object for the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p fileMappingAttributes or @p name was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @pre @p res is nonnull.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_CREATE_FILE_MAPPING_W is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+enum CzResult czWrap_CreateFileMappingW(
+	LPHANDLE res,
+	HANDLE file,
+	LPSECURITY_ATTRIBUTES fileMappingAttributes,
+	DWORD protect,
+	DWORD maximumSizeHigh,
+	DWORD maximumSizeLow,
+	LPCWSTR name);
+#endif
+
+/**
+ * @def CZ_WRAP_MAP_VIEW_OF_FILE
+ * 
+ * @brief Specifies whether @c MapViewOfFile is defined.
+ */
+#if !defined(CZ_WRAP_MAP_VIEW_OF_FILE)
+	#if CZ_WINDOWS
+		#define CZ_WRAP_MAP_VIEW_OF_FILE 1
+	#else
+		#define CZ_WRAP_MAP_VIEW_OF_FILE 0
+	#endif
+#endif
+
+#if CZ_WRAP_MAP_VIEW_OF_FILE
+/**
+ * @brief Wraps @c MapViewOfFile.
+ * 
+ * Calls @c MapViewOfFile with @p fileMappingObject, @p desiredAccess, @p fileOffsetHigh, @p fileOffsetLow, and
+ * @p numberOfBytesToMap. On success, the returned @c LPVOID is synchronously written to @p res. On failure, the
+ * contents of @p res are unchanged.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] fileMappingObject The first argument to pass to @c MapViewOfFile.
+ * @param[in] desiredAccess The second argument to pass to @c MapViewOfFile.
+ * @param[in] fileOffsetHigh The third argument to pass to @c MapViewOfFile.
+ * @param[in] fileOffsetLow The fourth argument to pass to @c MapViewOfFile.
+ * @param[in] numberOfBytesToMap The fifth argument to pass to @c MapViewOfFile.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to map a view of @p fileMappingObject was denied.
+ * @retval CZ_RESULT_BAD_FILE @p fileMappingObject or the corresponding file was invalid.
+ * @retval CZ_RESULT_BAD_OFFSET The file offset was not a multiple of the allocation granularity.
+ * @retval CZ_RESULT_IN_USE @p fileMappingObject or the corresponding file was already in use by the system.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @pre @p res is nonnull.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_MAP_VIEW_OF_FILE is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+enum CzResult czWrap_MapViewOfFile(
+	LPVOID* res,
+	HANDLE fileMappingObject,
+	DWORD desiredAccess,
+	DWORD fileOffsetHigh,
+	DWORD fileOffsetLow,
+	SIZE_T numberOfBytesToMap);
+#endif
+
+/**
+ * @def CZ_WRAP_UNMAP_VIEW_OF_FILE
+ * 
+ * @brief Specifies whether @c UnmapViewOfFile is defined.
+ */
+#if !defined(CZ_WRAP_UNMAP_VIEW_OF_FILE)
+	#if CZ_WINDOWS
+		#define CZ_WRAP_UNMAP_VIEW_OF_FILE 1
+	#else
+		#define CZ_WRAP_UNMAP_VIEW_OF_FILE 0
+	#endif
+#endif
+
+#if CZ_WRAP_UNMAP_VIEW_OF_FILE
+/**
+ * @brief Wraps @c UnmapViewOfFile.
+ * 
+ * Calls @c UnmapViewOfFile with @p baseAddress.
+ * 
+ * @param[in,out] baseAddress The argument to pass to @c UnmapViewOfFile.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ADDRESS @p baseAddress was an invalid pointer or mapping view.
+ * @retval CZ_RESULT_IN_USE The mapping view was already in use by the system.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_UNMAP_VIEW_OF_FILE is defined as a nonzero value.
+ */
+enum CzResult czWrap_UnmapViewOfFile(LPCVOID baseAddress);
+#endif
+
+/**
+ * @def CZ_WRAP_FLUSH_VIEW_OF_FILE
+ * 
+ * @brief Specifies whether @c FlushViewOfFile is defined.
+ */
+#if !defined(CZ_WRAP_FLUSH_VIEW_OF_FILE)
+	#if CZ_WINDOWS
+		#define CZ_WRAP_FLUSH_VIEW_OF_FILE 1
+	#else
+		#define CZ_WRAP_FLUSH_VIEW_OF_FILE 0
+	#endif
+#endif
+
+#if CZ_WRAP_FLUSH_VIEW_OF_FILE
+/**
+ * @brief Wraps @c FlushViewOfFile.
+ * 
+ * Calls @c FlushViewOfFile with @p baseAddress and @p numberOfBytesToFlush.
+ * 
+ * @param[in] baseAddress The first argument to pass to @c FlushViewOfFile.
+ * @param[in] numberOfBytesToFlush The second argument to pass to @c FlushViewOfFile.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ADDRESS The address range was invalid.
+ * @retval CZ_RESULT_IN_USE The mapping view was already in use by the system.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_FLUSH_VIEW_OF_FILE is defined as a nonzero value.
+ */
+enum CzResult czWrap_FlushViewOfFile(LPCVOID baseAddress, SIZE_T numberOfBytesToFlush);
+#endif
+
+/**
+ * @def CZ_WRAP_FLUSH_FILE_BUFFERS
+ * 
+ * @brief Specifies whether @c FlushFileBuffers is defined.
+ */
+#if !defined(CZ_WRAP_FLUSH_FILE_BUFFERS)
+	#if CZ_WINDOWS
+		#define CZ_WRAP_FLUSH_FILE_BUFFERS 1
+	#else
+		#define CZ_WRAP_FLUSH_FILE_BUFFERS 0
+	#endif
+#endif
+
+#if CZ_WRAP_FLUSH_FILE_BUFFERS
+/**
+ * @brief Wraps @c FlushFileBuffers.
+ * 
+ * Calls @c FlushFileBuffers with @p file.
+ * 
+ * @param[in,out] file The argument to pass to @c FlushFileBuffers.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_IN_USE The mapping view was already in use by the system.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_FLUSH_FILE_BUFFERS is defined as a nonzero value.
+ */
+enum CzResult czWrap_FlushFileBuffers(HANDLE file);
 #endif
 
 /**
