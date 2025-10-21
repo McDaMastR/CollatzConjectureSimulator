@@ -19,6 +19,9 @@
  * @file
  * 
  * @brief Buffer-based and (mostly) cross-platform file and IO management.
+ * 
+ * A file and IO API that allows access of system resources in a way that analogises memory buffers. In particular,
+ * regular files are abstracted as memory blocks that can be read from and written to.
  */
 
 #pragma once
@@ -35,7 +38,8 @@
 /**
  * @brief Specifies the behaviour of file and IO functions.
  * 
- * A set of flags specifying the desired behaviour of @ref czFileSize, @ref czReadFile, or @ref czWriteFile.
+ * A set of flags specifying the desired behaviour of @ref czFileSize, @ref czReadFile, @ref czWriteFile, or
+ * @ref czTrimFile.
  */
 struct CzFileFlags
 {
@@ -138,10 +142,10 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  * directory, pipe, or socket, the behaviour is platform dependent.
  * 
  * Let @e fileSize denote the size of the file located at @p path as measured in bytes, and let @e minSize denote the
- * minimum of @p size and ( @e fileSize - @p offset ). The file contents read include exactly @e minSize contiguous
- * bytes starting from the byte at the zero-based index @p offset. That is, all bytes whose indices lie within the
- * interval [ @p offset, @e minSize + @p offset ). If @p size is zero or @p offset is not less than @e fileSize, failure
- * occurs. On failure, the contents of @p buffer are undefined.
+ * minimum of @p size and (@e fileSize - @p offset). The file contents read include exactly @e minSize contiguous bytes
+ * starting from the byte at the zero-based index @p offset. That is, all bytes whose indices lie within the interval
+ * [@p offset, @e minSize + @p offset). If @p size is zero or @p offset is not less than @e fileSize, failure occurs. On
+ * failure, the contents of @p buffer are undefined.
  * 
  * The members of @p flags can optionally specify the following behaviour.
  * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
@@ -199,10 +203,10 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  * behaviour is platform dependent.
  * 
  * Let @e fileSize denote the size of the file located at @p path as measured in bytes if it exists, and zero otherwise.
- * Let @e maxSize denote the maximum of ( @p size + @p offset ) and @e fileSize. The file contents written include
- * exactly @p size contiguous bytes starting from the byte at the zero-based index @p offset. That is, all bytes whose
- * indices lie within the interval [ @p offset, @p size + @p offset ). Whether the previous file contents in this
- * interval are preserved is dependent on @p flags.overwriteFile.
+ * Let @e maxSize denote the maximum of (@p size + @p offset) and @e fileSize. The file contents written include exactly
+ * @p size contiguous bytes starting from the byte at the zero-based index @p offset. That is, all bytes whose indices
+ * lie within the interval [@p offset, @p size + @p offset). Whether the previous file contents in this interval are
+ * preserved is dependent on @p flags.overwriteFile.
  * 
  * If @p offset is @e fileSize or @c CZ_EOF, the contents of @p buffer are appended to the file. If @p offset is less
  * than @e fileSize, @e maxSize is greater than @e fileSize, and @p flags.overwriteFile is set, @e fileSize is increased
@@ -214,8 +218,8 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
  *   working directory of the program.
  * - If @p flags.overwriteFile is set, any overwritten file contents are destroyed. Otherwise if @p offset is not
- *   @c CZ_EOF, any previous file contents in the interval [ @p offset, @e fileSize ) are moved to the memory in the
- *   interval [ @p size + @p offset, @e fileSize + @p size ).
+ *   @c CZ_EOF, any previous file contents in the interval [@p offset, @e fileSize) are moved to the memory in the
+ *   interval [@p size + @p offset, @e fileSize + @p size).
  * - If @p flags.truncateFile is set, the file is truncated and its contents are destroyed prior to writing the contents
  *   of @p buffer to it; @p offset and @p flags.overwriteFile are ignored. Otherwise, the file is unaltered prior to
  *   writing to it.
@@ -267,15 +271,15 @@ enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, siz
  * behaviour is platform dependent.
  * 
  * Let @e fileSize denote the size of the file located at @p path as measured in bytes, let @e minSize denote the
- * minimum of @p size and ( @e fileSize - @p offset ), and let @e maxSize denote the maximum of zero and
- * ( @e fileSize - @p size ). The file contents trimmed are a contiguous block of memory whose size and location within
- * the file are dependent on @p size and @p offset.
- * - If @p offset is @c CZ_EOF, the trimmed block includes exactly ( @e fileSize - @e maxSize ) bytes starting from the
+ * minimum of @p size and (@e fileSize - @p offset), and let @e maxSize denote the maximum of (@e fileSize - @p size)
+ * and zero. The file contents trimmed are a contiguous block of memory whose size and offset within the file are
+ * dependent on @p size and @p offset.
+ * - If @p offset is @c CZ_EOF, the trimmed block includes exactly (@e fileSize - @e maxSize) bytes starting from the
  *   byte at the zero-based index @e maxSize. That is, all bytes whose indices lie within the interval
- *   [ @e maxSize, @e fileSize ).
+ *   [@e maxSize, @e fileSize).
  * - If @p offset is not @c CZ_EOF, the trimmed block includes exactly @e minSize bytes starting from the byte at the
  *   zero-based index @p offset. That is, all bytes whose indices lie within the interval
- *   [ @p offset, @e minSize + @p offset ).
+ *   [@p offset, @e minSize + @p offset).
  * 
  * Following the trim operation, the file contents in and proceeding the trimmed block are dependent on
  * @p flags.overwriteFile. If @p offset is @c CZ_EOF and @p flags.overwriteFile is not set, @e fileSize is decreased to
@@ -288,8 +292,8 @@ enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, siz
  *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
  *   working directory of the program.
  * - If @p flags.overwriteFile is set, the trimmed file contents are overwritten with zeros. Otherwise if @p offset is
- *   not @c CZ_EOF, any previous file contents in the interval [ @e minSize + @p offset, @e fileSize ) are moved to the
- *   memory in the interval [ @p offset, @e fileSize - @e minSize ).
+ *   not @c CZ_EOF, any previous file contents in the interval [@e minSize + @p offset, @e fileSize) are moved to the
+ *   memory in the interval [@p offset, @e fileSize - @e minSize).
  * - @p flags.truncateFile is ignored.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czTrimFile if the following conditions are satisfied.

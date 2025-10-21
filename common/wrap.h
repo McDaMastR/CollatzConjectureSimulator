@@ -310,7 +310,7 @@ enum CzResult czWrap_aligned_offset_realloc(
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ALIGNMENT @p alignment was not a power of two.
- * @retval CZ_RESULT_BAD_OFFSET @p offset was nonzero and greater than or equal to ( @p count * @p size ).
+ * @retval CZ_RESULT_BAD_OFFSET @p offset was nonzero and greater than or equal to (@p count * @p size).
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
  * @pre @p res is nonnull.
