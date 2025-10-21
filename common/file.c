@@ -99,7 +99,8 @@ static enum CzResult read_section_win32(HANDLE file, void* restrict buffer, size
 		overlapped.Offset = readOffset.LowPart;
 		overlapped.OffsetHigh = readOffset.HighPart;
 
-		ret = czWrap_ReadFile(file, readBuffer, readSize, NULL, &overlapped);
+		LPDWORD bytesRead = NULL;
+		ret = czWrap_ReadFile(file, readBuffer, readSize, bytesRead, &overlapped);
 		if CZ_NOEXPECT (ret)
 			return ret;
 	}
@@ -125,11 +126,82 @@ static enum CzResult write_section_win32(HANDLE file, const void* restrict buffe
 			overlapped.OffsetHigh = writeOffset.HighPart;
 		}
 
-		ret = czWrap_WriteFile(file, writeBuffer, writeSize, NULL, &overlapped);
+		LPDWORD bytesWritten = NULL;
+		ret = czWrap_WriteFile(file, writeBuffer, writeSize, bytesWritten, &overlapped);
 		if CZ_NOEXPECT (ret)
 			return ret;
 	}
 	return CZ_RESULT_SUCCESS;
+}
+#endif
+
+#if CZ_WRAP_DEVICE_IO_CONTROL
+static enum CzResult zero_section_win32(HANDLE file, size_t size, size_t offset)
+{
+	FILE_ZERO_DATA_INFORMATION zeroInfo = {0};
+	zeroInfo.FileOffset.QuadPart = (LONGLONG) offset;
+	zeroInfo.BeyondFinalZero.QuadPart = (LONGLONG) (offset + size);
+
+	DWORD controlCode = FSCTL_SET_ZERO_DATA;
+	LPVOID outBuffer = NULL;
+	DWORD outBufferSize = 0;
+	LPDWORD bytesReturned = NULL;
+	OVERLAPPED overlapped = {0};
+
+	return czWrap_DeviceIoControl(
+		file, controlCode, &zeroInfo, sizeof(zeroInfo), outBuffer, outBufferSize, bytesReturned, &overlapped);
+}
+#endif
+
+#if CZ_WINDOWS
+static enum CzResult move_section_win32(HANDLE file, size_t size, size_t srcOffset, size_t dstOffset)
+{
+	SYSTEM_INFO sysInfo;
+	GetSystemInfo(&sysInfo);
+
+	size_t granularity = (size_t) sysInfo.dwAllocationGranularity;
+	size_t minOffset = minz(srcOffset, dstOffset);
+	size_t maxOffset = maxz(srcOffset, dstOffset);
+
+	HANDLE mapping;
+	LPSECURITY_ATTRIBUTES mappingAttr = NULL;
+	DWORD protect = PAGE_READWRITE;
+	ULARGE_INTEGER maxSize = {.QuadPart = 0};
+	LPCWSTR mappingName = NULL;
+
+	enum CzResult ret = czWrap_CreateFileMappingW(
+		&mapping, file, mappingAttr, protect, maxSize.HighPart, maxSize.LowPart, mappingName);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	void* view;
+	DWORD viewAccess = FILE_MAP_ALL_ACCESS;
+	ULARGE_INTEGER viewOffset = {.QuadPart = minOffset & ~(granularity - 1)};
+	SIZE_T viewSize = size + maxOffset - (minOffset & ~(granularity - 1));
+
+	ret = czWrap_MapViewOfFile(&view, mapping, viewAccess, viewOffset.HighPart, viewOffset.LowPart, viewSize);
+	if CZ_NOEXPECT (ret)
+		goto err_close_map;
+
+	void* dst = (char*) view + (dstOffset - (size_t) viewOffset.QuadPart);
+	void* src = (char*) view + (srcOffset - (size_t) viewOffset.QuadPart);
+	memmove(dst, src, size);
+
+	ret = czWrap_FlushViewOfFile(view, viewSize);
+	if CZ_NOEXPECT (ret)
+		goto err_unmap_view;
+
+	ret = czWrap_UnmapViewOfFile(view);
+	if CZ_NOEXPECT (ret)
+		goto err_close_map;
+
+	return czWrap_CloseHandle(mapping);
+
+err_unmap_view:
+	czWrap_UnmapViewOfFile(view);
+err_close_map:
+	czWrap_CloseHandle(mapping);
+	return ret;
 }
 #endif
 
@@ -537,7 +609,7 @@ static enum CzResult truncate_write_file_win32(const char* restrict path, const 
 	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
 	LPSECURITY_ATTRIBUTES security = NULL;
 	DWORD disposition = OPEN_EXISTING;
-	DWORD flags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
+	DWORD flags = FILE_FLAG_SEQUENTIAL_SCAN;
 	HANDLE template = NULL;
 
 	ret = czWrap_CreateFileW(&file, wcPath, access, shareMode, security, disposition, flags, template);
@@ -995,6 +1067,231 @@ enum CzResult czWriteFile(
 	return ret;
 }
 
+#if CZ_WINDOWS
+static enum CzResult zero_file_end_win32(const char* restrict path, size_t size)
+{
+	wchar_t* restrict wcPath;
+	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	HANDLE file;
+	DWORD access = GENERIC_READ | GENERIC_WRITE;
+	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+	LPSECURITY_ATTRIBUTES security = NULL;
+	DWORD disposition = OPEN_EXISTING;
+	DWORD flags = FILE_FLAG_RANDOM_ACCESS;
+	HANDLE template = NULL;
+
+	ret = czWrap_CreateFileW(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	if CZ_NOEXPECT (ret)
+		goto err_free_wcpath;
+
+	LARGE_INTEGER fileSizeLarge;
+	ret = czWrap_GetFileSizeEx(file, &fileSizeLarge);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	size_t fileSize = (size_t) fileSizeLarge.QuadPart;
+	if CZ_NOEXPECT (!fileSize) {
+		ret = CZ_RESULT_NO_FILE;
+		goto err_close_file;
+	}
+
+	size_t zeroedSize = minz(size, fileSize);
+	size_t offset = fileSize - zeroedSize;
+	ret = zero_section_win32(file, zeroedSize, offset);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	czFree(wcPath);
+	return czWrap_CloseHandle(file);
+
+err_close_file:
+	czWrap_CloseHandle(file);
+err_free_wcpath:
+	czFree(wcPath);
+	return ret;
+}
+#endif
+
+#if CZ_WINDOWS
+static enum CzResult cut_file_end_win32(const char* restrict path, size_t size)
+{
+	wchar_t* restrict wcPath;
+	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	HANDLE file;
+	DWORD access = GENERIC_READ | GENERIC_WRITE;
+	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+	LPSECURITY_ATTRIBUTES security = NULL;
+	DWORD disposition = OPEN_EXISTING;
+	DWORD flags = FILE_FLAG_RANDOM_ACCESS;
+	HANDLE template = NULL;
+
+	ret = czWrap_CreateFileW(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	if CZ_NOEXPECT (ret)
+		goto err_free_wcpath;
+
+	LARGE_INTEGER fileSizeLarge;
+	ret = czWrap_GetFileSizeEx(file, &fileSizeLarge);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	size_t fileSize = (size_t) fileSizeLarge.QuadPart;
+	if CZ_NOEXPECT (!fileSize) {
+		ret = CZ_RESULT_NO_FILE;
+		goto err_close_file;
+	}
+
+	ULARGE_INTEGER newSize = {.QuadPart = maxz(size, fileSize) - size};
+	LARGE_INTEGER moveDistance;
+	memcpy(&moveDistance, &newSize, sizeof(newSize)); // Ensure strict aliasing
+
+	PLARGE_INTEGER newFilePtr = NULL;
+	DWORD moveMethod = FILE_BEGIN;
+	ret = czWrap_SetFilePointerEx(file, moveDistance, newFilePtr, moveMethod);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	ret = czWrap_SetEndOfFile(file);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	czFree(wcPath);
+	return czWrap_CloseHandle(file);
+
+err_close_file:
+	czWrap_CloseHandle(file);
+err_free_wcpath:
+	czFree(wcPath);
+	return ret;
+}
+#endif
+
+#if CZ_WINDOWS
+static enum CzResult zero_file_win32(const char* restrict path, size_t size, size_t offset)
+{
+	wchar_t* restrict wcPath;
+	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	HANDLE file;
+	DWORD access = GENERIC_READ | GENERIC_WRITE;
+	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+	LPSECURITY_ATTRIBUTES security = NULL;
+	DWORD disposition = OPEN_EXISTING;
+	DWORD flags = FILE_FLAG_RANDOM_ACCESS;
+	HANDLE template = NULL;
+
+	ret = czWrap_CreateFileW(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	if CZ_NOEXPECT (ret)
+		goto err_free_wcpath;
+
+	LARGE_INTEGER fileSizeLarge;
+	ret = czWrap_GetFileSizeEx(file, &fileSizeLarge);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	size_t fileSize = (size_t) fileSizeLarge.QuadPart;
+	if CZ_NOEXPECT (!fileSize) {
+		ret = CZ_RESULT_NO_FILE;
+		goto err_close_file;
+	}
+	if CZ_NOEXPECT (offset >= fileSize) {
+		ret = CZ_RESULT_BAD_OFFSET;
+		goto err_close_file;
+	}
+
+	size_t zeroedSize = minz(size, fileSize - offset);
+	ret = zero_section_win32(file, zeroedSize, offset);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	czFree(wcPath);
+	return czWrap_CloseHandle(file);
+
+err_close_file:
+	czWrap_CloseHandle(file);
+err_free_wcpath:
+	czFree(wcPath);
+	return ret;
+}
+#endif
+
+#if CZ_WINDOWS
+static enum CzResult cut_file_win32(const char* restrict path, size_t size, size_t offset)
+{
+	wchar_t* restrict wcPath;
+	enum CzResult ret = alloc_utf16_from_utf8_win32(&wcPath, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	HANDLE file;
+	DWORD access = GENERIC_READ | GENERIC_WRITE;
+	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+	LPSECURITY_ATTRIBUTES security = NULL;
+	DWORD disposition = OPEN_EXISTING;
+	DWORD flags = FILE_FLAG_RANDOM_ACCESS;
+	HANDLE template = NULL;
+
+	ret = czWrap_CreateFileW(&file, wcPath, access, shareMode, security, disposition, flags, template);
+	if CZ_NOEXPECT (ret)
+		goto err_free_wcpath;
+
+	LARGE_INTEGER fileSizeLarge;
+	ret = czWrap_GetFileSizeEx(file, &fileSizeLarge);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	size_t fileSize = (size_t) fileSizeLarge.QuadPart;
+	if CZ_NOEXPECT (!fileSize) {
+		ret = CZ_RESULT_NO_FILE;
+		goto err_close_file;
+	}
+	if CZ_NOEXPECT (offset >= fileSize) {
+		ret = CZ_RESULT_BAD_OFFSET;
+		goto err_close_file;
+	}
+
+	if (size + offset < fileSize) {
+		size_t moveSize = fileSize - (size + offset);
+		size_t moveSrc = size + offset;
+		size_t moveDst = offset;
+
+		ret = move_section_win32(file, moveSize, moveSrc, moveDst);
+		if CZ_NOEXPECT (ret)
+			goto err_close_file;
+	}
+
+	ULARGE_INTEGER newSize = {.QuadPart = maxz(size + offset, fileSize) - size};
+	LARGE_INTEGER moveDistance;
+	memcpy(&moveDistance, &newSize, sizeof(newSize)); // Ensure strict aliasing
+
+	PLARGE_INTEGER newFilePtr = NULL;
+	DWORD moveMethod = FILE_BEGIN;
+	ret = czWrap_SetFilePointerEx(file, moveDistance, newFilePtr, moveMethod);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	ret = czWrap_SetEndOfFile(file);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	czFree(wcPath);
+	return czWrap_CloseHandle(file);
+
+err_close_file:
+	czWrap_CloseHandle(file);
+err_free_wcpath:
+	czFree(wcPath);
+	return ret;
+}
+#endif
+
 #if CZ_POSIX_MAPPED_FILES >= 200112L
 static enum CzResult zero_file_end_posix(const char* restrict path, size_t size)
 {
@@ -1309,7 +1606,16 @@ enum CzResult czTrimFile(const char* restrict path, size_t size, size_t offset, 
 		realPath = fullPath;
 	}
 
-#if CZ_POSIX_MAPPED_FILES >= 200112L
+#if CZ_WINDOWS
+	if (offset == CZ_EOF && flags.overwriteFile)
+		ret = zero_file_end_win32(realPath, size);
+	else if (offset == CZ_EOF)
+		ret = cut_file_end_win32(realPath, size);
+	else if (flags.overwriteFile)
+		ret = zero_file_win32(realPath, size, offset);
+	else
+		ret = cut_file_win32(realPath, size, offset);
+#elif CZ_POSIX_MAPPED_FILES >= 200112L
 	if (offset == CZ_EOF && flags.overwriteFile)
 		ret = zero_file_end_posix(realPath, size);
 	else if (offset == CZ_EOF)
