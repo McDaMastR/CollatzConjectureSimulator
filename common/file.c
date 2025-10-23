@@ -270,20 +270,20 @@ static enum CzResult zero_section_posix(int fd, size_t size, size_t offset)
 	void* mapAddr = NULL;
 	size_t mapSize = size + (offset & (pageSize - 1));
 	int prot = PROT_WRITE;
-	int mapFlags = MAP_FILE | MAP_SHARED;
+	int mapFlags = MAP_SHARED;
 	off_t mapOffset = (off_t) (offset & ~(pageSize - 1));
 
 	ret = czWrap_mmap(&memory, mapAddr, mapSize, prot, mapFlags, fd, mapOffset);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
-	void* zeroed = (char*) memory + (offset & (pageSize - 1));
+	void* zero = (char*) memory + (offset & (pageSize - 1));
 #if CZ_APPLE
-	ret = czWrap_madvise(NULL, zeroed, size, MADV_ZERO);
+	ret = czWrap_madvise(NULL, zero, size, MADV_ZERO);
 	if (ret)
-		memset(zeroed, 0, size);
+		memset(zero, 0, size);
 #else
-	memset(zeroed, 0, size);
+	memset(zero, 0, size);
 #endif
 
 	int syncFlags = MS_ASYNC;
@@ -299,8 +299,8 @@ err_unmap_file:
 }
 #endif
 
-#if CZ_WRAP_SYSCONF && CZ_WRAP_MMAP && CZ_WRAP_MUNMAP && CZ_WRAP_MSYNC
-static enum CzResult move_section_posix(int fd, size_t size, size_t srcOffset, size_t dstOffset)
+#if CZ_WRAP_SYSCONF && CZ_WRAP_FSTAT && CZ_WRAP_FTRUNCATE && CZ_WRAP_MMAP && CZ_WRAP_MUNMAP && CZ_WRAP_MSYNC
+static enum CzResult insert_section_posix(int fd, const void* restrict buffer, size_t size, size_t offset)
 {
 	long confVal;
 	int confName = _SC_PAGESIZE;
@@ -308,24 +308,43 @@ static enum CzResult move_section_posix(int fd, size_t size, size_t srcOffset, s
 	if CZ_NOEXPECT (ret)
 		return ret;
 
+	struct stat st;
+	ret = czWrap_fstat(fd, &st);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
 	size_t pageSize = (size_t) confVal;
-	size_t minOffset = minz(srcOffset, dstOffset);
-	size_t maxOffset = maxz(srcOffset, dstOffset);
+	size_t fileSize = (size_t) st.st_size;
+	if CZ_NOEXPECT (offset > fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+
+	off_t newSize = (off_t) (fileSize + size);
+	ret = czWrap_ftruncate(fd, newSize);
+	if CZ_NOEXPECT (ret)
+		return ret;
 
 	void* restrict memory;
 	void* mapAddr = NULL;
-	size_t mapSize = size + maxOffset - (minOffset & ~(pageSize - 1));
+	size_t mapSize = (size_t) newSize - (offset & ~(pageSize - 1));
 	int prot = PROT_READ | PROT_WRITE;
-	int mapFlags = MAP_FILE | MAP_SHARED;
-	off_t mapOffset = (off_t) (minOffset & ~(pageSize - 1));
+	int mapFlags = MAP_SHARED;
+	off_t mapOffset = (off_t) (offset & ~(pageSize - 1));
 
 	ret = czWrap_mmap(&memory, mapAddr, mapSize, prot, mapFlags, fd, mapOffset);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
-	void* dst = (char*) memory + (dstOffset - (size_t) mapOffset);
-	void* src = (char*) memory + (srcOffset - (size_t) mapOffset);
-	memmove(dst, src, size);
+	void* mvDst = (char*) memory + (offset & (pageSize - 1)) + size;
+	void* mvSrc = (char*) memory + (offset & (pageSize - 1));
+	size_t mvSize = fileSize - offset;
+
+	void* cpDst = mvSrc;
+	const void* cpSrc = buffer;
+	size_t cpSize = size;
+
+	if (mvSize)
+		memmove(mvDst, mvSrc, mvSize);
+	memcpy(cpDst, cpSrc, cpSize);
 
 	int syncFlags = MS_ASYNC;
 	ret = czWrap_msync(memory, mapSize, syncFlags);
@@ -333,6 +352,65 @@ static enum CzResult move_section_posix(int fd, size_t size, size_t srcOffset, s
 		goto err_unmap_file;
 
 	return czWrap_munmap(memory, mapSize);
+
+err_unmap_file:
+	czWrap_munmap(memory, mapSize);
+	return ret;
+}
+#endif
+
+#if CZ_WRAP_SYSCONF && CZ_WRAP_FSTAT && CZ_WRAP_FTRUNCATE && CZ_WRAP_MMAP && CZ_WRAP_MUNMAP && CZ_WRAP_MSYNC
+static enum CzResult cut_section_posix(int fd, size_t size, size_t offset)
+{
+	long confVal;
+	int confName = _SC_PAGESIZE;
+	enum CzResult ret = czWrap_sysconf(&confVal, confName);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	struct stat st;
+	ret = czWrap_fstat(fd, &st);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	size_t pageSize = (size_t) confVal;
+	size_t fileSize = (size_t) st.st_size;
+	if CZ_NOEXPECT (offset >= fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if (size >= fileSize - offset) {
+		off_t newsize = (off_t) offset;
+		return czWrap_ftruncate(fd, newsize);
+	}
+
+	void* restrict memory;
+	void* mapAddr = NULL;
+	size_t mapSize = fileSize - (offset & ~(pageSize - 1));
+	int prot = PROT_READ | PROT_WRITE;
+	int mapFlags = MAP_SHARED;
+	off_t mapOffset = (off_t) (offset & ~(pageSize - 1));
+
+	ret = czWrap_mmap(&memory, mapAddr, mapSize, prot, mapFlags, fd, mapOffset);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	void* mvDst = (char*) memory + (offset & (pageSize - 1));
+	void* mvSrc = (char*) memory + (offset & (pageSize - 1)) + size;
+	size_t mvSize = fileSize - (size + offset);
+
+	memmove(mvDst, mvSrc, mvSize);
+
+	size_t syncSize = fileSize - (size + (offset & ~(pageSize - 1)));
+	int syncFlags = MS_ASYNC;
+	ret = czWrap_msync(memory, syncSize, syncFlags);
+	if CZ_NOEXPECT (ret)
+		goto err_unmap_file;
+
+	ret = czWrap_munmap(memory, mapSize);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	off_t newSize = (off_t) (size + offset);
+	return czWrap_ftruncate(fd, newSize);
 
 err_unmap_file:
 	czWrap_munmap(memory, mapSize);
@@ -898,45 +976,12 @@ static enum CzResult insert_file_posix(
 	if CZ_NOEXPECT (ret)
 		return ret;
 
-	struct stat st;
-	ret = czWrap_fstat(fd, &st);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	size_t fileSize = (size_t) st.st_size;
-	if CZ_NOEXPECT (offset > fileSize) {
-		ret = CZ_RESULT_BAD_OFFSET;
-		goto err_close_file;
+	ret = insert_section_posix(fd, buffer, size, offset);
+	if CZ_NOEXPECT (ret) {
+		czWrap_close(fd);
+		return ret;
 	}
-
-	void* restrict content = NULL;
-	size_t contentSize = fileSize - offset;
-	struct CzAllocFlags allocFlags = {0};
-
-	ret = czAlloc(&content, contentSize, allocFlags);
-	if CZ_NOEXPECT (ret && ret != CZ_RESULT_BAD_SIZE)
-		goto err_close_file;
-
-	ret = read_section_posix(fd, content, contentSize, offset);
-	if CZ_NOEXPECT (ret)
-		goto err_free_content;
-
-	ret = write_section_posix(fd, buffer, size, offset);
-	if CZ_NOEXPECT (ret)
-		goto err_free_content;
-
-	ret = write_section_posix(fd, content, contentSize, offset + size);
-	if CZ_NOEXPECT (ret)
-		goto err_free_content;
-
-	czFree(content);
 	return czWrap_close(fd);
-
-err_free_content:
-	czFree(content);
-err_close_file:
-	czWrap_close(fd);
-	return ret;
 }
 #endif
 
@@ -1015,14 +1060,11 @@ static enum CzResult insert_file_other(
 		return ret;
 
 	ret = insert_section_other(file, buffer, size, offset);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
+	if CZ_NOEXPECT (ret) {
+		czWrap_fclose(file);
+		return ret;
+	}
 	return czWrap_fclose(file);
-
-err_close_file:
-	czWrap_fclose(file);
-	return ret;
 }
 
 #if CZ_WINDOWS
@@ -1421,41 +1463,12 @@ static enum CzResult cut_file_posix(const char* restrict path, size_t size, size
 	if CZ_NOEXPECT (ret)
 		return ret;
 
-	struct stat st;
-	ret = czWrap_fstat(fd, &st);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	size_t fileSize = (size_t) st.st_size;
-	if CZ_NOEXPECT (!fileSize) {
-		ret = CZ_RESULT_NO_FILE;
-		goto err_close_file;
+	ret = cut_section_posix(fd, size, offset);
+	if CZ_NOEXPECT (ret) {
+		czWrap_close(fd);
+		return ret;
 	}
-	if CZ_NOEXPECT (offset >= fileSize) {
-		ret = CZ_RESULT_BAD_OFFSET;
-		goto err_close_file;
-	}
-
-	if (size + offset < fileSize) {
-		size_t moveSize = fileSize - (size + offset);
-		size_t moveSrc = size + offset;
-		size_t moveDst = offset;
-
-		ret = move_section_posix(fd, moveSize, moveSrc, moveDst);
-		if CZ_NOEXPECT (ret)
-			goto err_close_file;
-	}
-
-	off_t newSize = (off_t) (maxz(size + offset, fileSize) - size);
-	ret = czWrap_ftruncate(fd, newSize);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
 	return czWrap_close(fd);
-
-err_close_file:
-	czWrap_close(fd);
-	return ret;
 }
 #endif
 
