@@ -302,7 +302,7 @@ enum CzResult czWrap_fopen(FILE* restrict* res, const char* path, const char* mo
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= 200112L
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	if (errno == ENOENT)
 		return (mode && mode[0] == 'r') ? CZ_RESULT_NO_FILE : CZ_RESULT_BAD_PATH;
 
@@ -367,7 +367,7 @@ enum CzResult czWrap_fclose(FILE* stream)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= 200112L
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	switch (errno) {
 	case EFBIG:
 		return CZ_RESULT_BAD_FILE;
@@ -428,7 +428,7 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int origin)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= 200112L
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	switch (errno) {
 	case EFBIG:
 	case ESPIPE:
@@ -452,7 +452,7 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int origin)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #else
-	return CZ_RESULT_INTERNAL_ERROR;
+	return CZ_RESULT_BAD_OFFSET;
 #endif
 }
 
@@ -500,7 +500,7 @@ enum CzResult czWrap_ftell(long* res, FILE* stream)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= 200112L
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	switch (errno) {
 	case EOVERFLOW:
 	case ESPIPE:
@@ -529,7 +529,7 @@ enum CzResult czWrap_fread(size_t* res, void* buffer, size_t size, size_t count,
 	if (!r && feof(stream))
 		return pos ? CZ_RESULT_BAD_OFFSET : CZ_RESULT_NO_FILE;
 
-#if CZ_POSIX_VERSION >= 200112L
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	switch (errno) {
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
@@ -559,7 +559,7 @@ enum CzResult czWrap_fwrite(size_t* res, const void* buffer, size_t size, size_t
 	if CZ_EXPECT ((r == count || !size) && !ferror(stream))
 		return CZ_RESULT_SUCCESS;
 
-#if CZ_POSIX_VERSION >= 200112L
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	switch (errno) {
 	case EFBIG:
 		return CZ_RESULT_BAD_FILE;
@@ -621,7 +621,7 @@ enum CzResult czWrap_remove(const char* path)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= 200112L
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	switch (errno) {
 	case EACCES:
 	case EPERM:

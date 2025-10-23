@@ -164,7 +164,7 @@ enum CzResult czWrap_recalloc(void* restrict* res, void* ptr, size_t count, size
  * @brief Specifies whether @c posix_memalign is defined.
  */
 #if !defined(CZ_WRAP_POSIX_MEMALIGN)
-	#if CZ_APPLE || CZ_POSIX_ADVISORY_INFO >= 200112L
+	#if CZ_APPLE || CZ_POSIX_ADVISORY_INFO >= CZ_POSIX_2001
 		#define CZ_WRAP_POSIX_MEMALIGN 1
 	#else
 		#define CZ_WRAP_POSIX_MEMALIGN 0
@@ -366,7 +366,7 @@ enum CzResult czWrap_madvise(int* res, void* addr, size_t size, int advice);
  * @brief Specifies whether @c posix_madvise is defined.
  */
 #if !defined(CZ_WRAP_POSIX_MADVISE)
-	#if CZ_APPLE || CZ_POSIX_ADVISORY_INFO >= 200112L
+	#if CZ_APPLE || CZ_POSIX_ADVISORY_INFO >= CZ_POSIX_2001
 		#define CZ_WRAP_POSIX_MADVISE 1
 	#else
 		#define CZ_WRAP_POSIX_MADVISE 0
@@ -571,7 +571,7 @@ enum CzResult czWrap_remove(const char* path);
  * @brief Specifies whether @c fileno is defined.
  */
 #if !defined(CZ_WRAP_FILENO)
-	#if CZ_WINDOWS || CZ_POSIX_VERSION >= 200112L
+	#if CZ_WINDOWS || CZ_POSIX_VERSION >= CZ_POSIX_2001
 		#define CZ_WRAP_FILENO 1
 	#else
 		#define CZ_WRAP_FILENO 0
@@ -605,7 +605,7 @@ enum CzResult czWrap_fileno(int* res, FILE* stream);
  * @brief Specifies whether @c isatty is defined.
  */
 #if !defined(CZ_WRAP_ISATTY)
-	#if CZ_WINDOWS || CZ_POSIX_VERSION >= 200112L
+	#if CZ_WINDOWS || CZ_POSIX_VERSION >= CZ_POSIX_2001
 		#define CZ_WRAP_ISATTY 1
 	#else
 		#define CZ_WRAP_ISATTY 0
@@ -639,7 +639,7 @@ enum CzResult czWrap_isatty(int* res, int fd);
  * @brief Specifies whether @c stat is defined.
  */
 #if !defined(CZ_WRAP_STAT)
-	#if CZ_POSIX_VERSION >= 200112L
+	#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 		#define CZ_WRAP_STAT 1
 	#else
 		#define CZ_WRAP_STAT 0
@@ -675,7 +675,7 @@ enum CzResult czWrap_stat(const char* path, struct stat* st);
  * @brief Specifies whether @c fstat is defined.
  */
 #if !defined(CZ_WRAP_FSTAT)
-	#if CZ_POSIX_VERSION >= 200112L
+	#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 		#define CZ_WRAP_FSTAT 1
 	#else
 		#define CZ_WRAP_FSTAT 0
@@ -707,7 +707,7 @@ enum CzResult czWrap_fstat(int fd, struct stat* st);
  * @brief Specifies whether @c truncate is defined.
  */
 #if !defined(CZ_WRAP_TRUNCATE)
-	#if CZ_POSIX_VERSION >= 200112L
+	#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 		#define CZ_WRAP_TRUNCATE 1
 	#else
 		#define CZ_WRAP_TRUNCATE 0
@@ -745,7 +745,7 @@ enum CzResult czWrap_truncate(const char* path, off_t size);
  * @brief Specifies whether @c ftruncate is defined.
  */
 #if !defined(CZ_WRAP_FTRUNCATE)
-	#if CZ_POSIX_VERSION >= 200112L
+	#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 		#define CZ_WRAP_FTRUNCATE 1
 	#else
 		#define CZ_WRAP_FTRUNCATE 0
@@ -779,7 +779,7 @@ enum CzResult czWrap_ftruncate(int fd, off_t size);
  * @brief Specifies whether @c open is defined.
  */
 #if !defined(CZ_WRAP_OPEN)
-	#if CZ_POSIX_VERSION >= 200112L
+	#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 		#define CZ_WRAP_OPEN 1
 	#else
 		#define CZ_WRAP_OPEN 0
@@ -826,7 +826,7 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode);
  * @brief Specifies whether @c close is defined.
  */
 #if !defined(CZ_WRAP_CLOSE)
-	#if CZ_POSIX_VERSION >= 200112L
+	#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 		#define CZ_WRAP_CLOSE 1
 	#else
 		#define CZ_WRAP_CLOSE 0
@@ -858,7 +858,7 @@ enum CzResult czWrap_close(int fd);
  * @brief Specifies whether @c pread is defined.
  */
 #if !defined(CZ_WRAP_PREAD)
-	#if CZ_POSIX_VERSION >= 200112L
+	#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 		#define CZ_WRAP_PREAD 1
 	#else
 		#define CZ_WRAP_PREAD 0
@@ -904,7 +904,7 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
  * @brief Specifies whether @c write is defined.
  */
 #if !defined(CZ_WRAP_WRITE)
-	#if CZ_POSIX_VERSION >= 200112L
+	#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 		#define CZ_WRAP_WRITE 1
 	#else
 		#define CZ_WRAP_WRITE 0
@@ -948,7 +948,7 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
  * @brief Specifies whether @c pwrite is defined.
  */
 #if !defined(CZ_WRAP_PWRITE)
-	#if CZ_POSIX_VERSION >= 200112L
+	#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 		#define CZ_WRAP_PWRITE 1
 	#else
 		#define CZ_WRAP_PWRITE 0
@@ -993,7 +993,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
  * @brief Specifies whether @c mmap is defined.
  */
 #if !defined(CZ_WRAP_MMAP)
-	#if CZ_POSIX_MAPPED_FILES >= 200112L || CZ_POSIX_SHARED_MEMORY_OBJECTS >= 200112L
+	#if CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001 || CZ_POSIX_SHARED_MEMORY_OBJECTS >= CZ_POSIX_2001
 		#define CZ_WRAP_MMAP 1
 	#else
 		#define CZ_WRAP_MMAP 0
@@ -1040,7 +1040,7 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
  * @brief Specifies whether @c munmap is defined.
  */
 #if !defined(CZ_WRAP_MUNMAP)
-	#if CZ_POSIX_MAPPED_FILES >= 200112L || CZ_POSIX_SHARED_MEMORY_OBJECTS >= 200112L
+	#if CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001 || CZ_POSIX_SHARED_MEMORY_OBJECTS >= CZ_POSIX_2001
 		#define CZ_WRAP_MUNMAP 1
 	#else
 		#define CZ_WRAP_MUNMAP 0
@@ -1072,7 +1072,7 @@ enum CzResult czWrap_munmap(void* addr, size_t size);
  * @brief Specifies whether @c msync is defined.
  */
 #if !defined(CZ_WRAP_MSYNC)
-	#if CZ_POSIX_MAPPED_FILES >= 200112L
+	#if CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001
 		#define CZ_WRAP_MSYNC 1
 	#else
 		#define CZ_WRAP_MSYNC 0
@@ -1808,7 +1808,7 @@ enum CzResult czWrap_DeviceIoControl(
  * @brief Specifies whether @c sysconf is defined.
  */
 #if !defined(CZ_WRAP_SYSCONF)
-	#if CZ_POSIX_VERSION >= 200112L
+	#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 		#define CZ_WRAP_SYSCONF 1
 	#else
 		#define CZ_WRAP_SYSCONF 0

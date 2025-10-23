@@ -24,7 +24,7 @@
 	#define MAX_ACCESS_SIZE UINT32_MAX
 #elif CZ_APPLE
 	#define MAX_ACCESS_SIZE INT_MAX
-#elif CZ_POSIX_VERSION >= 200112L
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	#define MAX_ACCESS_SIZE SSIZE_MAX
 #else
 	#define MAX_ACCESS_SIZE SIZE_MAX
@@ -638,7 +638,7 @@ out_not_tty:
 }
 #endif
 
-#if CZ_POSIX_VERSION >= 200112L
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 static enum CzResult czStreamIsTerminal_posix(FILE* restrict stream, bool* restrict istty)
 {
 	int fd;
@@ -667,7 +667,7 @@ enum CzResult czStreamIsTerminal(FILE* restrict stream, bool* restrict istty)
 {
 #if CZ_WINDOWS
 	return czStreamIsTerminal_win32(stream, istty);
-#elif CZ_POSIX_VERSION >= 200112L
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	return czStreamIsTerminal_posix(stream, istty);
 #else
 	return czStreamIsTerminal_other(stream, istty);
@@ -698,7 +698,7 @@ err_free_widepath:
 }
 #endif
 
-#if CZ_POSIX_VERSION >= 200112L
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 static enum CzResult czFileSize_posix(const char* restrict path, size_t* restrict size)
 {
 	struct stat st;
@@ -749,7 +749,7 @@ enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struc
 
 #if CZ_WINDOWS
 	ret = czFileSize_win32(realPath, size);
-#elif CZ_POSIX_VERSION >= 200112L
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	ret = czFileSize_posix(realPath, size);
 #else
 	ret = czFileSize_other(realPath, size);
@@ -794,7 +794,7 @@ err_free_widepath:
 }
 #endif
 
-#if CZ_POSIX_VERSION >= 200112L
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 static enum CzResult czReadFile_posix(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
 {
 	int fd;
@@ -849,7 +849,7 @@ enum CzResult czReadFile(
 
 #if CZ_WINDOWS
 	ret = czReadFile_win32(realPath, buffer, size, offset);
-#elif CZ_POSIX_VERSION >= 200112L
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	ret = czReadFile_posix(realPath, buffer, size, offset);
 #else
 	ret = czReadFile_other(realPath, buffer, size, offset);
@@ -959,7 +959,7 @@ static enum CzResult insert_file_win32(
 }
 #endif
 
-#if CZ_POSIX_VERSION >= 200112L
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 static enum CzResult truncate_write_file_posix(const char* restrict path, const void* restrict buffer, size_t size)
 {
 	int fd;
@@ -979,7 +979,7 @@ static enum CzResult truncate_write_file_posix(const char* restrict path, const 
 }
 #endif
 
-#if CZ_POSIX_VERSION >= 200112L
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 static enum CzResult append_file_posix(const char* restrict path, const void* restrict buffer, size_t size)
 {
 	int fd;
@@ -999,7 +999,7 @@ static enum CzResult append_file_posix(const char* restrict path, const void* re
 }
 #endif
 
-#if CZ_POSIX_VERSION >= 200112L
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 static enum CzResult overwrite_file_posix(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
 {
@@ -1034,7 +1034,7 @@ err_close_file:
 }
 #endif
 
-#if CZ_POSIX_VERSION >= 200112L
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 static enum CzResult insert_file_posix(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
 {
@@ -1160,7 +1160,7 @@ static enum CzResult czWriteFile_win32(
 }
 #endif
 
-#if CZ_POSIX_VERSION >= 200112L
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 static enum CzResult czWriteFile_posix(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
 {
@@ -1205,7 +1205,7 @@ enum CzResult czWriteFile(
 
 #if CZ_WINDOWS
 	ret = czWriteFile_win32(realPath, buffer, size, offset, flags);
-#elif CZ_POSIX_VERSION >= 200112L
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	ret = czWriteFile_posix(realPath, buffer, size, offset, flags);
 #else
 	ret = czWriteFile_other(realPath, buffer, size, offset, flags);
@@ -1361,7 +1361,7 @@ static enum CzResult cut_file_win32(const wchar_t* restrict path, size_t size, s
 }
 #endif
 
-#if CZ_POSIX_MAPPED_FILES >= 200112L
+#if CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001
 static enum CzResult zero_file_end_posix(const char* restrict path, size_t size)
 {
 	int fd;
@@ -1397,7 +1397,7 @@ err_close_file:
 }
 #endif
 
-#if CZ_POSIX_VERSION >= 200112L
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 static enum CzResult cut_file_end_posix(const char* restrict path, size_t size)
 {
 	int fd;
@@ -1432,7 +1432,7 @@ err_close_file:
 }
 #endif
 
-#if CZ_POSIX_MAPPED_FILES >= 200112L
+#if CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001
 static enum CzResult zero_file_posix(const char* restrict path, size_t size, size_t offset)
 {
 	int fd;
@@ -1475,7 +1475,7 @@ err_close_file:
 }
 #endif
 
-#if CZ_POSIX_MAPPED_FILES >= 200112L
+#if CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001
 static enum CzResult cut_file_posix(const char* restrict path, size_t size, size_t offset)
 {
 	int fd;
@@ -1708,7 +1708,7 @@ static enum CzResult czTrimFile_win32(const char* restrict path, size_t size, si
 }
 #endif
 
-#if CZ_POSIX_MAPPED_FILES >= 200112L
+#if CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001
 static enum CzResult czTrimFile_posix(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
 {
 	if (offset == CZ_EOF && flags.overwriteFile)
@@ -1750,7 +1750,7 @@ enum CzResult czTrimFile(const char* restrict path, size_t size, size_t offset, 
 
 #if CZ_WINDOWS
 	ret = czTrimFile_win32(realPath, size, offset, flags);
-#elif CZ_POSIX_MAPPED_FILES >= 200112L
+#elif CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001
 	ret = czTrimFile_posix(realPath, size, offset, flags);
 #else
 	ret = czTrimFile_other(realPath, size, offset, flags);
