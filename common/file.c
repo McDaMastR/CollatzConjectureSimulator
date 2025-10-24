@@ -22,7 +22,7 @@
 
 #if CZ_WINDOWS
 	#define MAX_ACCESS_SIZE UINT32_MAX
-#elif CZ_APPLE
+#elif CZ_DARWIN
 	#define MAX_ACCESS_SIZE INT_MAX
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	#define MAX_ACCESS_SIZE SSIZE_MAX
@@ -381,7 +381,7 @@ static enum CzResult zero_section_posix(int fd, size_t size, size_t offset)
 		return ret;
 
 	void* zero = (char*) memory + (offset & (pageSize - 1));
-#if CZ_APPLE
+#if CZ_DARWIN
 	ret = czWrap_madvise(NULL, zero, size, MADV_ZERO);
 	if (ret)
 		memset(zero, 0, size);
@@ -1436,7 +1436,7 @@ err_close_file:
 static enum CzResult zero_file_posix(const char* restrict path, size_t size, size_t offset)
 {
 	int fd;
-#if CZ_APPLE
+#if CZ_DARWIN
 	int flags = O_WRONLY | O_NOCTTY;
 #else
 	int flags = O_RDWR | O_NOCTTY;

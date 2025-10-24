@@ -53,7 +53,7 @@ static enum CzResult realloc_win32(
 }
 #endif
 
-#if CZ_APPLE
+#if CZ_DARWIN
 static enum CzResult realloc_apple(
 	void* restrict* restrict memory, size_t oldSize, size_t newSize, struct CzAllocFlags flags)
 {
@@ -108,7 +108,7 @@ enum CzResult czRealloc(void* restrict* restrict memory, size_t oldSize, size_t 
 
 #if CZ_WINDOWS
 	return realloc_win32(memory, oldSize, newSize, flags);
-#elif CZ_APPLE
+#elif CZ_DARWIN
 	return realloc_apple(memory, oldSize, newSize, flags);
 #else
 	return realloc_other(memory, oldSize, newSize, flags);
@@ -125,7 +125,7 @@ static enum CzResult alloc_align_win32(
 }
 #endif
 
-#if CZ_APPLE
+#if CZ_DARWIN
 static enum CzResult alloc_align_apple(
 	void* restrict* restrict memory, size_t size, size_t alignment, size_t offset, struct CzAllocFlags flags)
 {
@@ -210,7 +210,7 @@ enum CzResult czAllocAlign(
 
 #if CZ_WINDOWS
 	return alloc_align_win32(memory, size, alignment, offset, flags);
-#elif CZ_APPLE
+#elif CZ_DARWIN
 	return alloc_align_apple(memory, size, alignment, offset, flags);
 #elif CZ_WRAP_POSIX_MEMALIGN
 	return alloc_align_posix(memory, size, alignment, offset, flags);
@@ -264,7 +264,7 @@ static enum CzResult realloc_align_win32(
 }
 #endif
 
-#if CZ_APPLE
+#if CZ_DARWIN
 static enum CzResult realloc_align_apple(
 	void* restrict* restrict memory,
 	size_t oldSize,
@@ -386,7 +386,7 @@ enum CzResult czReallocAlign(
 
 #if CZ_WINDOWS
 	return realloc_align_win32(memory, oldSize, newSize, alignment, offset, flags);
-#elif CZ_APPLE
+#elif CZ_DARWIN
 	return realloc_align_apple(memory, oldSize, newSize, alignment, offset, flags);
 #elif CZ_WRAP_POSIX_MEMALIGN
 	return realloc_align_posix(memory, oldSize, newSize, alignment, offset, flags);

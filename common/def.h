@@ -293,11 +293,11 @@
 	#endif
 #endif
 
-#if !defined(CZ_APPLE)
+#if !defined(CZ_DARWIN)
 	#if defined(__APPLE__) && defined(__MACH__)
-		#define CZ_APPLE 1
+		#define CZ_DARWIN 1
 	#else
-		#define CZ_APPLE 0
+		#define CZ_DARWIN 0
 	#endif
 #endif
 

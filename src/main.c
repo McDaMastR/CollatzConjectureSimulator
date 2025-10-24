@@ -333,7 +333,7 @@ static bool init_env(void)
 	flags |= ES_CONTINUOUS;
 	flags |= ES_SYSTEM_REQUIRED;
 	SetThreadExecutionState(flags);
-#elif CZ_APPLE
+#elif CZ_DARWIN
 	// Prevent system from sleeping, but allow display to sleep
 	CFStringRef type = kIOPMAssertPreventUserIdleSystemSleep;
 	IOPMAssertionLevel level = kIOPMAssertionLevelOn;

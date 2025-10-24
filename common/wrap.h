@@ -93,7 +93,7 @@ enum CzResult czWrap_realloc(void* restrict* res, void* ptr, size_t size);
  * @brief Specifies whether @c reallocf is defined.
  */
 #if !defined(CZ_WRAP_REALLOCF)
-	#if CZ_APPLE
+	#if CZ_DARWIN
 		#define CZ_WRAP_REALLOCF 1
 	#else
 		#define CZ_WRAP_REALLOCF 0
@@ -164,7 +164,7 @@ enum CzResult czWrap_recalloc(void* restrict* res, void* ptr, size_t count, size
  * @brief Specifies whether @c posix_memalign is defined.
  */
 #if !defined(CZ_WRAP_POSIX_MEMALIGN)
-	#if CZ_APPLE || CZ_POSIX_ADVISORY_INFO >= CZ_POSIX_2001
+	#if CZ_DARWIN || CZ_POSIX_ADVISORY_INFO >= CZ_POSIX_2001
 		#define CZ_WRAP_POSIX_MEMALIGN 1
 	#else
 		#define CZ_WRAP_POSIX_MEMALIGN 0
@@ -328,7 +328,7 @@ enum CzResult czWrap_aligned_offset_recalloc(
  * @brief Specifies whether @c madvise is defined.
  */
 #if !defined(CZ_WRAP_MADVISE)
-	#if CZ_APPLE
+	#if CZ_DARWIN
 		#define CZ_WRAP_MADVISE 1
 	#else
 		#define CZ_WRAP_MADVISE 0
@@ -366,7 +366,7 @@ enum CzResult czWrap_madvise(int* res, void* addr, size_t size, int advice);
  * @brief Specifies whether @c posix_madvise is defined.
  */
 #if !defined(CZ_WRAP_POSIX_MADVISE)
-	#if CZ_APPLE || CZ_POSIX_ADVISORY_INFO >= CZ_POSIX_2001
+	#if CZ_DARWIN || CZ_POSIX_ADVISORY_INFO >= CZ_POSIX_2001
 		#define CZ_WRAP_POSIX_MADVISE 1
 	#else
 		#define CZ_WRAP_POSIX_MADVISE 0

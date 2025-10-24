@@ -232,7 +232,7 @@ enum CzResult czWrap_posix_madvise(int* res, void* addr, size_t size, int advice
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
-#if CZ_APPLE
+#if CZ_DARWIN
 	switch (errno) {
 	case EPERM:
 		return CZ_RESULT_BAD_ACCESS;
@@ -263,7 +263,7 @@ enum CzResult czWrap_fopen(FILE* restrict* res, const char* path, const char* mo
 
 #if CZ_WINDOWS
 	return (errno == EINVAL) ? CZ_RESULT_BAD_ADDRESS : CZ_RESULT_NO_FILE;
-#elif CZ_APPLE
+#elif CZ_DARWIN
 	switch (errno) {
 	case EACCES:
 	case EROFS:
@@ -341,7 +341,7 @@ enum CzResult czWrap_fclose(FILE* stream)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
-#if CZ_APPLE
+#if CZ_DARWIN
 	switch (errno) {
 	case EDEADLK:
 	case EFBIG:
@@ -398,7 +398,7 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int origin)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
-#if CZ_APPLE
+#if CZ_DARWIN
 	switch (errno) {
 	case EDEADLK:
 	case EFBIG:
@@ -472,7 +472,7 @@ enum CzResult czWrap_ftell(long* res, FILE* stream)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_APPLE
+#elif CZ_DARWIN
 	switch (errno) {
 	case EDEADLK:
 	case EFBIG:
@@ -599,7 +599,7 @@ enum CzResult czWrap_remove(const char* path)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_APPLE
+#elif CZ_DARWIN
 	switch (errno) {
 	case EACCES:
 	case EPERM:
@@ -653,7 +653,7 @@ enum CzResult czWrap_fileno(int* res, FILE* stream)
 {
 #if CZ_WINDOWS
 	*res = _fileno(stream);
-#elif CZ_APPLE
+#elif CZ_DARWIN
 	*res = fileno(stream);
 #else
 	int f = fileno(stream);
@@ -672,6 +672,7 @@ enum CzResult czWrap_isatty(int* res, int fd)
 	int r = _isatty(fd);
 	if CZ_NOEXPECT (!r && errno == EBADF)
 		return CZ_RESULT_INTERNAL_ERROR;
+
 	*res = r;
 	return CZ_RESULT_SUCCESS;
 #else
@@ -705,7 +706,7 @@ enum CzResult czWrap_stat(const char* path, struct stat* st)
 		return CZ_RESULT_BAD_PATH;
 	case ENOENT:
 		return CZ_RESULT_NO_FILE;
-#if !CZ_APPLE
+#if !CZ_DARWIN
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 #endif
@@ -723,7 +724,7 @@ enum CzResult czWrap_fstat(int fd, struct stat* st)
 		return CZ_RESULT_SUCCESS;
 
 	switch (errno) {
-#if CZ_APPLE
+#if CZ_DARWIN
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
 #endif
@@ -746,7 +747,7 @@ enum CzResult czWrap_truncate(const char* path, off_t size)
 	case EACCES:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
-#if CZ_APPLE
+#if CZ_DARWIN
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
 	case EDEADLK:
@@ -760,7 +761,7 @@ enum CzResult czWrap_truncate(const char* path, off_t size)
 	case EFBIG:
 	case EINVAL:
 		return CZ_RESULT_BAD_SIZE;
-#if CZ_APPLE
+#if CZ_DARWIN
 	case ETXTBSY:
 		return CZ_RESULT_IN_USE;
 #endif
@@ -782,7 +783,7 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 		return CZ_RESULT_SUCCESS;
 
 	switch (errno) {
-#if CZ_APPLE
+#if CZ_DARWIN
 	case EPERM:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
@@ -791,7 +792,7 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 		return CZ_RESULT_BAD_FILE;
 #endif
 	case EFBIG:
-#if !CZ_APPLE
+#if !CZ_DARWIN
 	case EINVAL:
 #endif
 		return CZ_RESULT_BAD_SIZE;
@@ -812,7 +813,7 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 		return CZ_RESULT_SUCCESS;
 	}
 
-#if CZ_APPLE
+#if CZ_DARWIN
 	switch (errno) {
 	case EACCES:
 	case EROFS:
@@ -909,7 +910,7 @@ enum CzResult czWrap_close(int fd)
 	switch (errno) {
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-#if !CZ_APPLE
+#if !CZ_DARWIN
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
@@ -932,7 +933,7 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
 	if (!r)
 		return offset ? CZ_RESULT_BAD_OFFSET : CZ_RESULT_NO_FILE;
 
-#if CZ_APPLE
+#if CZ_DARWIN
 	if (errno == EINVAL)
 		return (size > INT_MAX) ? CZ_RESULT_BAD_SIZE : CZ_RESULT_BAD_OFFSET;
 
@@ -1000,7 +1001,7 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 	if CZ_EXPECT (r != -1 && (size_t) r == size)
 		return CZ_RESULT_SUCCESS;
 
-#if CZ_APPLE
+#if CZ_DARWIN
 	if (errno == EINVAL)
 		return (size > INT_MAX) ? CZ_RESULT_BAD_SIZE : CZ_RESULT_NO_FILE;
 
@@ -1073,7 +1074,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 	if CZ_EXPECT (r != -1 && (size_t) r == size)
 		return CZ_RESULT_SUCCESS;
 
-#if CZ_APPLE
+#if CZ_DARWIN
 	if (errno == EINVAL)
 		return (size > INT_MAX) ? CZ_RESULT_BAD_SIZE : CZ_RESULT_BAD_OFFSET;
 
@@ -1142,7 +1143,7 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 	if (errno == EINVAL)
 		return size ? CZ_RESULT_BAD_ALIGNMENT : CZ_RESULT_BAD_SIZE;
 
-#if CZ_APPLE
+#if CZ_DARWIN
 	switch (errno) {
 	case ENXIO:
 		return CZ_RESULT_BAD_ADDRESS;
@@ -1200,7 +1201,7 @@ enum CzResult czWrap_msync(void* addr, size_t size, int flags)
 	case ENOMEM:
 		return CZ_RESULT_BAD_ADDRESS;
 	case EINVAL:
-#if CZ_APPLE
+#if CZ_DARWIN
 		return size ? CZ_RESULT_BAD_ALIGNMENT : CZ_RESULT_BAD_SIZE;
 #else
 		return CZ_RESULT_BAD_ALIGNMENT;
