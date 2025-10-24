@@ -97,7 +97,7 @@ static void czCliParseArg(enum CzCliDatatype type, const char* option, const cha
 		result->s = arg;
 		break;
 
-	case CZ_CLI_DATATYPE_FLOAT:;
+	case CZ_CLI_DATATYPE_FLOAT:
 		float f = strtof(arg, &end);
 		if (*end) { 
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %f", arg, option, (double) f);
@@ -105,7 +105,7 @@ static void czCliParseArg(enum CzCliDatatype type, const char* option, const cha
 		result->f = f;
 		break;
 
-	case CZ_CLI_DATATYPE_DOUBLE:;
+	case CZ_CLI_DATATYPE_DOUBLE:
 		double d = strtod(arg, &end);
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %f", arg, option, d);
@@ -113,7 +113,7 @@ static void czCliParseArg(enum CzCliDatatype type, const char* option, const cha
 		result->d = d;
 		break;
 
-	case CZ_CLI_DATATYPE_LDOUBLE:;
+	case CZ_CLI_DATATYPE_LDOUBLE:
 		long double ld = strtold(arg, &end);
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %Lf", arg, option, ld);
@@ -121,7 +121,7 @@ static void czCliParseArg(enum CzCliDatatype type, const char* option, const cha
 		result->ld = ld;
 		break;
 
-	case CZ_CLI_DATATYPE_LONG:;
+	case CZ_CLI_DATATYPE_LONG:
 		long l = strtol(arg, &end, 0);
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %ld", arg, option, l);
@@ -129,7 +129,7 @@ static void czCliParseArg(enum CzCliDatatype type, const char* option, const cha
 		result->l = l;
 		break;
 
-	case CZ_CLI_DATATYPE_LLONG:;
+	case CZ_CLI_DATATYPE_LLONG:
 		long long ll = strtoll(arg, &end, 0);
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %lld", arg, option, ll);
@@ -137,7 +137,7 @@ static void czCliParseArg(enum CzCliDatatype type, const char* option, const cha
 		result->ll = ll;
 		break;
 
-	case CZ_CLI_DATATYPE_ULONG:;
+	case CZ_CLI_DATATYPE_ULONG:
 		unsigned long ul = strtoul(arg, &end, 0);
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %lu", arg, option, ul);
@@ -145,7 +145,7 @@ static void czCliParseArg(enum CzCliDatatype type, const char* option, const cha
 		result->ul = ul;
 		break;
 
-	case CZ_CLI_DATATYPE_ULLONG:;
+	case CZ_CLI_DATATYPE_ULLONG:
 		unsigned long long ull = strtoull(arg, &end, 0);
 		if (*end) {
 			log_warning(stdout, "Partially interpreting argument %s for option %s as %llu", arg, option, ull);

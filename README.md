@@ -65,6 +65,7 @@ correctly are listed below. The full requirements of the GPU are given in
   - Atomic operations via the `stdatomic.h` header (Optional C feature)
   - 128-bit integers via the `__int128` type (GNU C extension)
   - Conditional expressions with omitted operands (GNU C extension)
+  - Declarations following labels (GNU C extension)
   - Variadic macros with `__VA_OPT__` evaluation (GNU C extension)
 - [CMake](https://cmake.org) 3.24
 - [glslang](https://github.com/KhronosGroup/glslang)

@@ -25,12 +25,13 @@ set(COMPILE_WARNINGS_CLANG
 	-Weverything
 
 	# Warnings OFF
-	-Wno-bad-function-cast             -Wno-c++-compat
-	-Wno-c2y-extensions                -Wno-covered-switch-default
-	-Wno-declaration-after-statement   -Wno-gnu-conditional-omitted-operand
-	-Wno-implicit-int-float-conversion -Wno-missing-field-initializers
-	-Wno-padded                        -Wno-switch-enum
-	-Wno-unsafe-buffer-usage           -Wno-unused-function
+	-Wno-bad-function-cast               -Wno-c++-compat
+	-Wno-c23-extensions                  -Wno-c2y-extensions
+	-Wno-covered-switch-default          -Wno-declaration-after-statement
+	-Wno-gnu-conditional-omitted-operand -Wno-implicit-int-float-conversion
+	-Wno-missing-field-initializers      -Wno-padded
+	-Wno-switch-enum                     -Wno-unsafe-buffer-usage
+	-Wno-unused-function
 )
 
 set(COMPILE_WARNINGS_GNU
@@ -66,7 +67,8 @@ set(COMPILE_WARNINGS_GNU
 	-Wwrite-strings
 
 	# Warnings OFF
-	-Wno-missing-field-initializers -Wno-unused-function
+	-Wno-free-labels     -Wno-missing-field-initializers
+	-Wno-unused-function
 )
 
 set(COMPILE_WARNINGS_MSVC
