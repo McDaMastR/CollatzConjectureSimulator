@@ -20,8 +20,8 @@
  * 
  * @brief Buffer-based and (mostly) cross-platform file and IO management.
  * 
- * A file and IO API that allows access of system resources in a way that analogises memory buffers. In particular,
- * regular files are abstracted as memory blocks that can be read from and written to.
+ * A file and IO API that allows access of system resources in a way that analogises dynamic memory buffers. In
+ * particular, regular files are abstracted as blocks of memory that can be read from and written to.
  */
 
 #pragma once

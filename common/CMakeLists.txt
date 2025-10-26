@@ -13,10 +13,18 @@ set(USING_EXCESS_WARNINGS "$<BOOL:${CZ_EXCESS_WARNINGS}>")
 set(USING_STATIC_ANALYSIS "$<BOOL:${CZ_STATIC_ANALYSIS}>")
 
 check_include_file(aio.h        HAVE_AIO_H)
+check_include_file(mqueue.h     HAVE_MQUEUE_H)
+check_include_file(sched.h      HAVE_SCHED_H)
+check_include_file(semaphore.h  HAVE_SEMAPHORE_H)
+check_include_file(spawn.h      HAVE_SPAWN_H)
 check_include_file(stdcountof.h HAVE_STDCOUNTOF_H)
 check_include_file(sys/mman.h   HAVE_SYS_MMAN_H)
 
 set(USING_AIO_H        "$<BOOL:${HAVE_AIO_H}>")
+set(USING_MQUEUE_H     "$<BOOL:${HAVE_MQUEUE_H}>")
+set(USING_SCHED_H      "$<BOOL:${HAVE_SCHED_H}>")
+set(USING_SEMAPHORE_H  "$<BOOL:${HAVE_SEMAPHORE_H}>")
+set(USING_SPAWN_H      "$<BOOL:${HAVE_SPAWN_H}>")
 set(USING_STDCOUNTOF_H "$<BOOL:${HAVE_STDCOUNTOF_H}>")
 set(USING_SYS_MMAN_H   "$<BOOL:${HAVE_SYS_MMAN_H}>")
 
@@ -96,6 +104,7 @@ set(MACRO_DEFINITIONS_UNIX
 )
 
 set(MACRO_DEFINITIONS_WIN32
+	_CRT_NONSTDC_NO_WARNINGS=1
 	_CRT_SECURE_NO_WARNINGS=1
 )
 
@@ -110,6 +119,7 @@ set(INCLUDE_HEADERS_APPLE
 )
 
 set(INCLUDE_HEADERS_UNIX
+	<dirent.h$<ANGLE-R>
 	<fcntl.h$<ANGLE-R>
 	<unistd.h$<ANGLE-R>
 	<sys/select.h$<ANGLE-R>
@@ -222,6 +232,10 @@ target_precompile_headers(cltzCommon
 
 		# Optional headers
 		$<${USING_AIO_H}:<aio.h$<ANGLE-R>>
+		$<${USING_MQUEUE_H}:<mqueue.h$<ANGLE-R>>
+		$<${USING_SCHED_H}:<sched.h$<ANGLE-R>>
+		$<${USING_SEMAPHORE_H}:<semaphore.h$<ANGLE-R>>
+		$<${USING_SPAWN_H}:<spawn.h$<ANGLE-R>>
 		$<${USING_STDCOUNTOF_H}:<stdcountof.h$<ANGLE-R>>
 		$<${USING_SYS_MMAN_H}:<sys/mman.h$<ANGLE-R>>
 
