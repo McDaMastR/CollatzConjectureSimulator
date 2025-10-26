@@ -68,7 +68,7 @@ static enum CzResult realloc_apple(
 	if (flags.zeroInitialise && oldSize < newSize) {
 		void* addedMemory = (char*) *memory + oldSize;
 		size_t addedSize = newSize - oldSize;
-		ret = czWrap_madvise(NULL, addedMemory, addedSize, MADV_ZERO);
+		ret = czWrap_madvise(addedMemory, addedSize, MADV_ZERO);
 		if (ret)
 			memset(addedMemory, 0, addedSize);
 	}
@@ -141,10 +141,10 @@ static enum CzResult alloc_align_apple(
 
 	*memory = (char*) p + paddingSize;
 	*((void**) ((uintptr_t) *memory & ~(sizeof(void*) - 1)) - 1) = p;
-	czWrap_madvise(NULL, p, paddingSize, MADV_DONTNEED);
+	czWrap_madvise(p, paddingSize, MADV_DONTNEED);
 
 	if (flags.zeroInitialise) {
-		ret = czWrap_madvise(NULL, *memory, size, MADV_ZERO);
+		ret = czWrap_madvise(*memory, size, MADV_ZERO);
 		if (ret)
 			memset(*memory, 0, size);
 	}
@@ -288,7 +288,7 @@ static enum CzResult realloc_align_apple(
 	if (flags.zeroInitialise && oldSize < newSize) {
 		void* addedMemory = (char*) *memory + oldSize;
 		size_t addedSize = newSize - oldSize;
-		ret = czWrap_madvise(NULL, addedMemory, addedSize, MADV_ZERO);
+		ret = czWrap_madvise(addedMemory, addedSize, MADV_ZERO);
 		if (ret)
 			memset(addedMemory, 0, addedSize);
 	}

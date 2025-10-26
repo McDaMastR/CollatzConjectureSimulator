@@ -384,7 +384,7 @@ static enum CzResult zero_section_posix(int fd, size_t size, size_t offset)
 
 	void* zero = (char*) memory + (offset & (pageSize - 1));
 #if CZ_DARWIN
-	ret = czWrap_madvise(NULL, zero, size, MADV_ZERO);
+	ret = czWrap_madvise(zero, size, MADV_ZERO);
 	if (ret)
 		memset(zero, 0, size);
 #else
