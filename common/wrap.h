@@ -638,7 +638,6 @@ enum CzResult czWrap_fclose(FILE* stream);
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
- * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  */
@@ -675,7 +674,6 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence);
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
- * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
@@ -700,7 +698,6 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence);
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
- * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
@@ -739,7 +736,6 @@ enum CzResult czWrap_ftell(long* res, FILE* stream);
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
- * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
@@ -752,6 +748,66 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream);
 #endif
 
 /**
+ * @brief Wraps @c fgetpos.
+ * 
+ * Calls @c fgetpos with @p stream and @p pos.
+ * 
+ * @param[in] stream The first argument to pass to @c fgetpos.
+ * @param[out] pos The second argument to pass to @c fgetpos.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to flush the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p stream or @p pos was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ */
+enum CzResult czWrap_fgetpos(FILE* stream, fpos_t* pos);
+
+/**
+ * @brief Wraps @c fsetpos.
+ * 
+ * Calls @c fsetpos with @p stream and @p pos.
+ * 
+ * @param[in,out] stream The first argument to pass to @c fsetpos.
+ * @param[in] pos The second argument to pass to @c fsetpos.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to flush the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p stream or @p pos was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ */
+enum CzResult czWrap_fsetpos(FILE* stream, const fpos_t* pos);
+
+/**
+ * @brief Wraps @c rewind.
+ * 
+ * Calls @c rewind with @p stream.
+ * 
+ * @param[in,out] stream The argument to pass to @c rewind.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ */
+enum CzResult czWrap_rewind(FILE* stream);
+
+/**
  * @brief Wraps @c fread.
  * 
  * Calls @c fread with @p buffer, @p size, @p count, and @p stream. If @p res is nonnull, the returned @c size_t is
@@ -761,7 +817,7 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream);
  * @param[out] buffer The first argument to pass to @c fread.
  * @param[in] size The second argument to pass to @c fread.
  * @param[in] count The third argument to pass to @c fread.
- * @param[in] stream The fourth argument to pass to @c fread.
+ * @param[in,out] stream The fourth argument to pass to @c fread.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
@@ -799,6 +855,26 @@ enum CzResult czWrap_fread(size_t* res, void* buffer, size_t size, size_t count,
  */
 CZ_WR_ACCESS(1)
 enum CzResult czWrap_fwrite(size_t* res, const void* buffer, size_t size, size_t count, FILE* stream);
+
+/**
+ * @brief Wraps @c fflush.
+ * 
+ * Calls @c fflush with @p stream.
+ * 
+ * @param[in,out] stream The argument to pass to @c fflush.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to flush the file was denied.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ */
+enum CzResult czWrap_fflush(FILE* stream);
 
 /**
  * @brief Wraps @c remove.
@@ -1176,6 +1252,193 @@ enum CzResult czWrap_truncate(const char* path, off_t size);
  * @note This function is only defined if @ref CZ_WRAP_FTRUNCATE is defined as a nonzero value.
  */
 enum CzResult czWrap_ftruncate(int fd, off_t size);
+#endif
+
+/**
+ * @def CZ_WRAP_POSIX_FADVISE
+ * 
+ * @brief Specifies whether @c posix_fadvise is defined.
+ */
+#if !defined(CZ_WRAP_POSIX_FADVISE)
+	#if CZ_POSIX_ADVISORY_INFO >= CZ_POSIX_2001
+		#define CZ_WRAP_POSIX_FADVISE 1
+	#else
+		#define CZ_WRAP_POSIX_FADVISE 0
+	#endif
+#endif
+
+#if CZ_WRAP_POSIX_FADVISE
+/**
+ * @brief Wraps @c posix_fadvise.
+ * 
+ * Calls @c posix_fadvise with @p fd, @p offset, @p size, and @p advice. If @p res is nonnull, the returned @c int is
+ * synchronously written to @p res.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] fd The first argument to pass to @c posix_fadvise.
+ * @param[in] offset The second argument to pass to @c posix_fadvise.
+ * @param[in] size The third argument to pass to @c posix_fadvise.
+ * @param[in] advice The fourth argument to pass to @c posix_fadvise.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
+ * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_SIZE @p size was negative or @p advice was invalid.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_POSIX_FADVISE is defined as a nonzero value.
+ */
+CZ_WR_ACCESS(1)
+enum CzResult czWrap_posix_fadvise(int* res, int fd, off_t offset, off_t size, int advice);
+#endif
+
+/**
+ * @def CZ_WRAP_FALLOCATE
+ * 
+ * @brief Specifies whether @c fallocate is defined.
+ */
+#if !defined(CZ_WRAP_FALLOCATE)
+	#if CZ_GNU_LINUX
+		#define CZ_WRAP_FALLOCATE 1
+	#else
+		#define CZ_WRAP_FALLOCATE 0
+	#endif
+#endif
+
+#if CZ_WRAP_FALLOCATE
+/**
+ * @brief Wraps @c fallocate.
+ * 
+ * Calls @c fallocate with @p fd, @p mode, @p offset, and @p size.
+ * 
+ * @param[in] fd The first argument to pass to @c fallocate.
+ * @param[in] mode The second argument to pass to @c fallocate.
+ * @param[in] offset The third argument to pass to @c fallocate.
+ * @param[in] size The fourth argument to pass to @c fallocate.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
+ * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_OFFSET @p offset was negative or too large.
+ * @retval CZ_RESULT_BAD_SIZE @p size was nonpositive or (@p offset + @p size) was too large.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the filesystem or platform.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_FALLOCATE is defined as a nonzero value.
+ */
+enum CzResult czWrap_fallocate(int fd, int mode, off_t offset, off_t size);
+#endif
+
+/**
+ * @def CZ_WRAP_POSIX_FALLOCATE
+ * 
+ * @brief Specifies whether @c posix_fallocate is defined.
+ */
+#if !defined(CZ_WRAP_POSIX_FALLOCATE)
+	#if CZ_POSIX_ADVISORY_INFO >= CZ_POSIX_2001
+		#define CZ_WRAP_POSIX_FALLOCATE 1
+	#else
+		#define CZ_WRAP_POSIX_FALLOCATE 0
+	#endif
+#endif
+
+#if CZ_WRAP_POSIX_FALLOCATE
+/**
+ * @brief Wraps @c posix_fallocate.
+ * 
+ * Calls @c posix_fallocate with @p fd, @p offset, and @p size. If @p res is nonnull, the returned @c int is
+ * synchronously written to @p res.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] fd The first argument to pass to @c posix_fallocate.
+ * @param[in] offset The second argument to pass to @c posix_fallocate.
+ * @param[in] size The third argument to pass to @c posix_fallocate.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
+ * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_OFFSET @p offset was negative.
+ * @retval CZ_RESULT_BAD_SIZE @p size was nonpositive or (@p offset + @p size) was too large.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the filesystem or platform.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_POSIX_FALLOCATE is defined as a nonzero value.
+ */
+CZ_WR_ACCESS(1)
+enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size);
+#endif
+
+/**
+ * @def CZ_WRAP_FSYNC
+ * 
+ * @brief Specifies whether @c fsync is defined.
+ */
+#if !defined(CZ_WRAP_FSYNC)
+	#if CZ_XOPEN_VERSION >= CZ_XPG_1989 || CZ_POSIX_FSYNC >= CZ_POSIX_2001
+		#define CZ_WRAP_FSYNC 1
+	#else
+		#define CZ_WRAP_FSYNC 0
+	#endif
+#endif
+
+#if CZ_WRAP_FSYNC
+/**
+ * @brief Wraps @c fsync.
+ * 
+ * Calls @c fsync with @p fd.
+ * 
+ * @param[in] fd The argument to pass to @c fsync.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
+ * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_FSYNC is defined as a nonzero value.
+ */
+enum CzResult czWrap_fsync(int fd);
+#endif
+
+/**
+ * @def CZ_WRAP_FDATASYNC
+ * 
+ * @brief Specifies whether @c fdatasync is defined.
+ */
+#if !defined(CZ_WRAP_FDATASYNC)
+	#if CZ_XOPEN_REALTIME > 0
+		#define CZ_WRAP_FDATASYNC 1
+	#else
+		#define CZ_WRAP_FDATASYNC 0
+	#endif
+#endif
+
+#if CZ_WRAP_FDATASYNC
+/**
+ * @brief Wraps @c fdatasync.
+ * 
+ * Calls @c fdatasync with @p fd.
+ * 
+ * @param[in] fd The argument to pass to @c fdatasync.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
+ * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_FDATASYNC is defined as a nonzero value.
+ */
+enum CzResult czWrap_fdatasync(int fd);
 #endif
 
 /**

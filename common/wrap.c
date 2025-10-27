@@ -1287,9 +1287,13 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 
 #if CZ_DARWIN
 	switch (errno) {
+	case ECONNRESET:
 	case EDEADLK:
 	case EFBIG:
+	case ENETDOWN:
+	case ENETUNREACH:
 	case ENXIO:
+	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EINVAL:
@@ -1305,11 +1309,6 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ECONNRESET:
-	case ENETDOWN:
-	case ENETUNREACH:
-	case EPIPE:
-		return CZ_RESULT_NO_CONNECTION;
 	case ENOMEM:
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
@@ -1322,7 +1321,9 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 	switch (errno) {
 	case EPERM:
 		return CZ_RESULT_BAD_ACCESS;
+	case EDESTADDRREQ:
 	case EFBIG:
+	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EINVAL:
@@ -1338,9 +1339,6 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case EDESTADDRREQ:
-	case EPIPE:
-		return CZ_RESULT_NO_CONNECTION;
 	case ENOMEM:
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
@@ -1353,6 +1351,7 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 	switch (errno) {
 	case EFBIG:
 	case ENXIO:
+	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EINVAL:
@@ -1364,8 +1363,6 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case EPIPE:
-		return CZ_RESULT_NO_CONNECTION;
 	case ENOMEM:
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
@@ -1374,6 +1371,7 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_1988
 	switch (errno) {
+	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EINVAL:
@@ -1384,8 +1382,6 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case EPIPE:
-		return CZ_RESULT_NO_CONNECTION;
 	case ENOMEM:
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
@@ -1408,9 +1404,13 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence)
 
 #if CZ_DARWIN
 	switch (errno) {
+	case ECONNRESET:
 	case EDEADLK:
 	case EFBIG:
+	case ENETDOWN:
+	case ENETUNREACH:
 	case ENXIO:
+	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EINVAL:
@@ -1426,11 +1426,6 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ECONNRESET:
-	case ENETDOWN:
-	case ENETUNREACH:
-	case EPIPE:
-		return CZ_RESULT_NO_CONNECTION;
 	case ENOMEM:
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
@@ -1443,7 +1438,9 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence)
 	switch (errno) {
 	case EPERM:
 		return CZ_RESULT_BAD_ACCESS;
+	case EDESTADDRREQ:
 	case EFBIG:
+	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EINVAL:
@@ -1459,9 +1456,6 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case EDESTADDRREQ:
-	case EPIPE:
-		return CZ_RESULT_NO_CONNECTION;
 	case ENOMEM:
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
@@ -1474,6 +1468,7 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence)
 	switch (errno) {
 	case EFBIG:
 	case ENXIO:
+	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EINVAL:
@@ -1485,8 +1480,6 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case EPIPE:
-		return CZ_RESULT_NO_CONNECTION;
 	case ENOMEM:
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
@@ -1511,10 +1504,14 @@ enum CzResult czWrap_ftell(long* res, FILE* stream)
 
 #if CZ_DARWIN
 	switch (errno) {
+	case ECONNRESET:
 	case EDEADLK:
 	case EFBIG:
+	case ENETDOWN:
+	case ENETUNREACH:
 	case ENXIO:
 	case EOVERFLOW:
+	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EBADF:
@@ -1528,11 +1525,6 @@ enum CzResult czWrap_ftell(long* res, FILE* stream)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ECONNRESET:
-	case ENETDOWN:
-	case ENETUNREACH:
-	case EPIPE:
-		return CZ_RESULT_NO_CONNECTION;
 	case ENOMEM:
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
@@ -1546,8 +1538,10 @@ enum CzResult czWrap_ftell(long* res, FILE* stream)
 	case EINVAL:
 	case EPERM:
 		return CZ_RESULT_BAD_ACCESS;
+	case EDESTADDRREQ:
 	case EFBIG:
 	case EOVERFLOW:
+	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EBADF:
@@ -1560,9 +1554,6 @@ enum CzResult czWrap_ftell(long* res, FILE* stream)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case EDESTADDRREQ:
-	case EPIPE:
-		return CZ_RESULT_NO_CONNECTION;
 	case ENOMEM:
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
@@ -1604,10 +1595,14 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream)
 
 #if CZ_DARWIN
 	switch (errno) {
+	case ECONNRESET:
 	case EDEADLK:
 	case EFBIG:
+	case ENETDOWN:
+	case ENETUNREACH:
 	case ENXIO:
 	case EOVERFLOW:
+	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EBADF:
@@ -1621,11 +1616,6 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ECONNRESET:
-	case ENETDOWN:
-	case ENETUNREACH:
-	case EPIPE:
-		return CZ_RESULT_NO_CONNECTION;
 	case ENOMEM:
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
@@ -1639,8 +1629,10 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream)
 	case EINVAL:
 	case EPERM:
 		return CZ_RESULT_BAD_ACCESS;
+	case EDESTADDRREQ:
 	case EFBIG:
 	case EOVERFLOW:
+	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EBADF:
@@ -1653,9 +1645,6 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case EDESTADDRREQ:
-	case EPIPE:
-		return CZ_RESULT_NO_CONNECTION;
 	case ENOMEM:
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
@@ -1687,8 +1676,294 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream)
 }
 #endif
 
+enum CzResult czWrap_fgetpos(FILE* stream, fpos_t* pos)
+{
+	int r = fgetpos(stream, pos);
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+#if CZ_DARWIN
+	switch (errno) {
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
+	case ECONNRESET:
+	case EDEADLK:
+	case EFBIG:
+	case ENETDOWN:
+	case ENETUNREACH:
+	case ENXIO:
+	case EPIPE:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+	case EINVAL:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+#if EAGAIN != EWOULDBLOCK
+	case EWOULDBLOCK:
+		return CZ_RESULT_IN_USE;
+#endif
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_GNU_LINUX
+	switch (errno) {
+	case EINVAL:
+	case EPERM:
+		return CZ_RESULT_BAD_ACCESS;
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
+	case EDESTADDRREQ:
+	case EFBIG:
+	case EOVERFLOW:
+	case EPIPE:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+#if EAGAIN != EWOULDBLOCK
+	case EWOULDBLOCK:
+		return CZ_RESULT_IN_USE;
+#endif
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
+	switch (errno) {
+	case EOVERFLOW:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_XOPEN_VERSION >= CZ_XPG_1992
+	switch (errno) {
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_FILE;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	if (!stream || !pos)
+		return CZ_RESULT_BAD_ADDRESS;
+	return CZ_RESULT_INTERNAL_ERROR;
+#endif
+}
+
+enum CzResult czWrap_fsetpos(FILE* stream, const fpos_t* pos)
+{
+	int r = fsetpos(stream, pos);
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+#if CZ_DARWIN
+	switch (errno) {
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
+	case ECONNRESET:
+	case EDEADLK:
+	case EFBIG:
+	case ENETDOWN:
+	case ENETUNREACH:
+	case ENXIO:
+	case EPIPE:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+	case EINVAL:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+#if EAGAIN != EWOULDBLOCK
+	case EWOULDBLOCK:
+		return CZ_RESULT_IN_USE;
+#endif
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_GNU_LINUX
+	switch (errno) {
+	case EINVAL:
+	case EPERM:
+		return CZ_RESULT_BAD_ACCESS;
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
+	case EDESTADDRREQ:
+	case EFBIG:
+	case EPIPE:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+#if EAGAIN != EWOULDBLOCK
+	case EWOULDBLOCK:
+		return CZ_RESULT_IN_USE;
+#endif
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_XOPEN_VERSION >= CZ_XPG_1992
+	switch (errno) {
+	case EFBIG:
+	case ENXIO:
+	case EPIPE:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	if (!stream || !pos)
+		return CZ_RESULT_BAD_ADDRESS;
+	return CZ_RESULT_INTERNAL_ERROR;
+#endif
+}
+
+enum CzResult czWrap_rewind(FILE* stream)
+{
+#if CZ_POSIX_VERSION >= CZ_POSIX_1988
+	errno = 0;
+#endif
+	rewind(stream);
+
+#if CZ_DARWIN
+	switch (errno) {
+	case 0:
+		return CZ_RESULT_SUCCESS;
+	case ECONNRESET:
+	case EDEADLK:
+	case EFBIG:
+	case ENETDOWN:
+	case ENETUNREACH:
+	case ENXIO:
+	case EPIPE:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+	case EINVAL:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+#if EAGAIN != EWOULDBLOCK
+	case EWOULDBLOCK:
+		return CZ_RESULT_IN_USE;
+#endif
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_GNU_LINUX
+	switch (errno) {
+	case 0:
+		return CZ_RESULT_SUCCESS;
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
+	switch (errno) {
+	case 0:
+		return CZ_RESULT_SUCCESS;
+	case EFBIG:
+	case ENXIO:
+	case EPIPE:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_1988
+	switch (errno) {
+	case 0:
+		return CZ_RESULT_SUCCESS;
+	case EPIPE:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	long pos = ftell(stream);
+	if CZ_EXPECT (!pos)
+		return CZ_RESULT_SUCCESS;
+	if (!stream)
+		return CZ_RESULT_BAD_STREAM;
+	return CZ_RESULT_INTERNAL_ERROR;
+#endif
+}
+
 enum CzResult czWrap_fread(size_t* res, void* buffer, size_t size, size_t count, FILE* stream)
 {
+	clearerr(stream);
 	size_t r = fread(buffer, size, count, stream);
 	int err = ferror(stream);
 	int eof = feof(stream);
@@ -1736,14 +2011,18 @@ enum CzResult czWrap_fread(size_t* res, void* buffer, size_t size, size_t count,
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #else
+	if (!stream)
+		CZ_RESULT_BAD_STREAM;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
 }
 
 enum CzResult czWrap_fwrite(size_t* res, const void* buffer, size_t size, size_t count, FILE* stream)
 {
+	clearerr(stream);
 	size_t r = fwrite(buffer, size, count, stream);
 	int err = ferror(stream);
+
 	if (res)
 		*res = r;
 	if CZ_EXPECT (!err && r == count)
@@ -1765,6 +2044,129 @@ enum CzResult czWrap_fwrite(size_t* res, const void* buffer, size_t size, size_t
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
 	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_1988
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case EPIPE:
+		return CZ_RESULT_NO_CONNECTION;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	if (!stream)
+		CZ_RESULT_BAD_STREAM;
+	return CZ_RESULT_INTERNAL_ERROR;
+#endif
+}
+
+enum CzResult czWrap_fflush(FILE* stream)
+{
+	int r = fflush(stream);
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+#if CZ_DARWIN
+	switch (errno) {
+	case EDEADLK:
+	case EFBIG:
+	case ENXIO:
+	case EOVERFLOW:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+	case EINVAL:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+#if EAGAIN != EWOULDBLOCK
+	case EWOULDBLOCK:
+		return CZ_RESULT_IN_USE;
+#endif
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ECONNRESET:
+	case ENETDOWN:
+	case ENETUNREACH:
+	case EPIPE:
+		return CZ_RESULT_NO_CONNECTION;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_GNU_LINUX
+	switch (errno) {
+	case EPERM:
+	case EINVAL:
+		return CZ_RESULT_BAD_ACCESS;
+	case EFBIG:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+#if EAGAIN != EWOULDBLOCK
+	case EWOULDBLOCK:
+		return CZ_RESULT_IN_USE;
+#endif
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case EDESTADDRREQ:
+	case EPIPE:
+		return CZ_RESULT_NO_CONNECTION;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2008
+	switch (errno) {
+	case EFBIG:
+	case ENXIO:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case EPIPE:
+		return CZ_RESULT_NO_CONNECTION;
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
+	switch (errno) {
+	case EFBIG:
+	case ENXIO:
+		return CZ_RESULT_BAD_FILE;
+	case EBADF:
+		return CZ_RESULT_BAD_STREAM;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case EPIPE:
+		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
 	default:
@@ -2775,6 +3177,372 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 		return CZ_RESULT_BAD_ACCESS;
 	if (size < 0)
 		return CZ_RESULT_BAD_SIZE;
+	return CZ_RESULT_INTERNAL_ERROR;
+#endif
+}
+#endif
+
+#if CZ_WRAP_POSIX_FADVISE
+enum CzResult czWrap_posix_fadvise(int* res, int fd, off_t offset, off_t size, int advice)
+{
+	int r = posix_fadvise(fd, offset, size, advice);
+	if (res)
+		*res = r;
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+#if CZ_GNU_LINUX
+	switch (r) {
+	case EBADF:
+	case EINVAL:
+		return CZ_RESULT_BAD_ACCESS;
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2008
+	switch (r) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EINVAL:
+		if (size < 0)
+			return CZ_RESULT_BAD_SIZE;
+		return CZ_RESULT_BAD_ACCESS;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
+	switch (r) {
+	case EBADF:
+	case EINVAL:
+		return CZ_RESULT_BAD_ACCESS;
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (size < 0)
+		return CZ_RESULT_BAD_SIZE;
+	return CZ_RESULT_INTERNAL_ERROR;
+#endif
+}
+#endif
+
+#if CZ_WRAP_FALLOCATE
+enum CzResult czWrap_fallocate(int fd, int mode, off_t offset, off_t size)
+{
+	int r = fallocate(fd, mode, offset, size);
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+#if CZ_GNU_LINUX
+	switch (errno) {
+	case EBADF:
+	case EPERM:
+		return CZ_RESULT_BAD_ACCESS;
+	case ENODEV:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EINVAL:
+		if (offset < 0)
+			return CZ_RESULT_BAD_OFFSET;
+		if (size <= 0)
+			return CZ_RESULT_BAD_SIZE;
+		if (mode == FALLOC_FL_ZERO_RANGE)
+			return CZ_RESULT_BAD_FILE;
+		if (mode & (FALLOC_FL_COLLAPSE_RANGE | FALLOC_FL_INSERT_RANGE)) {
+			struct stat st = {0};
+			fstat(fd, &st);
+			if (st.st_blksize && offset & (st.st_blksize - 1))
+				return CZ_RESULT_BAD_OFFSET;
+			if (st.st_blksize && size & (st.st_blksize - 1))
+				return CZ_RESULT_BAD_SIZE;
+
+			if (mode == FALLOC_FL_INSERT_RANGE)
+				return CZ_RESULT_BAD_OFFSET;
+			if (mode == FALLOC_FL_COLLAPSE_RANGE)
+				return CZ_RESULT_BAD_SIZE;
+			return CZ_RESULT_BAD_ACCESS;
+		}
+		return CZ_RESULT_INTERNAL_ERROR;
+	case EFBIG:
+		return CZ_RESULT_BAD_SIZE;
+	case ETXTBSY:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case ENOSYS:
+	case EOPNOTSUPP:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (offset < 0)
+		return CZ_RESULT_BAD_OFFSET;
+	if (size <= 0)
+		return CZ_RESULT_BAD_SIZE;
+	return CZ_RESULT_INTERNAL_ERROR;
+#endif
+}
+#endif
+
+#if CZ_WRAP_POSIX_FALLOCATE
+enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
+{
+	int r = posix_fallocate(fd, offset, size);
+	if (res)
+		*res = r;
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+#if CZ_GNU_LINUX
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case ENODEV:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EINVAL:
+		if (offset < 0)
+			return CZ_RESULT_BAD_OFFSET;
+		if (size <= 0)
+			return CZ_RESULT_BAD_SIZE
+		return CZ_RESULT_NO_SUPPORT;
+	case EFBIG:
+		return CZ_RESULT_BAD_SIZE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EOPNOTSUPP:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2024
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case ENODEV:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EINVAL:
+		if (offset < 0)
+			return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_BAD_SIZE;
+	case EFBIG:
+		return CZ_RESULT_BAD_SIZE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case ENOTSUP:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2008
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case ENODEV:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EINVAL:
+		if (offset < 0)
+			return CZ_RESULT_BAD_OFFSET;
+		if (size <= 0)
+			return CZ_RESULT_BAD_SIZE
+		return CZ_RESULT_NO_SUPPORT;
+	case EFBIG:
+		return CZ_RESULT_BAD_SIZE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case ENODEV:
+	case ESPIPE:
+		return CZ_RESULT_BAD_FILE;
+	case EINVAL:
+		if (!size)
+			return CZ_RESULT_BAD_SIZE;
+		return CZ_RESULT_BAD_OFFSET;
+	case EFBIG:
+		return CZ_RESULT_BAD_SIZE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (offset < 0)
+		return CZ_RESULT_BAD_OFFSET;
+	if (size <= 0)
+		return CZ_RESULT_BAD_SIZE;
+	return CZ_RESULT_INTERNAL_ERROR;
+#endif
+}
+#endif
+
+#if CZ_WRAP_FSYNC
+enum CzResult czWrap_fsync(int fd)
+{
+	int r = fsync(fd);
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+#if CZ_DARWIN
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EINVAL:
+		return CZ_RESULT_BAD_FILE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOBUFS:
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_GNU_LINUX
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EROFS:
+	case EINVAL:
+		return CZ_RESULT_BAD_FILE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EINVAL:
+		return CZ_RESULT_BAD_FILE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOBUFS:
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_1996
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_XOPEN_VERSION >= CZ_XPG_1989
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	return CZ_RESULT_INTERNAL_ERROR;
+#endif
+}
+#endif
+
+#if CZ_WRAP_FDATASYNC
+enum CzResult czWrap_fdatasync(int fd)
+{
+	int r = fdatasync(fd);
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+#if CZ_GNU_LINUX
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EROFS:
+	case EINVAL:
+		return CZ_RESULT_BAD_FILE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	case EDQUOT:
+		return CZ_RESULT_NO_QUOTA;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EINVAL:
+		return CZ_RESULT_BAD_FILE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOBUFS:
+	case ENOMEM:
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_1996
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EINVAL:
+		return CZ_RESULT_BAD_FILE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_MEMORY;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
 }
