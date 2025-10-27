@@ -94,6 +94,44 @@ CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
 enum CzResult czWrap_realloc(void* restrict* res, void* ptr, size_t size);
 
 /**
+ * @def CZ_WRAP_REALLOCARRAY
+ * 
+ * @brief Specifies whether @c reallocarray is defined.
+ */
+#if !defined(CZ_WRAP_REALLOCARRAY)
+	#if CZ_GNU_LINUX || CZ_POSIX_VERSION >= CZ_POSIX_2024
+		#define CZ_WRAP_REALLOCARRAY 1
+	#else
+		#define CZ_WRAP_REALLOCARRAY 0
+	#endif
+#endif
+
+#if CZ_WRAP_REALLOCARRAY
+/**
+ * @brief Wraps @c reallocarray.
+ * 
+ * Calls @c reallocarray with @p ptr, @p count, and @p size. On success, the returned @c void* is synchronously written
+ * to @p res. On failure, the contents of @p res are unchanged and the call is logged to @c stderr.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in,out] ptr The first argument to pass to @c reallocarray.
+ * @param[in] count The second argument to pass to @c reallocarray.
+ * @param[in] size The third argument to pass to @c reallocarray.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_SIZE @p count or @p size was zero.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * 
+ * @pre @p res is nonnull.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_REALLOCARRAY is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+enum CzResult czWrap_reallocarray(void* restrict* res, void* ptr, size_t count, size_t size);
+#endif
+
+/**
  * @def CZ_WRAP_REALLOCF
  * 
  * @brief Specifies whether @c reallocf is defined.
@@ -165,6 +203,27 @@ enum CzResult czWrap_reallocf(void* restrict* res, void* ptr, size_t size);
 CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
 enum CzResult czWrap_recalloc(void* restrict* res, void* ptr, size_t count, size_t size);
 #endif
+
+/**
+ * @brief Wraps @c aligned_alloc.
+ * 
+ * Calls @c aligned_alloc with @p alignment and @p size. On success, the returned @c void* is synchronously written to
+ * @p res. On failure, the contents of @p res are unchanged and the call is logged to @c stderr.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] alignment The first argument to pass to @c aligned_alloc.
+ * @param[in] size The second argument to pass to @c aligned_alloc.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ALIGNMENT @p alignment was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_SIZE @p size was not a nonzero multiple of @p alignment.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * 
+ * @pre @p res is nonnull.
+ */
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
+enum CzResult czWrap_aligned_alloc(void* restrict* res, size_t alignment, size_t size);
 
 /**
  * @def CZ_WRAP_POSIX_MEMALIGN
@@ -437,6 +496,111 @@ CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
 enum CzResult czWrap_fopen(FILE* restrict* res, const char* path, const char* mode);
 
 /**
+ * @def CZ_WRAP_FDOPEN
+ * 
+ * @brief Specifies whether @c fdopen is defined.
+ */
+#if !defined(CZ_WRAP_FDOPEN)
+	#if CZ_POSIX_VERSION >= CZ_POSIX_1988
+		#define CZ_WRAP_FDOPEN 1
+	#else
+		#define CZ_WRAP_FDOPEN 0
+	#endif
+#endif
+
+#if CZ_WRAP_FDOPEN
+/**
+ * @brief Wraps @c fdopen.
+ * 
+ * Calls @c fdopen with @p fd and @p mode. On success, the returned @c FILE* is synchronously written to @p res. On
+ * failure, the contents of @p res are unchanged.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] fd The first argument to pass to @c fdopen.
+ * @param[in] mode The second argument to pass to @c fdopen.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to open the file was denied.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_OPEN The maximum number of open streams was reached.
+ * 
+ * @pre @p res is nonnull.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_FDOPEN is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+enum CzResult czWrap_fdopen(FILE* restrict* res, int fd, const char* mode);
+#endif
+
+/**
+ * @brief Wraps @c freopen.
+ * 
+ * Calls @c freopen with @p path, @p mode, and @p stream.
+ * 
+ * @param[in] path The first argument to pass to @c freopen.
+ * @param[in] mode The second argument to pass to @c freopen.
+ * @param[in,out] stream The third argument to pass to @c freopen.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to open the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p path, @p mode, or @p stream was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
+ * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_FILE The file did not exist.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_OPEN The maximum number of open files or streams was reached.
+ * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ */
+enum CzResult czWrap_freopen(const char* path, const char* mode, FILE* stream);
+
+/**
+ * @def CZ_WRAP_FMEMOPEN
+ * 
+ * @brief Specifies whether @c fmemopen is defined.
+ */
+#if !defined(CZ_WRAP_FMEMOPEN)
+	#if CZ_DARWIN || CZ_POSIX_VERSION >= CZ_POSIX_2008
+		#define CZ_WRAP_FMEMOPEN 1
+	#else
+		#define CZ_WRAP_FMEMOPEN 0
+	#endif
+#endif
+
+#if CZ_WRAP_FMEMOPEN
+/**
+ * @brief Wraps @c fmemopen.
+ * 
+ * Calls @c fmemopen with @p buffer, @p size, and @p mode. On success, the returned @c FILE* is synchronously written to
+ * @p res. On failure, the contents of @p res are unchanged.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] buffer The first argument to pass to @c fmemopen.
+ * @param[in] size The second argument to pass to @c fmemopen.
+ * @param[in] mode The third argument to pass to @c fmemopen.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS @p mode was invalid.
+ * @retval CZ_RESULT_BAD_SIZE @p size was zero.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_OPEN The maximum number of open streams was reached.
+ * 
+ * @pre @p res is nonnull.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_FMEMOPEN is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+enum CzResult czWrap_fmemopen(FILE* restrict* res, void* buffer, size_t size, const char* mode);
+#endif
+
+/**
  * @brief Wraps @c fclose.
  * 
  * Calls @c fclose with @p stream.
@@ -481,6 +645,46 @@ enum CzResult czWrap_fclose(FILE* stream);
 enum CzResult czWrap_fseek(FILE* stream, long offset, int whence);
 
 /**
+ * @def CZ_WRAP_FSEEKO
+ * 
+ * @brief Specifies whether @c fseeko is defined.
+ */
+#if !defined(CZ_WRAP_FSEEKO)
+	#if CZ_POSIX_VERSION >= CZ_POSIX_2001
+		#define CZ_WRAP_FSEEKO 1
+	#else
+		#define CZ_WRAP_FSEEKO 0
+	#endif
+#endif
+
+#if CZ_WRAP_FSEEKO
+/**
+ * @brief Wraps @c fseeko.
+ * 
+ * Calls @c fseeko with @p stream, @p offset, and @p whence.
+ * 
+ * @param[in,out] stream The first argument to pass to @c fseeko.
+ * @param[in] offset The second argument to pass to @c fseeko.
+ * @param[in] whence The third argument to pass to @c fseeko.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to flush the file was denied.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_OFFSET @p whence or the resultant file offset was invalid.
+ * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_FSEEKO is defined as a nonzero value.
+ */
+enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence);
+#endif
+
+/**
  * @brief Wraps @c ftell.
  * 
  * Calls @c ftell with @p stream. On success, the returned @c long is synchronously written to @p res. On failure, the
@@ -504,6 +708,48 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence);
  */
 CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
 enum CzResult czWrap_ftell(long* res, FILE* stream);
+
+/**
+ * @def CZ_WRAP_FTELLO
+ * 
+ * @brief Specifies whether @c ftello is defined.
+ */
+#if !defined(CZ_WRAP_FTELLO)
+	#if CZ_POSIX_VERSION >= CZ_POSIX_2001
+		#define CZ_WRAP_FTELLO 1
+	#else
+		#define CZ_WRAP_FTELLO 0
+	#endif
+#endif
+
+#if CZ_WRAP_FTELLO
+/**
+ * @brief Wraps @c ftello.
+ * 
+ * Calls @c ftello with @p stream. On success, the returned @c off_t is synchronously written to @p res. On failure, the
+ * contents of @p res are unchanged.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] stream The argument to pass to @c ftello.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to flush the file was denied.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ * 
+ * @pre @p res is nonnull.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_FTELLO is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+enum CzResult czWrap_ftello(off_t* res, FILE* stream);
+#endif
 
 /**
  * @brief Wraps @c fread.
@@ -572,6 +818,78 @@ enum CzResult czWrap_fwrite(size_t* res, const void* buffer, size_t size, size_t
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  */
 enum CzResult czWrap_remove(const char* path);
+
+/**
+ * @def CZ_WRAP_RMDIR
+ * 
+ * @brief Specifies whether @c rmdir is defined.
+ */
+#if !defined(CZ_WRAP_RMDIR)
+	#if CZ_XOPEN_VERSION >= CZ_XPG_1989
+		#define CZ_WRAP_RMDIR 1
+	#else
+		#define CZ_WRAP_RMDIR 0
+	#endif
+#endif
+
+#if CZ_WRAP_RMDIR
+/**
+ * @brief Wraps @c rmdir.
+ * 
+ * Calls @c rmdir with @p path.
+ * 
+ * @param[in] path The argument to pass to @c rmdir.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to delete the directory was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was not an empty directory.
+ * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
+ * @retval CZ_RESULT_IN_USE The directory was already in use by the system.
+ * @retval CZ_RESULT_NO_FILE The directory did not exist.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_RMDIR is defined as a nonzero value.
+ */
+enum CzResult czWrap_rmdir(const char* path);
+#endif
+
+/**
+ * @def CZ_WRAP_UNLINK
+ * 
+ * @brief Specifies whether @c unlink is defined.
+ */
+#if !defined(CZ_WRAP_UNLINK)
+	#if CZ_POSIX_VERSION >= CZ_POSIX_1988
+		#define CZ_WRAP_UNLINK 1
+	#else
+		#define CZ_WRAP_UNLINK 0
+	#endif
+#endif
+
+#if CZ_WRAP_UNLINK
+/**
+ * @brief Wraps @c unlink.
+ * 
+ * Calls @c unlink with @p path.
+ * 
+ * @param[in] path The argument to pass to @c unlink.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to delete the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_NO_FILE The file did not exist.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_UNLINK is defined as a nonzero value.
+ */
+enum CzResult czWrap_unlink(const char* path);
+#endif
 
 /**
  * @def CZ_WRAP_FILENO
@@ -680,6 +998,42 @@ enum CzResult czWrap_stat(const char* path, struct stat* st);
 #endif
 
 /**
+ * @def CZ_WRAP_LSTAT
+ * 
+ * @brief Specifies whether @c lstat is defined.
+ */
+#if !defined(CZ_WRAP_LSTAT)
+	#if CZ_POSIX_VERSION >= CZ_POSIX_1988
+		#define CZ_WRAP_LSTAT 1
+	#else
+		#define CZ_WRAP_LSTAT 0
+	#endif
+#endif
+
+#if CZ_WRAP_LSTAT
+/**
+ * @brief Wraps @c lstat.
+ * 
+ * Calls @c lstat with @p path and @p st.
+ * 
+ * @param[in] path The first argument to pass to @c lstat.
+ * @param[out] st The second argument to pass to @c lstat.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p path or @p st was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
+ * @retval CZ_RESULT_NO_FILE The file did not exist.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_LSTAT is defined as a nonzero value.
+ */
+enum CzResult czWrap_lstat(const char* path, struct stat* st);
+#endif
+
+/**
  * @def CZ_WRAP_FSTAT
  * 
  * @brief Specifies whether @c fstat is defined.
@@ -711,6 +1065,44 @@ enum CzResult czWrap_stat(const char* path, struct stat* st);
  * @note This function is only defined if @ref CZ_WRAP_FSTAT is defined as a nonzero value.
  */
 enum CzResult czWrap_fstat(int fd, struct stat* st);
+#endif
+
+/**
+ * @def CZ_WRAP_FSTATAT
+ * 
+ * @brief Specifies whether @c fstatat is defined.
+ */
+#if !defined(CZ_WRAP_FSTATAT)
+	#if CZ_DARWIN || CZ_POSIX_VERSION >= CZ_POSIX_2008
+		#define CZ_WRAP_FSTATAT 1
+	#else
+		#define CZ_WRAP_FSTATAT 0
+	#endif
+#endif
+
+#if CZ_WRAP_FSTATAT
+/**
+ * @brief Wraps @c fstatat.
+ * 
+ * Calls @c fstatat with @p fd, @p path, @p st, and @p flag.
+ * 
+ * @param[in] fd The first argument to pass to @c fstatat.
+ * @param[in] path The second argument to pass to @c fstatat.
+ * @param[out] st The third argument to pass to @c fstatat.
+ * @param[in] flag The fourth argument to pass to @c fstatat.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p path or @p st was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
+ * @retval CZ_RESULT_NO_FILE The file did not exist.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_FSTATAT is defined as a nonzero value.
+ */
+enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag);
 #endif
 
 /**
@@ -834,6 +1226,98 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode);
 #endif
 
 /**
+ * @def CZ_WRAP_OPENAT
+ * 
+ * @brief Specifies whether @c openat is defined.
+ */
+#if !defined(CZ_WRAP_OPENAT)
+	#if CZ_DARWIN || CZ_POSIX_VERSION >= CZ_POSIX_2008
+		#define CZ_WRAP_OPENAT 1
+	#else
+		#define CZ_WRAP_OPENAT 0
+	#endif
+#endif
+
+#if CZ_WRAP_OPENAT
+/**
+ * @brief Wraps @c openat.
+ * 
+ * Calls @c openat with @p fd, @p path, @p flags, and @p mode. On success, the returned @c int is synchronously written
+ * to @p res. On failure, the contents of @p res are unchanged.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] fd The first argument to pass to @c openat.
+ * @param[in] path The second argument to pass to @c openat.
+ * @param[in] flags The third argument to pass to @c openat.
+ * @param[in] mode The fourth argument to pass to @c openat.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to open the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_FILE The file did not exist.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_OPEN The maximum number of open files was reached.
+ * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @pre @p res is nonnull.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_OPENAT is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_t mode);
+#endif
+
+/**
+ * @def CZ_WRAP_CREAT
+ * 
+ * @brief Specifies whether @c creat is defined.
+ */
+#if !defined(CZ_WRAP_CREAT)
+	#if CZ_POSIX_VERSION >= CZ_POSIX_1988
+		#define CZ_WRAP_CREAT 1
+	#else
+		#define CZ_WRAP_CREAT 0
+	#endif
+#endif
+
+#if CZ_WRAP_CREAT
+/**
+ * @brief Wraps @c creat.
+ * 
+ * Calls @c creat with @p path and @p mode. On success, the returned @c int is synchronously written to @p res. On
+ * failure, the contents of @p res are unchanged.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] path The first argument to pass to @c creat.
+ * @param[in] mode The third argument to pass to @c creat.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to create the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_OPEN The maximum number of open files was reached.
+ * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ * 
+ * @pre @p res is nonnull.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_CREAT is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+enum CzResult czWrap_creat(int* res, const char* path, mode_t mode);
+#endif
+
+/**
  * @def CZ_WRAP_CLOSE
  * 
  * @brief Specifies whether @c close is defined.
@@ -864,6 +1348,120 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode);
  * @note This function is only defined if @ref CZ_WRAP_CLOSE is defined as a nonzero value.
  */
 enum CzResult czWrap_close(int fd);
+#endif
+
+/**
+ * @def CZ_WRAP_POSIX_CLOSE
+ * 
+ * @brief Specifies whether @c posix_close is defined.
+ */
+#if !defined(CZ_WRAP_POSIX_CLOSE)
+	#if CZ_POSIX_VERSION >= CZ_POSIX_2024
+		#define CZ_WRAP_POSIX_CLOSE 1
+	#else
+		#define CZ_WRAP_POSIX_CLOSE 0
+	#endif
+#endif
+
+#if CZ_WRAP_POSIX_CLOSE
+/**
+ * @brief Wraps @c posix_close.
+ * 
+ * Calls @c posix_close with @p fd and @p flag.
+ * 
+ * @param[in] fd The first argument to pass to @c posix_close.
+ * @param[in] flag The second argument to pass to @c posix_close.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS @p fd or @p flag was invalid.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_POSIX_CLOSE is defined as a nonzero value.
+ */
+enum CzResult czWrap_posix_close(int fd, int flag);
+#endif
+
+/**
+ * @def CZ_WRAP_LSEEK
+ * 
+ * @brief Specifies whether @c lseek is defined.
+ */
+#if !defined(CZ_WRAP_LSEEK)
+	#if CZ_POSIX_VERSION >= CZ_POSIX_1988
+		#define CZ_WRAP_LSEEK 1
+	#else
+		#define CZ_WRAP_LSEEK 0
+	#endif
+#endif
+
+#if CZ_WRAP_LSEEK
+/**
+ * @brief Wraps @c lseek.
+ * 
+ * Calls @c lseek with @p fd, @p offset, and @p whence. If @p res is nonnull, the returned @c off_t is synchronously
+ * written to @p res.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] fd The first argument to pass to @c lseek.
+ * @param[in] offset The second argument to pass to @c lseek.
+ * @param[in] whence The third argument to pass to @c lseek.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
+ * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_OFFSET @p whence or the resultant file offset was invalid.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_LSEEK is defined as a nonzero value.
+ */
+CZ_WR_ACCESS(1)
+enum CzResult czWrap_lseek(off_t* res, int fd, off_t offset, int whence);
+#endif
+
+/**
+ * @def CZ_WRAP_READ
+ * 
+ * @brief Specifies whether @c read is defined.
+ */
+#if !defined(CZ_WRAP_READ)
+	#if CZ_POSIX_VERSION >= CZ_POSIX_1988
+		#define CZ_WRAP_READ 1
+	#else
+		#define CZ_WRAP_READ 0
+	#endif
+#endif
+
+#if CZ_WRAP_READ
+/**
+ * @brief Wraps @c read.
+ * 
+ * Calls @c read with @p fd, @p buffer, and @p size. If @p res is nonnull, the returned @c ssize_t is synchronously
+ * written to @p res.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] fd The first argument to pass to @c read.
+ * @param[out] buffer The second argument to pass to @c read.
+ * @param[in] size The third argument to pass to @c read.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to read from the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p buffer was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_OFFSET The file was already at @c EOF.
+ * @retval CZ_RESULT_BAD_SIZE @p size was too large.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_FILE The file was empty or deleted.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_TIMEOUT A system operation timed out.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_READ is defined as a nonzero value.
+ */
+CZ_WR_ACCESS(1)
+enum CzResult czWrap_read(ssize_t* res, int fd, void* buffer, size_t size);
 #endif
 
 /**
