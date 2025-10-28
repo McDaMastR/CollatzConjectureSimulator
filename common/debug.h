@@ -53,12 +53,6 @@ bool log_critical(FILE* stream, const char* format, ...);
 CZ_COLD CZ_NONNULL_ARGS(3, 4) CZ_NULLTERM_ARG(3) CZ_NULLTERM_ARG(4) CZ_NO_ACCESS(2)
 void log_fopen_failure(int line, FILE* res, const char* name, const char* mode);
 
-CZ_COLD CZ_NO_ACCESS(3) CZ_NO_ACCESS(6)
-void log_fread_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file);
-
-CZ_COLD CZ_NO_ACCESS(3) CZ_NO_ACCESS(6)
-void log_fwrite_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file);
-
 CZ_COLD CZ_NONNULL_ARGS(4) CZ_NULLTERM_ARG(4) CZ_NO_ACCESS(3)
 void log_fscanf_failure(int line, int res, FILE* file, const char* fmt);
 
@@ -110,11 +104,6 @@ void VKAPI_CALL internal_free_callback(
 
 #define FOPEN_FAILURE(res, name, mode) log_fopen_failure( \
 	__LINE__, (FILE*) (res), (const char*) (name), (const char*) (mode))
-#define FREAD_FAILURE(res, buf, size, count, file) log_fread_failure( \
-	__LINE__, (size_t) (res), (const void*) (buf), (size_t) (size), (size_t) (count), (FILE*) (file))
-#define FWRITE_FAILURE(res, buf, size, count, file) log_fwrite_failure( \
-	__LINE__, (size_t) (res), (const void*) (buf), (size_t) (size), (size_t) (count), (FILE*) (file))
-
 #define FSCANF_FAILURE(res, file, fmt)  log_fscanf_failure(__LINE__, (int) (res), (FILE*) (file), (const char*) (fmt))
 #define FPRINTF_FAILURE(res, file, fmt) log_fprintf_failure(__LINE__, (int) (res), (FILE*) (file), (const char*) (fmt))
 

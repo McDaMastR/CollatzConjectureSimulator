@@ -2542,14 +2542,14 @@ bool submit_commands(struct Gpu* restrict gpu)
 	position.val0mod1off[0] = 1;
 	position.curStartValue = 3;
 
-	size_t fileSize;
+	size_t fileSize = 0;
 	struct CzFileFlags fileFlags = {0};
 	fileFlags.relativeToExe = true;
 
 	enum CzResult czres = czFileSize(CZ_PROGRESS_FILE_NAME, &fileSize, fileFlags);
 	if CZ_NOEXPECT (czres && czres != CZ_RESULT_NO_FILE) { dyrecord_destroy(localRecord); return false; }
 
-	if (!czgConfig.restart && czres == CZ_RESULT_SUCCESS) {
+	if (!czgConfig.restart && fileSize) {
 		uint64_t val0mod1off0Upper, val0mod1off0Lower;
 		uint64_t val0mod1off1Upper, val0mod1off1Lower;
 		uint64_t val0mod1off2Upper, val0mod1off2Lower;
@@ -2561,9 +2561,14 @@ bool submit_commands(struct Gpu* restrict gpu)
 
 		bres = read_text(
 			CZ_PROGRESS_FILE_NAME,
-			"%" SCNx64 " %" SCNx64 "\n%" SCNx64 " %" SCNx64 "\n%" SCNx64 " %" SCNx64 "\n"
-			"%" SCNx64 " %" SCNx64 "\n%" SCNx64 " %" SCNx64 "\n%" SCNx64 " %" SCNx64 "\n"
-			"%" SCNx64 " %" SCNx64 "\n%" SCNx16,
+			"%" SCNx64 " %" SCNx64 "\n"
+			"%" SCNx64 " %" SCNx64 "\n"
+			"%" SCNx64 " %" SCNx64 "\n"
+			"%" SCNx64 " %" SCNx64 "\n"
+			"%" SCNx64 " %" SCNx64 "\n"
+			"%" SCNx64 " %" SCNx64 "\n"
+			"%" SCNx64 " %" SCNx64 "\n"
+			"%" SCNx16,
 			&val0mod1off0Upper, &val0mod1off0Lower,
 			&val0mod1off1Upper, &val0mod1off1Lower,
 			&val0mod1off2Upper, &val0mod1off2Lower,
@@ -3121,9 +3126,14 @@ bool submit_commands(struct Gpu* restrict gpu)
 	if (!czgConfig.restart) {
 		bres = write_text(
 			CZ_PROGRESS_FILE_NAME,
-			"%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n"
-			"%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n%016" PRIx64 " %016" PRIx64 "\n"
-			"%016" PRIx64 " %016" PRIx64 "\n%04"  PRIx16,
+			"%016" PRIx64 " %016" PRIx64 "\n"
+			"%016" PRIx64 " %016" PRIx64 "\n"
+			"%016" PRIx64 " %016" PRIx64 "\n"
+			"%016" PRIx64 " %016" PRIx64 "\n"
+			"%016" PRIx64 " %016" PRIx64 "\n"
+			"%016" PRIx64 " %016" PRIx64 "\n"
+			"%016" PRIx64 " %016" PRIx64 "\n"
+			"%04"  PRIx16,
 			CZ_UINT128_UPPER(position.val0mod1off[0]), CZ_UINT128_LOWER(position.val0mod1off[0]),
 			CZ_UINT128_UPPER(position.val0mod1off[1]), CZ_UINT128_LOWER(position.val0mod1off[1]),
 			CZ_UINT128_UPPER(position.val0mod1off[2]), CZ_UINT128_LOWER(position.val0mod1off[2]),

@@ -676,38 +676,6 @@ void log_fopen_failure(int line, FILE* res, const char* name, const char* mode)
 		line, time, (uintptr_t) res, name, mode);
 }
 
-void log_fread_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file)
-{
-	double time = program_time();
-
-	log_error(
-		stderr,
-		"IO error at line %d (%.3fms)\n"
-		"Failed function call 'fread' with %zu\n"
-		"Arguments:\n"
-		"\tbuffer = 0x%016" PRIxPTR "\n"
-		"\tsize   = %zu\n"
-		"\tcount  = %zu\n"
-		"\tfile   = 0x%016" PRIxPTR "\n",
-		line, time, res, (uintptr_t) buf, size, count, (uintptr_t) file);
-}
-
-void log_fwrite_failure(int line, size_t res, const void* buf, size_t size, size_t count, FILE* file)
-{
-	double time = program_time();
-
-	log_error(
-		stderr,
-		"IO error at line %d (%.3fms)\n"
-		"Failed function call 'fwrite' with %zu\n"
-		"Arguments:\n"
-		"\tbuffer = 0x%016" PRIxPTR "\n"
-		"\tsize   = %zu\n"
-		"\tcount  = %zu\n"
-		"\tfile   = 0x%016" PRIxPTR "\n",
-		line, time, res, (uintptr_t) buf, size, count, (uintptr_t) file);
-}
-
 void log_fscanf_failure(int line, int res, FILE* file, const char* fmt)
 {
 	double time = program_time();
