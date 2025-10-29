@@ -430,8 +430,11 @@ enum CzResult czWrap_aligned_offset_recalloc(
  * @retval CZ_RESULT_NO_OPEN The maximum number of cgroups was reached.
  * @retval CZ_RESULT_NO_SUPPORT @p advice was unsupported by the platform.
  * 
+ * @pre @p addr is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_MADVISE is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(1, 2)
 enum CzResult czWrap_madvise(void* addr, size_t size, int advice);
 #endif
 
@@ -468,9 +471,11 @@ enum CzResult czWrap_madvise(void* addr, size_t size, int advice);
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
  * @retval CZ_RESULT_NO_SUPPORT @p advice was unsupported by the platform.
  * 
+ * @pre @p addr is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_POSIX_MADVISE is defined as a nonzero value.
  */
-CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(2) CZ_WR_ACCESS(1) CZ_NO_ACCESS(2, 3)
 enum CzResult czWrap_posix_madvise(int* res, void* addr, size_t size, int advice);
 #endif
 
@@ -498,8 +503,10 @@ enum CzResult czWrap_posix_madvise(int* res, void* addr, size_t size, int advice
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
  * @pre @p res is nonnull.
+ * @pre @p path is nonnull and NUL-terminated.
+ * @pre @p mode is nonnull and NUL-terminated.
  */
-CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(2) CZ_NULTERM_ARG(3) CZ_WR_ACCESS(1) CZ_RD_ACCESS(2) CZ_RD_ACCESS(3)
 enum CzResult czWrap_fopen(FILE* restrict* res, const char* path, const char* mode);
 
 /**
@@ -534,10 +541,12 @@ enum CzResult czWrap_fopen(FILE* restrict* res, const char* path, const char* mo
  * @retval CZ_RESULT_NO_OPEN The maximum number of open streams was reached.
  * 
  * @pre @p res is nonnull.
+ * @pre @p fd is an open file descriptor.
+ * @pre @p mode is nonnull and NUL-terminated.
  * 
  * @note This function is only defined if @ref CZ_WRAP_FDOPEN is defined as a nonzero value.
  */
-CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(3) CZ_FILDES(2) CZ_WR_ACCESS(1) CZ_RD_ACCESS(3)
 enum CzResult czWrap_fdopen(FILE* restrict* res, int fd, const char* mode);
 #endif
 
@@ -564,7 +573,11 @@ enum CzResult czWrap_fdopen(FILE* restrict* res, int fd, const char* mode);
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_OPEN The maximum number of open files or streams was reached.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ * 
+ * @pre @p path is NUL-terminated.
+ * @pre @p mode is nonnull and NUL-terminated.
  */
+CZ_NONNULL_ARGS(2) CZ_NULTERM_ARG(1) CZ_NULTERM_ARG(2) CZ_RD_ACCESS(1) CZ_RD_ACCESS(2) CZ_RW_ACCESS(3)
 enum CzResult czWrap_freopen(const char* path, const char* mode, FILE* stream);
 
 /**
@@ -600,10 +613,11 @@ enum CzResult czWrap_freopen(const char* path, const char* mode, FILE* stream);
  * @retval CZ_RESULT_NO_OPEN The maximum number of open streams was reached.
  * 
  * @pre @p res is nonnull.
+ * @pre @p mode is nonnull and NUL-terminated.
  * 
  * @note This function is only defined if @ref CZ_WRAP_FMEMOPEN is defined as a nonzero value.
  */
-CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(1, 4) CZ_NULTERM_ARG(4) CZ_WR_ACCESS(1) CZ_NO_ACCESS(2, 3) CZ_RD_ACCESS(4)
 enum CzResult czWrap_fmemopen(FILE* restrict* res, void* buffer, size_t size, const char* mode);
 #endif
 
@@ -612,7 +626,7 @@ enum CzResult czWrap_fmemopen(FILE* restrict* res, void* buffer, size_t size, co
  * 
  * Calls @c fclose with @p stream.
  * 
- * @param[in,out] stream The argument to pass to @c fclose.
+ * @param[in] stream The argument to pass to @c fclose.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
@@ -625,7 +639,10 @@ enum CzResult czWrap_fmemopen(FILE* restrict* res, void* buffer, size_t size, co
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @pre @p stream is nonnull.
  */
+CZ_NONNULL_ARGS()
 enum CzResult czWrap_fclose(FILE* stream);
 
 /**
@@ -647,7 +664,10 @@ enum CzResult czWrap_fclose(FILE* stream);
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ * 
+ * @pre @p stream is nonnull.
  */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
 enum CzResult czWrap_fseek(FILE* stream, long offset, int whence);
 
 /**
@@ -684,8 +704,11 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence);
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
+ * @pre @p stream is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_FSEEKO is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
 enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence);
 #endif
 
@@ -709,8 +732,9 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence);
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
  * @pre @p res is nonnull.
+ * @pre @p stream is nonnull.
  */
-CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(1) CZ_RW_ACCESS(2)
 enum CzResult czWrap_ftell(long* res, FILE* stream);
 
 /**
@@ -747,10 +771,11 @@ enum CzResult czWrap_ftell(long* res, FILE* stream);
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
  * @pre @p res is nonnull.
+ * @pre @p stream is nonnull.
  * 
  * @note This function is only defined if @ref CZ_WRAP_FTELLO is defined as a nonzero value.
  */
-CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(1) CZ_RW_ACCESS(2)
 enum CzResult czWrap_ftello(off_t* res, FILE* stream);
 #endif
 
@@ -772,7 +797,11 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream);
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ * 
+ * @pre @p stream is nonnull.
+ * @pre @p pos is nonnull.
  */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_WR_ACCESS(2)
 enum CzResult czWrap_fgetpos(FILE* stream, fpos_t* pos);
 
 /**
@@ -793,7 +822,11 @@ enum CzResult czWrap_fgetpos(FILE* stream, fpos_t* pos);
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ * 
+ * @pre @p stream is nonnull.
+ * @pre @p pos is nonnull.
  */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_RD_ACCESS(2)
 enum CzResult czWrap_fsetpos(FILE* stream, const fpos_t* pos);
 
 /**
@@ -811,7 +844,10 @@ enum CzResult czWrap_fsetpos(FILE* stream, const fpos_t* pos);
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ * 
+ * @pre @p stream is nonnull.
  */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
 enum CzResult czWrap_rewind(FILE* stream);
 
 /**
@@ -835,8 +871,11 @@ enum CzResult czWrap_rewind(FILE* stream);
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_FILE The file was empty.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * 
+ * @pre @p buffer is nonnull.
+ * @pre @p stream is nonnull.
  */
-CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(2, 5) CZ_WR_ACCESS(1) CZ_WR_ACCESS(2) CZ_RW_ACCESS(5)
 enum CzResult czWrap_fread(size_t* res, void* buffer, size_t size, size_t count, FILE* stream);
 
 /**
@@ -859,8 +898,11 @@ enum CzResult czWrap_fread(size_t* res, void* buffer, size_t size, size_t count,
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * 
+ * @pre @p buffer is nonnull.
+ * @pre @p stream is nonnull.
  */
-CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(2, 5) CZ_WR_ACCESS(1) CZ_RD_ACCESS(2) CZ_RW_ACCESS(5)
 enum CzResult czWrap_fwrite(size_t* res, const void* buffer, size_t size, size_t count, FILE* stream);
 
 /**
@@ -881,6 +923,7 @@ enum CzResult czWrap_fwrite(size_t* res, const void* buffer, size_t size, size_t
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  */
+CZ_RW_ACCESS(1)
 enum CzResult czWrap_fflush(FILE* stream);
 
 /**
@@ -899,7 +942,10 @@ enum CzResult czWrap_fflush(FILE* stream);
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * 
+ * @pre @p path is nonnull and NUL-terminated.
  */
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1)
 enum CzResult czWrap_remove(const char* path);
 
 /**
@@ -933,8 +979,11 @@ enum CzResult czWrap_remove(const char* path);
  * @retval CZ_RESULT_NO_FILE The directory did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
+ * @pre @p path is nonnull and NUL-terminated.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_RMDIR is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1)
 enum CzResult czWrap_rmdir(const char* path);
 #endif
 
@@ -969,8 +1018,11 @@ enum CzResult czWrap_rmdir(const char* path);
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
+ * @pre @p path is nonnull and NUL-terminated.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_UNLINK is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1)
 enum CzResult czWrap_unlink(const char* path);
 #endif
 
@@ -1002,10 +1054,11 @@ enum CzResult czWrap_unlink(const char* path);
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * 
  * @pre @p res is nonnull.
+ * @pre @p stream is nonnull.
  * 
  * @note This function is only defined if @ref CZ_WRAP_FILENO is defined as a nonzero value.
  */
-CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(1) CZ_RW_ACCESS(2)
 enum CzResult czWrap_fileno(int* res, FILE* stream);
 #endif
 
@@ -1037,10 +1090,11 @@ enum CzResult czWrap_fileno(int* res, FILE* stream);
  * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
  * 
  * @pre @p res is nonnull.
+ * @pre @p fd is an open file descriptor.
  * 
  * @note This function is only defined if @ref CZ_WRAP_ISATTY is defined as a nonzero value.
  */
-CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(1) CZ_FILDES(2)
 enum CzResult czWrap_isatty(int* res, int fd);
 #endif
 
@@ -1075,8 +1129,12 @@ enum CzResult czWrap_isatty(int* res, int fd);
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
+ * @pre @p path is nonnull and NUL-terminated.
+ * @pre @p st is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_STAT is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1) CZ_WR_ACCESS(2)
 enum CzResult czWrap_stat(const char* path, struct stat* st);
 #endif
 
@@ -1111,8 +1169,12 @@ enum CzResult czWrap_stat(const char* path, struct stat* st);
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
+ * @pre @p path is nonnull and NUL-terminated.
+ * @pre @p st is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_LSTAT is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1) CZ_WR_ACCESS(2)
 enum CzResult czWrap_lstat(const char* path, struct stat* st);
 #endif
 
@@ -1145,8 +1207,12 @@ enum CzResult czWrap_lstat(const char* path, struct stat* st);
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
+ * @pre @p fd is an open file descriptor.
+ * @pre @p st is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_FSTAT is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS() CZ_FILDES(1) CZ_WR_ACCESS(2)
 enum CzResult czWrap_fstat(int fd, struct stat* st);
 #endif
 
@@ -1183,8 +1249,13 @@ enum CzResult czWrap_fstat(int fd, struct stat* st);
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
+ * @pre @p fd is @c AT_FDCWD or an open file descriptor.
+ * @pre @p path is nonnull and NUL-terminated.
+ * @pre @p st is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_FSTATAT is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(2) CZ_RD_ACCESS(2) CZ_WR_ACCESS(3)
 enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag);
 #endif
 
@@ -1221,8 +1292,11 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * 
+ * @pre @p path is nonnull and NUL-terminated.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_TRUNCATE is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1)
 enum CzResult czWrap_truncate(const char* path, off_t size);
 #endif
 
@@ -1256,8 +1330,11 @@ enum CzResult czWrap_truncate(const char* path, off_t size);
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * 
+ * @pre @p fd is an open file descriptor with write access.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_FTRUNCATE is defined as a nonzero value.
  */
+CZ_WR_FILDES(1)
 enum CzResult czWrap_ftruncate(int fd, off_t size);
 #endif
 
@@ -1293,9 +1370,11 @@ enum CzResult czWrap_ftruncate(int fd, off_t size);
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
  * @retval CZ_RESULT_BAD_SIZE @p size was negative or @p advice was invalid.
  * 
+ * @pre @p fd is an open file descriptor.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_POSIX_FADVISE is defined as a nonzero value.
  */
-CZ_WR_ACCESS(1)
+CZ_WR_ACCESS(1) CZ_FILDES(2)
 enum CzResult czWrap_posix_fadvise(int* res, int fd, off_t offset, off_t size, int advice);
 #endif
 
@@ -1334,8 +1413,11 @@ enum CzResult czWrap_posix_fadvise(int* res, int fd, off_t offset, off_t size, i
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the filesystem or platform.
  * 
+ * @pre @p fd is an open file descriptor with write access.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_FALLOCATE is defined as a nonzero value.
  */
+CZ_WR_FILDES(1)
 enum CzResult czWrap_fallocate(int fd, int mode, off_t offset, off_t size);
 #endif
 
@@ -1374,9 +1456,11 @@ enum CzResult czWrap_fallocate(int fd, int mode, off_t offset, off_t size);
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the filesystem or platform.
  * 
+ * @pre @p fd is an open file descriptor with write access.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_POSIX_FALLOCATE is defined as a nonzero value.
  */
-CZ_WR_ACCESS(1)
+CZ_WR_ACCESS(1) CZ_WR_FILDES(2)
 enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size);
 #endif
 
@@ -1409,8 +1493,11 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
+ * @pre @p fd is an open file descriptor.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_FSYNC is defined as a nonzero value.
  */
+CZ_FILDES(1)
 enum CzResult czWrap_fsync(int fd);
 #endif
 
@@ -1443,8 +1530,11 @@ enum CzResult czWrap_fsync(int fd);
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
+ * @pre @p fd is an open file descriptor.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_FDATASYNC is defined as a nonzero value.
  */
+CZ_FILDES(1)
 enum CzResult czWrap_fdatasync(int fd);
 #endif
 
@@ -1488,10 +1578,11 @@ enum CzResult czWrap_fdatasync(int fd);
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
  * @pre @p res is nonnull.
+ * @pre @p path is nonnull and NUL-terminated.
  * 
  * @note This function is only defined if @ref CZ_WRAP_OPEN is defined as a nonzero value.
  */
-CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(2) CZ_WR_ACCESS(1) CZ_RD_ACCESS(2)
 enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode);
 #endif
 
@@ -1536,10 +1627,12 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode);
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
  * @pre @p res is nonnull.
+ * @pre @p fd is @c AT_FDCWD or an open file descriptor.
+ * @pre @p path is nonnull and NUL-terminated.
  * 
  * @note This function is only defined if @ref CZ_WRAP_OPENAT is defined as a nonzero value.
  */
-CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(3) CZ_WR_ACCESS(1) CZ_RD_ACCESS(3)
 enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_t mode);
 #endif
 
@@ -1580,10 +1673,11 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
  * @pre @p res is nonnull.
+ * @pre @p path is nonnull and NUL-terminated.
  * 
  * @note This function is only defined if @ref CZ_WRAP_CREAT is defined as a nonzero value.
  */
-CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(2) CZ_WR_ACCESS(1) CZ_RD_ACCESS(2)
 enum CzResult czWrap_creat(int* res, const char* path, mode_t mode);
 #endif
 
@@ -1615,8 +1709,11 @@ enum CzResult czWrap_creat(int* res, const char* path, mode_t mode);
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
+ * @pre @p fd is an open file descriptor.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_CLOSE is defined as a nonzero value.
  */
+CZ_FILDES(1)
 enum CzResult czWrap_close(int fd);
 #endif
 
@@ -1647,8 +1744,11 @@ enum CzResult czWrap_close(int fd);
  * @retval CZ_RESULT_BAD_ACCESS @p fd or @p flag was invalid.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * 
+ * @pre @p fd is an open file descriptor.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_POSIX_CLOSE is defined as a nonzero value.
  */
+CZ_FILDES(1)
 enum CzResult czWrap_posix_close(int fd, int flag);
 #endif
 
@@ -1683,9 +1783,11 @@ enum CzResult czWrap_posix_close(int fd, int flag);
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
  * @retval CZ_RESULT_BAD_OFFSET @p whence or the resultant file offset was invalid.
  * 
+ * @pre @p fd is an open file descriptor.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_LSEEK is defined as a nonzero value.
  */
-CZ_WR_ACCESS(1)
+CZ_WR_ACCESS(1) CZ_FILDES(2)
 enum CzResult czWrap_lseek(off_t* res, int fd, off_t offset, int whence);
 #endif
 
@@ -1728,9 +1830,12 @@ enum CzResult czWrap_lseek(off_t* res, int fd, off_t offset, int whence);
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_TIMEOUT A system operation timed out.
  * 
+ * @pre @p fd is an open file descriptor with read access.
+ * @pre @p buffer is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_READ is defined as a nonzero value.
  */
-CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(3) CZ_WR_ACCESS(1) CZ_RD_FILDES(2) CZ_WR_ACCESS(3, 4)
 enum CzResult czWrap_read(ssize_t* res, int fd, void* buffer, size_t size);
 #endif
 
@@ -1773,9 +1878,12 @@ enum CzResult czWrap_read(ssize_t* res, int fd, void* buffer, size_t size);
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_TIMEOUT A system operation timed out.
  * 
+ * @pre @p fd is an open file descriptor with read access.
+ * @pre @p buffer is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_PREAD is defined as a nonzero value.
  */
-CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(3) CZ_WR_ACCESS(1) CZ_RD_FILDES(2) CZ_WR_ACCESS(3, 4)
 enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_t offset);
 #endif
 
@@ -1816,9 +1924,12 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
+ * @pre @p fd is an open file descriptor with write access.
+ * @pre @p buffer is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_WRITE is defined as a nonzero value.
  */
-CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(3) CZ_WR_ACCESS(1) CZ_WR_FILDES(2) CZ_RD_ACCESS(3, 4)
 enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size);
 #endif
 
@@ -1860,9 +1971,12 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
+ * @pre @p fd is an open file descriptor with write access.
+ * @pre @p buffer is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_PWRITE is defined as a nonzero value.
  */
-CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(3) CZ_WR_ACCESS(1) CZ_WR_FILDES(2) CZ_RD_ACCESS(3, 4)
 enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t size, off_t offset);
 #endif
 
@@ -1907,6 +2021,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the filesystem or platform.
  * 
  * @pre @p res is nonnull.
+ * @pre @p fd is -1 or an open file descriptor.
  * 
  * @note This function is only defined if @ref CZ_WRAP_MMAP is defined as a nonzero value.
  */
@@ -1933,7 +2048,7 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
  * 
  * Calls @c munmap with @p addr and @p size.
  * 
- * @param[in,out] addr The first argument to pass to @c munmap.
+ * @param[in] addr The first argument to pass to @c munmap.
  * @param[in] size The second argument to pass to @c munmap.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
@@ -1943,8 +2058,11 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
  * @retval CZ_RESULT_IN_USE The mapped memory was already in use by the system.
  * 
+ * @pre @p addr is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_MUNMAP is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS()
 enum CzResult czWrap_munmap(void* addr, size_t size);
 #endif
 
@@ -1979,8 +2097,11 @@ enum CzResult czWrap_munmap(void* addr, size_t size);
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
  * @retval CZ_RESULT_IN_USE The mapped memory was already in use by the system.
  * 
+ * @pre @p addr is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_MSYNC is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1, 2)
 enum CzResult czWrap_msync(void* addr, size_t size, int flags);
 #endif
 
@@ -2011,10 +2132,11 @@ enum CzResult czWrap_msync(void* addr, size_t size, int flags);
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * 
  * @pre @p res is nonnull.
+ * @pre @p fd is an open file descriptor.
  * 
  * @note This function is only defined if @ref CZ_WRAP_GET_OSFHANDLE is defined as a nonzero value.
  */
-CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(1) CZ_FILDES(2)
 enum CzResult czWrap_get_osfhandle(intptr_t* res, int fd);
 #endif
 
@@ -2053,9 +2175,11 @@ enum CzResult czWrap_get_osfhandle(intptr_t* res, int fd);
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
+ * @pre @p mbStr is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_MULTI_BYTE_TO_WIDE_CHAR is defined as a nonzero value.
  */
-CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(4) CZ_WR_ACCESS(1) CZ_RD_ACCESS(4, 5) CZ_WR_ACCESS(6, 7)
 enum CzResult czWrap_MultiByteToWideChar(
 	LPINT res, UINT codePage, DWORD flags, LPCCH mbStr, INT mbSize, LPWSTR wcStr, INT wcSize);
 #endif
@@ -2095,8 +2219,12 @@ enum CzResult czWrap_MultiByteToWideChar(
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
+ * @pre @p path is nonnull and NUL-terminated.
+ * @pre @p info is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_GET_FILE_ATTRIBUTES_EX_W is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS() CZ_RD_ACCESS(1) CZ_WR_ACCESS(3)
 enum CzResult czWrap_GetFileAttributesExW(LPCWSTR path, GET_FILEEX_INFO_LEVELS level, LPVOID info);
 #endif
 
@@ -2132,8 +2260,12 @@ enum CzResult czWrap_GetFileAttributesExW(LPCWSTR path, GET_FILEEX_INFO_LEVELS l
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
+ * @pre @p file is nonnull.
+ * @pre @p size is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_GET_FILE_SIZE_EX is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(2)
 enum CzResult czWrap_GetFileSizeEx(HANDLE file, PLARGE_INTEGER size);
 #endif
 
@@ -2181,10 +2313,11 @@ enum CzResult czWrap_GetFileSizeEx(HANDLE file, PLARGE_INTEGER size);
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
  * @pre @p res is nonnull.
+ * @pre @p path is nonnull and NUL-terminated.
  * 
  * @note This function is only defined if @ref CZ_WRAP_CREATE_FILE_W is defined as a nonzero value.
  */
-CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(1, 2) CZ_WR_ACCESS(1) CZ_RD_ACCESS(2) CZ_RD_ACCESS(5)
 enum CzResult czWrap_CreateFileW(
 	LPHANDLE res,
 	LPCWSTR path,
@@ -2215,7 +2348,7 @@ enum CzResult czWrap_CreateFileW(
  * 
  * Calls @c CloseHandle with @p handle.
  * 
- * @param[in,out] handle The argument to pass to @c CloseHandle.
+ * @param[in] handle The argument to pass to @c CloseHandle.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
@@ -2223,8 +2356,11 @@ enum CzResult czWrap_CreateFileW(
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
+ * @pre @p handle is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_CLOSE_HANDLE is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS()
 enum CzResult czWrap_CloseHandle(HANDLE handle);
 #endif
 
@@ -2257,8 +2393,11 @@ enum CzResult czWrap_CloseHandle(HANDLE handle);
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
+ * @pre @p file is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_SET_END_OF_FILE is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS()
 enum CzResult czWrap_SetEndOfFile(HANDLE file);
 #endif
 
@@ -2297,8 +2436,11 @@ enum CzResult czWrap_SetEndOfFile(HANDLE file);
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
+ * @pre @p file is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_SET_FILE_POINTER_EX is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(3)
 enum CzResult czWrap_SetFilePointerEx(
 	HANDLE file, LARGE_INTEGER distanceToMove, PLARGE_INTEGER newFilePointer, DWORD moveMethod);
 #endif
@@ -2326,7 +2468,7 @@ enum CzResult czWrap_SetFilePointerEx(
  * @param[out] buffer The second argument to pass to @c ReadFile.
  * @param[in] numberOfBytesToRead The third argument to pass to @c ReadFile.
  * @param[out] numberOfBytesRead The fourth argument to pass to @c ReadFile.
- * @param[in] overlapped The fifth argument to pass to @c ReadFile.
+ * @param[in,out] overlapped The fifth argument to pass to @c ReadFile.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
@@ -2341,8 +2483,12 @@ enum CzResult czWrap_SetFilePointerEx(
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
+ * @pre @p file is nonnull.
+ * @pre @p buffer is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_READ_FILE is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS(1, 2) CZ_WR_ACCESS(2, 3) CZ_WR_ACCESS(4) CZ_RW_ACCESS(5)
 enum CzResult czWrap_ReadFile(
 	HANDLE file, LPVOID buffer, DWORD numberOfBytesToRead, LPDWORD numberOfBytesRead, LPOVERLAPPED overlapped);
 #endif
@@ -2384,8 +2530,12 @@ enum CzResult czWrap_ReadFile(
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
+ * @pre @p file is nonnull.
+ * @pre @p buffer is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_WRITE_FILE is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS(1, 2) CZ_RD_ACCESS(2, 3) CZ_WR_ACCESS(4) CZ_RW_ACCESS(5)
 enum CzResult czWrap_WriteFile(
 	HANDLE file, LPCVOID buffer, DWORD numberOfBytesToWrite, LPDWORD numberOfBytesWritten, LPOVERLAPPED overlapped);
 #endif
@@ -2423,8 +2573,11 @@ enum CzResult czWrap_WriteFile(
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
+ * @pre @p path is nonnull and NUL-terminated.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_DELETE_FILE_W is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS() CZ_RD_ACCESS(1)
 enum CzResult czWrap_DeleteFileW(LPCWSTR path);
 #endif
 
@@ -2468,10 +2621,11 @@ enum CzResult czWrap_DeleteFileW(LPCWSTR path);
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
  * @pre @p res is nonnull.
+ * @pre @p file is nonnull.
  * 
  * @note This function is only defined if @ref CZ_WRAP_CREATE_FILE_MAPPING_W is defined as a nonzero value.
  */
-CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(1, 2) CZ_WR_ACCESS(1) CZ_RD_ACCESS(3) CZ_RD_ACCESS(7)
 enum CzResult czWrap_CreateFileMappingW(
 	LPHANDLE res,
 	HANDLE file,
@@ -2520,10 +2674,11 @@ enum CzResult czWrap_CreateFileMappingW(
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
  * @pre @p res is nonnull.
+ * @pre @p fileMappingObject is nonnull.
  * 
  * @note This function is only defined if @ref CZ_WRAP_MAP_VIEW_OF_FILE is defined as a nonzero value.
  */
-CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(1, 2) CZ_WR_ACCESS(1)
 enum CzResult czWrap_MapViewOfFile(
 	LPVOID* res,
 	HANDLE fileMappingObject,
@@ -2552,7 +2707,7 @@ enum CzResult czWrap_MapViewOfFile(
  * 
  * Calls @c UnmapViewOfFile with @p baseAddress.
  * 
- * @param[in,out] baseAddress The argument to pass to @c UnmapViewOfFile.
+ * @param[in] baseAddress The argument to pass to @c UnmapViewOfFile.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
@@ -2561,8 +2716,11 @@ enum CzResult czWrap_MapViewOfFile(
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
+ * @pre @p baseAddress is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_UNMAP_VIEW_OF_FILE is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS()
 enum CzResult czWrap_UnmapViewOfFile(LPCVOID baseAddress);
 #endif
 
@@ -2595,8 +2753,11 @@ enum CzResult czWrap_UnmapViewOfFile(LPCVOID baseAddress);
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
+ * @pre @p baseAddress is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_FLUSH_VIEW_OF_FILE is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS() CZ_RD_ACCESS(1, 2)
 enum CzResult czWrap_FlushViewOfFile(LPCVOID baseAddress, SIZE_T numberOfBytesToFlush);
 #endif
 
@@ -2627,8 +2788,11 @@ enum CzResult czWrap_FlushViewOfFile(LPCVOID baseAddress, SIZE_T numberOfBytesTo
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
+ * @pre @p file is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_FLUSH_FILE_BUFFERS is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS()
 enum CzResult czWrap_FlushFileBuffers(HANDLE file);
 #endif
 
@@ -2672,8 +2836,11 @@ enum CzResult czWrap_FlushFileBuffers(HANDLE file);
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
+ * @pre @p device is nonnull.
+ * 
  * @note This function is only defined if @ref CZ_WRAP_DEVICE_IO_CONTROL is defined as a nonzero value.
  */
+CZ_NONNULL_ARGS(1) CZ_RD_ACCESS(3, 4) CZ_WR_ACCESS(5, 6) CZ_WR_ACCESS(7), CZ_RW_ACCESS(8)
 enum CzResult czWrap_DeviceIoControl(
 	HANDLE device,
 	DWORD ioControlCode,
@@ -2734,5 +2901,5 @@ enum CzResult czWrap_sysconf(long* res, int name);
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  */
-CZ_WR_ACCESS(1)
+CZ_WR_ACCESS(1) CZ_WR_ACCESS(2, 3) CZ_WR_ACCESS(4)
 enum CzResult czWrap_getExecutablePath(int* res, char* out, int capacity, int* dirnameLength);
