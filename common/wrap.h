@@ -99,7 +99,14 @@ enum CzResult czWrap_realloc(void* restrict* res, void* ptr, size_t size);
  * @brief Specifies whether @c reallocarray is defined.
  */
 #if !defined(CZ_WRAP_REALLOCARRAY)
-	#if CZ_GNU_LINUX || CZ_POSIX_VERSION >= CZ_POSIX_2024
+	#if ((                                                 \
+			CZ_GNU_SOURCE &&                               \
+			CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 26) &&  \
+			CZ_GLIBC_VERSION <= CZ_MAKE_VERSION(2, 28)) || \
+		(                                                  \
+			CZ_DEFAULT_SOURCE &&                           \
+			CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 29)) || \
+		CZ_POSIX_VERSION >= CZ_POSIX_2024)
 		#define CZ_WRAP_REALLOCARRAY 1
 	#else
 		#define CZ_WRAP_REALLOCARRAY 0
@@ -1298,7 +1305,7 @@ enum CzResult czWrap_posix_fadvise(int* res, int fd, off_t offset, off_t size, i
  * @brief Specifies whether @c fallocate is defined.
  */
 #if !defined(CZ_WRAP_FALLOCATE)
-	#if CZ_GNU_LINUX
+	#if CZ_GNU_LINUX && CZ_GNU_SOURCE
 		#define CZ_WRAP_FALLOCATE 1
 	#else
 		#define CZ_WRAP_FALLOCATE 0

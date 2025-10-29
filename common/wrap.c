@@ -2550,7 +2550,7 @@ enum CzResult czWrap_fileno(int* res, FILE* stream)
 	*res = fd;
 	return CZ_RESULT_SUCCESS;
 #elif CZ_POSIX_VERSION >= CZ_POSIX_1988
-	if CZ_EXPECT (r != -1) {
+	if CZ_EXPECT (fd != -1) {
 		*res = fd;
 		return CZ_RESULT_SUCCESS;
 	}
@@ -2562,7 +2562,7 @@ enum CzResult czWrap_fileno(int* res, FILE* stream)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #else
-	if CZ_EXPECT (r != -1) {
+	if CZ_EXPECT (fd != -1) {
 		*res = fd;
 		return CZ_RESULT_SUCCESS;
 	}
@@ -2896,8 +2896,10 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
 			return CZ_RESULT_BAD_ADDRESS;
 		if (path[0])
 			return CZ_RESULT_NO_FILE;
-		if (flags & AT_EMPTY_PATH)
+#if CZ_GNU_SOURCE
+		if (flag & AT_EMPTY_PATH)
 			return CZ_RESULT_NO_FILE;
+#endif
 		return CZ_RESULT_BAD_PATH;
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
@@ -3317,7 +3319,7 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 		if (offset < 0)
 			return CZ_RESULT_BAD_OFFSET;
 		if (size <= 0)
-			return CZ_RESULT_BAD_SIZE
+			return CZ_RESULT_BAD_SIZE;
 		return CZ_RESULT_NO_SUPPORT;
 	case EFBIG:
 		return CZ_RESULT_BAD_SIZE;
@@ -3363,7 +3365,7 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 		if (offset < 0)
 			return CZ_RESULT_BAD_OFFSET;
 		if (size <= 0)
-			return CZ_RESULT_BAD_SIZE
+			return CZ_RESULT_BAD_SIZE;
 		return CZ_RESULT_NO_SUPPORT;
 	case EFBIG:
 		return CZ_RESULT_BAD_SIZE;
@@ -3616,10 +3618,14 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
+#if CZ_GNU_SOURCE
 		if (flags & O_TMPFILE && !(flags & (O_WRONLY | O_RDWR)))
 			return CZ_RESULT_BAD_ACCESS;
+#endif
+#if CZ_GNU_SOURCE
 		if (flags & O_DIRECT)
 			return CZ_RESULT_NO_SUPPORT;
+#endif
 		if (flags & O_CREAT && flags & O_DIRECTORY)
 			return CZ_RESULT_NO_SUPPORT;
 		return CZ_RESULT_BAD_PATH;
@@ -3632,8 +3638,10 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 			return CZ_RESULT_BAD_PATH;
 		if (flags & O_CREAT)
 			return CZ_RESULT_BAD_PATH;
+#if CZ_GNU_SOURCE
 		if (flags & O_TMPFILE && flags & (O_WRONLY | O_RDWR))
 			return CZ_RESULT_NO_SUPPORT;
+#endif
 		return CZ_RESULT_NO_FILE;
 	case EEXIST:
 	case EFBIG:
@@ -3665,8 +3673,10 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case EOPNOTSUPP:
 		return CZ_RESULT_NO_SUPPORT;
 	case EISDIR:
+#if CZ_GNU_SOURCE
 		if (flags & O_TMPFILE && flags & (O_WRONLY | O_RDWR))
 			return CZ_RESULT_NO_SUPPORT;
+#endif
 		return CZ_RESULT_BAD_FILE;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -3933,10 +3943,14 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
+#if CZ_GNU_SOURCE
 		if (flags & O_TMPFILE && !(flags & (O_WRONLY | O_RDWR)))
 			return CZ_RESULT_BAD_ACCESS;
+#endif
+#if CZ_GNU_SOURCE
 		if (flags & O_DIRECT)
 			return CZ_RESULT_NO_SUPPORT;
+#endif
 		if (flags & O_CREAT && flags & O_DIRECTORY)
 			return CZ_RESULT_NO_SUPPORT;
 		return CZ_RESULT_BAD_PATH;
@@ -3949,8 +3963,10 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 			return CZ_RESULT_BAD_PATH;
 		if (flags & O_CREAT)
 			return CZ_RESULT_BAD_PATH;
+#if CZ_GNU_SOURCE
 		if (flags & O_TMPFILE && flags & (O_WRONLY | O_RDWR))
 			return CZ_RESULT_NO_SUPPORT;
+#endif
 		return CZ_RESULT_NO_FILE;
 	case EEXIST:
 	case EFBIG:
@@ -3982,8 +3998,10 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 	case EOPNOTSUPP:
 		return CZ_RESULT_NO_SUPPORT;
 	case EISDIR:
+#if CZ_GNU_SOURCE
 		if (flags & O_TMPFILE && flags & (O_WRONLY | O_RDWR))
 			return CZ_RESULT_NO_SUPPORT;
+#endif
 		return CZ_RESULT_BAD_FILE;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;

@@ -29,7 +29,595 @@
 	#error "Target must support 128-bit integers"
 #endif
 
-// Check support for attributes and builtins
+// Helper macros for versioning
+
+#define CZ_MAKE_VERSION(major, minor, .../* patch */) ( ((major) << 48) | ((minor) << 32) __VA_OPT__(| (__VA_ARGS__)) )
+
+// Check for predefined OS macros
+
+#if !defined(CZ_CYGWIN)
+	#if defined(__CYGWIN__)
+		#define CZ_CYGWIN 1
+	#else
+		#define CZ_CYGWIN 0
+	#endif
+#endif
+
+#if !defined(CZ_DARWIN)
+	#if defined(__APPLE__) && defined(__MACH__)
+		#define CZ_DARWIN 1
+	#else
+		#define CZ_DARWIN 0
+	#endif
+#endif
+
+#if !defined(CZ_GNU_LINUX)
+	#if defined(__gnu_linux__)
+		#define CZ_GNU_LINUX 1
+	#else
+		#define CZ_GNU_LINUX 0
+	#endif
+#endif
+
+#if !defined(CZ_IOS)
+	#if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+		#define CZ_IOS 1
+	#else
+		#define CZ_IOS 0
+	#endif
+#endif
+
+#if !defined(CZ_LINUX)
+	#if defined(__linux__)
+		#define CZ_LINUX 1
+	#else
+		#define CZ_LINUX 0
+	#endif
+#endif
+
+#if !defined(CZ_MACOS)
+	#if defined(TARGET_OS_OSX) && TARGET_OS_OSX
+		#define CZ_MACOS 1
+	#else
+		#define CZ_MACOS 0
+	#endif
+#endif
+
+#if !defined(CZ_UNIX)
+	#if defined(__unix__) || defined(__unix) || defined(unix)
+		#define CZ_UNIX 1
+	#else
+		#define CZ_UNIX 0
+	#endif
+#endif
+
+#if !defined(CZ_WINDOWS)
+	#if defined(_WIN32)
+		#define CZ_WINDOWS 1
+	#else
+		#define CZ_WINDOWS 0
+	#endif
+#endif
+
+// Check for predefined libc macros
+
+#if !defined(CZ_GLIBC)
+	#if defined(__GLIBC__)
+		#define CZ_GLIBC 1
+	#else
+		#define CZ_GLIBC 0
+	#endif
+#endif
+
+#if !defined(CZ_GLIBC_MAJOR)
+	#if defined(__GLIBC__)
+		#define CZ_GLIBC_MAJOR __GLIBC__
+	#else
+		#define CZ_GLIBC_MAJOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_GLIBC_MINOR)
+	#if defined(__GLIBC_MINOR__)
+		#define CZ_GLIBC_MINOR __GLIBC_MINOR__
+	#else
+		#define CZ_GLIBC_MINOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_GLIBC_VERSION)
+	#define CZ_GLIBC_VERSION CZ_MAKE_VERSION(CZ_GLIBC_MAJOR, CZ_GLIBC_MINOR)
+#endif
+
+// Check for predefined POSIX.1 macros
+
+#if !defined(CZ_POSIX_VERSION)
+	#if defined(_POSIX_VERSION)
+		#define CZ_POSIX_VERSION _POSIX_VERSION
+	#else
+		#define CZ_POSIX_VERSION ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_ADVISORY_INFO)
+	#if defined(_POSIX_ADVISORY_INFO)
+		#define CZ_POSIX_ADVISORY_INFO _POSIX_ADVISORY_INFO
+	#else
+		#define CZ_POSIX_ADVISORY_INFO ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_ASYNCHRONOUS_IO)
+	#if defined(_POSIX_ASYNCHRONOUS_IO)
+		#define CZ_POSIX_ASYNCHRONOUS_IO _POSIX_ASYNCHRONOUS_IO
+	#else
+		#define CZ_POSIX_ASYNCHRONOUS_IO ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_BARRIERS)
+	#if defined(_POSIX_BARRIERS)
+		#define CZ_POSIX_BARRIERS _POSIX_BARRIERS
+	#else
+		#define CZ_POSIX_BARRIERS ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_CLOCK_SELECTION)
+	#if defined(_POSIX_CLOCK_SELECTION)
+		#define CZ_POSIX_CLOCK_SELECTION _POSIX_CLOCK_SELECTION
+	#else
+		#define CZ_POSIX_CLOCK_SELECTION ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_CPUTIME)
+	#if defined(_POSIX_CPUTIME)
+		#define CZ_POSIX_CPUTIME _POSIX_CPUTIME
+	#else
+		#define CZ_POSIX_CPUTIME ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_FSYNC)
+	#if defined(_POSIX_FSYNC)
+		#define CZ_POSIX_FSYNC _POSIX_FSYNC
+	#else
+		#define CZ_POSIX_FSYNC ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_IPV6)
+	#if defined(_POSIX_IPV6)
+		#define CZ_POSIX_IPV6 _POSIX_IPV6
+	#else
+		#define CZ_POSIX_IPV6 ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_JOB_CONTROL)
+	#if defined(_POSIX_JOB_CONTROL)
+		#define CZ_POSIX_JOB_CONTROL _POSIX_JOB_CONTROL
+	#else
+		#define CZ_POSIX_JOB_CONTROL ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_MAPPED_FILES)
+	#if defined(_POSIX_MAPPED_FILES)
+		#define CZ_POSIX_MAPPED_FILES _POSIX_MAPPED_FILES
+	#else
+		#define CZ_POSIX_MAPPED_FILES ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_MEMLOCK)
+	#if defined(_POSIX_MEMLOCK)
+		#define CZ_POSIX_MEMLOCK _POSIX_MEMLOCK
+	#else
+		#define CZ_POSIX_MEMLOCK ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_MEMLOCK_RANGE)
+	#if defined(_POSIX_MEMLOCK_RANGE)
+		#define CZ_POSIX_MEMLOCK_RANGE _POSIX_MEMLOCK_RANGE
+	#else
+		#define CZ_POSIX_MEMLOCK_RANGE ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_MEMORY_PROTECTION)
+	#if defined(_POSIX_MEMORY_PROTECTION)
+		#define CZ_POSIX_MEMORY_PROTECTION _POSIX_MEMORY_PROTECTION
+	#else
+		#define CZ_POSIX_MEMORY_PROTECTION ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_MESSAGE_PASSING)
+	#if defined(_POSIX_MESSAGE_PASSING)
+		#define CZ_POSIX_MESSAGE_PASSING _POSIX_MESSAGE_PASSING
+	#else
+		#define CZ_POSIX_MESSAGE_PASSING ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_MONOTONIC_CLOCK)
+	#if defined(_POSIX_MONOTONIC_CLOCK)
+		#define CZ_POSIX_MONOTONIC_CLOCK _POSIX_MONOTONIC_CLOCK
+	#else
+		#define CZ_POSIX_MONOTONIC_CLOCK ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_NO_TRUNC)
+	#if defined(_POSIX_NO_TRUNC)
+		#define CZ_POSIX_NO_TRUNC _POSIX_NO_TRUNC
+	#else
+		#define CZ_POSIX_NO_TRUNC ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_PRIORITIZED_IO)
+	#if defined(_POSIX_PRIORITIZED_IO)
+		#define CZ_POSIX_PRIORITIZED_IO _POSIX_PRIORITIZED_IO
+	#else
+		#define CZ_POSIX_PRIORITIZED_IO ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_PRIORITY_SCHEDULING)
+	#if defined(_POSIX_PRIORITY_SCHEDULING)
+		#define CZ_POSIX_PRIORITY_SCHEDULING _POSIX_PRIORITY_SCHEDULING
+	#else
+		#define CZ_POSIX_PRIORITY_SCHEDULING ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_RAW_SOCKETS)
+	#if defined(_POSIX_RAW_SOCKETS)
+		#define CZ_POSIX_RAW_SOCKETS _POSIX_RAW_SOCKETS
+	#else
+		#define CZ_POSIX_RAW_SOCKETS ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_READER_WRITER_LOCKS)
+	#if defined(_POSIX_READER_WRITER_LOCKS)
+		#define CZ_POSIX_READER_WRITER_LOCKS _POSIX_READER_WRITER_LOCKS
+	#else
+		#define CZ_POSIX_READER_WRITER_LOCKS ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_REALTIME_SIGNALS)
+	#if defined(_POSIX_REALTIME_SIGNALS)
+		#define CZ_POSIX_REALTIME_SIGNALS _POSIX_REALTIME_SIGNALS
+	#else
+		#define CZ_POSIX_REALTIME_SIGNALS ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_REGEXP)
+	#if defined(_POSIX_REGEXP)
+		#define CZ_POSIX_REGEXP _POSIX_REGEXP
+	#else
+		#define CZ_POSIX_REGEXP ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_SAVED_IDS)
+	#if defined(_POSIX_SAVED_IDS)
+		#define CZ_POSIX_SAVED_IDS _POSIX_SAVED_IDS
+	#else
+		#define CZ_POSIX_SAVED_IDS ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_SEMAPHORES)
+	#if defined(_POSIX_SEMAPHORES)
+		#define CZ_POSIX_SEMAPHORES _POSIX_SEMAPHORES
+	#else
+		#define CZ_POSIX_SEMAPHORES ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_SHARED_MEMORY_OBJECTS)
+	#if defined(_POSIX_SHARED_MEMORY_OBJECTS)
+		#define CZ_POSIX_SHARED_MEMORY_OBJECTS _POSIX_SHARED_MEMORY_OBJECTS
+	#else
+		#define CZ_POSIX_SHARED_MEMORY_OBJECTS ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_SHELL)
+	#if defined(_POSIX_SHELL)
+		#define CZ_POSIX_SHELL _POSIX_SHELL
+	#else
+		#define CZ_POSIX_SHELL ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_SPAWN)
+	#if defined(_POSIX_SPAWN)
+		#define CZ_POSIX_SPAWN _POSIX_SPAWN
+	#else
+		#define CZ_POSIX_SPAWN ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_SPIN_LOCKS)
+	#if defined(_POSIX_SPIN_LOCKS)
+		#define CZ_POSIX_SPIN_LOCKS _POSIX_SPIN_LOCKS
+	#else
+		#define CZ_POSIX_SPIN_LOCKS ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_SPORADIC_SERVER)
+	#if defined(_POSIX_SPORADIC_SERVER)
+		#define CZ_POSIX_SPORADIC_SERVER _POSIX_SPORADIC_SERVER
+	#else
+		#define CZ_POSIX_SPORADIC_SERVER ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_SYNCHRONIZED_IO)
+	#if defined(_POSIX_SYNCHRONIZED_IO)
+		#define CZ_POSIX_SYNCHRONIZED_IO _POSIX_SYNCHRONIZED_IO
+	#else
+		#define CZ_POSIX_SYNCHRONIZED_IO ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_THREAD_ATTR_STACKADDR)
+	#if defined(_POSIX_THREAD_ATTR_STACKADDR)
+		#define CZ_POSIX_THREAD_ATTR_STACKADDR _POSIX_THREAD_ATTR_STACKADDR
+	#else
+		#define CZ_POSIX_THREAD_ATTR_STACKADDR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_THREAD_ATTR_STACKSIZE)
+	#if defined(_POSIX_THREAD_ATTR_STACKSIZE)
+		#define CZ_POSIX_THREAD_ATTR_STACKSIZE _POSIX_THREAD_ATTR_STACKSIZE
+	#else
+		#define CZ_POSIX_THREAD_ATTR_STACKSIZE ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_THREAD_CPUTIME)
+	#if defined(_POSIX_THREAD_CPUTIME)
+		#define CZ_POSIX_THREAD_CPUTIME _POSIX_THREAD_CPUTIME
+	#else
+		#define CZ_POSIX_THREAD_CPUTIME ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_THREAD_PRIO_INHERIT)
+	#if defined(_POSIX_THREAD_PRIO_INHERIT)
+		#define CZ_POSIX_THREAD_PRIO_INHERIT _POSIX_THREAD_PRIO_INHERIT
+	#else
+		#define CZ_POSIX_THREAD_PRIO_INHERIT ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_THREAD_PRIO_PROTECT)
+	#if defined(_POSIX_THREAD_PRIO_PROTECT)
+		#define CZ_POSIX_THREAD_PRIO_PROTECT _POSIX_THREAD_PRIO_PROTECT
+	#else
+		#define CZ_POSIX_THREAD_PRIO_PROTECT ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_THREAD_PRIORITY_SCHEDULING)
+	#if defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
+		#define CZ_POSIX_THREAD_PRIORITY_SCHEDULING _POSIX_THREAD_PRIORITY_SCHEDULING
+	#else
+		#define CZ_POSIX_THREAD_PRIORITY_SCHEDULING ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_THREAD_PROCESS_SHARED)
+	#if defined(_POSIX_THREAD_PROCESS_SHARED)
+		#define CZ_POSIX_THREAD_PROCESS_SHARED _POSIX_THREAD_PROCESS_SHARED
+	#else
+		#define CZ_POSIX_THREAD_PROCESS_SHARED ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_THREAD_SAFE_FUNCTIONS)
+	#if defined(_POSIX_THREAD_SAFE_FUNCTIONS)
+		#define CZ_POSIX_THREAD_SAFE_FUNCTIONS _POSIX_THREAD_SAFE_FUNCTIONS
+	#else
+		#define CZ_POSIX_THREAD_SAFE_FUNCTIONS ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_THREAD_SPORADIC_SERVER)
+	#if defined(_POSIX_THREAD_SPORADIC_SERVER)
+		#define CZ_POSIX_THREAD_SPORADIC_SERVER _POSIX_THREAD_SPORADIC_SERVER
+	#else
+		#define CZ_POSIX_THREAD_SPORADIC_SERVER ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_THREADS)
+	#if defined(_POSIX_THREADS)
+		#define CZ_POSIX_THREADS _POSIX_THREADS
+	#else
+		#define CZ_POSIX_THREADS ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_TIMEOUTS)
+	#if defined(_POSIX_TIMEOUTS)
+		#define CZ_POSIX_TIMEOUTS _POSIX_TIMEOUTS
+	#else
+		#define CZ_POSIX_TIMEOUTS ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_TIMERS)
+	#if defined(_POSIX_TIMERS)
+		#define CZ_POSIX_TIMERS _POSIX_TIMERS
+	#else
+		#define CZ_POSIX_TIMERS ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_TRACE)
+	#if defined(_POSIX_TRACE)
+		#define CZ_POSIX_TRACE _POSIX_TRACE
+	#else
+		#define CZ_POSIX_TRACE ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_TRACE_EVENT_FILTER)
+	#if defined(_POSIX_TRACE_EVENT_FILTER)
+		#define CZ_POSIX_TRACE_EVENT_FILTER _POSIX_TRACE_EVENT_FILTER
+	#else
+		#define CZ_POSIX_TRACE_EVENT_FILTER ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_TRACE_INHERIT)
+	#if defined(_POSIX_TRACE_INHERIT)
+		#define CZ_POSIX_TRACE_INHERIT _POSIX_TRACE_INHERIT
+	#else
+		#define CZ_POSIX_TRACE_INHERIT ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_TRACE_LOG)
+	#if defined(_POSIX_TRACE_LOG)
+		#define CZ_POSIX_TRACE_LOG _POSIX_TRACE_LOG
+	#else
+		#define CZ_POSIX_TRACE_LOG ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_POSIX_TYPED_MEMORY_OBJECTS)
+	#if defined(_POSIX_TYPED_MEMORY_OBJECTS)
+		#define CZ_POSIX_TYPED_MEMORY_OBJECTS _POSIX_TYPED_MEMORY_OBJECTS
+	#else
+		#define CZ_POSIX_TYPED_MEMORY_OBJECTS ( -1 )
+	#endif
+#endif
+
+// Check for predefined X/OPEN macros
+
+#if !defined(CZ_XOPEN_VERSION)
+	#if defined(_XOPEN_VERSION)
+		#define CZ_XOPEN_VERSION _XOPEN_VERSION
+	#else
+		#define CZ_XOPEN_VERSION ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_XOPEN_CRYPT)
+	#if defined(_XOPEN_CRYPT)
+		#define CZ_XOPEN_CRYPT _XOPEN_CRYPT
+	#else
+		#define CZ_XOPEN_CRYPT ( -1 )
+	#endif
+#endif
+
+#if !defined (CZ_XOPEN_LEGACY)
+	#if defined(_XOPEN_LEGACY)
+		#define CZ_XOPEN_LEGACY _XOPEN_LEGACY
+	#else
+		#define CZ_XOPEN_LEGACY ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_XOPEN_REALTIME)
+	#if defined(_XOPEN_REALTIME)
+		#define CZ_XOPEN_REALTIME _XOPEN_REALTIME
+	#else
+		#define CZ_XOPEN_REALTIME ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_XOPEN_REALTIME_THREADS)
+	#if defined(_XOPEN_REALTIME_THREADS)
+		#define CZ_XOPEN_REALTIME_THREADS _XOPEN_REALTIME_THREADS
+	#else
+		#define CZ_XOPEN_REALTIME_THREADS ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_XOPEN_STREAMS)
+	#if defined(_XOPEN_STREAMS)
+		#define CZ_XOPEN_STREAMS _XOPEN_STREAMS
+	#else
+		#define CZ_XOPEN_STREAMS ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_XOPEN_UNIX)
+	#if defined(_XOPEN_UNIX)
+		#define CZ_XOPEN_UNIX _XOPEN_UNIX
+	#else
+		#define CZ_XOPEN_UNIX ( -1 )
+	#endif
+#endif
+
+// Check for predefined Linux macros
+
+#if !defined(CZ_LINUX_ADVISE_SYSCALLS)
+	#if defined(CONFIG_ADVISE_SYSCALLS)
+		#define CZ_LINUX_ADVISE_SYSCALLS 1
+	#else
+		#define CZ_LINUX_ADVISE_SYSCALLS 0
+	#endif
+#endif
+
+#if !defined(CZ_LINUX_KSM)
+	#if defined(CONFIG_KSM)
+		#define CZ_LINUX_KSM 1
+	#else
+		#define CZ_LINUX_KSM 0
+	#endif
+#endif
+
+#if !defined(CZ_LINUX_MEMORY_FAILURE)
+	#if defined(CONFIG_MEMORY_FAILURE)
+		#define CZ_LINUX_MEMORY_FAILURE 1
+	#else
+		#define CZ_LINUX_MEMORY_FAILURE 0
+	#endif
+#endif
+
+#if !defined(CZ_LINUX_TRANSPARENT_HUGEPAGE)
+	#if defined(CONFIG_TRANSPARENT_HUGEPAGE)
+		#define CZ_LINUX_TRANSPARENT_HUGEPAGE 1
+	#else
+		#define CZ_LINUX_TRANSPARENT_HUGEPAGE 0
+	#endif
+#endif
+
+// Check for user-defined feature macros
+
+#if !defined(CZ_DEFAULT_SOURCE)
+	#if defined(_DEFAULT_SOURCE)
+		#define CZ_DEFAULT_SOURCE 1
+	#else
+		#define CZ_DEFAULT_SOURCE 0
+	#endif
+#endif
+
+#if !defined(CZ_GNU_SOURCE)
+	#if defined(_GNU_SOURCE)
+		#define CZ_GNU_SOURCE 1
+	#else
+		#define CZ_GNU_SOURCE 0
+	#endif
+#endif
+
+// Check support for attributes, builtins, features, etc.
 
 #if !defined(CZ_HAS_ATTRIBUTE)
 	#if defined(__has_attribute)
@@ -283,549 +871,11 @@
 	#endif
 #endif
 
-// Check support for predefined macros
-
 #if !defined(CZ_FILENAME)
 	#if defined(__FILE_NAME__)
 		#define CZ_FILENAME __FILE_NAME__
 	#else
 		#define CZ_FILENAME __FILE__
-	#endif
-#endif
-
-#if !defined(CZ_DARWIN)
-	#if defined(__APPLE__) && defined(__MACH__)
-		#define CZ_DARWIN 1
-	#else
-		#define CZ_DARWIN 0
-	#endif
-#endif
-
-#if !defined(CZ_IOS)
-	#if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
-		#define CZ_IOS 1
-	#else
-		#define CZ_IOS 0
-	#endif
-#endif
-
-#if !defined(CZ_MACOS)
-	#if defined(TARGET_OS_OSX) && TARGET_OS_OSX
-		#define CZ_MACOS 1
-	#else
-		#define CZ_MACOS 0
-	#endif
-#endif
-
-#if !defined(CZ_UNIX)
-	#if defined(__unix__) || defined(__unix) || defined(unix)
-		#define CZ_UNIX 1
-	#else
-		#define CZ_UNIX 0
-	#endif
-#endif
-
-#if !defined(CZ_LINUX)
-	#if defined(__linux__)
-		#define CZ_LINUX 1
-	#else
-		#define CZ_LINUX 0
-	#endif
-#endif
-
-#if !defined(CZ_GNU_LINUX)
-	#if defined(__gnu_linux__)
-		#define CZ_GNU_LINUX 1
-	#else
-		#define CZ_GNU_LINUX 0
-	#endif
-#endif
-
-#if !defined(CZ_CYGWIN)
-	#if defined(__CYGWIN__)
-		#define CZ_CYGWIN 1
-	#else
-		#define CZ_CYGWIN 0
-	#endif
-#endif
-
-#if !defined(CZ_MINGW)
-	#if defined(__MINGW32__)
-		#define CZ_MINGW 1
-	#else
-		#define CZ_MINGW 0
-	#endif
-#endif
-
-#if !defined(CZ_WINDOWS)
-	#if defined(_WIN32)
-		#define CZ_WINDOWS 1
-	#else
-		#define CZ_WINDOWS 0
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_VERSION)
-	#if defined(_POSIX_VERSION)
-		#define CZ_POSIX_VERSION _POSIX_VERSION
-	#else
-		#define CZ_POSIX_VERSION (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_ADVISORY_INFO)
-	#if defined(_POSIX_ADVISORY_INFO)
-		#define CZ_POSIX_ADVISORY_INFO _POSIX_ADVISORY_INFO
-	#else
-		#define CZ_POSIX_ADVISORY_INFO (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_ASYNCHRONOUS_IO)
-	#if defined(_POSIX_ASYNCHRONOUS_IO)
-		#define CZ_POSIX_ASYNCHRONOUS_IO _POSIX_ASYNCHRONOUS_IO
-	#else
-		#define CZ_POSIX_ASYNCHRONOUS_IO (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_BARRIERS)
-	#if defined(_POSIX_BARRIERS)
-		#define CZ_POSIX_BARRIERS _POSIX_BARRIERS
-	#else
-		#define CZ_POSIX_BARRIERS (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_CLOCK_SELECTION)
-	#if defined(_POSIX_CLOCK_SELECTION)
-		#define CZ_POSIX_CLOCK_SELECTION _POSIX_CLOCK_SELECTION
-	#else
-		#define CZ_POSIX_CLOCK_SELECTION (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_CPUTIME)
-	#if defined(_POSIX_CPUTIME)
-		#define CZ_POSIX_CPUTIME _POSIX_CPUTIME
-	#else
-		#define CZ_POSIX_CPUTIME (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_FSYNC)
-	#if defined(_POSIX_FSYNC)
-		#define CZ_POSIX_FSYNC _POSIX_FSYNC
-	#else
-		#define CZ_POSIX_FSYNC (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_IPV6)
-	#if defined(_POSIX_IPV6)
-		#define CZ_POSIX_IPV6 _POSIX_IPV6
-	#else
-		#define CZ_POSIX_IPV6 (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_JOB_CONTROL)
-	#if defined(_POSIX_JOB_CONTROL)
-		#define CZ_POSIX_JOB_CONTROL _POSIX_JOB_CONTROL
-	#else
-		#define CZ_POSIX_JOB_CONTROL (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_MAPPED_FILES)
-	#if defined(_POSIX_MAPPED_FILES)
-		#define CZ_POSIX_MAPPED_FILES _POSIX_MAPPED_FILES
-	#else
-		#define CZ_POSIX_MAPPED_FILES (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_MEMLOCK)
-	#if defined(_POSIX_MEMLOCK)
-		#define CZ_POSIX_MEMLOCK _POSIX_MEMLOCK
-	#else
-		#define CZ_POSIX_MEMLOCK (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_MEMLOCK_RANGE)
-	#if defined(_POSIX_MEMLOCK_RANGE)
-		#define CZ_POSIX_MEMLOCK_RANGE _POSIX_MEMLOCK_RANGE
-	#else
-		#define CZ_POSIX_MEMLOCK_RANGE (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_MEMORY_PROTECTION)
-	#if defined(_POSIX_MEMORY_PROTECTION)
-		#define CZ_POSIX_MEMORY_PROTECTION _POSIX_MEMORY_PROTECTION
-	#else
-		#define CZ_POSIX_MEMORY_PROTECTION (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_MESSAGE_PASSING)
-	#if defined(_POSIX_MESSAGE_PASSING)
-		#define CZ_POSIX_MESSAGE_PASSING _POSIX_MESSAGE_PASSING
-	#else
-		#define CZ_POSIX_MESSAGE_PASSING (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_MONOTONIC_CLOCK)
-	#if defined(_POSIX_MONOTONIC_CLOCK)
-		#define CZ_POSIX_MONOTONIC_CLOCK _POSIX_MONOTONIC_CLOCK
-	#else
-		#define CZ_POSIX_MONOTONIC_CLOCK (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_NO_TRUNC)
-	#if defined(_POSIX_NO_TRUNC)
-		#define CZ_POSIX_NO_TRUNC _POSIX_NO_TRUNC
-	#else
-		#define CZ_POSIX_NO_TRUNC (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_PRIORITIZED_IO)
-	#if defined(_POSIX_PRIORITIZED_IO)
-		#define CZ_POSIX_PRIORITIZED_IO _POSIX_PRIORITIZED_IO
-	#else
-		#define CZ_POSIX_PRIORITIZED_IO (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_PRIORITY_SCHEDULING)
-	#if defined(_POSIX_PRIORITY_SCHEDULING)
-		#define CZ_POSIX_PRIORITY_SCHEDULING _POSIX_PRIORITY_SCHEDULING
-	#else
-		#define CZ_POSIX_PRIORITY_SCHEDULING (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_RAW_SOCKETS)
-	#if defined(_POSIX_RAW_SOCKETS)
-		#define CZ_POSIX_RAW_SOCKETS _POSIX_RAW_SOCKETS
-	#else
-		#define CZ_POSIX_RAW_SOCKETS (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_READER_WRITER_LOCKS)
-	#if defined(_POSIX_READER_WRITER_LOCKS)
-		#define CZ_POSIX_READER_WRITER_LOCKS _POSIX_READER_WRITER_LOCKS
-	#else
-		#define CZ_POSIX_READER_WRITER_LOCKS (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_REALTIME_SIGNALS)
-	#if defined(_POSIX_REALTIME_SIGNALS)
-		#define CZ_POSIX_REALTIME_SIGNALS _POSIX_REALTIME_SIGNALS
-	#else
-		#define CZ_POSIX_REALTIME_SIGNALS (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_REGEXP)
-	#if defined(_POSIX_REGEXP)
-		#define CZ_POSIX_REGEXP _POSIX_REGEXP
-	#else
-		#define CZ_POSIX_REGEXP (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_SAVED_IDS)
-	#if defined(_POSIX_SAVED_IDS)
-		#define CZ_POSIX_SAVED_IDS _POSIX_SAVED_IDS
-	#else
-		#define CZ_POSIX_SAVED_IDS (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_SEMAPHORES)
-	#if defined(_POSIX_SEMAPHORES)
-		#define CZ_POSIX_SEMAPHORES _POSIX_SEMAPHORES
-	#else
-		#define CZ_POSIX_SEMAPHORES (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_SHARED_MEMORY_OBJECTS)
-	#if defined(_POSIX_SHARED_MEMORY_OBJECTS)
-		#define CZ_POSIX_SHARED_MEMORY_OBJECTS _POSIX_SHARED_MEMORY_OBJECTS
-	#else
-		#define CZ_POSIX_SHARED_MEMORY_OBJECTS (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_SHELL)
-	#if defined(_POSIX_SHELL)
-		#define CZ_POSIX_SHELL _POSIX_SHELL
-	#else
-		#define CZ_POSIX_SHELL (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_SPAWN)
-	#if defined(_POSIX_SPAWN)
-		#define CZ_POSIX_SPAWN _POSIX_SPAWN
-	#else
-		#define CZ_POSIX_SPAWN (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_SPIN_LOCKS)
-	#if defined(_POSIX_SPIN_LOCKS)
-		#define CZ_POSIX_SPIN_LOCKS _POSIX_SPIN_LOCKS
-	#else
-		#define CZ_POSIX_SPIN_LOCKS (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_SPORADIC_SERVER)
-	#if defined(_POSIX_SPORADIC_SERVER)
-		#define CZ_POSIX_SPORADIC_SERVER _POSIX_SPORADIC_SERVER
-	#else
-		#define CZ_POSIX_SPORADIC_SERVER (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_SYNCHRONIZED_IO)
-	#if defined(_POSIX_SYNCHRONIZED_IO)
-		#define CZ_POSIX_SYNCHRONIZED_IO _POSIX_SYNCHRONIZED_IO
-	#else
-		#define CZ_POSIX_SYNCHRONIZED_IO (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_THREAD_ATTR_STACKADDR)
-	#if defined(_POSIX_THREAD_ATTR_STACKADDR)
-		#define CZ_POSIX_THREAD_ATTR_STACKADDR _POSIX_THREAD_ATTR_STACKADDR
-	#else
-		#define CZ_POSIX_THREAD_ATTR_STACKADDR (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_THREAD_ATTR_STACKSIZE)
-	#if defined(_POSIX_THREAD_ATTR_STACKSIZE)
-		#define CZ_POSIX_THREAD_ATTR_STACKSIZE _POSIX_THREAD_ATTR_STACKSIZE
-	#else
-		#define CZ_POSIX_THREAD_ATTR_STACKSIZE (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_THREAD_CPUTIME)
-	#if defined(_POSIX_THREAD_CPUTIME)
-		#define CZ_POSIX_THREAD_CPUTIME _POSIX_THREAD_CPUTIME
-	#else
-		#define CZ_POSIX_THREAD_CPUTIME (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_THREAD_PRIO_INHERIT)
-	#if defined(_POSIX_THREAD_PRIO_INHERIT)
-		#define CZ_POSIX_THREAD_PRIO_INHERIT _POSIX_THREAD_PRIO_INHERIT
-	#else
-		#define CZ_POSIX_THREAD_PRIO_INHERIT (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_THREAD_PRIO_PROTECT)
-	#if defined(_POSIX_THREAD_PRIO_PROTECT)
-		#define CZ_POSIX_THREAD_PRIO_PROTECT _POSIX_THREAD_PRIO_PROTECT
-	#else
-		#define CZ_POSIX_THREAD_PRIO_PROTECT (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_THREAD_PRIORITY_SCHEDULING)
-	#if defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
-		#define CZ_POSIX_THREAD_PRIORITY_SCHEDULING _POSIX_THREAD_PRIORITY_SCHEDULING
-	#else
-		#define CZ_POSIX_THREAD_PRIORITY_SCHEDULING (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_THREAD_PROCESS_SHARED)
-	#if defined(_POSIX_THREAD_PROCESS_SHARED)
-		#define CZ_POSIX_THREAD_PROCESS_SHARED _POSIX_THREAD_PROCESS_SHARED
-	#else
-		#define CZ_POSIX_THREAD_PROCESS_SHARED (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_THREAD_SAFE_FUNCTIONS)
-	#if defined(_POSIX_THREAD_SAFE_FUNCTIONS)
-		#define CZ_POSIX_THREAD_SAFE_FUNCTIONS _POSIX_THREAD_SAFE_FUNCTIONS
-	#else
-		#define CZ_POSIX_THREAD_SAFE_FUNCTIONS (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_THREAD_SPORADIC_SERVER)
-	#if defined(_POSIX_THREAD_SPORADIC_SERVER)
-		#define CZ_POSIX_THREAD_SPORADIC_SERVER _POSIX_THREAD_SPORADIC_SERVER
-	#else
-		#define CZ_POSIX_THREAD_SPORADIC_SERVER (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_THREADS)
-	#if defined(_POSIX_THREADS)
-		#define CZ_POSIX_THREADS _POSIX_THREADS
-	#else
-		#define CZ_POSIX_THREADS (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_TIMEOUTS)
-	#if defined(_POSIX_TIMEOUTS)
-		#define CZ_POSIX_TIMEOUTS _POSIX_TIMEOUTS
-	#else
-		#define CZ_POSIX_TIMEOUTS (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_TIMERS)
-	#if defined(_POSIX_TIMERS)
-		#define CZ_POSIX_TIMERS _POSIX_TIMERS
-	#else
-		#define CZ_POSIX_TIMERS (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_TRACE)
-	#if defined(_POSIX_TRACE)
-		#define CZ_POSIX_TRACE _POSIX_TRACE
-	#else
-		#define CZ_POSIX_TRACE (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_TRACE_EVENT_FILTER)
-	#if defined(_POSIX_TRACE_EVENT_FILTER)
-		#define CZ_POSIX_TRACE_EVENT_FILTER _POSIX_TRACE_EVENT_FILTER
-	#else
-		#define CZ_POSIX_TRACE_EVENT_FILTER (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_TRACE_INHERIT)
-	#if defined(_POSIX_TRACE_INHERIT)
-		#define CZ_POSIX_TRACE_INHERIT _POSIX_TRACE_INHERIT
-	#else
-		#define CZ_POSIX_TRACE_INHERIT (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_TRACE_LOG)
-	#if defined(_POSIX_TRACE_LOG)
-		#define CZ_POSIX_TRACE_LOG _POSIX_TRACE_LOG
-	#else
-		#define CZ_POSIX_TRACE_LOG (-1)
-	#endif
-#endif
-
-#if !defined(CZ_POSIX_TYPED_MEMORY_OBJECTS)
-	#if defined(_POSIX_TYPED_MEMORY_OBJECTS)
-		#define CZ_POSIX_TYPED_MEMORY_OBJECTS _POSIX_TYPED_MEMORY_OBJECTS
-	#else
-		#define CZ_POSIX_TYPED_MEMORY_OBJECTS (-1)
-	#endif
-#endif
-
-#if !defined(CZ_XOPEN_VERSION)
-	#if defined(_XOPEN_VERSION)
-		#define CZ_XOPEN_VERSION _XOPEN_VERSION
-	#else
-		#define CZ_XOPEN_VERSION (-1)
-	#endif
-#endif
-
-#if !defined(CZ_XOPEN_CRYPT)
-	#if defined(_XOPEN_CRYPT)
-		#define CZ_XOPEN_CRYPT _XOPEN_CRYPT
-	#else
-		#define CZ_XOPEN_CRYPT (-1)
-	#endif
-#endif
-
-#if !defined (CZ_XOPEN_LEGACY)
-	#if defined(_XOPEN_LEGACY)
-		#define CZ_XOPEN_LEGACY _XOPEN_LEGACY
-	#else
-		#define CZ_XOPEN_LEGACY (-1)
-	#endif
-#endif
-
-#if !defined(CZ_XOPEN_REALTIME)
-	#if defined(_XOPEN_REALTIME)
-		#define CZ_XOPEN_REALTIME _XOPEN_REALTIME
-	#else
-		#define CZ_XOPEN_REALTIME (-1)
-	#endif
-#endif
-
-#if !defined(CZ_XOPEN_REALTIME_THREADS)
-	#if defined(_XOPEN_REALTIME_THREADS)
-		#define CZ_XOPEN_REALTIME_THREADS _XOPEN_REALTIME_THREADS
-	#else
-		#define CZ_XOPEN_REALTIME_THREADS (-1)
-	#endif
-#endif
-
-#if !defined(CZ_XOPEN_STREAMS)
-	#if defined(_XOPEN_STREAMS)
-		#define CZ_XOPEN_STREAMS _XOPEN_STREAMS
-	#else
-		#define CZ_XOPEN_STREAMS (-1)
-	#endif
-#endif
-
-#if !defined(CZ_XOPEN_UNIX)
-	#if defined(_XOPEN_UNIX)
-		#define CZ_XOPEN_UNIX _XOPEN_UNIX
-	#else
-		#define CZ_XOPEN_UNIX (-1)
-	#endif
-#endif
-
-#if !defined(CZ_LINUX_ADVISE_SYSCALLS)
-	#if defined(CONFIG_ADVISE_SYSCALLS)
-		#define CZ_LINUX_ADVISE_SYSCALLS 1
-	#else
-		#define CZ_LINUX_ADVISE_SYSCALLS 0
-	#endif
-#endif
-
-#if !defined(CZ_LINUX_KSM)
-	#if defined(CONFIG_KSM)
-		#define CZ_LINUX_KSM 1
-	#else
-		#define CZ_LINUX_KSM 0
-	#endif
-#endif
-
-#if !defined(CZ_LINUX_MEMORY_FAILURE)
-	#if defined(CONFIG_MEMORY_FAILURE)
-		#define CZ_LINUX_MEMORY_FAILURE 1
-	#else
-		#define CZ_LINUX_MEMORY_FAILURE 0
-	#endif
-#endif
-
-#if !defined(CZ_LINUX_TRANSPARENT_HUGEPAGE)
-	#if defined(CONFIG_TRANSPARENT_HUGEPAGE)
-		#define CZ_LINUX_TRANSPARENT_HUGEPAGE 1
-	#else
-		#define CZ_LINUX_TRANSPARENT_HUGEPAGE 0
 	#endif
 #endif
 

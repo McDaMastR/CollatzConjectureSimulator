@@ -33,49 +33,84 @@ set(COMPILE_WARNINGS_CLANG
 	-Weverything
 
 	# Warnings OFF
-	-Wno-bad-function-cast               -Wno-c++-compat
-	-Wno-c23-extensions                  -Wno-c2y-extensions
-	-Wno-covered-switch-default          -Wno-declaration-after-statement
-	-Wno-gnu-conditional-omitted-operand -Wno-implicit-int-float-conversion
-	-Wno-missing-field-initializers      -Wno-padded
-	-Wno-switch-enum                     -Wno-unsafe-buffer-usage
+	-Wno-bad-function-cast
+	-Wno-c++-compat
+	-Wno-c23-extensions
+	-Wno-c2y-extensions
+	-Wno-covered-switch-default
+	-Wno-declaration-after-statement
+	-Wno-gnu-conditional-omitted-operand
+	-Wno-implicit-int-float-conversion
+	-Wno-missing-field-initializers
+	-Wno-padded
+	-Wno-switch-enum
+	-Wno-unsafe-buffer-usage
 	-Wno-unused-function
 )
 
 set(COMPILE_WARNINGS_GNU
 	# Warnings ON
-	-Wall                           -Wextra
-	-Walloc-zero                    -Walloca
-	-Warray-bounds=2                -Wattribute-alias=2
-	-Wbidi-chars=any,ucn            -Wc11-c23-compat
-	-Wcast-align=strict             -Wcast-qual
-	-Wconversion                    -Wdate-time
-	-Wdisabled-optimization         -Wdouble-promotion
-	-Wduplicated-branches           -Wduplicated-cond
-	-Wflex-array-member-not-at-end  -Wfloat-equal
-	-Wformat=2                      -Wformat-overflow=2
-	-Wformat-signedness             -Wformat-truncation=2
-	-Wimplicit-fallthrough=5        -Winit-self
-	-Winvalid-pch                   -Winvalid-utf8
-	-Wlogical-op                    -Wmissing-declarations
-	-Wmissing-format-attribute      -Wmissing-include-dirs
-	-Wmissing-noreturn              -Wmissing-prototypes
-	-Wmissing-variable-declarations -Wnested-externs
-	-Wnull-dereference              -Wold-style-definition
-	-Wopenacc-parallelism           -Wpacked
-	-Wpointer-arith                 -Wredundant-decls
-	-Wshadow                        -Wshift-overflow=2
-	-Wstack-protector               -Wstrict-overflow=5
-	-Wstrict-prototypes             -Wstringop-overflow=4
-	-Wswitch-default                -Wsync-nand
-	-Wtrampolines                   -Wtrivial-auto-var-init
-	-Wundef                         -Wunsafe-loop-optimizations
-	-Wunused-const-variable=2       -Wunused-macros
-	-Wuse-after-free=3              -Wvector-operation-performance
+	-Wall
+	-Wextra
+	-Walloc-zero
+	-Walloca
+	-Warray-bounds=2
+	-Wattribute-alias=2
+	-Wbidi-chars=any,ucn
+	-Wc11-c23-compat
+	-Wcast-align=strict
+	-Wcast-qual
+	-Wconversion
+	-Wdate-time
+	-Wdisabled-optimization
+	-Wdouble-promotion
+	-Wduplicated-branches
+	-Wduplicated-cond
+	-Wflex-array-member-not-at-end
+	-Wfloat-equal
+	-Wformat=2
+	-Wformat-overflow=2
+	-Wformat-signedness
+	-Wformat-truncation=2
+	-Wimplicit-fallthrough=5
+	-Winit-self
+	-Winvalid-pch
+	-Winvalid-utf8
+	-Wlogical-op
+	-Wmissing-declarations
+	-Wmissing-format-attribute
+	-Wmissing-include-dirs
+	-Wmissing-noreturn
+	-Wmissing-prototypes
+	-Wmissing-variable-declarations
+	-Wnested-externs
+	-Wnull-dereference
+	-Wold-style-definition
+	-Wopenacc-parallelism
+	-Wpacked
+	-Wpointer-arith
+	-Wredundant-decls
+	-Wshadow
+	-Wshift-overflow=2
+	-Wstack-protector
+	-Wstrict-overflow=5
+	-Wstrict-prototypes
+	-Wstringop-overflow=4
+	-Wswitch-default
+	-Wsync-nand
+	-Wtrampolines
+	-Wtrivial-auto-var-init
+	-Wundef
+	-Wunsafe-loop-optimizations
+	-Wunused-const-variable=2
+	-Wunused-macros
+	-Wuse-after-free=3
+	-Wvector-operation-performance
 	-Wwrite-strings
 
 	# Warnings OFF
-	-Wno-free-labels     -Wno-missing-field-initializers
+	-Wno-free-labels
+	-Wno-missing-field-initializers
 	-Wno-unused-function
 )
 
@@ -96,11 +131,6 @@ set(MACRO_DEFINITIONS_APPLE
 
 set(MACRO_DEFINITIONS_MINGW
 	$<${USING_EXCESS_WARNINGS}:__MINGW_MSVC_COMPAT_WARNINGS=1>
-)
-
-set(MACRO_DEFINITIONS_UNIX
-	_FILE_OFFSET_BITS=64
-	_TIME_BITS=64
 )
 
 set(MACRO_DEFINITIONS_WIN32
@@ -152,10 +182,15 @@ target_compile_definitions(cltzCommon
 		CZ_VERSION_MINOR=${CollatzConjectureSimulator_VERSION_MINOR}
 		CZ_VERSION_PATCH=${CollatzConjectureSimulator_VERSION_PATCH}
 
+		_FILE_OFFSET_BITS=64
+		_TIME_BITS=64
+		_DEFAULT_SOURCE=1
+		_POSIX_C_SOURCE=202405L
+		_XOPEN_SOURCE=800
+
 		$<$<NOT:$<CONFIG:DEBUG>>:NDEBUG=1>
 		$<${USING_APPLE}:${MACRO_DEFINITIONS_APPLE}>
 		$<${USING_MINGW}:${MACRO_DEFINITIONS_MINGW}>
-		$<${USING_UNIX}:${MACRO_DEFINITIONS_UNIX}>
 		$<${USING_WIN32}:${MACRO_DEFINITIONS_WIN32}>
 )
 
