@@ -181,7 +181,7 @@ enum CzResult czWrap_reallocf(void* restrict* res, void* ptr, size_t size);
  * @brief Specifies whether @c _recalloc is defined.
  */
 #if !defined(CZ_WRAP_RECALLOC)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_RECALLOC 1
 	#else
 		#define CZ_WRAP_RECALLOC 0
@@ -277,7 +277,7 @@ enum CzResult czWrap_posix_memalign(int* res, void* restrict* ptr, size_t alignm
  * @brief Specifies whether @c _aligned_offset_malloc is defined.
  */
 #if !defined(CZ_WRAP_ALIGNED_OFFSET_MALLOC)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_ALIGNED_OFFSET_MALLOC 1
 	#else
 		#define CZ_WRAP_ALIGNED_OFFSET_MALLOC 0
@@ -317,7 +317,7 @@ enum CzResult czWrap_aligned_offset_malloc(void* restrict* res, size_t size, siz
  * @brief Specifies whether @c _aligned_offset_realloc is defined.
  */
 #if !defined(CZ_WRAP_ALIGNED_OFFSET_REALLOC)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_ALIGNED_OFFSET_REALLOC 1
 	#else
 		#define CZ_WRAP_ALIGNED_OFFSET_REALLOC 0
@@ -359,7 +359,7 @@ enum CzResult czWrap_aligned_offset_realloc(
  * @brief Specifies whether @c _aligned_offset_recalloc is defined.
  */
 #if !defined(CZ_WRAP_ALIGNED_OFFSET_RECALLOC)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_ALIGNED_OFFSET_RECALLOC 1
 	#else
 		#define CZ_WRAP_ALIGNED_OFFSET_RECALLOC 0
@@ -980,7 +980,7 @@ enum CzResult czWrap_unlink(const char* path);
  * @brief Specifies whether @c fileno is defined.
  */
 #if !defined(CZ_WRAP_FILENO)
-	#if CZ_WINDOWS || CZ_POSIX_VERSION >= CZ_POSIX_1988
+	#if CZ_WIN32 || CZ_POSIX_VERSION >= CZ_POSIX_1988
 		#define CZ_WRAP_FILENO 1
 	#else
 		#define CZ_WRAP_FILENO 0
@@ -1015,7 +1015,7 @@ enum CzResult czWrap_fileno(int* res, FILE* stream);
  * @brief Specifies whether @c isatty is defined.
  */
 #if !defined(CZ_WRAP_ISATTY)
-	#if CZ_WINDOWS || CZ_POSIX_VERSION >= CZ_POSIX_1988
+	#if CZ_WIN32 || CZ_POSIX_VERSION >= CZ_POSIX_1988
 		#define CZ_WRAP_ISATTY 1
 	#else
 		#define CZ_WRAP_ISATTY 0
@@ -1990,7 +1990,7 @@ enum CzResult czWrap_msync(void* addr, size_t size, int flags);
  * @brief Specifies whether @c _get_osfhandle is defined.
  */
 #if !defined(CZ_WRAP_GET_OSFHANDLE)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_GET_OSFHANDLE 1
 	#else
 		#define CZ_WRAP_GET_OSFHANDLE 0
@@ -2024,7 +2024,7 @@ enum CzResult czWrap_get_osfhandle(intptr_t* res, int fd);
  * @brief Specifies whether @c MultiByteToWideChar is defined.
  */
 #if !defined(CZ_WRAP_MULTI_BYTE_TO_WIDE_CHAR)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_MULTI_BYTE_TO_WIDE_CHAR 1
 	#else
 		#define CZ_WRAP_MULTI_BYTE_TO_WIDE_CHAR 0
@@ -2066,7 +2066,7 @@ enum CzResult czWrap_MultiByteToWideChar(
  * @brief Specifies whether @c GetFileAttributesExW is defined.
  */
 #if !defined(CZ_WRAP_GET_FILE_ATTRIBUTES_EX_W)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_GET_FILE_ATTRIBUTES_EX_W 1
 	#else
 		#define CZ_WRAP_GET_FILE_ATTRIBUTES_EX_W 0
@@ -2106,7 +2106,7 @@ enum CzResult czWrap_GetFileAttributesExW(LPCWSTR path, GET_FILEEX_INFO_LEVELS l
  * @brief Specifies whether @c GetFileSizeEx is defined.
  */
 #if !defined(CZ_WRAP_GET_FILE_SIZE_EX)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_GET_FILE_SIZE_EX 1
 	#else
 		#define CZ_WRAP_GET_FILE_SIZE_EX 0
@@ -2143,7 +2143,7 @@ enum CzResult czWrap_GetFileSizeEx(HANDLE file, PLARGE_INTEGER size);
  * @brief Specifies whether @c CreateFileW is defined.
  */
 #if !defined(CZ_WRAP_CREATE_FILE_W)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_CREATE_FILE_W 1
 	#else
 		#define CZ_WRAP_CREATE_FILE_W 0
@@ -2202,7 +2202,7 @@ enum CzResult czWrap_CreateFileW(
  * @brief Specifies whether @c CloseHandle is defined.
  */
 #if !defined(CZ_WRAP_CLOSE_HANDLE)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_CLOSE_HANDLE 1
 	#else
 		#define CZ_WRAP_CLOSE_HANDLE 0
@@ -2234,7 +2234,7 @@ enum CzResult czWrap_CloseHandle(HANDLE handle);
  * @brief Specifies whether @c SetEndOfFile is defined.
  */
 #if !defined(CZ_WRAP_SET_END_OF_FILE)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_SET_END_OF_FILE 1
 	#else
 		#define CZ_WRAP_SET_END_OF_FILE 0
@@ -2268,7 +2268,7 @@ enum CzResult czWrap_SetEndOfFile(HANDLE file);
  * @brief Specifies whether @c SetFilePointerEx is defined.
  */
 #if !defined(CZ_WRAP_SET_FILE_POINTER_EX)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_SET_FILE_POINTER_EX 1
 	#else
 		#define CZ_WRAP_SET_FILE_POINTER_EX 0
@@ -2309,7 +2309,7 @@ enum CzResult czWrap_SetFilePointerEx(
  * @brief Specifies whether @c ReadFile is defined.
  */
 #if !defined(CZ_WRAP_READ_FILE)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_READ_FILE 1
 	#else
 		#define CZ_WRAP_READ_FILE 0
@@ -2353,7 +2353,7 @@ enum CzResult czWrap_ReadFile(
  * @brief Specifies whether @c WriteFile is defined.
  */
 #if !defined(CZ_WRAP_WRITE_FILE)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_WRITE_FILE 1
 	#else
 		#define CZ_WRAP_WRITE_FILE 0
@@ -2396,7 +2396,7 @@ enum CzResult czWrap_WriteFile(
  * @brief Specifies whether @c DeleteFileW is defined.
  */
 #if !defined(CZ_WRAP_DELETE_FILE_W)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_DELETE_FILE_W 1
 	#else
 		#define CZ_WRAP_DELETE_FILE_W 0
@@ -2434,7 +2434,7 @@ enum CzResult czWrap_DeleteFileW(LPCWSTR path);
  * @brief Specifies whether @c CreateFileMappingW is defined.
  */
 #if !defined(CZ_WRAP_CREATE_FILE_MAPPING_W)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_CREATE_FILE_MAPPING_W 1
 	#else
 		#define CZ_WRAP_CREATE_FILE_MAPPING_W 0
@@ -2488,7 +2488,7 @@ enum CzResult czWrap_CreateFileMappingW(
  * @brief Specifies whether @c MapViewOfFile is defined.
  */
 #if !defined(CZ_WRAP_MAP_VIEW_OF_FILE)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_MAP_VIEW_OF_FILE 1
 	#else
 		#define CZ_WRAP_MAP_VIEW_OF_FILE 0
@@ -2539,7 +2539,7 @@ enum CzResult czWrap_MapViewOfFile(
  * @brief Specifies whether @c UnmapViewOfFile is defined.
  */
 #if !defined(CZ_WRAP_UNMAP_VIEW_OF_FILE)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_UNMAP_VIEW_OF_FILE 1
 	#else
 		#define CZ_WRAP_UNMAP_VIEW_OF_FILE 0
@@ -2572,7 +2572,7 @@ enum CzResult czWrap_UnmapViewOfFile(LPCVOID baseAddress);
  * @brief Specifies whether @c FlushViewOfFile is defined.
  */
 #if !defined(CZ_WRAP_FLUSH_VIEW_OF_FILE)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_FLUSH_VIEW_OF_FILE 1
 	#else
 		#define CZ_WRAP_FLUSH_VIEW_OF_FILE 0
@@ -2606,7 +2606,7 @@ enum CzResult czWrap_FlushViewOfFile(LPCVOID baseAddress, SIZE_T numberOfBytesTo
  * @brief Specifies whether @c FlushFileBuffers is defined.
  */
 #if !defined(CZ_WRAP_FLUSH_FILE_BUFFERS)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_FLUSH_FILE_BUFFERS 1
 	#else
 		#define CZ_WRAP_FLUSH_FILE_BUFFERS 0
@@ -2638,7 +2638,7 @@ enum CzResult czWrap_FlushFileBuffers(HANDLE file);
  * @brief Specifies whether @c DeviceIoControl is defined.
  */
 #if !defined(CZ_WRAP_DEVICE_IO_CONTROL)
-	#if CZ_WINDOWS
+	#if CZ_WIN32
 		#define CZ_WRAP_DEVICE_IO_CONTROL 1
 	#else
 		#define CZ_WRAP_DEVICE_IO_CONTROL 0

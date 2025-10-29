@@ -2546,7 +2546,7 @@ enum CzResult czWrap_fileno(int* res, FILE* stream)
 {
 	int fd = fileno(stream);
 
-#if CZ_DARWIN || CZ_WINDOWS
+#if CZ_DARWIN || CZ_WIN32
 	*res = fd;
 	return CZ_RESULT_SUCCESS;
 #elif CZ_POSIX_VERSION >= CZ_POSIX_1988
@@ -2577,7 +2577,7 @@ enum CzResult czWrap_isatty(int* res, int fd)
 	errno = 0;
 	int r = isatty(fd);
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 	if CZ_EXPECT (r || errno != EBADF) {
 		*res = r;
 		return CZ_RESULT_SUCCESS;

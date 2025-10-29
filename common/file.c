@@ -20,7 +20,7 @@
 #include "util.h"
 #include "wrap.h"
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 	#define MAX_ACCESS_SIZE UINT32_MAX
 #elif CZ_DARWIN
 	#define MAX_ACCESS_SIZE INT_MAX
@@ -174,7 +174,7 @@ static enum CzResult zero_section_win32(HANDLE file, size_t size, size_t offset)
 }
 #endif
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 static enum CzResult insert_section_win32(HANDLE file, const void* restrict buffer, size_t size, size_t offset)
 {
 	SYSTEM_INFO sysInfo;
@@ -243,7 +243,7 @@ err_close_map:
 }
 #endif
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 static enum CzResult cut_section_win32(HANDLE file, size_t size, size_t offset)
 {
 	SYSTEM_INFO sysInfo;
@@ -613,7 +613,7 @@ err_free_content:
 	return ret;
 }
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 static enum CzResult czStreamIsTerminal_win32(FILE* restrict stream, bool* restrict istty)
 {
 	int fd;
@@ -667,7 +667,7 @@ static enum CzResult czStreamIsTerminal_other(FILE* restrict stream, bool* restr
 
 enum CzResult czStreamIsTerminal(FILE* restrict stream, bool* restrict istty)
 {
-#if CZ_WINDOWS
+#if CZ_WIN32
 	return czStreamIsTerminal_win32(stream, istty);
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	return czStreamIsTerminal_posix(stream, istty);
@@ -676,7 +676,7 @@ enum CzResult czStreamIsTerminal(FILE* restrict stream, bool* restrict istty)
 #endif
 }
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 static enum CzResult czFileSize_win32(const char* restrict path, size_t* restrict size)
 {
 	wchar_t* restrict widePath;
@@ -749,7 +749,7 @@ enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struc
 		realPath = fullPath;
 	}
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 	ret = czFileSize_win32(realPath, size);
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	ret = czFileSize_posix(realPath, size);
@@ -761,7 +761,7 @@ enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struc
 	return ret;
 }
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 static enum CzResult czReadFile_win32(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
 {
 	wchar_t* restrict widePath;
@@ -849,7 +849,7 @@ enum CzResult czReadFile(
 		realPath = fullPath;
 	}
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 	ret = czReadFile_win32(realPath, buffer, size, offset);
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	ret = czReadFile_posix(realPath, buffer, size, offset);
@@ -861,7 +861,7 @@ enum CzResult czReadFile(
 	return ret;
 }
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 static enum CzResult truncate_write_file_win32(const wchar_t* restrict path, const void* restrict buffer, size_t size)
 {
 	HANDLE file;
@@ -886,7 +886,7 @@ static enum CzResult truncate_write_file_win32(const wchar_t* restrict path, con
 }
 #endif
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 static enum CzResult append_file_win32(const wchar_t* restrict path, const void* restrict buffer, size_t size)
 {
 	HANDLE file;
@@ -911,7 +911,7 @@ static enum CzResult append_file_win32(const wchar_t* restrict path, const void*
 }
 #endif
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 static enum CzResult overwrite_file_win32(
 	const wchar_t* restrict path, const void* restrict buffer, size_t size, size_t offset)
 {
@@ -936,7 +936,7 @@ static enum CzResult overwrite_file_win32(
 }
 #endif
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 static enum CzResult insert_file_win32(
 	const wchar_t* restrict path, const void* restrict buffer, size_t size, size_t offset)
 {
@@ -1139,7 +1139,7 @@ static enum CzResult insert_file_other(
 	return czWrap_fclose(file);
 }
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 static enum CzResult czWriteFile_win32(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
 {
@@ -1205,7 +1205,7 @@ enum CzResult czWriteFile(
 		realPath = fullPath;
 	}
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 	ret = czWriteFile_win32(realPath, buffer, size, offset, flags);
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	ret = czWriteFile_posix(realPath, buffer, size, offset, flags);
@@ -1217,7 +1217,7 @@ enum CzResult czWriteFile(
 	return ret;
 }
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 static enum CzResult zero_file_end_win32(const wchar_t* restrict path, size_t size)
 {
 	HANDLE file;
@@ -1257,7 +1257,7 @@ err_close_file:
 }
 #endif
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 static enum CzResult cut_file_end_win32(const wchar_t* restrict path, size_t size)
 {
 	HANDLE file;
@@ -1296,7 +1296,7 @@ err_close_file:
 }
 #endif
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 static enum CzResult zero_file_win32(const wchar_t* restrict path, size_t size, size_t offset)
 {
 	HANDLE file;
@@ -1339,7 +1339,7 @@ err_close_file:
 }
 #endif
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 static enum CzResult cut_file_win32(const wchar_t* restrict path, size_t size, size_t offset)
 {
 	HANDLE file;
@@ -1688,7 +1688,7 @@ err_close_file:
 	return ret;
 }
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 static enum CzResult czTrimFile_win32(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
 {
 	wchar_t* restrict widePath;
@@ -1750,7 +1750,7 @@ enum CzResult czTrimFile(const char* restrict path, size_t size, size_t offset, 
 		realPath = fullPath;
 	}
 
-#if CZ_WINDOWS
+#if CZ_WIN32
 	ret = czTrimFile_win32(realPath, size, offset, flags);
 #elif CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001
 	ret = czTrimFile_posix(realPath, size, offset, flags);

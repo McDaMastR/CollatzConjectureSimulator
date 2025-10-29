@@ -315,7 +315,7 @@ static bool init_config(int argc, char** argv)
 
 static bool init_env(void)
 {
-#if CZ_WINDOWS
+#if CZ_WIN32
 	HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
 
 	DWORD mode;

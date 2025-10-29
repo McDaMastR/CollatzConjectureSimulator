@@ -48,7 +48,7 @@ uint32_t ceil_pow2(uint32_t x)
 	return x == 1 ? UINT32_C(1) : UINT32_C(2) << (31 - __builtin_clz(x - 1));
 #elif CZ_HAS_BUILTIN(clzl) && UINT32_MAX == ULONG_MAX
 	return x == 1 ? UINT32_C(1) : UINT32_C(2) << (31 - __builtin_clzl(x - 1));
-#elif CZ_WINDOWS
+#elif CZ_WIN32
 	unsigned long i;
 	_BitScanReverse(&i, x - 1);
 	return UINT32_C(1) << (i + 1);
@@ -68,7 +68,7 @@ uint32_t floor_pow2(uint32_t x)
 	return UINT32_C(1) << (31 - __builtin_clz(x));
 #elif CZ_HAS_BUILTIN(clzl) && UINT32_MAX == ULONG_MAX
 	return UINT32_C(1) << (31 - __builtin_clzl(x));
-#elif CZ_WINDOWS
+#elif CZ_WIN32
 	unsigned long i;
 	_BitScanReverse(&i, x);
 	return UINT32_C(1) << i;

@@ -35,6 +35,22 @@
 
 // Check for predefined OS macros
 
+#if !defined(CZ_AIX)
+	#if defined(_AIX) || defined(__TOS_AIX__)
+		#define CZ_AIX 1
+	#else
+		#define CZ_AIX 0
+	#endif
+#endif
+
+#if !defined(CZ_ANDROID)
+	#if defined(__ANDROID__)
+		#define CZ_ANDROID 1
+	#else
+		#define CZ_ANDROID 0
+	#endif
+#endif
+
 #if !defined(CZ_CYGWIN)
 	#if defined(__CYGWIN__)
 		#define CZ_CYGWIN 1
@@ -51,11 +67,67 @@
 	#endif
 #endif
 
+#if !defined(CZ_DRAGONFLY_BSD)
+	#if defined(__DragonFly__)
+		#define CZ_DRAGONFLY_BSD 1
+	#else
+		#define CZ_DRAGONFLY_BSD 0
+	#endif
+#endif
+
+#if !defined(CZ_FREE_BSD)
+	#if defined(__FreeBSD__)
+		#define CZ_FREE_BSD 1
+	#else
+		#define CZ_FREE_BSD 0
+	#endif
+#endif
+
+#if !defined(CZ_FREE_BSD_MAJOR)
+	#if defined(__FreeBSD__)
+		#define CZ_FREE_BSD_MAJOR __FreeBSD__
+	#else
+		#define CZ_FREE_BSD_MAJOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_FREE_BSD_MINOR)
+	#if defined(__FreeBSD_version)
+		#define CZ_FREE_BSD_MINOR ( (__FreeBSD_version / 1000) % 100 )
+	#elif defined(__FreeBSD__)
+		#define CZ_FREE_BSD_MINOR 0
+	#else
+		#define CZ_FREE_BSD_MINOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_FREE_BSD_PATCH)
+	#if defined(__FreeBSD_version)
+		#define CZ_FREE_BSD_PATCH ( __FreeBSD_version % 1000 )
+	#elif defined(__FreeBSD__)
+		#define CZ_FREE_BSD_PATCH 0
+	#else
+		#define CZ_FREE_BSD_PATCH ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_FREE_BSD_VERSION)
+	#define CZ_FREE_BSD_VERSION CZ_MAKE_VERSION(CZ_FREE_BSD_MAJOR, CZ_FREE_BSD_MINOR, CZ_FREE_BSD_PATCH)
+#endif
+
 #if !defined(CZ_GNU_LINUX)
 	#if defined(__gnu_linux__)
 		#define CZ_GNU_LINUX 1
 	#else
 		#define CZ_GNU_LINUX 0
+	#endif
+#endif
+
+#if !defined(CZ_HAIKU)
+	#if defined(__HAIKU__)
+		#define CZ_HAIKU 1
+	#else
+		#define CZ_HAIKU 0
 	#endif
 #endif
 
@@ -83,6 +155,100 @@
 	#endif
 #endif
 
+#if !defined(CZ_MIDNIGHT_BSD)
+	#if defined(__MidnightBSD__)
+		#define CZ_MIDNIGHT_BSD 1
+	#else
+		#define CZ_MIDNIGHT_BSD 0
+	#endif
+#endif
+
+#if !defined(CZ_NET_BSD)
+	#if defined(__NetBSD__)
+		#define CZ_NET_BSD 1
+	#else
+		#define CZ_NET_BSD 0
+	#endif
+#endif
+
+#if !defined(CZ_NET_BSD_MAJOR)
+	#if defined(__NetBSD_Version__)
+		#define CZ_NET_BSD_MAJOR ( __NetBSD_Version__ / 100000000 )
+	#elif defined(__NetBSD__)
+		#define CZ_NET_BSD_MAJOR 0
+	#else
+		#define CZ_NET_BSD_MAJOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_NET_BSD_MINOR)
+	#if defined(__NetBSD_Version__)
+		#define CZ_NET_BSD_MINOR ( (__NetBSD_Version__ / 1000000) % 100 )
+	#elif defined(__NetBSD__)
+		#define CZ_NET_BSD_MINOR 0
+	#else
+		#define CZ_NET_BSD_MINOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_NET_BSD_PATCH)
+	#if defined(__NetBSD_Version__)
+		#define CZ_NET_BSD_PATCH ( (__NetBSD_Version__ / 100) % 100 )
+	#elif defined(__NetBSD__)
+		#define CZ_NET_BSD_PATCH 0
+	#else
+		#define CZ_NET_BSD_PATCH ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_NET_BSD_VERSION)
+	#define CZ_NET_BSD_VERSION CZ_MAKE_VERSION(CZ_NET_BSD_MAJOR, CZ_NET_BSD_MINOR, CZ_NET_BSD_PATCH)
+#endif
+
+#if !defined(CZ_OPEN_BSD)
+	#if defined(__OpenBSD__)
+		#define CZ_OPEN_BSD 1
+	#else
+		#define CZ_OPEN_BSD 0
+	#endif
+#endif
+
+#if !defined(CZ_QNX)
+	#if defined(__QNX__)
+		#define CZ_QNX 1
+	#else
+		#define CZ_QNX 0
+	#endif
+#endif
+
+#if !defined(CZ_QNX_MAJOR)
+	#if defined(__QNX__)
+		#define CZ_QNX_MAJOR ( __QNX__ / 100 )
+	#else
+		#define CZ_QNX_MAJOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_QNX_MINOR)
+	#if defined(__QNX__)
+		#define CZ_QNX_MINOR ( (__QNX__ / 10) % 10 )
+	#else
+		#define CZ_QNX_MINOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_QNX_PATCH)
+	#if defined(__QNX__)
+		#define CZ_QNX_PATCH ( __QNX__ % 10 )
+	#else
+		#define CZ_QNX_PATCH ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_QNX_VERSION)
+	#define CZ_QNX_VERSION CZ_MAKE_VERSION(CZ_QNX_MAJOR, CZ_QNX_MINOR, CZ_QNX_PATCH)
+#endif
+
 #if !defined(CZ_UNIX)
 	#if defined(__unix__) || defined(__unix) || defined(unix)
 		#define CZ_UNIX 1
@@ -91,21 +257,29 @@
 	#endif
 #endif
 
-#if !defined(CZ_WINDOWS)
+#if !defined(CZ_WIN32)
 	#if defined(_WIN32)
-		#define CZ_WINDOWS 1
+		#define CZ_WIN32 1
 	#else
-		#define CZ_WINDOWS 0
+		#define CZ_WIN32 0
+	#endif
+#endif
+
+#if !defined(CZ_WIN64)
+	#if defined(_WIN64)
+		#define CZ_WIN64 1
+	#else
+		#define CZ_WIN64 0
 	#endif
 #endif
 
 // Check for predefined compiler macros
 
-#if !defined(CZ_APPLECLANG)
+#if !defined(CZ_APPLE_CLANG)
 	#if defined(__apple_build_version__) && defined(__clang__)
-		#define CZ_APPLECLANG 1
+		#define CZ_APPLE_CLANG 1
 	#else
-		#define CZ_APPLECLANG 0
+		#define CZ_APPLE_CLANG 0
 	#endif
 #endif
 
