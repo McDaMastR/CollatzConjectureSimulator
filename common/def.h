@@ -991,11 +991,11 @@
 	#endif
 #endif
 
-#if !defined(CZ_NULLTERM_ARG)
+#if !defined(CZ_NULTERM_ARG)
 	#if CZ_HAS_ATTRIBUTE(null_terminated_string_arg)
-		#define CZ_NULLTERM_ARG(arg) __attribute__ (( null_terminated_string_arg(arg) ))
+		#define CZ_NULTERM_ARG(arg) __attribute__ (( null_terminated_string_arg(arg) ))
 	#else
-		#define CZ_NULLTERM_ARG(arg)
+		#define CZ_NULTERM_ARG(arg)
 	#endif
 #endif
 

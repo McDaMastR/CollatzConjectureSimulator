@@ -19,7 +19,7 @@
 
 struct DyString_
 {
-	size_t length; // Number of characters currently in string, including null terminator
+	size_t length; // Number of characters currently in string, including NUL terminator
 	size_t capacity; // Number of characters that could fit in allocated memory
 	char* restrict raw; // Raw string
 };
@@ -70,7 +70,7 @@ struct DyString_* dystring_create(size_t count)
 	czres = czAlloc((void* restrict*) &string->raw, sizeof(char) * count, rawFlags);
 	if CZ_NOEXPECT (czres) { goto err_free_string; }
 
-	string->length = 1; // Start as a single null terminator
+	string->length = 1; // Start as a single NUL terminator
 	string->capacity = count;
 	return string;
 

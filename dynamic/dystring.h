@@ -18,7 +18,7 @@
 /**
  * @file
  * 
- * @brief The types and functions for dynamically sized null-terminated byte strings.
+ * @brief The types and functions for dynamically sized NUL-terminated byte strings.
  */
 
 #pragma once
@@ -26,7 +26,7 @@
 #include "common.h"
 
 /**
- * @brief Handle for a dynamically sized null-terminated byte string.
+ * @brief Handle for a dynamically sized NUL-terminated byte string.
  */
 typedef struct DyString_* DyString;
 
@@ -44,8 +44,8 @@ void dystring_destroy(DyString string);
 /**
  * @brief Creates a new dynamic string.
  * 
- * Creates a dynamic string containing only the null terminator. Memory is preallocated for @p count characters,
- * including the null terminator. All preallocated memory is zero initialised. Failure can occur if sufficient memory is
+ * Creates a dynamic string containing only the NUL terminator. Memory is preallocated for @p count characters,
+ * including the NUL terminator. All preallocated memory is zero initialised. Failure can occur if sufficient memory is
  * unable to be allocated.
  * 
  * @param[in] count The number of characters to preallocate memory for.
@@ -62,7 +62,7 @@ DyString dystring_create(size_t count);
 /**
  * @brief Retrieves the length of a dynamic string.
  * 
- * Retrieves the number of characters in @p string, including the null terminator.
+ * Retrieves the number of characters in @p string, including the NUL terminator.
  * 
  * @param[in] string The dynamic string.
  * 
@@ -105,10 +105,10 @@ char* dystring_raw(DyString string);
  * @return A pointer to the added substring in @p string, or null on failure.
  * 
  * @pre @p string is nonnull.
- * @pre @p substring is nonnull and null-terminated.
+ * @pre @p substring is nonnull and NUL-terminated.
  * @pre @p string and @p substring do not overlap in memory.
  */
-CZ_NONNULL_ARGS() CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RD_ACCESS(2)
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RD_ACCESS(2)
 char* dystring_append(DyString string, const char* substring);
 
 /**
@@ -123,10 +123,10 @@ char* dystring_append(DyString string, const char* substring);
  * @return A pointer to the added substring in @p string, or null on failure.
  * 
  * @pre @p string is nonnull.
- * @pre @p substring is nonnull and null-terminated.
+ * @pre @p substring is nonnull and NUL-terminated.
  * @pre @p string and @p substring do not overlap in memory.
  */
-CZ_NONNULL_ARGS() CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RD_ACCESS(2)
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RD_ACCESS(2)
 char* dystring_prepend(DyString string, const char* substring);
 
 /**
@@ -142,9 +142,9 @@ char* dystring_prepend(DyString string, const char* substring);
  * @return A pointer to the added substring in @p string, or null on failure.
  * 
  * @pre @p string is nonnull.
- * @pre @p substring is nonnull and null-terminated.
+ * @pre @p substring is nonnull and NUL-terminated.
  * @pre @p string and @p substring do not overlap in memory.
  * @pre @p index is less than the length of @p string.
  */
-CZ_NONNULL_ARGS() CZ_NULLTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RD_ACCESS(2)
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RD_ACCESS(2)
 char* dystring_add(DyString string, const char* substring, size_t index);

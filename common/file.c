@@ -66,7 +66,7 @@ static enum CzResult alloc_utf16_from_utf8_win32(wchar_t* restrict* restrict utf
 	unsigned int codePage = CP_UTF8;
 	unsigned long flags = MB_ERR_INVALID_CHARS;
 	const char* mbStr = utf8;
-	int mbSize = -1; // utf8 is null-terminated
+	int mbSize = -1; // utf8 is NUL-terminated
 	wchar_t* wcStr = NULL;
 	int wcSize = 0; // first get required length of utf16
 

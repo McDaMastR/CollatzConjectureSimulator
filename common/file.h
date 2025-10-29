@@ -126,11 +126,11 @@ enum CzResult czStreamIsTerminal(FILE* stream, bool* istty);
  * @retval CZ_RESULT_NO_OPEN The maximum number of open files was reached.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
- * @pre @p path is nonnull and null-terminated.
+ * @pre @p path is nonnull and NUL-terminated.
  * @pre @p size is nonnull.
  * @pre @p path and @p size do not overlap in memory.
  */
-CZ_NONNULL_ARGS() CZ_NULLTERM_ARG(1) CZ_RD_ACCESS(1) CZ_WR_ACCESS(2)
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1) CZ_WR_ACCESS(2)
 enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flags);
 
 /**
@@ -185,12 +185,12 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * @retval CZ_RESULT_TIMEOUT A system operation timed out.
  * 
- * @pre @p path is nonnull and null-terminated.
+ * @pre @p path is nonnull and NUL-terminated.
  * @pre @p buffer is nonnull.
  * @pre @p path and @p buffer do not overlap in memory.
  * @pre @p size is less than or equal to the size of @p buffer.
  */
-CZ_NONNULL_ARGS() CZ_NULLTERM_ARG(1) CZ_RD_ACCESS(1) CZ_WR_ACCESS(2, 3)
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1) CZ_WR_ACCESS(2, 3)
 enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t offset, struct CzFileFlags flags);
 
 /**
@@ -252,14 +252,14 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
- * @pre @p path is nonnull and null-terminated.
+ * @pre @p path is nonnull and NUL-terminated.
  * @pre @p buffer is nonnull.
  * @pre @p path and @p buffer do not overlap in memory.
  * @pre @p size is less than or equal to the size of @p buffer.
  * 
  * @warning Invalid usage can result in permanent loss of file data.
  */
-CZ_NONNULL_ARGS() CZ_NULLTERM_ARG(1) CZ_RD_ACCESS(1) CZ_RD_ACCESS(2, 3)
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1) CZ_RD_ACCESS(2, 3)
 enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, size_t offset, struct CzFileFlags flags);
 
 /**
@@ -323,9 +323,9 @@ enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, siz
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
- * @pre @p path is nonnull and null-terminated.
+ * @pre @p path is nonnull and NUL-terminated.
  * 
  * @warning Invalid usage can result in permanent loss of file data.
  */
-CZ_NONNULL_ARGS() CZ_NULLTERM_ARG(1) CZ_RD_ACCESS(1)
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1)
 enum CzResult czTrimFile(const char* path, size_t size, size_t offset, struct CzFileFlags flags);
