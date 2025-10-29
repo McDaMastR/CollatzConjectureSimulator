@@ -99,6 +99,184 @@
 	#endif
 #endif
 
+// Check for predefined compiler macros
+
+#if !defined(CZ_APPLECLANG)
+	#if defined(__apple_build_version__) && defined(__clang__)
+		#define CZ_APPLECLANG 1
+	#else
+		#define CZ_APPLECLANG 0
+	#endif
+#endif
+
+#if !defined(CZ_CLANG)
+	#if defined(__clang__)
+		#define CZ_CLANG 1
+	#else
+		#define CZ_CLANG 0
+	#endif
+#endif
+
+#if !defined(CZ_CLANG_MAJOR)
+	#if defined(__clang_major__)
+		#define CZ_CLANG_MAJOR __clang_major__
+	#else
+		#define CZ_CLANG_MAJOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_CLANG_MINOR)
+	#if defined(__clang_minor__)
+		#define CZ_CLANG_MINOR __clang_minor__
+	#else
+		#define CZ_CLANG_MINOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_CLANG_PATCH)
+	#if defined(__clang_patchlevel__)
+		#define CZ_CLANG_PATCH __clang_patchlevel__
+	#else
+		#define CZ_CLANG_PATCH ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_CLANG_VERSION)
+	#define CZ_CLANG_VERSION CZ_MAKE_VERSION(CZ_CLANG_MAJOR, CZ_CLANG_MINOR, CZ_CLANG_PATCH)
+#endif
+
+#if !defined(CZ_GNUC)
+	#if defined(__GNUC__)
+		#define CZ_GNUC 1
+	#else
+		#define CZ_GNUC 0
+	#endif
+#endif
+
+#if !defined(CZ_GNUC_MAJOR)
+	#if defined(__GNUC__)
+		#define CZ_GNUC_MAJOR __GNUC__
+	#else
+		#define CZ_GNUC_MAJOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_GNUC_MINOR)
+	#if defined(__GNUC_MINOR__)
+		#define CZ_GNUC_MINOR __GNUC_MINOR__
+	#else
+		#define CZ_GNUC_MINOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_GNUC_PATCH)
+	#if defined(__GNUC_PATCHLEVEL__)
+		#define CZ_GNUC_PATCH __GNUC_PATCHLEVEL__
+	#elif defined(__GNUC__)
+		#define CZ_GNUC_PATCH 0
+	#else
+		#define CZ_GNUC_PATCH ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_GNUC_VERSION)
+	#define CZ_GNUC_VERSION CZ_MAKE_VERSION(CZ_GNUC_MAJOR, CZ_GNUC_MINOR, CZ_GNUC_PATCH)
+#endif
+
+#if !defined(CZ_MINGW32)
+	#if defined(__MINGW32__)
+		#define CZ_MINGW32 1
+	#else
+		#define CZ_MINGW32 0
+	#endif
+#endif
+
+#if !defined(CZ_MINGW32_MAJOR)
+	#if defined(__MINGW32_MAJOR_VERSION)
+		#define CZ_MINGW32_MAJOR __MINGW32_MAJOR_VERSION
+	#else
+		#define CZ_MINGW32_MAJOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_MINGW32_MINOR)
+	#if defined(__MINGW32_MINOR_VERSION)
+		#define CZ_MINGW32_MINOR __MINGW32_MINOR_VERSION
+	#else
+		#define CZ_MINGW32_MINOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_MINGW32_VERSION)
+	#define CZ_MINGW32_VERSION CZ_MAKE_VERSION(CZ_MINGW32_MAJOR, CZ_MINGW32_MINOR)
+#endif
+
+#if !defined(CZ_MINGW64)
+	#if defined(__MINGW64__)
+		#define CZ_MINGW64 1
+	#else
+		#define CZ_MINGW64 0
+	#endif
+#endif
+
+#if !defined(CZ_MINGW64_MAJOR)
+	#if defined(__MINGW64_MAJOR_VERSION)
+		#define CZ_MINGW64_MAJOR __MINGW64_MAJOR_VERSION
+	#else
+		#define CZ_MINGW64_MAJOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_MINGW64_MINOR)
+	#if defined(__MINGW64_MINOR_VERSION)
+		#define CZ_MINGW64_MINOR __MINGW64_MINOR_VERSION
+	#else
+		#define CZ_MINGW64_MINOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_MINGW64_VERSION)
+	#define CZ_MINGW64_VERSION CZ_MAKE_VERSION(CZ_MINGW64_MAJOR, CZ_MINGW64_MINOR)
+#endif
+
+#if !defined(CZ_MSVC)
+	#if defined(_MSC_VER)
+		#define CZ_MSVC 1
+	#else
+		#define CZ_MSVC 0
+	#endif
+#endif
+
+#if !defined(CZ_MSVC_MAJOR)
+	#if defined(_MSC_VER)
+		#define CZ_MSVC_MAJOR ( _MSC_VER / 100 )
+	#else
+		#define CZ_MSVC_MAJOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_MSVC_MINOR)
+	#if defined(_MSC_VER)
+		#define CZ_MSVC_MINOR ( _MSC_VER % 100 )
+	#else
+		#define CZ_MSVC_MINOR ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_MSVC_PATCH)
+	#if defined(_MSC_FULL_VER)
+		#define CZ_MSVC_PATCH ( _MSC_FULL_VER % 100000 )
+	#elif defined(_MSC_VER)
+		#define CZ_MSVC_PATCH 0
+	#else
+		#define CZ_MSVC_PATCH ( -1 )
+	#endif
+#endif
+
+#if !defined(CZ_MSVC_VERSION)
+	#define CZ_MSVC_VERSION CZ_MAKE_VERSION(CZ_MSVC_MAJOR, CZ_MSVC_MINOR, CZ_MSVC_PATCH)
+#endif
+
 // Check for predefined libc macros
 
 #if !defined(CZ_GLIBC)
@@ -635,6 +813,22 @@
 	#endif
 #endif
 
+#if !defined(CZ_HAS_EXTENSION)
+	#if defined( __has_extension)
+		#define CZ_HAS_EXTENSION(x)  __has_extension(x)
+	#else
+		#define CZ_HAS_EXTENSION(x) 0
+	#endif
+#endif
+
+#if !defined(CZ_HAS_FEATURE)
+	#if defined(__has_feature)
+		#define CZ_HAS_FEATURE(x) __has_feature(x)
+	#else
+		#define CZ_HAS_FEATURE(x) 0
+	#endif
+#endif
+
 #if !defined(CZ_HAS_INCLUDE)
 	#if defined(__has_include)
 		#define CZ_HAS_INCLUDE(x) __has_include(<x>)
@@ -648,7 +842,7 @@
 		#define CZ_ASSUME(x) __builtin_assume(x)
 	#elif CZ_HAS_ATTRIBUTE(assume)
 		#define CZ_ASSUME(x) __attribute__ (( assume(x) ))
-	#elif defined(_MSC_VER)
+	#elif CZ_MSVC
 		#define CZ_ASSUME(x) __assume(x)
 	#else
 		#define CZ_ASSUME(x)
@@ -690,7 +884,7 @@
 #if !defined(CZ_CONST)
 	#if CZ_HAS_ATTRIBUTE(const)
 		#define CZ_CONST __attribute__ (( const ))
-	#elif defined(_MSC_VER)
+	#elif CZ_MSVC
 		#define CZ_CONST __declspec(noalias)
 	#else
 		#define CZ_CONST
@@ -700,7 +894,7 @@
 #if !defined(CZ_PURE)
 	#if CZ_HAS_ATTRIBUTE(pure)
 		#define CZ_PURE __attribute__ (( pure ))
-	#elif defined(_MSC_VER)
+	#elif CZ_MSVC
 		#define CZ_PURE __declspec(noalias)
 	#else
 		#define CZ_PURE
@@ -710,7 +904,7 @@
 #if !defined(CZ_REPRODUCIBLE)
 	#if CZ_HAS_ATTRIBUTE(reproducible)
 		#define CZ_REPRODUCIBLE __attribute__ (( reproducible ))
-	#elif defined(_MSC_VER)
+	#elif CZ_MSVC
 		#define CZ_REPRODUCIBLE __declspec(noalias)
 	#else
 		#define CZ_REPRODUCIBLE
@@ -720,7 +914,7 @@
 #if !defined(CZ_UNSEQUENCED)
 	#if CZ_HAS_ATTRIBUTE(unsequenced)
 		#define CZ_UNSEQUENCED __attribute__ (( unsequenced ))
-	#elif defined(_MSC_VER)
+	#elif CZ_MSVC
 		#define CZ_UNSEQUENCED __declspec(noalias)
 	#else
 		#define CZ_UNSEQUENCED
@@ -730,7 +924,7 @@
 #if !defined(CZ_MALLOC)
 	#if CZ_HAS_ATTRIBUTE(malloc)
 		#define CZ_MALLOC __attribute__ (( malloc ))
-	#elif defined(_MSC_VER)
+	#elif CZ_MSVC
 		#define CZ_MALLOC __declspec(allocator)
 	#else
 		#define CZ_MALLOC
@@ -738,7 +932,7 @@
 #endif
 
 #if !defined(CZ_FREE)
-	#if CZ_HAS_ATTRIBUTE(malloc) && !defined(__clang__)
+	#if CZ_HAS_ATTRIBUTE(malloc) && !CZ_CLANG
 		#define CZ_FREE(func, arg) __attribute__ (( malloc(func, arg) ))
 	#else
 		#define CZ_FREE(func, arg)
@@ -746,7 +940,7 @@
 #endif
 
 #if !defined(CZ_PRINTF)
-	#if CZ_HAS_ATTRIBUTE(format) && defined(__clang__)
+	#if CZ_HAS_ATTRIBUTE(format) && CZ_CLANG
 		#define CZ_PRINTF(fmt, args) __attribute__ (( format(printf, fmt, args) ))
 	#elif CZ_HAS_ATTRIBUTE(format)
 		#define CZ_PRINTF(fmt, args) __attribute__ (( format(gnu_printf, fmt, args) ))
@@ -756,7 +950,7 @@
 #endif
 
 #if !defined(CZ_SCANF)
-	#if CZ_HAS_ATTRIBUTE(format) && defined(__clang__)
+	#if CZ_HAS_ATTRIBUTE(format) && CZ_CLANG
 		#define CZ_SCANF(fmt, args) __attribute__ (( format(scanf, fmt, args) ))
 	#elif CZ_HAS_ATTRIBUTE(format)
 		#define CZ_SCANF(fmt, args) __attribute__ (( format(gnu_scanf, fmt, args) ))
@@ -802,6 +996,42 @@
 		#define CZ_NULLTERM_ARG(arg) __attribute__ (( null_terminated_string_arg(arg) ))
 	#else
 		#define CZ_NULLTERM_ARG(arg)
+	#endif
+#endif
+
+#if !defined(CZ_FILDES)
+	#if CZ_HAS_ATTRIBUTE(fd_arg)
+		#define CZ_FILDES(arg) __attribute__ (( fd_arg(arg) ))
+	#else
+		#define CZ_FILDES(arg)
+	#endif
+#endif
+
+#if !defined(CZ_RD_FILDES)
+	#if CZ_HAS_ATTRIBUTE(fd_arg_read)
+		#define CZ_RD_FILDES(arg) __attribute__ (( fd_arg_read(arg) ))
+	#else
+		#define CZ_RD_FILDES(arg)
+	#endif
+#endif
+
+#if !defined(CZ_WR_FILDES)
+	#if CZ_HAS_ATTRIBUTE(fd_arg_write)
+		#define CZ_WR_FILDES(arg) __attribute__ (( fd_arg_write(arg) ))
+	#else
+		#define CZ_WR_FILDES(arg)
+	#endif
+#endif
+
+#if !defined(CZ_RW_FILDES)
+	#if CZ_HAS_ATTRIBUTE(fd_arg_read) && CZ_HAS_ATTRIBUTE(fd_arg_write)
+		#define CZ_RW_FILDES(arg) __attribute__ (( fd_arg_read(arg), fd_arg_write(arg) ))
+	#elif CZ_HAS_ATTRIBUTE(fd_arg_read)
+		#define CZ_RW_FILDES(arg) __attribute__ (( fd_arg_read(arg) ))
+	#elif CZ_HAS_ATTRIBUTE(fd_arg_write)
+		#define CZ_RW_FILDES(arg) __attribute__ (( fd_arg_write(arg) ))
+	#else
+		#define CZ_RW_FILDES(arg)
 	#endif
 #endif
 

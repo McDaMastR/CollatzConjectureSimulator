@@ -57,7 +57,6 @@ set(COMPILE_WARNINGS_GNU
 	-Warray-bounds=2
 	-Wattribute-alias=2
 	-Wbidi-chars=any,ucn
-	-Wc11-c23-compat
 	-Wcast-align=strict
 	-Wcast-qual
 	-Wconversion
@@ -108,10 +107,15 @@ set(COMPILE_WARNINGS_GNU
 	-Wvector-operation-performance
 	-Wwrite-strings
 
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,15>:-Wc11-c23-compat>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,15>:-Wleading-whitespace=blanks>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,15>:-Wtrailing-whitespace=any>
+
 	# Warnings OFF
-	-Wno-free-labels
 	-Wno-missing-field-initializers
 	-Wno-unused-function
+
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,15>:-Wno-free-labels>
 )
 
 set(COMPILE_WARNINGS_MSVC
@@ -209,6 +213,8 @@ target_compile_options(cltzCommon
 
 		$<$<AND:${USING_STATIC_ANALYSIS},$<C_COMPILER_ID:GNU>>:-fanalyzer>
 		$<$<AND:${USING_STATIC_ANALYSIS},$<C_COMPILER_ID:MSVC>>:/analyze>
+
+		$<$<C_COMPILER_ID:AppleClang,Clang,GNU>:-ftabstop=4>
 )
 
 target_link_libraries(cltzCommon
