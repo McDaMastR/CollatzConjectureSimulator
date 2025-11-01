@@ -78,10 +78,10 @@ bool init_colour_level(enum CzColourLevel level)
 	return true;
 }
 
-#if defined(__GNUC__)
-	#pragma GCC diagnostic push
-	#pragma GCC diagnostic ignored "-Wformat-nonliteral"
-	#pragma GCC diagnostic ignored "-Wmissing-format-attribute"
+#if CZ_GNUC
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#pragma GCC diagnostic ignored "-Wmissing-format-attribute"
 #endif
 
 static bool log_colour(
@@ -160,8 +160,8 @@ static bool log_colour(
 	return true;
 }
 
-#if defined(__GNUC__)
-	#pragma GCC diagnostic pop
+#if CZ_GNUC
+#pragma GCC diagnostic pop
 #endif
 
 bool log_debug(FILE* stream, const char* format, ...)

@@ -21,15 +21,15 @@
 #include "wrap.h"
 
 #if CZ_WIN32
-	#define MAX_ACCESS_SIZE UINT32_MAX
+#define MAX_ACCESS_SIZE UINT32_MAX
 #elif CZ_DARWIN
-	#define MAX_ACCESS_SIZE INT_MAX
+#define MAX_ACCESS_SIZE INT_MAX
 #elif CZ_GNU_LINUX
-	#define MAX_ACCESS_SIZE 0x7ffff000 // MAX_RW_COUNT
+#define MAX_ACCESS_SIZE 0x7ffff000 // MAX_RW_COUNT
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
-	#define MAX_ACCESS_SIZE SSIZE_MAX
+#define MAX_ACCESS_SIZE SSIZE_MAX
 #else
-	#define MAX_ACCESS_SIZE SIZE_MAX
+#define MAX_ACCESS_SIZE SIZE_MAX
 #endif
 
 static enum CzResult alloc_abspath_from_relpath_to_exe(char* restrict* restrict absPath, const char* restrict relPath)

@@ -135,7 +135,9 @@ enum CzResult czWrap_realloc(void* restrict* res, void* ptr, size_t size)
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	default:
-		return size ? CZ_RESULT_INTERNAL_ERROR : CZ_RESULT_BAD_SIZE;
+		if (!size)
+			return CZ_RESULT_BAD_SIZE;
+		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #else
 	if (!size)
@@ -270,7 +272,9 @@ enum CzResult czWrap_aligned_alloc(void* restrict* res, size_t alignment, size_t
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2024
 	switch (errno) {
 	case EINVAL:
-		return size ? CZ_RESULT_BAD_ALIGNMENT : CZ_RESULT_BAD_SIZE;
+		if (!size)
+			return CZ_RESULT_BAD_SIZE;
+		return CZ_RESULT_BAD_ALIGNMENT;
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	default:
@@ -441,8 +445,11 @@ enum CzResult czWrap_madvise(void* addr, size_t size, int advice)
 			return CZ_RESULT_BAD_ALIGNMENT;
 
 		switch (advice) {
-#if CZ_LINUX_KSM
+#if defined(MADV_MERGEABLE)
 		case MADV_MERGEABLE:
+			return CZ_RESULT_NO_SUPPORT;
+#endif
+#if defined(MADV_UNMERGEABLE)
 		case MADV_UNMERGEABLE:
 			return CZ_RESULT_NO_SUPPORT;
 #endif
@@ -453,11 +460,11 @@ enum CzResult czWrap_madvise(void* addr, size_t size, int advice)
 		return CZ_RESULT_IN_USE;
 	case EBUSY:
 		switch (advice) {
-#if CZ_LINUX_MEMORY_FAILURE
+#if defined(MADV_SOFT_OFFLINE)
 		case MADV_SOFT_OFFLINE:
 			return CZ_RESULT_IN_USE;
 #endif
-#if CZ_LINUX_TRANSPARENT_HUGEPAGE
+#if defined(MADV_COLLAPSE)
 		case MADV_COLLAPSE:
 			return CZ_RESULT_NO_OPEN;
 #endif
@@ -474,7 +481,7 @@ enum CzResult czWrap_madvise(void* addr, size_t size, int advice)
 		case MADV_POPULATE_WRITE:
 		case MADV_WILLNEED:
 			return CZ_RESULT_NO_MEMORY;
-#if CZ_LINUX_TRANSPARENT_HUGEPAGE
+#if defined(MADV_COLLAPSE)
 		case MADV_COLLAPSE:
 			return CZ_RESULT_NO_MEMORY;
 #endif
@@ -1085,7 +1092,9 @@ enum CzResult czWrap_fmemopen(FILE* restrict* res, void* buffer, size_t size, co
 #if CZ_DARWIN || CZ_GNU_LINUX
 	switch (errno) {
 	case EINVAL:
-		return size ? CZ_RESULT_BAD_ACCESS : CZ_RESULT_BAD_SIZE;
+		if (!size)
+			return CZ_RESULT_BAD_SIZE;
+		return CZ_RESULT_BAD_ACCESS;
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	default:
@@ -1094,7 +1103,9 @@ enum CzResult czWrap_fmemopen(FILE* restrict* res, void* buffer, size_t size, co
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2008
 	switch (errno) {
 	case EINVAL:
-		return size ? CZ_RESULT_BAD_ACCESS : CZ_RESULT_BAD_SIZE;
+		if (!size)
+			return CZ_RESULT_BAD_SIZE;
+		return CZ_RESULT_BAD_ACCESS;
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EMFILE:

@@ -115,39 +115,37 @@ void VKAPI_CALL internal_free_callback(
 #define VULKAN_FAILURE(func) log_vulkan_failure(__LINE__, vkres, #func)
 
 #if defined(NDEBUG)
-	#define VK_CALL(vkfunc, ...)   \
-		do {                       \
-			(vkfunc)(__VA_ARGS__); \
-		}                          \
-		while (0)
+#define VK_CALL(vkfunc, ...)   \
+	do {                       \
+		(vkfunc)(__VA_ARGS__); \
+	}                          \
+	while (0)
 
-	#define VK_CALLR(vkfunc, ...)                  \
-		do {                                       \
-			vkres = (vkfunc)(__VA_ARGS__);         \
-			if CZ_NOEXPECT (vkres != VK_SUCCESS) { \
-				VULKAN_FAILURE(vkfunc);            \
-			}                                      \
-		}                                          \
-		while (0)
+#define VK_CALLR(vkfunc, ...)                \
+	do {                                     \
+		vkres = (vkfunc)(__VA_ARGS__);       \
+		if CZ_NOEXPECT (vkres != VK_SUCCESS) \
+			VULKAN_FAILURE(vkfunc);          \
+	}                                        \
+	while (0)
 #else
-	#define VK_CALL(vkfunc, ...)                \
-		do {                                    \
-			czgCallbackData.func = #vkfunc;     \
-			czgCallbackData.file = CZ_FILENAME; \
-			czgCallbackData.line = __LINE__;    \
-			(vkfunc)(__VA_ARGS__);              \
-		}                                       \
-		while (0)
+#define VK_CALL(vkfunc, ...)                \
+	do {                                    \
+		czgCallbackData.func = #vkfunc;     \
+		czgCallbackData.file = CZ_FILENAME; \
+		czgCallbackData.line = __LINE__;    \
+		(vkfunc)(__VA_ARGS__);              \
+	}                                       \
+	while (0)
 
-	#define VK_CALLR(vkfunc, ...)                  \
-		do {                                       \
-			czgCallbackData.func = #vkfunc;        \
-			czgCallbackData.file = CZ_FILENAME;    \
-			czgCallbackData.line = __LINE__;       \
-			vkres = (vkfunc)(__VA_ARGS__);         \
-			if CZ_NOEXPECT (vkres != VK_SUCCESS) { \
-				VULKAN_FAILURE(vkfunc);            \
-			}                                      \
-		}                                          \
-		while (0)
+#define VK_CALLR(vkfunc, ...)                \
+	do {                                     \
+		czgCallbackData.func = #vkfunc;      \
+		czgCallbackData.file = CZ_FILENAME;  \
+		czgCallbackData.line = __LINE__;     \
+		vkres = (vkfunc)(__VA_ARGS__);       \
+		if CZ_NOEXPECT (vkres != VK_SUCCESS) \
+			VULKAN_FAILURE(vkfunc);          \
+	}                                        \
+	while (0)
 #endif

@@ -61,7 +61,7 @@ bool create_instance(struct Gpu* restrict gpu)
 		if CZ_NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 	}
 
-#ifndef NDEBUG
+#if !defined(NDEBUG)
 	bres = init_debug_logfile(CZ_DEBUG_LOG_NAME);
 	if CZ_NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 #endif
@@ -165,7 +165,7 @@ bool create_instance(struct Gpu* restrict gpu)
 			usingPortabilityEnumeration = true;
 		}
 
-#ifndef NDEBUG
+#if !defined(NDEBUG)
 		else if (!strcmp(extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
 			CZ_PNEXT_ADD(next, debugMessengerInfo);
 			dyarray_append(enabledExtensions, &extensionName);
@@ -1548,7 +1548,7 @@ bool create_buffers(struct Gpu* restrict gpu)
 		}
 	}
 
-#ifndef NDEBUG
+#if !defined(NDEBUG)
 	for (uint32_t i = 0; i < buffersPerHeap; i++) {
 		char objectName[37];
 		sprintf(objectName, "Host visible (%" PRIu32 "/%" PRIu32 ")", i + 1, buffersPerHeap);
@@ -1694,7 +1694,7 @@ bool create_descriptors(struct Gpu* restrict gpu)
 
 	VK_CALL(vkUpdateDescriptorSets, device, writeCount, writeDescriptorSets, copyCount, copyDescriptorSets);
 
-#ifndef NDEBUG
+#if !defined(NDEBUG)
 	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
 		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
 			char objectName[58];
@@ -2439,7 +2439,7 @@ bool create_commands(struct Gpu* restrict gpu)
 		semaphores[i] = semaphore;
 	}
 
-#ifndef NDEBUG
+#if !defined(NDEBUG)
 	set_debug_name(device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t) transferCmdPool, "Transfer");
 	set_debug_name(device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t) computeCmdPool, "Compute");
 

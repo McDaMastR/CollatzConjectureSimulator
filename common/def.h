@@ -20,13 +20,13 @@
 // Check support for necessary features
 
 #if defined(__STDC_NO_ATOMICS__)
-	#error "Compiler must support C11 atomic types and operations"
+#error "Compiler must support C11 atomic types and operations"
 #endif
 
 #if !defined(__SIZEOF_INT128__)
-	#error "Compiler must support GNU C 128-bit integer extension"
+#error "Compiler must support GNU C 128-bit integer extension"
 #elif __SIZEOF_INT128__ != 16
-	#error "Target must support 128-bit integers"
+#error "Target must support 128-bit integers"
 #endif
 
 // Helper macros for versioning
@@ -36,1251 +36,1221 @@
 // Check for predefined OS macros
 
 #if !defined(CZ_AIX)
-	#if defined(_AIX) || defined(__TOS_AIX__)
-		#define CZ_AIX 1
-	#else
-		#define CZ_AIX 0
-	#endif
+#if defined(_AIX) || defined(__TOS_AIX__)
+#define CZ_AIX 1
+#else
+#define CZ_AIX 0
+#endif
 #endif
 
 #if !defined(CZ_ANDROID)
-	#if defined(__ANDROID__)
-		#define CZ_ANDROID 1
-	#else
-		#define CZ_ANDROID 0
-	#endif
+#if defined(__ANDROID__)
+#define CZ_ANDROID 1
+#else
+#define CZ_ANDROID 0
+#endif
 #endif
 
 #if !defined(CZ_CYGWIN)
-	#if defined(__CYGWIN__)
-		#define CZ_CYGWIN 1
-	#else
-		#define CZ_CYGWIN 0
-	#endif
+#if defined(__CYGWIN__)
+#define CZ_CYGWIN 1
+#else
+#define CZ_CYGWIN 0
+#endif
 #endif
 
 #if !defined(CZ_DARWIN)
-	#if defined(__APPLE__) && defined(__MACH__)
-		#define CZ_DARWIN 1
-	#else
-		#define CZ_DARWIN 0
-	#endif
+#if defined(__APPLE__) && defined(__MACH__)
+#define CZ_DARWIN 1
+#else
+#define CZ_DARWIN 0
+#endif
 #endif
 
 #if !defined(CZ_DRAGONFLY_BSD)
-	#if defined(__DragonFly__)
-		#define CZ_DRAGONFLY_BSD 1
-	#else
-		#define CZ_DRAGONFLY_BSD 0
-	#endif
+#if defined(__DragonFly__)
+#define CZ_DRAGONFLY_BSD 1
+#else
+#define CZ_DRAGONFLY_BSD 0
+#endif
 #endif
 
 #if !defined(CZ_FREE_BSD)
-	#if defined(__FreeBSD__)
-		#define CZ_FREE_BSD 1
-	#else
-		#define CZ_FREE_BSD 0
-	#endif
+#if defined(__FreeBSD__)
+#define CZ_FREE_BSD 1
+#else
+#define CZ_FREE_BSD 0
+#endif
 #endif
 
 #if !defined(CZ_FREE_BSD_MAJOR)
-	#if defined(__FreeBSD__)
-		#define CZ_FREE_BSD_MAJOR __FreeBSD__
-	#else
-		#define CZ_FREE_BSD_MAJOR ( -1 )
-	#endif
+#if defined(__FreeBSD__)
+#define CZ_FREE_BSD_MAJOR __FreeBSD__
+#else
+#define CZ_FREE_BSD_MAJOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_FREE_BSD_MINOR)
-	#if defined(__FreeBSD_version)
-		#define CZ_FREE_BSD_MINOR ( (__FreeBSD_version / 1000) % 100 )
-	#elif defined(__FreeBSD__)
-		#define CZ_FREE_BSD_MINOR 0
-	#else
-		#define CZ_FREE_BSD_MINOR ( -1 )
-	#endif
+#if defined(__FreeBSD_version)
+#define CZ_FREE_BSD_MINOR ( (__FreeBSD_version / 1000) % 100 )
+#elif defined(__FreeBSD__)
+#define CZ_FREE_BSD_MINOR 0
+#else
+#define CZ_FREE_BSD_MINOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_FREE_BSD_PATCH)
-	#if defined(__FreeBSD_version)
-		#define CZ_FREE_BSD_PATCH ( __FreeBSD_version % 1000 )
-	#elif defined(__FreeBSD__)
-		#define CZ_FREE_BSD_PATCH 0
-	#else
-		#define CZ_FREE_BSD_PATCH ( -1 )
-	#endif
+#if defined(__FreeBSD_version)
+#define CZ_FREE_BSD_PATCH ( __FreeBSD_version % 1000 )
+#elif defined(__FreeBSD__)
+#define CZ_FREE_BSD_PATCH 0
+#else
+#define CZ_FREE_BSD_PATCH ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_FREE_BSD_VERSION)
-	#define CZ_FREE_BSD_VERSION CZ_MAKE_VERSION(CZ_FREE_BSD_MAJOR, CZ_FREE_BSD_MINOR, CZ_FREE_BSD_PATCH)
+#define CZ_FREE_BSD_VERSION CZ_MAKE_VERSION(CZ_FREE_BSD_MAJOR, CZ_FREE_BSD_MINOR, CZ_FREE_BSD_PATCH)
 #endif
 
 #if !defined(CZ_GNU_LINUX)
-	#if defined(__gnu_linux__)
-		#define CZ_GNU_LINUX 1
-	#else
-		#define CZ_GNU_LINUX 0
-	#endif
+#if defined(__gnu_linux__)
+#define CZ_GNU_LINUX 1
+#else
+#define CZ_GNU_LINUX 0
+#endif
 #endif
 
 #if !defined(CZ_HAIKU)
-	#if defined(__HAIKU__)
-		#define CZ_HAIKU 1
-	#else
-		#define CZ_HAIKU 0
-	#endif
+#if defined(__HAIKU__)
+#define CZ_HAIKU 1
+#else
+#define CZ_HAIKU 0
+#endif
 #endif
 
 #if !defined(CZ_IOS)
-	#if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
-		#define CZ_IOS 1
-	#else
-		#define CZ_IOS 0
-	#endif
+#if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+#define CZ_IOS 1
+#else
+#define CZ_IOS 0
+#endif
 #endif
 
 #if !defined(CZ_LINUX)
-	#if defined(__linux__)
-		#define CZ_LINUX 1
-	#else
-		#define CZ_LINUX 0
-	#endif
+#if defined(__linux__)
+#define CZ_LINUX 1
+#else
+#define CZ_LINUX 0
+#endif
 #endif
 
 #if !defined(CZ_MACOS)
-	#if defined(TARGET_OS_OSX) && TARGET_OS_OSX
-		#define CZ_MACOS 1
-	#else
-		#define CZ_MACOS 0
-	#endif
+#if defined(TARGET_OS_OSX) && TARGET_OS_OSX
+#define CZ_MACOS 1
+#else
+#define CZ_MACOS 0
+#endif
 #endif
 
 #if !defined(CZ_MIDNIGHT_BSD)
-	#if defined(__MidnightBSD__)
-		#define CZ_MIDNIGHT_BSD 1
-	#else
-		#define CZ_MIDNIGHT_BSD 0
-	#endif
+#if defined(__MidnightBSD__)
+#define CZ_MIDNIGHT_BSD 1
+#else
+#define CZ_MIDNIGHT_BSD 0
+#endif
 #endif
 
 #if !defined(CZ_NET_BSD)
-	#if defined(__NetBSD__)
-		#define CZ_NET_BSD 1
-	#else
-		#define CZ_NET_BSD 0
-	#endif
+#if defined(__NetBSD__)
+#define CZ_NET_BSD 1
+#else
+#define CZ_NET_BSD 0
+#endif
 #endif
 
 #if !defined(CZ_NET_BSD_MAJOR)
-	#if defined(__NetBSD_Version__)
-		#define CZ_NET_BSD_MAJOR ( __NetBSD_Version__ / 100000000 )
-	#elif defined(__NetBSD__)
-		#define CZ_NET_BSD_MAJOR 0
-	#else
-		#define CZ_NET_BSD_MAJOR ( -1 )
-	#endif
+#if defined(__NetBSD_Version__)
+#define CZ_NET_BSD_MAJOR ( __NetBSD_Version__ / 100000000 )
+#elif defined(__NetBSD__)
+#define CZ_NET_BSD_MAJOR 0
+#else
+#define CZ_NET_BSD_MAJOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_NET_BSD_MINOR)
-	#if defined(__NetBSD_Version__)
-		#define CZ_NET_BSD_MINOR ( (__NetBSD_Version__ / 1000000) % 100 )
-	#elif defined(__NetBSD__)
-		#define CZ_NET_BSD_MINOR 0
-	#else
-		#define CZ_NET_BSD_MINOR ( -1 )
-	#endif
+#if defined(__NetBSD_Version__)
+#define CZ_NET_BSD_MINOR ( (__NetBSD_Version__ / 1000000) % 100 )
+#elif defined(__NetBSD__)
+#define CZ_NET_BSD_MINOR 0
+#else
+#define CZ_NET_BSD_MINOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_NET_BSD_PATCH)
-	#if defined(__NetBSD_Version__)
-		#define CZ_NET_BSD_PATCH ( (__NetBSD_Version__ / 100) % 100 )
-	#elif defined(__NetBSD__)
-		#define CZ_NET_BSD_PATCH 0
-	#else
-		#define CZ_NET_BSD_PATCH ( -1 )
-	#endif
+#if defined(__NetBSD_Version__)
+#define CZ_NET_BSD_PATCH ( (__NetBSD_Version__ / 100) % 100 )
+#elif defined(__NetBSD__)
+#define CZ_NET_BSD_PATCH 0
+#else
+#define CZ_NET_BSD_PATCH ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_NET_BSD_VERSION)
-	#define CZ_NET_BSD_VERSION CZ_MAKE_VERSION(CZ_NET_BSD_MAJOR, CZ_NET_BSD_MINOR, CZ_NET_BSD_PATCH)
+#define CZ_NET_BSD_VERSION CZ_MAKE_VERSION(CZ_NET_BSD_MAJOR, CZ_NET_BSD_MINOR, CZ_NET_BSD_PATCH)
 #endif
 
 #if !defined(CZ_OPEN_BSD)
-	#if defined(__OpenBSD__)
-		#define CZ_OPEN_BSD 1
-	#else
-		#define CZ_OPEN_BSD 0
-	#endif
+#if defined(__OpenBSD__)
+#define CZ_OPEN_BSD 1
+#else
+#define CZ_OPEN_BSD 0
+#endif
 #endif
 
 #if !defined(CZ_QNX)
-	#if defined(__QNX__)
-		#define CZ_QNX 1
-	#else
-		#define CZ_QNX 0
-	#endif
+#if defined(__QNX__)
+#define CZ_QNX 1
+#else
+#define CZ_QNX 0
+#endif
 #endif
 
 #if !defined(CZ_QNX_MAJOR)
-	#if defined(__QNX__)
-		#define CZ_QNX_MAJOR ( __QNX__ / 100 )
-	#else
-		#define CZ_QNX_MAJOR ( -1 )
-	#endif
+#if defined(__QNX__)
+#define CZ_QNX_MAJOR ( __QNX__ / 100 )
+#else
+#define CZ_QNX_MAJOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_QNX_MINOR)
-	#if defined(__QNX__)
-		#define CZ_QNX_MINOR ( (__QNX__ / 10) % 10 )
-	#else
-		#define CZ_QNX_MINOR ( -1 )
-	#endif
+#if defined(__QNX__)
+#define CZ_QNX_MINOR ( (__QNX__ / 10) % 10 )
+#else
+#define CZ_QNX_MINOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_QNX_PATCH)
-	#if defined(__QNX__)
-		#define CZ_QNX_PATCH ( __QNX__ % 10 )
-	#else
-		#define CZ_QNX_PATCH ( -1 )
-	#endif
+#if defined(__QNX__)
+#define CZ_QNX_PATCH ( __QNX__ % 10 )
+#else
+#define CZ_QNX_PATCH ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_QNX_VERSION)
-	#define CZ_QNX_VERSION CZ_MAKE_VERSION(CZ_QNX_MAJOR, CZ_QNX_MINOR, CZ_QNX_PATCH)
+#define CZ_QNX_VERSION CZ_MAKE_VERSION(CZ_QNX_MAJOR, CZ_QNX_MINOR, CZ_QNX_PATCH)
 #endif
 
 #if !defined(CZ_UNIX)
-	#if defined(__unix__) || defined(__unix) || defined(unix)
-		#define CZ_UNIX 1
-	#else
-		#define CZ_UNIX 0
-	#endif
+#if defined(__unix__) || defined(__unix) || defined(unix)
+#define CZ_UNIX 1
+#else
+#define CZ_UNIX 0
+#endif
 #endif
 
 #if !defined(CZ_WIN32)
-	#if defined(_WIN32)
-		#define CZ_WIN32 1
-	#else
-		#define CZ_WIN32 0
-	#endif
+#if defined(_WIN32)
+#define CZ_WIN32 1
+#else
+#define CZ_WIN32 0
+#endif
 #endif
 
 #if !defined(CZ_WIN64)
-	#if defined(_WIN64)
-		#define CZ_WIN64 1
-	#else
-		#define CZ_WIN64 0
-	#endif
+#if defined(_WIN64)
+#define CZ_WIN64 1
+#else
+#define CZ_WIN64 0
+#endif
 #endif
 
 // Check for predefined compiler macros
 
 #if !defined(CZ_APPLE_CLANG)
-	#if defined(__apple_build_version__) && defined(__clang__)
-		#define CZ_APPLE_CLANG 1
-	#else
-		#define CZ_APPLE_CLANG 0
-	#endif
+#if defined(__apple_build_version__) && defined(__clang__)
+#define CZ_APPLE_CLANG 1
+#else
+#define CZ_APPLE_CLANG 0
+#endif
 #endif
 
 #if !defined(CZ_CLANG)
-	#if defined(__clang__)
-		#define CZ_CLANG 1
-	#else
-		#define CZ_CLANG 0
-	#endif
+#if defined(__clang__)
+#define CZ_CLANG 1
+#else
+#define CZ_CLANG 0
+#endif
 #endif
 
 #if !defined(CZ_CLANG_MAJOR)
-	#if defined(__clang_major__)
-		#define CZ_CLANG_MAJOR __clang_major__
-	#else
-		#define CZ_CLANG_MAJOR ( -1 )
-	#endif
+#if defined(__clang_major__)
+#define CZ_CLANG_MAJOR __clang_major__
+#else
+#define CZ_CLANG_MAJOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_CLANG_MINOR)
-	#if defined(__clang_minor__)
-		#define CZ_CLANG_MINOR __clang_minor__
-	#else
-		#define CZ_CLANG_MINOR ( -1 )
-	#endif
+#if defined(__clang_minor__)
+#define CZ_CLANG_MINOR __clang_minor__
+#else
+#define CZ_CLANG_MINOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_CLANG_PATCH)
-	#if defined(__clang_patchlevel__)
-		#define CZ_CLANG_PATCH __clang_patchlevel__
-	#else
-		#define CZ_CLANG_PATCH ( -1 )
-	#endif
+#if defined(__clang_patchlevel__)
+#define CZ_CLANG_PATCH __clang_patchlevel__
+#else
+#define CZ_CLANG_PATCH ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_CLANG_VERSION)
-	#define CZ_CLANG_VERSION CZ_MAKE_VERSION(CZ_CLANG_MAJOR, CZ_CLANG_MINOR, CZ_CLANG_PATCH)
+#define CZ_CLANG_VERSION CZ_MAKE_VERSION(CZ_CLANG_MAJOR, CZ_CLANG_MINOR, CZ_CLANG_PATCH)
 #endif
 
 #if !defined(CZ_GNUC)
-	#if defined(__GNUC__)
-		#define CZ_GNUC 1
-	#else
-		#define CZ_GNUC 0
-	#endif
+#if defined(__GNUC__)
+#define CZ_GNUC 1
+#else
+#define CZ_GNUC 0
+#endif
 #endif
 
 #if !defined(CZ_GNUC_MAJOR)
-	#if defined(__GNUC__)
-		#define CZ_GNUC_MAJOR __GNUC__
-	#else
-		#define CZ_GNUC_MAJOR ( -1 )
-	#endif
+#if defined(__GNUC__)
+#define CZ_GNUC_MAJOR __GNUC__
+#else
+#define CZ_GNUC_MAJOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_GNUC_MINOR)
-	#if defined(__GNUC_MINOR__)
-		#define CZ_GNUC_MINOR __GNUC_MINOR__
-	#else
-		#define CZ_GNUC_MINOR ( -1 )
-	#endif
+#if defined(__GNUC_MINOR__)
+#define CZ_GNUC_MINOR __GNUC_MINOR__
+#else
+#define CZ_GNUC_MINOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_GNUC_PATCH)
-	#if defined(__GNUC_PATCHLEVEL__)
-		#define CZ_GNUC_PATCH __GNUC_PATCHLEVEL__
-	#elif defined(__GNUC__)
-		#define CZ_GNUC_PATCH 0
-	#else
-		#define CZ_GNUC_PATCH ( -1 )
-	#endif
+#if defined(__GNUC_PATCHLEVEL__)
+#define CZ_GNUC_PATCH __GNUC_PATCHLEVEL__
+#elif defined(__GNUC__)
+#define CZ_GNUC_PATCH 0
+#else
+#define CZ_GNUC_PATCH ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_GNUC_VERSION)
-	#define CZ_GNUC_VERSION CZ_MAKE_VERSION(CZ_GNUC_MAJOR, CZ_GNUC_MINOR, CZ_GNUC_PATCH)
+#define CZ_GNUC_VERSION CZ_MAKE_VERSION(CZ_GNUC_MAJOR, CZ_GNUC_MINOR, CZ_GNUC_PATCH)
 #endif
 
 #if !defined(CZ_MINGW32)
-	#if defined(__MINGW32__)
-		#define CZ_MINGW32 1
-	#else
-		#define CZ_MINGW32 0
-	#endif
+#if defined(__MINGW32__)
+#define CZ_MINGW32 1
+#else
+#define CZ_MINGW32 0
+#endif
 #endif
 
 #if !defined(CZ_MINGW32_MAJOR)
-	#if defined(__MINGW32_MAJOR_VERSION)
-		#define CZ_MINGW32_MAJOR __MINGW32_MAJOR_VERSION
-	#else
-		#define CZ_MINGW32_MAJOR ( -1 )
-	#endif
+#if defined(__MINGW32_MAJOR_VERSION)
+#define CZ_MINGW32_MAJOR __MINGW32_MAJOR_VERSION
+#else
+#define CZ_MINGW32_MAJOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_MINGW32_MINOR)
-	#if defined(__MINGW32_MINOR_VERSION)
-		#define CZ_MINGW32_MINOR __MINGW32_MINOR_VERSION
-	#else
-		#define CZ_MINGW32_MINOR ( -1 )
-	#endif
+#if defined(__MINGW32_MINOR_VERSION)
+#define CZ_MINGW32_MINOR __MINGW32_MINOR_VERSION
+#else
+#define CZ_MINGW32_MINOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_MINGW32_VERSION)
-	#define CZ_MINGW32_VERSION CZ_MAKE_VERSION(CZ_MINGW32_MAJOR, CZ_MINGW32_MINOR)
+#define CZ_MINGW32_VERSION CZ_MAKE_VERSION(CZ_MINGW32_MAJOR, CZ_MINGW32_MINOR)
 #endif
 
 #if !defined(CZ_MINGW64)
-	#if defined(__MINGW64__)
-		#define CZ_MINGW64 1
-	#else
-		#define CZ_MINGW64 0
-	#endif
+#if defined(__MINGW64__)
+#define CZ_MINGW64 1
+#else
+#define CZ_MINGW64 0
+#endif
 #endif
 
 #if !defined(CZ_MINGW64_MAJOR)
-	#if defined(__MINGW64_MAJOR_VERSION)
-		#define CZ_MINGW64_MAJOR __MINGW64_MAJOR_VERSION
-	#else
-		#define CZ_MINGW64_MAJOR ( -1 )
-	#endif
+#if defined(__MINGW64_MAJOR_VERSION)
+#define CZ_MINGW64_MAJOR __MINGW64_MAJOR_VERSION
+#else
+#define CZ_MINGW64_MAJOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_MINGW64_MINOR)
-	#if defined(__MINGW64_MINOR_VERSION)
-		#define CZ_MINGW64_MINOR __MINGW64_MINOR_VERSION
-	#else
-		#define CZ_MINGW64_MINOR ( -1 )
-	#endif
+#if defined(__MINGW64_MINOR_VERSION)
+#define CZ_MINGW64_MINOR __MINGW64_MINOR_VERSION
+#else
+#define CZ_MINGW64_MINOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_MINGW64_VERSION)
-	#define CZ_MINGW64_VERSION CZ_MAKE_VERSION(CZ_MINGW64_MAJOR, CZ_MINGW64_MINOR)
+#define CZ_MINGW64_VERSION CZ_MAKE_VERSION(CZ_MINGW64_MAJOR, CZ_MINGW64_MINOR)
 #endif
 
 #if !defined(CZ_MSVC)
-	#if defined(_MSC_VER)
-		#define CZ_MSVC 1
-	#else
-		#define CZ_MSVC 0
-	#endif
+#if defined(_MSC_VER)
+#define CZ_MSVC 1
+#else
+#define CZ_MSVC 0
+#endif
 #endif
 
 #if !defined(CZ_MSVC_MAJOR)
-	#if defined(_MSC_VER)
-		#define CZ_MSVC_MAJOR ( _MSC_VER / 100 )
-	#else
-		#define CZ_MSVC_MAJOR ( -1 )
-	#endif
+#if defined(_MSC_VER)
+#define CZ_MSVC_MAJOR ( _MSC_VER / 100 )
+#else
+#define CZ_MSVC_MAJOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_MSVC_MINOR)
-	#if defined(_MSC_VER)
-		#define CZ_MSVC_MINOR ( _MSC_VER % 100 )
-	#else
-		#define CZ_MSVC_MINOR ( -1 )
-	#endif
+#if defined(_MSC_VER)
+#define CZ_MSVC_MINOR ( _MSC_VER % 100 )
+#else
+#define CZ_MSVC_MINOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_MSVC_PATCH)
-	#if defined(_MSC_FULL_VER)
-		#define CZ_MSVC_PATCH ( _MSC_FULL_VER % 100000 )
-	#elif defined(_MSC_VER)
-		#define CZ_MSVC_PATCH 0
-	#else
-		#define CZ_MSVC_PATCH ( -1 )
-	#endif
+#if defined(_MSC_FULL_VER)
+#define CZ_MSVC_PATCH ( _MSC_FULL_VER % 100000 )
+#elif defined(_MSC_VER)
+#define CZ_MSVC_PATCH 0
+#else
+#define CZ_MSVC_PATCH ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_MSVC_VERSION)
-	#define CZ_MSVC_VERSION CZ_MAKE_VERSION(CZ_MSVC_MAJOR, CZ_MSVC_MINOR, CZ_MSVC_PATCH)
+#define CZ_MSVC_VERSION CZ_MAKE_VERSION(CZ_MSVC_MAJOR, CZ_MSVC_MINOR, CZ_MSVC_PATCH)
 #endif
 
 // Check for predefined libc macros
 
 #if !defined(CZ_GLIBC)
-	#if defined(__GLIBC__)
-		#define CZ_GLIBC 1
-	#else
-		#define CZ_GLIBC 0
-	#endif
+#if defined(__GLIBC__) || defined(__GNU_LIBRARY__)
+#define CZ_GLIBC 1
+#else
+#define CZ_GLIBC 0
+#endif
 #endif
 
 #if !defined(CZ_GLIBC_MAJOR)
-	#if defined(__GLIBC__)
-		#define CZ_GLIBC_MAJOR __GLIBC__
-	#else
-		#define CZ_GLIBC_MAJOR ( -1 )
-	#endif
+#if defined(__GLIBC__)
+#define CZ_GLIBC_MAJOR __GLIBC__
+#elif defined(__GNU_LIBRARY__)
+#define CZ_GLIBC_MAJOR __GNU_LIBRARY__
+#else
+#define CZ_GLIBC_MAJOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_GLIBC_MINOR)
-	#if defined(__GLIBC_MINOR__)
-		#define CZ_GLIBC_MINOR __GLIBC_MINOR__
-	#else
-		#define CZ_GLIBC_MINOR ( -1 )
-	#endif
+#if defined(__GLIBC_MINOR__)
+#define CZ_GLIBC_MINOR __GLIBC_MINOR__
+#elif defined(__GNU_LIBRARY_MINOR__)
+#define CZ_GLIBC_MINOR __GNU_LIBRARY_MINOR__
+#else
+#define CZ_GLIBC_MINOR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_GLIBC_VERSION)
-	#define CZ_GLIBC_VERSION CZ_MAKE_VERSION(CZ_GLIBC_MAJOR, CZ_GLIBC_MINOR)
+#define CZ_GLIBC_VERSION CZ_MAKE_VERSION(CZ_GLIBC_MAJOR, CZ_GLIBC_MINOR)
 #endif
 
 // Check for predefined POSIX.1 macros
 
 #if !defined(CZ_POSIX_VERSION)
-	#if defined(_POSIX_VERSION)
-		#define CZ_POSIX_VERSION _POSIX_VERSION
-	#else
-		#define CZ_POSIX_VERSION ( -1 )
-	#endif
+#if defined(_POSIX_VERSION)
+#define CZ_POSIX_VERSION _POSIX_VERSION
+#else
+#define CZ_POSIX_VERSION ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_ADVISORY_INFO)
-	#if defined(_POSIX_ADVISORY_INFO)
-		#define CZ_POSIX_ADVISORY_INFO _POSIX_ADVISORY_INFO
-	#else
-		#define CZ_POSIX_ADVISORY_INFO ( -1 )
-	#endif
+#if defined(_POSIX_ADVISORY_INFO)
+#define CZ_POSIX_ADVISORY_INFO _POSIX_ADVISORY_INFO
+#else
+#define CZ_POSIX_ADVISORY_INFO ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_ASYNCHRONOUS_IO)
-	#if defined(_POSIX_ASYNCHRONOUS_IO)
-		#define CZ_POSIX_ASYNCHRONOUS_IO _POSIX_ASYNCHRONOUS_IO
-	#else
-		#define CZ_POSIX_ASYNCHRONOUS_IO ( -1 )
-	#endif
+#if defined(_POSIX_ASYNCHRONOUS_IO)
+#define CZ_POSIX_ASYNCHRONOUS_IO _POSIX_ASYNCHRONOUS_IO
+#else
+#define CZ_POSIX_ASYNCHRONOUS_IO ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_BARRIERS)
-	#if defined(_POSIX_BARRIERS)
-		#define CZ_POSIX_BARRIERS _POSIX_BARRIERS
-	#else
-		#define CZ_POSIX_BARRIERS ( -1 )
-	#endif
+#if defined(_POSIX_BARRIERS)
+#define CZ_POSIX_BARRIERS _POSIX_BARRIERS
+#else
+#define CZ_POSIX_BARRIERS ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_CLOCK_SELECTION)
-	#if defined(_POSIX_CLOCK_SELECTION)
-		#define CZ_POSIX_CLOCK_SELECTION _POSIX_CLOCK_SELECTION
-	#else
-		#define CZ_POSIX_CLOCK_SELECTION ( -1 )
-	#endif
+#if defined(_POSIX_CLOCK_SELECTION)
+#define CZ_POSIX_CLOCK_SELECTION _POSIX_CLOCK_SELECTION
+#else
+#define CZ_POSIX_CLOCK_SELECTION ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_CPUTIME)
-	#if defined(_POSIX_CPUTIME)
-		#define CZ_POSIX_CPUTIME _POSIX_CPUTIME
-	#else
-		#define CZ_POSIX_CPUTIME ( -1 )
-	#endif
+#if defined(_POSIX_CPUTIME)
+#define CZ_POSIX_CPUTIME _POSIX_CPUTIME
+#else
+#define CZ_POSIX_CPUTIME ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_FSYNC)
-	#if defined(_POSIX_FSYNC)
-		#define CZ_POSIX_FSYNC _POSIX_FSYNC
-	#else
-		#define CZ_POSIX_FSYNC ( -1 )
-	#endif
+#if defined(_POSIX_FSYNC)
+#define CZ_POSIX_FSYNC _POSIX_FSYNC
+#else
+#define CZ_POSIX_FSYNC ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_IPV6)
-	#if defined(_POSIX_IPV6)
-		#define CZ_POSIX_IPV6 _POSIX_IPV6
-	#else
-		#define CZ_POSIX_IPV6 ( -1 )
-	#endif
+#if defined(_POSIX_IPV6)
+#define CZ_POSIX_IPV6 _POSIX_IPV6
+#else
+#define CZ_POSIX_IPV6 ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_JOB_CONTROL)
-	#if defined(_POSIX_JOB_CONTROL)
-		#define CZ_POSIX_JOB_CONTROL _POSIX_JOB_CONTROL
-	#else
-		#define CZ_POSIX_JOB_CONTROL ( -1 )
-	#endif
+#if defined(_POSIX_JOB_CONTROL)
+#define CZ_POSIX_JOB_CONTROL _POSIX_JOB_CONTROL
+#else
+#define CZ_POSIX_JOB_CONTROL ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_MAPPED_FILES)
-	#if defined(_POSIX_MAPPED_FILES)
-		#define CZ_POSIX_MAPPED_FILES _POSIX_MAPPED_FILES
-	#else
-		#define CZ_POSIX_MAPPED_FILES ( -1 )
-	#endif
+#if defined(_POSIX_MAPPED_FILES)
+#define CZ_POSIX_MAPPED_FILES _POSIX_MAPPED_FILES
+#else
+#define CZ_POSIX_MAPPED_FILES ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_MEMLOCK)
-	#if defined(_POSIX_MEMLOCK)
-		#define CZ_POSIX_MEMLOCK _POSIX_MEMLOCK
-	#else
-		#define CZ_POSIX_MEMLOCK ( -1 )
-	#endif
+#if defined(_POSIX_MEMLOCK)
+#define CZ_POSIX_MEMLOCK _POSIX_MEMLOCK
+#else
+#define CZ_POSIX_MEMLOCK ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_MEMLOCK_RANGE)
-	#if defined(_POSIX_MEMLOCK_RANGE)
-		#define CZ_POSIX_MEMLOCK_RANGE _POSIX_MEMLOCK_RANGE
-	#else
-		#define CZ_POSIX_MEMLOCK_RANGE ( -1 )
-	#endif
+#if defined(_POSIX_MEMLOCK_RANGE)
+#define CZ_POSIX_MEMLOCK_RANGE _POSIX_MEMLOCK_RANGE
+#else
+#define CZ_POSIX_MEMLOCK_RANGE ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_MEMORY_PROTECTION)
-	#if defined(_POSIX_MEMORY_PROTECTION)
-		#define CZ_POSIX_MEMORY_PROTECTION _POSIX_MEMORY_PROTECTION
-	#else
-		#define CZ_POSIX_MEMORY_PROTECTION ( -1 )
-	#endif
+#if defined(_POSIX_MEMORY_PROTECTION)
+#define CZ_POSIX_MEMORY_PROTECTION _POSIX_MEMORY_PROTECTION
+#else
+#define CZ_POSIX_MEMORY_PROTECTION ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_MESSAGE_PASSING)
-	#if defined(_POSIX_MESSAGE_PASSING)
-		#define CZ_POSIX_MESSAGE_PASSING _POSIX_MESSAGE_PASSING
-	#else
-		#define CZ_POSIX_MESSAGE_PASSING ( -1 )
-	#endif
+#if defined(_POSIX_MESSAGE_PASSING)
+#define CZ_POSIX_MESSAGE_PASSING _POSIX_MESSAGE_PASSING
+#else
+#define CZ_POSIX_MESSAGE_PASSING ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_MONOTONIC_CLOCK)
-	#if defined(_POSIX_MONOTONIC_CLOCK)
-		#define CZ_POSIX_MONOTONIC_CLOCK _POSIX_MONOTONIC_CLOCK
-	#else
-		#define CZ_POSIX_MONOTONIC_CLOCK ( -1 )
-	#endif
+#if defined(_POSIX_MONOTONIC_CLOCK)
+#define CZ_POSIX_MONOTONIC_CLOCK _POSIX_MONOTONIC_CLOCK
+#else
+#define CZ_POSIX_MONOTONIC_CLOCK ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_NO_TRUNC)
-	#if defined(_POSIX_NO_TRUNC)
-		#define CZ_POSIX_NO_TRUNC _POSIX_NO_TRUNC
-	#else
-		#define CZ_POSIX_NO_TRUNC ( -1 )
-	#endif
+#if defined(_POSIX_NO_TRUNC)
+#define CZ_POSIX_NO_TRUNC _POSIX_NO_TRUNC
+#else
+#define CZ_POSIX_NO_TRUNC ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_PRIORITIZED_IO)
-	#if defined(_POSIX_PRIORITIZED_IO)
-		#define CZ_POSIX_PRIORITIZED_IO _POSIX_PRIORITIZED_IO
-	#else
-		#define CZ_POSIX_PRIORITIZED_IO ( -1 )
-	#endif
+#if defined(_POSIX_PRIORITIZED_IO)
+#define CZ_POSIX_PRIORITIZED_IO _POSIX_PRIORITIZED_IO
+#else
+#define CZ_POSIX_PRIORITIZED_IO ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_PRIORITY_SCHEDULING)
-	#if defined(_POSIX_PRIORITY_SCHEDULING)
-		#define CZ_POSIX_PRIORITY_SCHEDULING _POSIX_PRIORITY_SCHEDULING
-	#else
-		#define CZ_POSIX_PRIORITY_SCHEDULING ( -1 )
-	#endif
+#if defined(_POSIX_PRIORITY_SCHEDULING)
+#define CZ_POSIX_PRIORITY_SCHEDULING _POSIX_PRIORITY_SCHEDULING
+#else
+#define CZ_POSIX_PRIORITY_SCHEDULING ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_RAW_SOCKETS)
-	#if defined(_POSIX_RAW_SOCKETS)
-		#define CZ_POSIX_RAW_SOCKETS _POSIX_RAW_SOCKETS
-	#else
-		#define CZ_POSIX_RAW_SOCKETS ( -1 )
-	#endif
+#if defined(_POSIX_RAW_SOCKETS)
+#define CZ_POSIX_RAW_SOCKETS _POSIX_RAW_SOCKETS
+#else
+#define CZ_POSIX_RAW_SOCKETS ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_READER_WRITER_LOCKS)
-	#if defined(_POSIX_READER_WRITER_LOCKS)
-		#define CZ_POSIX_READER_WRITER_LOCKS _POSIX_READER_WRITER_LOCKS
-	#else
-		#define CZ_POSIX_READER_WRITER_LOCKS ( -1 )
-	#endif
+#if defined(_POSIX_READER_WRITER_LOCKS)
+#define CZ_POSIX_READER_WRITER_LOCKS _POSIX_READER_WRITER_LOCKS
+#else
+#define CZ_POSIX_READER_WRITER_LOCKS ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_REALTIME_SIGNALS)
-	#if defined(_POSIX_REALTIME_SIGNALS)
-		#define CZ_POSIX_REALTIME_SIGNALS _POSIX_REALTIME_SIGNALS
-	#else
-		#define CZ_POSIX_REALTIME_SIGNALS ( -1 )
-	#endif
+#if defined(_POSIX_REALTIME_SIGNALS)
+#define CZ_POSIX_REALTIME_SIGNALS _POSIX_REALTIME_SIGNALS
+#else
+#define CZ_POSIX_REALTIME_SIGNALS ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_REGEXP)
-	#if defined(_POSIX_REGEXP)
-		#define CZ_POSIX_REGEXP _POSIX_REGEXP
-	#else
-		#define CZ_POSIX_REGEXP ( -1 )
-	#endif
+#if defined(_POSIX_REGEXP)
+#define CZ_POSIX_REGEXP _POSIX_REGEXP
+#else
+#define CZ_POSIX_REGEXP ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_SAVED_IDS)
-	#if defined(_POSIX_SAVED_IDS)
-		#define CZ_POSIX_SAVED_IDS _POSIX_SAVED_IDS
-	#else
-		#define CZ_POSIX_SAVED_IDS ( -1 )
-	#endif
+#if defined(_POSIX_SAVED_IDS)
+#define CZ_POSIX_SAVED_IDS _POSIX_SAVED_IDS
+#else
+#define CZ_POSIX_SAVED_IDS ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_SEMAPHORES)
-	#if defined(_POSIX_SEMAPHORES)
-		#define CZ_POSIX_SEMAPHORES _POSIX_SEMAPHORES
-	#else
-		#define CZ_POSIX_SEMAPHORES ( -1 )
-	#endif
+#if defined(_POSIX_SEMAPHORES)
+#define CZ_POSIX_SEMAPHORES _POSIX_SEMAPHORES
+#else
+#define CZ_POSIX_SEMAPHORES ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_SHARED_MEMORY_OBJECTS)
-	#if defined(_POSIX_SHARED_MEMORY_OBJECTS)
-		#define CZ_POSIX_SHARED_MEMORY_OBJECTS _POSIX_SHARED_MEMORY_OBJECTS
-	#else
-		#define CZ_POSIX_SHARED_MEMORY_OBJECTS ( -1 )
-	#endif
+#if defined(_POSIX_SHARED_MEMORY_OBJECTS)
+#define CZ_POSIX_SHARED_MEMORY_OBJECTS _POSIX_SHARED_MEMORY_OBJECTS
+#else
+#define CZ_POSIX_SHARED_MEMORY_OBJECTS ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_SHELL)
-	#if defined(_POSIX_SHELL)
-		#define CZ_POSIX_SHELL _POSIX_SHELL
-	#else
-		#define CZ_POSIX_SHELL ( -1 )
-	#endif
+#if defined(_POSIX_SHELL)
+#define CZ_POSIX_SHELL _POSIX_SHELL
+#else
+#define CZ_POSIX_SHELL ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_SPAWN)
-	#if defined(_POSIX_SPAWN)
-		#define CZ_POSIX_SPAWN _POSIX_SPAWN
-	#else
-		#define CZ_POSIX_SPAWN ( -1 )
-	#endif
+#if defined(_POSIX_SPAWN)
+#define CZ_POSIX_SPAWN _POSIX_SPAWN
+#else
+#define CZ_POSIX_SPAWN ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_SPIN_LOCKS)
-	#if defined(_POSIX_SPIN_LOCKS)
-		#define CZ_POSIX_SPIN_LOCKS _POSIX_SPIN_LOCKS
-	#else
-		#define CZ_POSIX_SPIN_LOCKS ( -1 )
-	#endif
+#if defined(_POSIX_SPIN_LOCKS)
+#define CZ_POSIX_SPIN_LOCKS _POSIX_SPIN_LOCKS
+#else
+#define CZ_POSIX_SPIN_LOCKS ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_SPORADIC_SERVER)
-	#if defined(_POSIX_SPORADIC_SERVER)
-		#define CZ_POSIX_SPORADIC_SERVER _POSIX_SPORADIC_SERVER
-	#else
-		#define CZ_POSIX_SPORADIC_SERVER ( -1 )
-	#endif
+#if defined(_POSIX_SPORADIC_SERVER)
+#define CZ_POSIX_SPORADIC_SERVER _POSIX_SPORADIC_SERVER
+#else
+#define CZ_POSIX_SPORADIC_SERVER ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_SYNCHRONIZED_IO)
-	#if defined(_POSIX_SYNCHRONIZED_IO)
-		#define CZ_POSIX_SYNCHRONIZED_IO _POSIX_SYNCHRONIZED_IO
-	#else
-		#define CZ_POSIX_SYNCHRONIZED_IO ( -1 )
-	#endif
+#if defined(_POSIX_SYNCHRONIZED_IO)
+#define CZ_POSIX_SYNCHRONIZED_IO _POSIX_SYNCHRONIZED_IO
+#else
+#define CZ_POSIX_SYNCHRONIZED_IO ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_THREAD_ATTR_STACKADDR)
-	#if defined(_POSIX_THREAD_ATTR_STACKADDR)
-		#define CZ_POSIX_THREAD_ATTR_STACKADDR _POSIX_THREAD_ATTR_STACKADDR
-	#else
-		#define CZ_POSIX_THREAD_ATTR_STACKADDR ( -1 )
-	#endif
+#if defined(_POSIX_THREAD_ATTR_STACKADDR)
+#define CZ_POSIX_THREAD_ATTR_STACKADDR _POSIX_THREAD_ATTR_STACKADDR
+#else
+#define CZ_POSIX_THREAD_ATTR_STACKADDR ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_THREAD_ATTR_STACKSIZE)
-	#if defined(_POSIX_THREAD_ATTR_STACKSIZE)
-		#define CZ_POSIX_THREAD_ATTR_STACKSIZE _POSIX_THREAD_ATTR_STACKSIZE
-	#else
-		#define CZ_POSIX_THREAD_ATTR_STACKSIZE ( -1 )
-	#endif
+#if defined(_POSIX_THREAD_ATTR_STACKSIZE)
+#define CZ_POSIX_THREAD_ATTR_STACKSIZE _POSIX_THREAD_ATTR_STACKSIZE
+#else
+#define CZ_POSIX_THREAD_ATTR_STACKSIZE ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_THREAD_CPUTIME)
-	#if defined(_POSIX_THREAD_CPUTIME)
-		#define CZ_POSIX_THREAD_CPUTIME _POSIX_THREAD_CPUTIME
-	#else
-		#define CZ_POSIX_THREAD_CPUTIME ( -1 )
-	#endif
+#if defined(_POSIX_THREAD_CPUTIME)
+#define CZ_POSIX_THREAD_CPUTIME _POSIX_THREAD_CPUTIME
+#else
+#define CZ_POSIX_THREAD_CPUTIME ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_THREAD_PRIO_INHERIT)
-	#if defined(_POSIX_THREAD_PRIO_INHERIT)
-		#define CZ_POSIX_THREAD_PRIO_INHERIT _POSIX_THREAD_PRIO_INHERIT
-	#else
-		#define CZ_POSIX_THREAD_PRIO_INHERIT ( -1 )
-	#endif
+#if defined(_POSIX_THREAD_PRIO_INHERIT)
+#define CZ_POSIX_THREAD_PRIO_INHERIT _POSIX_THREAD_PRIO_INHERIT
+#else
+#define CZ_POSIX_THREAD_PRIO_INHERIT ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_THREAD_PRIO_PROTECT)
-	#if defined(_POSIX_THREAD_PRIO_PROTECT)
-		#define CZ_POSIX_THREAD_PRIO_PROTECT _POSIX_THREAD_PRIO_PROTECT
-	#else
-		#define CZ_POSIX_THREAD_PRIO_PROTECT ( -1 )
-	#endif
+#if defined(_POSIX_THREAD_PRIO_PROTECT)
+#define CZ_POSIX_THREAD_PRIO_PROTECT _POSIX_THREAD_PRIO_PROTECT
+#else
+#define CZ_POSIX_THREAD_PRIO_PROTECT ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_THREAD_PRIORITY_SCHEDULING)
-	#if defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
-		#define CZ_POSIX_THREAD_PRIORITY_SCHEDULING _POSIX_THREAD_PRIORITY_SCHEDULING
-	#else
-		#define CZ_POSIX_THREAD_PRIORITY_SCHEDULING ( -1 )
-	#endif
+#if defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
+#define CZ_POSIX_THREAD_PRIORITY_SCHEDULING _POSIX_THREAD_PRIORITY_SCHEDULING
+#else
+#define CZ_POSIX_THREAD_PRIORITY_SCHEDULING ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_THREAD_PROCESS_SHARED)
-	#if defined(_POSIX_THREAD_PROCESS_SHARED)
-		#define CZ_POSIX_THREAD_PROCESS_SHARED _POSIX_THREAD_PROCESS_SHARED
-	#else
-		#define CZ_POSIX_THREAD_PROCESS_SHARED ( -1 )
-	#endif
+#if defined(_POSIX_THREAD_PROCESS_SHARED)
+#define CZ_POSIX_THREAD_PROCESS_SHARED _POSIX_THREAD_PROCESS_SHARED
+#else
+#define CZ_POSIX_THREAD_PROCESS_SHARED ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_THREAD_SAFE_FUNCTIONS)
-	#if defined(_POSIX_THREAD_SAFE_FUNCTIONS)
-		#define CZ_POSIX_THREAD_SAFE_FUNCTIONS _POSIX_THREAD_SAFE_FUNCTIONS
-	#else
-		#define CZ_POSIX_THREAD_SAFE_FUNCTIONS ( -1 )
-	#endif
+#if defined(_POSIX_THREAD_SAFE_FUNCTIONS)
+#define CZ_POSIX_THREAD_SAFE_FUNCTIONS _POSIX_THREAD_SAFE_FUNCTIONS
+#else
+#define CZ_POSIX_THREAD_SAFE_FUNCTIONS ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_THREAD_SPORADIC_SERVER)
-	#if defined(_POSIX_THREAD_SPORADIC_SERVER)
-		#define CZ_POSIX_THREAD_SPORADIC_SERVER _POSIX_THREAD_SPORADIC_SERVER
-	#else
-		#define CZ_POSIX_THREAD_SPORADIC_SERVER ( -1 )
-	#endif
+#if defined(_POSIX_THREAD_SPORADIC_SERVER)
+#define CZ_POSIX_THREAD_SPORADIC_SERVER _POSIX_THREAD_SPORADIC_SERVER
+#else
+#define CZ_POSIX_THREAD_SPORADIC_SERVER ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_THREADS)
-	#if defined(_POSIX_THREADS)
-		#define CZ_POSIX_THREADS _POSIX_THREADS
-	#else
-		#define CZ_POSIX_THREADS ( -1 )
-	#endif
+#if defined(_POSIX_THREADS)
+#define CZ_POSIX_THREADS _POSIX_THREADS
+#else
+#define CZ_POSIX_THREADS ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_TIMEOUTS)
-	#if defined(_POSIX_TIMEOUTS)
-		#define CZ_POSIX_TIMEOUTS _POSIX_TIMEOUTS
-	#else
-		#define CZ_POSIX_TIMEOUTS ( -1 )
-	#endif
+#if defined(_POSIX_TIMEOUTS)
+#define CZ_POSIX_TIMEOUTS _POSIX_TIMEOUTS
+#else
+#define CZ_POSIX_TIMEOUTS ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_TIMERS)
-	#if defined(_POSIX_TIMERS)
-		#define CZ_POSIX_TIMERS _POSIX_TIMERS
-	#else
-		#define CZ_POSIX_TIMERS ( -1 )
-	#endif
+#if defined(_POSIX_TIMERS)
+#define CZ_POSIX_TIMERS _POSIX_TIMERS
+#else
+#define CZ_POSIX_TIMERS ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_TRACE)
-	#if defined(_POSIX_TRACE)
-		#define CZ_POSIX_TRACE _POSIX_TRACE
-	#else
-		#define CZ_POSIX_TRACE ( -1 )
-	#endif
+#if defined(_POSIX_TRACE)
+#define CZ_POSIX_TRACE _POSIX_TRACE
+#else
+#define CZ_POSIX_TRACE ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_TRACE_EVENT_FILTER)
-	#if defined(_POSIX_TRACE_EVENT_FILTER)
-		#define CZ_POSIX_TRACE_EVENT_FILTER _POSIX_TRACE_EVENT_FILTER
-	#else
-		#define CZ_POSIX_TRACE_EVENT_FILTER ( -1 )
-	#endif
+#if defined(_POSIX_TRACE_EVENT_FILTER)
+#define CZ_POSIX_TRACE_EVENT_FILTER _POSIX_TRACE_EVENT_FILTER
+#else
+#define CZ_POSIX_TRACE_EVENT_FILTER ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_TRACE_INHERIT)
-	#if defined(_POSIX_TRACE_INHERIT)
-		#define CZ_POSIX_TRACE_INHERIT _POSIX_TRACE_INHERIT
-	#else
-		#define CZ_POSIX_TRACE_INHERIT ( -1 )
-	#endif
+#if defined(_POSIX_TRACE_INHERIT)
+#define CZ_POSIX_TRACE_INHERIT _POSIX_TRACE_INHERIT
+#else
+#define CZ_POSIX_TRACE_INHERIT ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_TRACE_LOG)
-	#if defined(_POSIX_TRACE_LOG)
-		#define CZ_POSIX_TRACE_LOG _POSIX_TRACE_LOG
-	#else
-		#define CZ_POSIX_TRACE_LOG ( -1 )
-	#endif
+#if defined(_POSIX_TRACE_LOG)
+#define CZ_POSIX_TRACE_LOG _POSIX_TRACE_LOG
+#else
+#define CZ_POSIX_TRACE_LOG ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_POSIX_TYPED_MEMORY_OBJECTS)
-	#if defined(_POSIX_TYPED_MEMORY_OBJECTS)
-		#define CZ_POSIX_TYPED_MEMORY_OBJECTS _POSIX_TYPED_MEMORY_OBJECTS
-	#else
-		#define CZ_POSIX_TYPED_MEMORY_OBJECTS ( -1 )
-	#endif
+#if defined(_POSIX_TYPED_MEMORY_OBJECTS)
+#define CZ_POSIX_TYPED_MEMORY_OBJECTS _POSIX_TYPED_MEMORY_OBJECTS
+#else
+#define CZ_POSIX_TYPED_MEMORY_OBJECTS ( -1 )
+#endif
 #endif
 
 // Check for predefined X/OPEN macros
 
 #if !defined(CZ_XOPEN_VERSION)
-	#if defined(_XOPEN_VERSION)
-		#define CZ_XOPEN_VERSION _XOPEN_VERSION
-	#else
-		#define CZ_XOPEN_VERSION ( -1 )
-	#endif
+#if defined(_XOPEN_VERSION)
+#define CZ_XOPEN_VERSION _XOPEN_VERSION
+#else
+#define CZ_XOPEN_VERSION ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_XOPEN_CRYPT)
-	#if defined(_XOPEN_CRYPT)
-		#define CZ_XOPEN_CRYPT _XOPEN_CRYPT
-	#else
-		#define CZ_XOPEN_CRYPT ( -1 )
-	#endif
+#if defined(_XOPEN_CRYPT)
+#define CZ_XOPEN_CRYPT _XOPEN_CRYPT
+#else
+#define CZ_XOPEN_CRYPT ( -1 )
+#endif
 #endif
 
 #if !defined (CZ_XOPEN_LEGACY)
-	#if defined(_XOPEN_LEGACY)
-		#define CZ_XOPEN_LEGACY _XOPEN_LEGACY
-	#else
-		#define CZ_XOPEN_LEGACY ( -1 )
-	#endif
+#if defined(_XOPEN_LEGACY)
+#define CZ_XOPEN_LEGACY _XOPEN_LEGACY
+#else
+#define CZ_XOPEN_LEGACY ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_XOPEN_REALTIME)
-	#if defined(_XOPEN_REALTIME)
-		#define CZ_XOPEN_REALTIME _XOPEN_REALTIME
-	#else
-		#define CZ_XOPEN_REALTIME ( -1 )
-	#endif
+#if defined(_XOPEN_REALTIME)
+#define CZ_XOPEN_REALTIME _XOPEN_REALTIME
+#else
+#define CZ_XOPEN_REALTIME ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_XOPEN_REALTIME_THREADS)
-	#if defined(_XOPEN_REALTIME_THREADS)
-		#define CZ_XOPEN_REALTIME_THREADS _XOPEN_REALTIME_THREADS
-	#else
-		#define CZ_XOPEN_REALTIME_THREADS ( -1 )
-	#endif
+#if defined(_XOPEN_REALTIME_THREADS)
+#define CZ_XOPEN_REALTIME_THREADS _XOPEN_REALTIME_THREADS
+#else
+#define CZ_XOPEN_REALTIME_THREADS ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_XOPEN_STREAMS)
-	#if defined(_XOPEN_STREAMS)
-		#define CZ_XOPEN_STREAMS _XOPEN_STREAMS
-	#else
-		#define CZ_XOPEN_STREAMS ( -1 )
-	#endif
+#if defined(_XOPEN_STREAMS)
+#define CZ_XOPEN_STREAMS _XOPEN_STREAMS
+#else
+#define CZ_XOPEN_STREAMS ( -1 )
+#endif
 #endif
 
 #if !defined(CZ_XOPEN_UNIX)
-	#if defined(_XOPEN_UNIX)
-		#define CZ_XOPEN_UNIX _XOPEN_UNIX
-	#else
-		#define CZ_XOPEN_UNIX ( -1 )
-	#endif
+#if defined(_XOPEN_UNIX)
+#define CZ_XOPEN_UNIX _XOPEN_UNIX
+#else
+#define CZ_XOPEN_UNIX ( -1 )
 #endif
-
-// Check for predefined Linux macros
-
-#if !defined(CZ_LINUX_ADVISE_SYSCALLS)
-	#if defined(CONFIG_ADVISE_SYSCALLS)
-		#define CZ_LINUX_ADVISE_SYSCALLS 1
-	#else
-		#define CZ_LINUX_ADVISE_SYSCALLS 0
-	#endif
-#endif
-
-#if !defined(CZ_LINUX_KSM)
-	#if defined(CONFIG_KSM)
-		#define CZ_LINUX_KSM 1
-	#else
-		#define CZ_LINUX_KSM 0
-	#endif
-#endif
-
-#if !defined(CZ_LINUX_MEMORY_FAILURE)
-	#if defined(CONFIG_MEMORY_FAILURE)
-		#define CZ_LINUX_MEMORY_FAILURE 1
-	#else
-		#define CZ_LINUX_MEMORY_FAILURE 0
-	#endif
-#endif
-
-#if !defined(CZ_LINUX_TRANSPARENT_HUGEPAGE)
-	#if defined(CONFIG_TRANSPARENT_HUGEPAGE)
-		#define CZ_LINUX_TRANSPARENT_HUGEPAGE 1
-	#else
-		#define CZ_LINUX_TRANSPARENT_HUGEPAGE 0
-	#endif
 #endif
 
 // Check for user-defined feature macros
 
 #if !defined(CZ_DEFAULT_SOURCE)
-	#if defined(_DEFAULT_SOURCE)
-		#define CZ_DEFAULT_SOURCE 1
-	#else
-		#define CZ_DEFAULT_SOURCE 0
-	#endif
+#if defined(_DEFAULT_SOURCE)
+#define CZ_DEFAULT_SOURCE 1
+#else
+#define CZ_DEFAULT_SOURCE 0
+#endif
 #endif
 
 #if !defined(CZ_GNU_SOURCE)
-	#if defined(_GNU_SOURCE)
-		#define CZ_GNU_SOURCE 1
-	#else
-		#define CZ_GNU_SOURCE 0
-	#endif
+#if defined(_GNU_SOURCE)
+#define CZ_GNU_SOURCE 1
+#else
+#define CZ_GNU_SOURCE 0
+#endif
 #endif
 
 // Check support for attributes, builtins, features, etc.
 
 #if !defined(CZ_HAS_ATTRIBUTE)
-	#if defined(__has_attribute)
-		#define CZ_HAS_ATTRIBUTE(x) __has_attribute(x)
-	#else
-		#define CZ_HAS_ATTRIBUTE(x) 0
-	#endif
+#if defined(__has_attribute)
+#define CZ_HAS_ATTRIBUTE(x) __has_attribute(x)
+#else
+#define CZ_HAS_ATTRIBUTE(x) 0
+#endif
 #endif
 
 #if !defined(CZ_HAS_BUILTIN)
-	#if defined(__has_builtin)
-		#define CZ_HAS_BUILTIN(x) __has_builtin(__builtin_##x)
-	#else
-		#define CZ_HAS_BUILTIN(x) 0
-	#endif
+#if defined(__has_builtin)
+#define CZ_HAS_BUILTIN(x) __has_builtin(__builtin_##x)
+#else
+#define CZ_HAS_BUILTIN(x) 0
+#endif
 #endif
 
 #if !defined(CZ_HAS_EXTENSION)
-	#if defined( __has_extension)
-		#define CZ_HAS_EXTENSION(x)  __has_extension(x)
-	#else
-		#define CZ_HAS_EXTENSION(x) 0
-	#endif
+#if defined( __has_extension)
+#define CZ_HAS_EXTENSION(x)  __has_extension(x)
+#else
+#define CZ_HAS_EXTENSION(x) 0
+#endif
 #endif
 
 #if !defined(CZ_HAS_FEATURE)
-	#if defined(__has_feature)
-		#define CZ_HAS_FEATURE(x) __has_feature(x)
-	#else
-		#define CZ_HAS_FEATURE(x) 0
-	#endif
+#if defined(__has_feature)
+#define CZ_HAS_FEATURE(x) __has_feature(x)
+#else
+#define CZ_HAS_FEATURE(x) 0
+#endif
 #endif
 
 #if !defined(CZ_HAS_INCLUDE)
-	#if defined(__has_include)
-		#define CZ_HAS_INCLUDE(x) __has_include(<x>)
-	#else
-		#define CZ_HAS_INCLUDE(x) 0
-	#endif
+#if defined(__has_include)
+#define CZ_HAS_INCLUDE(x) __has_include(<x>)
+#else
+#define CZ_HAS_INCLUDE(x) 0
+#endif
 #endif
 
 #if !defined(CZ_ASSUME)
-	#if CZ_HAS_BUILTIN(assume)
-		#define CZ_ASSUME(x) __builtin_assume(x)
-	#elif CZ_HAS_ATTRIBUTE(assume)
-		#define CZ_ASSUME(x) __attribute__ (( assume(x) ))
-	#elif CZ_MSVC
-		#define CZ_ASSUME(x) __assume(x)
-	#else
-		#define CZ_ASSUME(x)
-	#endif
+#if CZ_HAS_BUILTIN(assume)
+#define CZ_ASSUME(x) __builtin_assume(x)
+#elif CZ_HAS_ATTRIBUTE(assume)
+#define CZ_ASSUME(x) __attribute__ (( assume(x) ))
+#elif CZ_MSVC
+#define CZ_ASSUME(x) __assume(x)
+#else
+#define CZ_ASSUME(x)
+#endif
 #endif
 
 #if !defined(CZ_EXPECT)
-	#if CZ_HAS_BUILTIN(expect)
-		#define CZ_EXPECT(x) ( __builtin_expect((x) ? 1 : 0, 1) )
-	#else
-		#define CZ_EXPECT(x) (x)
-	#endif
+#if CZ_HAS_BUILTIN(expect)
+#define CZ_EXPECT(x) ( __builtin_expect((x) ? 1 : 0, 1) )
+#else
+#define CZ_EXPECT(x) (x)
+#endif
 #endif
 
 #if !defined(CZ_NOEXPECT)
-	#if CZ_HAS_BUILTIN(expect)
-		#define CZ_NOEXPECT(x) ( __builtin_expect((x) ? 1 : 0, 0) )
-	#else
-		#define CZ_NOEXPECT(x) (x)
-	#endif
+#if CZ_HAS_BUILTIN(expect)
+#define CZ_NOEXPECT(x) ( __builtin_expect((x) ? 1 : 0, 0) )
+#else
+#define CZ_NOEXPECT(x) (x)
+#endif
 #endif
 
 #if !defined(CZ_HOT)
-	#if CZ_HAS_ATTRIBUTE(hot)
-		#define CZ_HOT __attribute__ (( hot ))
-	#else
-		#define CZ_HOT
-	#endif
+#if CZ_HAS_ATTRIBUTE(hot)
+#define CZ_HOT __attribute__ (( hot ))
+#else
+#define CZ_HOT
+#endif
 #endif
 
 #if !defined(CZ_COLD)
-	#if CZ_HAS_ATTRIBUTE(cold)
-		#define CZ_COLD __attribute__ (( cold ))
-	#else
-		#define CZ_COLD
-	#endif
+#if CZ_HAS_ATTRIBUTE(cold)
+#define CZ_COLD __attribute__ (( cold ))
+#else
+#define CZ_COLD
+#endif
 #endif
 
 #if !defined(CZ_CONST)
-	#if CZ_HAS_ATTRIBUTE(const)
-		#define CZ_CONST __attribute__ (( const ))
-	#elif CZ_MSVC
-		#define CZ_CONST __declspec(noalias)
-	#else
-		#define CZ_CONST
-	#endif
+#if CZ_HAS_ATTRIBUTE(const)
+#define CZ_CONST __attribute__ (( const ))
+#elif CZ_MSVC
+#define CZ_CONST __declspec(noalias)
+#else
+#define CZ_CONST
+#endif
 #endif
 
 #if !defined(CZ_PURE)
-	#if CZ_HAS_ATTRIBUTE(pure)
-		#define CZ_PURE __attribute__ (( pure ))
-	#elif CZ_MSVC
-		#define CZ_PURE __declspec(noalias)
-	#else
-		#define CZ_PURE
-	#endif
+#if CZ_HAS_ATTRIBUTE(pure)
+#define CZ_PURE __attribute__ (( pure ))
+#elif CZ_MSVC
+#define CZ_PURE __declspec(noalias)
+#else
+#define CZ_PURE
+#endif
 #endif
 
 #if !defined(CZ_REPRODUCIBLE)
-	#if CZ_HAS_ATTRIBUTE(reproducible)
-		#define CZ_REPRODUCIBLE __attribute__ (( reproducible ))
-	#elif CZ_MSVC
-		#define CZ_REPRODUCIBLE __declspec(noalias)
-	#else
-		#define CZ_REPRODUCIBLE
-	#endif
+#if CZ_HAS_ATTRIBUTE(reproducible)
+#define CZ_REPRODUCIBLE __attribute__ (( reproducible ))
+#elif CZ_MSVC
+#define CZ_REPRODUCIBLE __declspec(noalias)
+#else
+#define CZ_REPRODUCIBLE
+#endif
 #endif
 
 #if !defined(CZ_UNSEQUENCED)
-	#if CZ_HAS_ATTRIBUTE(unsequenced)
-		#define CZ_UNSEQUENCED __attribute__ (( unsequenced ))
-	#elif CZ_MSVC
-		#define CZ_UNSEQUENCED __declspec(noalias)
-	#else
-		#define CZ_UNSEQUENCED
-	#endif
+#if CZ_HAS_ATTRIBUTE(unsequenced)
+#define CZ_UNSEQUENCED __attribute__ (( unsequenced ))
+#elif CZ_MSVC
+#define CZ_UNSEQUENCED __declspec(noalias)
+#else
+#define CZ_UNSEQUENCED
+#endif
 #endif
 
 #if !defined(CZ_MALLOC)
-	#if CZ_HAS_ATTRIBUTE(malloc)
-		#define CZ_MALLOC __attribute__ (( malloc ))
-	#elif CZ_MSVC
-		#define CZ_MALLOC __declspec(allocator)
-	#else
-		#define CZ_MALLOC
-	#endif
+#if CZ_HAS_ATTRIBUTE(malloc)
+#define CZ_MALLOC __attribute__ (( malloc ))
+#elif CZ_MSVC
+#define CZ_MALLOC __declspec(allocator)
+#else
+#define CZ_MALLOC
+#endif
 #endif
 
 #if !defined(CZ_FREE)
-	#if CZ_HAS_ATTRIBUTE(malloc) && !CZ_CLANG
-		#define CZ_FREE(func, arg) __attribute__ (( malloc(func, arg) ))
-	#else
-		#define CZ_FREE(func, arg)
-	#endif
+#if CZ_HAS_ATTRIBUTE(malloc) && !CZ_CLANG
+#define CZ_FREE(func, arg) __attribute__ (( malloc(func, arg) ))
+#else
+#define CZ_FREE(func, arg)
+#endif
 #endif
 
 #if !defined(CZ_PRINTF)
-	#if CZ_HAS_ATTRIBUTE(format) && CZ_CLANG
-		#define CZ_PRINTF(fmt, args) __attribute__ (( format(printf, fmt, args) ))
-	#elif CZ_HAS_ATTRIBUTE(format)
-		#define CZ_PRINTF(fmt, args) __attribute__ (( format(gnu_printf, fmt, args) ))
-	#else
-		#define CZ_PRINTF(fmt, args)
-	#endif
+#if CZ_HAS_ATTRIBUTE(format) && CZ_CLANG
+#define CZ_PRINTF(fmt, args) __attribute__ (( format(printf, fmt, args) ))
+#elif CZ_HAS_ATTRIBUTE(format)
+#define CZ_PRINTF(fmt, args) __attribute__ (( format(gnu_printf, fmt, args) ))
+#else
+#define CZ_PRINTF(fmt, args)
+#endif
 #endif
 
 #if !defined(CZ_SCANF)
-	#if CZ_HAS_ATTRIBUTE(format) && CZ_CLANG
-		#define CZ_SCANF(fmt, args) __attribute__ (( format(scanf, fmt, args) ))
-	#elif CZ_HAS_ATTRIBUTE(format)
-		#define CZ_SCANF(fmt, args) __attribute__ (( format(gnu_scanf, fmt, args) ))
-	#else
-		#define CZ_SCANF(fmt, args)
-	#endif
+#if CZ_HAS_ATTRIBUTE(format) && CZ_CLANG
+#define CZ_SCANF(fmt, args) __attribute__ (( format(scanf, fmt, args) ))
+#elif CZ_HAS_ATTRIBUTE(format)
+#define CZ_SCANF(fmt, args) __attribute__ (( format(gnu_scanf, fmt, args) ))
+#else
+#define CZ_SCANF(fmt, args)
+#endif
 #endif
 
 #if !defined(CZ_NONNULL_ARGS)
-	#if CZ_HAS_ATTRIBUTE(nonnull)
-		#define CZ_NONNULL_ARGS(...) __attribute__ (( nonnull __VA_OPT__((__VA_ARGS__)) ))
-	#else
-		#define CZ_NONNULL_ARGS(...)
-	#endif
+#if CZ_HAS_ATTRIBUTE(nonnull)
+#define CZ_NONNULL_ARGS(...) __attribute__ (( nonnull __VA_OPT__((__VA_ARGS__)) ))
+#else
+#define CZ_NONNULL_ARGS(...)
+#endif
 #endif
 
 #if !defined(CZ_NONNULL_NONZERO_ARGS)
-	#if CZ_HAS_ATTRIBUTE(nonnull_if_nonzero)
-		#define CZ_NONNULL_NONZERO_ARGS(ptr, ...) __attribute__ (( nonnull_if_nonzero(ptr, __VA_ARGS__) ))
-	#else
-		#define CZ_NONNULL_NONZERO_ARGS(ptr, ...)
-	#endif
+#if CZ_HAS_ATTRIBUTE(nonnull_if_nonzero)
+#define CZ_NONNULL_NONZERO_ARGS(ptr, ...) __attribute__ (( nonnull_if_nonzero(ptr, __VA_ARGS__) ))
+#else
+#define CZ_NONNULL_NONZERO_ARGS(ptr, ...)
+#endif
 #endif
 
 #if !defined(CZ_ALLOC_ARGS)
-	#if CZ_HAS_ATTRIBUTE(alloc_size)
-		#define CZ_ALLOC_ARGS(...) __attribute__ (( alloc_size(__VA_ARGS__) ))
-	#else
-		#define CZ_ALLOC_ARGS(...)
-	#endif
+#if CZ_HAS_ATTRIBUTE(alloc_size)
+#define CZ_ALLOC_ARGS(...) __attribute__ (( alloc_size(__VA_ARGS__) ))
+#else
+#define CZ_ALLOC_ARGS(...)
+#endif
 #endif
 
 #if !defined(CZ_ALIGN_ARG)
-	#if CZ_HAS_ATTRIBUTE(alloc_align)
-		#define CZ_ALIGN_ARG(arg) __attribute__ (( alloc_align(arg) ))
-	#else
-		#define CZ_ALIGN_ARG(arg)
-	#endif
+#if CZ_HAS_ATTRIBUTE(alloc_align)
+#define CZ_ALIGN_ARG(arg) __attribute__ (( alloc_align(arg) ))
+#else
+#define CZ_ALIGN_ARG(arg)
+#endif
 #endif
 
 #if !defined(CZ_NULTERM_ARG)
-	#if CZ_HAS_ATTRIBUTE(null_terminated_string_arg)
-		#define CZ_NULTERM_ARG(arg) __attribute__ (( null_terminated_string_arg(arg) ))
-	#else
-		#define CZ_NULTERM_ARG(arg)
-	#endif
+#if CZ_HAS_ATTRIBUTE(null_terminated_string_arg)
+#define CZ_NULTERM_ARG(arg) __attribute__ (( null_terminated_string_arg(arg) ))
+#else
+#define CZ_NULTERM_ARG(arg)
+#endif
 #endif
 
 #if !defined(CZ_FILDES)
-	#if CZ_HAS_ATTRIBUTE(fd_arg)
-		#define CZ_FILDES(arg) __attribute__ (( fd_arg(arg) ))
-	#else
-		#define CZ_FILDES(arg)
-	#endif
+#if CZ_HAS_ATTRIBUTE(fd_arg)
+#define CZ_FILDES(arg) __attribute__ (( fd_arg(arg) ))
+#else
+#define CZ_FILDES(arg)
+#endif
 #endif
 
 #if !defined(CZ_RD_FILDES)
-	#if CZ_HAS_ATTRIBUTE(fd_arg_read)
-		#define CZ_RD_FILDES(arg) __attribute__ (( fd_arg_read(arg) ))
-	#else
-		#define CZ_RD_FILDES(arg)
-	#endif
+#if CZ_HAS_ATTRIBUTE(fd_arg_read)
+#define CZ_RD_FILDES(arg) __attribute__ (( fd_arg_read(arg) ))
+#else
+#define CZ_RD_FILDES(arg)
+#endif
 #endif
 
 #if !defined(CZ_WR_FILDES)
-	#if CZ_HAS_ATTRIBUTE(fd_arg_write)
-		#define CZ_WR_FILDES(arg) __attribute__ (( fd_arg_write(arg) ))
-	#else
-		#define CZ_WR_FILDES(arg)
-	#endif
+#if CZ_HAS_ATTRIBUTE(fd_arg_write)
+#define CZ_WR_FILDES(arg) __attribute__ (( fd_arg_write(arg) ))
+#else
+#define CZ_WR_FILDES(arg)
+#endif
 #endif
 
 #if !defined(CZ_RW_FILDES)
-	#if CZ_HAS_ATTRIBUTE(fd_arg_read) && CZ_HAS_ATTRIBUTE(fd_arg_write)
-		#define CZ_RW_FILDES(arg) __attribute__ (( fd_arg_read(arg), fd_arg_write(arg) ))
-	#elif CZ_HAS_ATTRIBUTE(fd_arg_read)
-		#define CZ_RW_FILDES(arg) __attribute__ (( fd_arg_read(arg) ))
-	#elif CZ_HAS_ATTRIBUTE(fd_arg_write)
-		#define CZ_RW_FILDES(arg) __attribute__ (( fd_arg_write(arg) ))
-	#else
-		#define CZ_RW_FILDES(arg)
-	#endif
+#if CZ_HAS_ATTRIBUTE(fd_arg_read) && CZ_HAS_ATTRIBUTE(fd_arg_write)
+#define CZ_RW_FILDES(arg) __attribute__ (( fd_arg_read(arg), fd_arg_write(arg) ))
+#elif CZ_HAS_ATTRIBUTE(fd_arg_read)
+#define CZ_RW_FILDES(arg) __attribute__ (( fd_arg_read(arg) ))
+#elif CZ_HAS_ATTRIBUTE(fd_arg_write)
+#define CZ_RW_FILDES(arg) __attribute__ (( fd_arg_write(arg) ))
+#else
+#define CZ_RW_FILDES(arg)
+#endif
 #endif
 
 #if !defined(CZ_NO_ACCESS)
-	#if CZ_HAS_ATTRIBUTE(access)
-		#define CZ_NO_ACCESS(...) __attribute__ (( access(none, __VA_ARGS__) ))
-	#else
-		#define CZ_NO_ACCESS(...)
-	#endif
+#if CZ_HAS_ATTRIBUTE(access)
+#define CZ_NO_ACCESS(...) __attribute__ (( access(none, __VA_ARGS__) ))
+#else
+#define CZ_NO_ACCESS(...)
+#endif
 #endif
 
 #if !defined(CZ_RD_ACCESS)
-	#if CZ_HAS_ATTRIBUTE(access)
-		#define CZ_RD_ACCESS(...) __attribute__ (( access(read_only, __VA_ARGS__) ))
-	#else
-		#define CZ_RD_ACCESS(...)
-	#endif
+#if CZ_HAS_ATTRIBUTE(access)
+#define CZ_RD_ACCESS(...) __attribute__ (( access(read_only, __VA_ARGS__) ))
+#else
+#define CZ_RD_ACCESS(...)
+#endif
 #endif
 
 #if !defined(CZ_WR_ACCESS)
-	#if CZ_HAS_ATTRIBUTE(access)
-		#define CZ_WR_ACCESS(...) __attribute__ (( access(write_only, __VA_ARGS__) ))
-	#else
-		#define CZ_WR_ACCESS(...)
-	#endif
+#if CZ_HAS_ATTRIBUTE(access)
+#define CZ_WR_ACCESS(...) __attribute__ (( access(write_only, __VA_ARGS__) ))
+#else
+#define CZ_WR_ACCESS(...)
+#endif
 #endif
 
 #if !defined(CZ_RW_ACCESS)
-	#if CZ_HAS_ATTRIBUTE(access)
-		#define CZ_RW_ACCESS(...) __attribute__ (( access(read_write, __VA_ARGS__) ))
-	#else
-		#define CZ_RW_ACCESS(...)
-	#endif
+#if CZ_HAS_ATTRIBUTE(access)
+#define CZ_RW_ACCESS(...) __attribute__ (( access(read_write, __VA_ARGS__) ))
+#else
+#define CZ_RW_ACCESS(...)
+#endif
 #endif
 
 #if !defined(CZ_NONNULL_RET)
-	#if CZ_HAS_ATTRIBUTE(returns_nonnull)
-		#define CZ_NONNULL_RET __attribute__ (( returns_nonnull ))
-	#else
-		#define CZ_NONNULL_RET
-	#endif
+#if CZ_HAS_ATTRIBUTE(returns_nonnull)
+#define CZ_NONNULL_RET __attribute__ (( returns_nonnull ))
+#else
+#define CZ_NONNULL_RET
+#endif
 #endif
 
 #if !defined(CZ_USE_RET)
-	#if CZ_HAS_ATTRIBUTE(warn_unused_result)
-		#define CZ_USE_RET __attribute__ (( warn_unused_result ))
-	#else
-		#define CZ_USE_RET
-	#endif
+#if CZ_HAS_ATTRIBUTE(warn_unused_result)
+#define CZ_USE_RET __attribute__ (( warn_unused_result ))
+#else
+#define CZ_USE_RET
+#endif
 #endif
 
 #if !defined(CZ_COUNTBY)
-	#if CZ_HAS_ATTRIBUTE(counted_by)
-		#define CZ_COUNTBY(x) __attribute__ (( counted_by(x) ))
-	#else
-		#define CZ_COUNTBY(x)
-	#endif
+#if CZ_HAS_ATTRIBUTE(counted_by)
+#define CZ_COUNTBY(x) __attribute__ (( counted_by(x) ))
+#else
+#define CZ_COUNTBY(x)
+#endif
 #endif
 
 // Check support for extensions and features
 
 #if !defined(CZ_COUNTOF)
-	#if CZ_HAS_INCLUDE(stdcountof.h)
-		#define CZ_COUNTOF(a) countof(a)
-	#else
-		#define CZ_COUNTOF(a) ( sizeof(a) / sizeof(*(a)) )
-	#endif
+#if CZ_HAS_INCLUDE(stdcountof.h)
+#define CZ_COUNTOF(a) countof(a)
+#else
+#define CZ_COUNTOF(a) ( sizeof(a) / sizeof(*(a)) )
+#endif
 #endif
 
 #if !defined(CZ_FILENAME)
-	#if defined(__FILE_NAME__)
-		#define CZ_FILENAME __FILE_NAME__
-	#else
-		#define CZ_FILENAME __FILE__
-	#endif
+#if defined(__FILE_NAME__)
+#define CZ_FILENAME __FILE_NAME__
+#else
+#define CZ_FILENAME __FILE__
+#endif
 #endif
 
 // Standard C versions

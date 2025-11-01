@@ -98,23 +98,23 @@ CZ_CONST CZ_USE_RET
 uint64_t minu64v(size_t count, ...);
 
 #if SIZE_MAX == UINT8_MAX
-	#define maxz(x, y)    maxu8(x, y)
-	#define minz(x, y)    minu8(x, y)
-	#define maxzv(c, ...) maxu8v(c, __VA_ARGS__)
-	#define minzv(c, ...) minu8v(c, __VA_ARGS__)
+#define maxz(x, y)    maxu8(x, y)
+#define minz(x, y)    minu8(x, y)
+#define maxzv(c, ...) maxu8v(c, __VA_ARGS__)
+#define minzv(c, ...) minu8v(c, __VA_ARGS__)
 #elif SIZE_MAX == UINT16_MAX
-	#define maxz(x, y)    maxu16(x, y)
-	#define minz(x, y)    minu16(x, y)
-	#define maxzv(c, ...) maxu16v(c, __VA_ARGS__)
-	#define minzv(c, ...) minu16v(c, __VA_ARGS__)
+#define maxz(x, y)    maxu16(x, y)
+#define minz(x, y)    minu16(x, y)
+#define maxzv(c, ...) maxu16v(c, __VA_ARGS__)
+#define minzv(c, ...) minu16v(c, __VA_ARGS__)
 #elif SIZE_MAX == UINT32_MAX
-	#define maxz(x, y)    maxu32(x, y)
-	#define minz(x, y)    minu32(x, y)
-	#define maxzv(c, ...) maxu32v(c, __VA_ARGS__)
-	#define minzv(c, ...) minu32v(c, __VA_ARGS__)
+#define maxz(x, y)    maxu32(x, y)
+#define minz(x, y)    minu32(x, y)
+#define maxzv(c, ...) maxu32v(c, __VA_ARGS__)
+#define minzv(c, ...) minu32v(c, __VA_ARGS__)
 #elif SIZE_MAX == UINT64_MAX
-	#define maxz(x, y)    maxu64(x, y)
-	#define minz(x, y)    minu64(x, y)
-	#define maxzv(c, ...) maxu64v(c, __VA_ARGS__)
-	#define minzv(c, ...) minu64v(c, __VA_ARGS__)
+#define maxz(x, y)    maxu64(x, y)
+#define minz(x, y)    minu64(x, y)
+#define maxzv(c, ...) maxu64v(c, __VA_ARGS__)
+#define minzv(c, ...) minu64v(c, __VA_ARGS__)
 #endif
