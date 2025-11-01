@@ -18,6 +18,7 @@ check_include_file(sched.h      HAVE_SCHED_H)
 check_include_file(semaphore.h  HAVE_SEMAPHORE_H)
 check_include_file(spawn.h      HAVE_SPAWN_H)
 check_include_file(stdcountof.h HAVE_STDCOUNTOF_H)
+check_include_file(sys/param.h  HAVE_SYS_PARAM_H)
 check_include_file(sys/mman.h   HAVE_SYS_MMAN_H)
 
 set(USING_AIO_H        "$<BOOL:${HAVE_AIO_H}>")
@@ -26,6 +27,7 @@ set(USING_SCHED_H      "$<BOOL:${HAVE_SCHED_H}>")
 set(USING_SEMAPHORE_H  "$<BOOL:${HAVE_SEMAPHORE_H}>")
 set(USING_SPAWN_H      "$<BOOL:${HAVE_SPAWN_H}>")
 set(USING_STDCOUNTOF_H "$<BOOL:${HAVE_STDCOUNTOF_H}>")
+set(USING_SYS_PARAM_H  "$<BOOL:${HAVE_SYS_PARAM_H}>")
 set(USING_SYS_MMAN_H   "$<BOOL:${HAVE_SYS_MMAN_H}>")
 
 set(COMPILE_WARNINGS_CLANG
@@ -40,7 +42,6 @@ set(COMPILE_WARNINGS_CLANG
 	-Wno-covered-switch-default
 	-Wno-declaration-after-statement
 	-Wno-gnu-conditional-omitted-operand
-	-Wno-implicit-int-float-conversion
 	-Wno-missing-field-initializers
 	-Wno-padded
 	-Wno-switch-enum
@@ -109,7 +110,6 @@ set(COMPILE_WARNINGS_GNU
 
 	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,15>:-Wc11-c23-compat>
 	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,15>:-Wleading-whitespace=blanks>
-	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,15>:-Wtrailing-whitespace=any>
 
 	# Warnings OFF
 	-Wno-missing-field-initializers
@@ -279,6 +279,7 @@ target_precompile_headers(cltzCommon
 		$<${USING_SPAWN_H}:<spawn.h$<ANGLE-R>>
 		$<${USING_STDCOUNTOF_H}:<stdcountof.h$<ANGLE-R>>
 		$<${USING_SYS_MMAN_H}:<sys/mman.h$<ANGLE-R>>
+		$<${USING_SYS_PARAM_H}:<sys/param.h$<ANGLE-R>>
 
 		# OS-specific headers
 		$<${USING_APPLE}:${INCLUDE_HEADERS_APPLE}>
