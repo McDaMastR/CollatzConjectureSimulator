@@ -33,6 +33,53 @@
 
 #define CZ_MAKE_VERSION(major, minor, .../* patch */) ( ((major) << 48) | ((minor) << 32) __VA_OPT__(| (__VA_ARGS__)) )
 
+// Standard C versions
+
+#define CZ_STDC_1989 1       // C89 - ISO/IEC 9899:1990
+#define CZ_STDC_1995 199409L // C95 - ISO/IEC 9899:1990/AMD1:1995
+#define CZ_STDC_1999 199901L // C99 - ISO/IEC 9899:1999
+#define CZ_STDC_2011 201112L // C11 - ISO/IEC 9899:2011
+#define CZ_STDC_2017 201710L // C17 - ISO/IEC 9899:2018
+#define CZ_STDC_2023 202311L // C23 - ISO/IEC 9899:2024
+
+// Standard C++ versions
+
+#define CZ_STDCXX_1998 199711L // C++98 - ISO/IEC 14882:1998
+#define CZ_STDCXX_2003 199711L // C++03 - ISO/IEC 14882:2003
+#define CZ_STDCXX_2011 201103L // C++11 - ISO/IEC 14882:2011
+#define CZ_STDCXX_2014 201402L // C++14 - ISO/IEC 14882:2014
+#define CZ_STDCXX_2017 201703L // C++17 - ISO/IEC 14882:2017
+#define CZ_STDCXX_2020 202002L // C++20 - ISO/IEC 14882:2020
+#define CZ_STDCXX_2023 202302L // C++23 - ISO/IEC 14882:2024
+
+// POSIX.1 versions
+
+#define CZ_POSIX_1988 198808L // POSIX.1-1988 - IEEE Std 1003.1-1988
+#define CZ_POSIX_1990 199009L // POSIX.1-1990 - IEEE Std 1003.1-1990  - ISO/IEC 9945:1990
+#define CZ_POSIX_1993 199309L // POSIX.1b     - IEEE Std 1003.1b-1993
+#define CZ_POSIX_1995 199506L // POSIX.1c     - IEEE Std 1003.1c-1995
+#define CZ_POSIX_1996 199506L // POSIX.1-1996 - IEEE Std 1003.1-1996  - ISO/IEC 9945:1996
+#define CZ_POSIX_2001 200112L // POSIX.1-2001 - IEEE Std 1003.1-2001  - ISO/IEC 9945:2002
+#define CZ_POSIX_2008 200809L // POSIX.1-2008 - IEEE Std 1003.1-2008  - ISO/IEC/IEEE 9945:2009
+#define CZ_POSIX_2017 200809L // POSIX.1-2017 - IEEE Std 1003.1-2017
+#define CZ_POSIX_2024 202405L // POSIX.1-2024 - IEEE Std 1003.1-2024
+
+// X/Open Portability Guide (XPG) versions
+
+#define CZ_XPG_1985 1 // XPG
+#define CZ_XPG_1987 2 // XPG2
+#define CZ_XPG_1989 3 // XPG3
+#define CZ_XPG_1992 4 // XPG4
+#define CZ_XPG_1994 4 // XPG4v2
+
+// Single UNIX Specification (SUS...) versions
+
+#define CZ_SUS_1994 4   // SUS
+#define CZ_SUS_1997 500 // SUSv2
+#define CZ_SUS_2001 600 // SUSv3
+#define CZ_SUS_2008 700 // SUSv4
+#define CZ_SUS_2024 800 // SUSv5
+
 // Check for predefined OS macros
 
 #if !defined(CZ_AIX)
@@ -485,6 +532,26 @@
 #define CZ_GLIBC_VERSION CZ_MAKE_VERSION(CZ_GLIBC_MAJOR, CZ_GLIBC_MINOR)
 #endif
 
+// Check for predefined stdc macros
+
+#if !defined(CZ_STDC)
+#if defined(__STDC__)
+#define CZ_STDC 1
+#else
+#define CZ_STDC 0
+#endif
+#endif
+
+#if !defined(CZ_STDC_VERSION)
+#if defined(__STDC_VERSION__)
+#define CZ_STDC_VERSION __STDC_VERSION__
+#elif defined(__STDC__)
+#define CZ_STDC_VERSION CZ_STDC_1989
+#else
+#define CZ_STDC_VERSION 0
+#endif
+#endif
+
 // Check for predefined POSIX.1 macros
 
 #if !defined(CZ_POSIX_VERSION)
@@ -923,6 +990,22 @@
 
 // Check for user-defined feature macros
 
+#if !defined(CZ_ATFILE_SOURCE)
+#if defined(_ATFILE_SOURCE)
+#define CZ_ATFILE_SOURCE 1
+#else
+#define CZ_ATFILE_SOURCE 0
+#endif
+#endif
+
+#if !defined(CZ_BSD_SOURCE)
+#if defined(_BSD_SOURCE)
+#define CZ_BSD_SOURCE 1
+#else
+#define CZ_BSD_SOURCE 0
+#endif
+#endif
+
 #if !defined(CZ_DEFAULT_SOURCE)
 #if defined(_DEFAULT_SOURCE)
 #define CZ_DEFAULT_SOURCE 1
@@ -931,11 +1014,73 @@
 #endif
 #endif
 
+#if !defined(CZ_FILE_OFFSET_BITS)
+#if defined(_FILE_OFFSET_BITS) && _FILE_OFFSET_BITS > 0
+#define CZ_FILE_OFFSET_BITS _FILE_OFFSET_BITS
+#elif defined(_LARGEFILE_SOURCE)
+#define CZ_FILE_OFFSET_BITS 64
+#else
+#define CZ_FILE_OFFSET_BITS 0
+#endif
+#endif
+
 #if !defined(CZ_GNU_SOURCE)
 #if defined(_GNU_SOURCE)
 #define CZ_GNU_SOURCE 1
 #else
 #define CZ_GNU_SOURCE 0
+#endif
+#endif
+
+#if !defined(CZ_ISOC99_SOURCE)
+#if defined(_ISOC99_SOURCE) || defined(_ISOC9X_SOURCE)
+#define CZ_ISOC99_SOURCE 1
+#else
+#define CZ_ISOC99_SOURCE 0
+#endif
+#endif
+
+#if !defined(CZ_ISOC11_SOURCE)
+#if defined(_ISOC11_SOURCE)
+#define CZ_ISOC11_SOURCE 1
+#else
+#define CZ_ISOC11_SOURCE 0
+#endif
+#endif
+
+#if !defined(CZ_POSIX_C_SOURCE)
+#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE > 0
+#define CZ_POSIX_C_SOURCE _POSIX_C_SOURCE
+#elif defined(_POSIX_SOURCE)
+#define CZ_POSIX_C_SOURCE 1
+#else
+#define CZ_POSIX_C_SOURCE 0
+#endif
+#endif
+
+#if !defined(CZ_SVID_SOURCE)
+#if defined(_SVID_SOURCE)
+#define CZ_SVID_SOURCE 1
+#else
+#define CZ_SVID_SOURCE 0
+#endif
+#endif
+
+#if !defined(CZ_TIME_BITS)
+#if defined(_TIME_BITS) && _TIME_BITS > 0
+#define CZ_TIME_BITS _TIME_BITS
+#else
+#define CZ_TIME_BITS 0
+#endif
+#endif
+
+#if !defined(CZ_XOPEN_SOURCE)
+#if defined(_XOPEN_SOURCE) && _XOPEN_SOURCE > CZ_XPG_1992
+#define CZ_XOPEN_SOURCE _XOPEN_SOURCE
+#elif defined(_XOPEN_SOURCE)
+#define CZ_XOPEN_SOURCE CZ_XPG_1992
+#else
+#define CZ_XOPEN_SOURCE 0
 #endif
 #endif
 
@@ -1252,50 +1397,6 @@
 #define CZ_FILENAME __FILE__
 #endif
 #endif
-
-// Standard C versions
-
-#define CZ_STDC_1995 199409L // C95 - ISO/IEC 9899:1990/AMD1:1995
-#define CZ_STDC_1999 199901L // C99 - ISO/IEC 9899:1999
-#define CZ_STDC_2011 201112L // C11 - ISO/IEC 9899:2011
-#define CZ_STDC_2017 201710L // C17 - ISO/IEC 9899:2018
-#define CZ_STDC_2023 202311L // C23 - ISO/IEC 9899:2024
-
-// Standard C++ versions
-
-#define CZ_STDCXX_1998 199711L // C++98 - ISO/IEC 14882:1998
-#define CZ_STDCXX_2003 199711L // C++03 - ISO/IEC 14882:2003
-#define CZ_STDCXX_2011 201103L // C++11 - ISO/IEC 14882:2011
-#define CZ_STDCXX_2014 201402L // C++14 - ISO/IEC 14882:2014
-#define CZ_STDCXX_2017 201703L // C++17 - ISO/IEC 14882:2017
-#define CZ_STDCXX_2020 202002L // C++20 - ISO/IEC 14882:2020
-#define CZ_STDCXX_2023 202302L // C++23 - ISO/IEC 14882:2024
-
-// POSIX.1 versions
-
-#define CZ_POSIX_1988 198808L // POSIX.1-1988 - IEEE 1003.1-1988
-#define CZ_POSIX_1990 199009L // POSIX.1-1990 - IEEE 1003.1-1990 - ISO/IEC 9945:1990
-#define CZ_POSIX_1996 199506L // POSIX.1-1996 - IEEE 1003.1-1996 - ISO/IEC 9945:1996
-#define CZ_POSIX_2001 200112L // POSIX.1-2001 - IEEE 1003.1-2001 - ISO/IEC 9945:2002
-#define CZ_POSIX_2008 200809L // POSIX.1-2008 - IEEE 1003.1-2008 - ISO/IEC/IEEE 9945:2009
-#define CZ_POSIX_2017 200809L // POSIX.1-2017 - IEEE 1003.1-2017
-#define CZ_POSIX_2024 202405L // POSIX.1-2024 - IEEE 1003.1-2024
-
-// X/Open Portability Guide (XPG) versions
-
-#define CZ_XPG_1985 1 // XPG
-#define CZ_XPG_1987 2 // XPG2
-#define CZ_XPG_1989 3 // XPG3
-#define CZ_XPG_1992 4 // XPG4
-#define CZ_XPG_1994 4 // XPG4v2
-
-// Single UNIX Specification (SUS...) versions
-
-#define CZ_SUS_1994 4   // SUS
-#define CZ_SUS_1997 500 // SUSv2
-#define CZ_SUS_2001 600 // SUSv3
-#define CZ_SUS_2008 700 // SUSv4
-#define CZ_SUS_2024 800 // SUSv5
 
 // ANSI escape codes regarding Select Graphic Rendition (SGR)
 
