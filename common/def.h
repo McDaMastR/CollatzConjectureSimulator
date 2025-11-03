@@ -133,6 +133,8 @@
 #if !defined(CZ_FREE_BSD_MAJOR)
 #if defined(__FreeBSD__)
 #define CZ_FREE_BSD_MAJOR __FreeBSD__
+#elif CZ_FREE_BSD
+#define CZ_FREE_BSD_MAJOR 0
 #else
 #define CZ_FREE_BSD_MAJOR ( -1 )
 #endif
@@ -141,7 +143,7 @@
 #if !defined(CZ_FREE_BSD_MINOR)
 #if defined(__FreeBSD_version)
 #define CZ_FREE_BSD_MINOR ( (__FreeBSD_version / 1000) % 100 )
-#elif defined(__FreeBSD__)
+#elif CZ_FREE_BSD
 #define CZ_FREE_BSD_MINOR 0
 #else
 #define CZ_FREE_BSD_MINOR ( -1 )
@@ -151,7 +153,7 @@
 #if !defined(CZ_FREE_BSD_PATCH)
 #if defined(__FreeBSD_version)
 #define CZ_FREE_BSD_PATCH ( __FreeBSD_version % 1000 )
-#elif defined(__FreeBSD__)
+#elif CZ_FREE_BSD
 #define CZ_FREE_BSD_PATCH 0
 #else
 #define CZ_FREE_BSD_PATCH ( -1 )
@@ -186,6 +188,40 @@
 #endif
 #endif
 
+#if !defined(CZ_IOS_MAJOR)
+#if defined(__IPHONE_OS_VERSION_MAX_ALLOWED)
+#define CZ_IOS_MAJOR ( __IPHONE_OS_VERSION_MAX_ALLOWED / 10000 )
+#elif CZ_IOS
+#define CZ_IOS_MAJOR 0
+#else
+#define CZ_IOS_MAJOR ( -1 )
+#endif
+#endif
+
+#if !defined(CZ_IOS_MINOR)
+#if defined(__IPHONE_OS_VERSION_MAX_ALLOWED)
+#define CZ_IOS_MINOR ( (__IPHONE_OS_VERSION_MAX_ALLOWED / 100) % 100 )
+#elif CZ_IOS
+#define CZ_IOS_MINOR 0
+#else
+#define CZ_IOS_MINOR ( -1 )
+#endif
+#endif
+
+#if !defined(CZ_IOS_PATCH)
+#if defined(__IPHONE_OS_VERSION_MAX_ALLOWED)
+#define CZ_IOS_PATCH ( __IPHONE_OS_VERSION_MAX_ALLOWED % 100 )
+#elif CZ_IOS
+#define CZ_IOS_PATCH 0
+#else
+#define CZ_IOS_PATCH ( -1 )
+#endif
+#endif
+
+#if !defined(CZ_IOS_VERSION)
+#define CZ_IOS_VERSION CZ_MAKE_VERSION(CZ_IOS_MAJOR, CZ_IOS_MINOR, CZ_IOS_PATCH)
+#endif
+
 #if !defined(CZ_LINUX)
 #if defined(__linux__)
 #define CZ_LINUX 1
@@ -200,6 +236,46 @@
 #else
 #define CZ_MACOS 0
 #endif
+#endif
+
+#if !defined(CZ_MACOS_MAJOR)
+#if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 10000
+#define CZ_MACOS_MAJOR ( __MAC_OS_X_VERSION_MAX_ALLOWED / 10000 )
+#elif defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
+#define CZ_MACOS_MAJOR ( __MAC_OS_X_VERSION_MAX_ALLOWED / 100 )
+#elif CZ_MACOS
+#define CZ_MACOS_MAJOR 0
+#else
+#define CZ_MACOS_MAJOR ( -1 )
+#endif
+#endif
+
+#if !defined(CZ_MACOS_MINOR)
+#if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 10000
+#define CZ_MACOS_MINOR ( (__MAC_OS_X_VERSION_MAX_ALLOWED / 100) % 100 )
+#elif defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
+#define CZ_MACOS_MINOR ( (__MAC_OS_X_VERSION_MAX_ALLOWED / 10) % 10 )
+#elif CZ_MACOS
+#define CZ_MACOS_MINOR 0
+#else
+#define CZ_MACOS_MINOR ( -1 )
+#endif
+#endif
+
+#if !defined(CZ_MACOS_PATCH)
+#if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 10000
+#define CZ_MACOS_PATCH ( __MAC_OS_X_VERSION_MAX_ALLOWED % 100 )
+#elif defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
+#define CZ_MACOS_PATCH ( __MAC_OS_X_VERSION_MAX_ALLOWED % 10 )
+#elif CZ_MACOS
+#define CZ_MACOS_PATCH 0
+#else
+#define CZ_MACOS_PATCH ( -1 )
+#endif
+#endif
+
+#if !defined(CZ_MACOS_VERSION)
+#define CZ_MACOS_VERSION CZ_MAKE_VERSION(CZ_MACOS_MAJOR, CZ_MACOS_MINOR, CZ_MACOS_PATCH)
 #endif
 
 #if !defined(CZ_MIDNIGHT_BSD)
@@ -221,7 +297,7 @@
 #if !defined(CZ_NET_BSD_MAJOR)
 #if defined(__NetBSD_Version__)
 #define CZ_NET_BSD_MAJOR ( __NetBSD_Version__ / 100000000 )
-#elif defined(__NetBSD__)
+#elif CZ_NET_BSD
 #define CZ_NET_BSD_MAJOR 0
 #else
 #define CZ_NET_BSD_MAJOR ( -1 )
@@ -231,7 +307,7 @@
 #if !defined(CZ_NET_BSD_MINOR)
 #if defined(__NetBSD_Version__)
 #define CZ_NET_BSD_MINOR ( (__NetBSD_Version__ / 1000000) % 100 )
-#elif defined(__NetBSD__)
+#elif CZ_NET_BSD
 #define CZ_NET_BSD_MINOR 0
 #else
 #define CZ_NET_BSD_MINOR ( -1 )
@@ -241,7 +317,7 @@
 #if !defined(CZ_NET_BSD_PATCH)
 #if defined(__NetBSD_Version__)
 #define CZ_NET_BSD_PATCH ( (__NetBSD_Version__ / 100) % 100 )
-#elif defined(__NetBSD__)
+#elif CZ_NET_BSD
 #define CZ_NET_BSD_PATCH 0
 #else
 #define CZ_NET_BSD_PATCH ( -1 )
@@ -271,6 +347,8 @@
 #if !defined(CZ_QNX_MAJOR)
 #if defined(__QNX__)
 #define CZ_QNX_MAJOR ( __QNX__ / 100 )
+#elif CZ_QNX
+#define CZ_QNX_MAJOR 0
 #else
 #define CZ_QNX_MAJOR ( -1 )
 #endif
@@ -279,6 +357,8 @@
 #if !defined(CZ_QNX_MINOR)
 #if defined(__QNX__)
 #define CZ_QNX_MINOR ( (__QNX__ / 10) % 10 )
+#elif CZ_QNX
+#define CZ_QNX_MINOR 0
 #else
 #define CZ_QNX_MINOR ( -1 )
 #endif
@@ -287,6 +367,8 @@
 #if !defined(CZ_QNX_PATCH)
 #if defined(__QNX__)
 #define CZ_QNX_PATCH ( __QNX__ % 10 )
+#elif CZ_QNX
+#define CZ_QNX_PATCH 0
 #else
 #define CZ_QNX_PATCH ( -1 )
 #endif
@@ -341,6 +423,8 @@
 #if !defined(CZ_CLANG_MAJOR)
 #if defined(__clang_major__)
 #define CZ_CLANG_MAJOR __clang_major__
+#elif CZ_CLANG
+#define CZ_CLANG_MAJOR 0
 #else
 #define CZ_CLANG_MAJOR ( -1 )
 #endif
@@ -349,6 +433,8 @@
 #if !defined(CZ_CLANG_MINOR)
 #if defined(__clang_minor__)
 #define CZ_CLANG_MINOR __clang_minor__
+#elif CZ_CLANG
+#define CZ_CLANG_MINOR 0
 #else
 #define CZ_CLANG_MINOR ( -1 )
 #endif
@@ -357,6 +443,8 @@
 #if !defined(CZ_CLANG_PATCH)
 #if defined(__clang_patchlevel__)
 #define CZ_CLANG_PATCH __clang_patchlevel__
+#elif CZ_CLANG
+#define CZ_CLANG_PATCH 0
 #else
 #define CZ_CLANG_PATCH ( -1 )
 #endif
@@ -377,6 +465,8 @@
 #if !defined(CZ_GNUC_MAJOR)
 #if defined(__GNUC__)
 #define CZ_GNUC_MAJOR __GNUC__
+#elif CZ_GNUC
+#define CZ_GNUC_MAJOR 0
 #else
 #define CZ_GNUC_MAJOR ( -1 )
 #endif
@@ -385,6 +475,8 @@
 #if !defined(CZ_GNUC_MINOR)
 #if defined(__GNUC_MINOR__)
 #define CZ_GNUC_MINOR __GNUC_MINOR__
+#elif CZ_GNUC
+#define CZ_GNUC_MINOR 0
 #else
 #define CZ_GNUC_MINOR ( -1 )
 #endif
@@ -393,7 +485,7 @@
 #if !defined(CZ_GNUC_PATCH)
 #if defined(__GNUC_PATCHLEVEL__)
 #define CZ_GNUC_PATCH __GNUC_PATCHLEVEL__
-#elif defined(__GNUC__)
+#elif CZ_GNUC
 #define CZ_GNUC_PATCH 0
 #else
 #define CZ_GNUC_PATCH ( -1 )
@@ -415,6 +507,8 @@
 #if !defined(CZ_MINGW32_MAJOR)
 #if defined(__MINGW32_MAJOR_VERSION)
 #define CZ_MINGW32_MAJOR __MINGW32_MAJOR_VERSION
+#elif CZ_MINGW32
+#define CZ_MINGW32_MAJOR 0
 #else
 #define CZ_MINGW32_MAJOR ( -1 )
 #endif
@@ -423,6 +517,8 @@
 #if !defined(CZ_MINGW32_MINOR)
 #if defined(__MINGW32_MINOR_VERSION)
 #define CZ_MINGW32_MINOR __MINGW32_MINOR_VERSION
+#elif CZ_MINGW32
+#define CZ_MINGW32_MINOR 0
 #else
 #define CZ_MINGW32_MINOR ( -1 )
 #endif
@@ -443,6 +539,8 @@
 #if !defined(CZ_MINGW64_MAJOR)
 #if defined(__MINGW64_MAJOR_VERSION)
 #define CZ_MINGW64_MAJOR __MINGW64_MAJOR_VERSION
+#elif CZ_MINGW64
+#define CZ_MINGW64_MAJOR 0
 #else
 #define CZ_MINGW64_MAJOR ( -1 )
 #endif
@@ -451,6 +549,8 @@
 #if !defined(CZ_MINGW64_MINOR)
 #if defined(__MINGW64_MINOR_VERSION)
 #define CZ_MINGW64_MINOR __MINGW64_MINOR_VERSION
+#elif CZ_MINGW64
+#define CZ_MINGW64_MINOR 0
 #else
 #define CZ_MINGW64_MINOR ( -1 )
 #endif
@@ -471,6 +571,8 @@
 #if !defined(CZ_MSVC_MAJOR)
 #if defined(_MSC_VER)
 #define CZ_MSVC_MAJOR ( _MSC_VER / 100 )
+#elif CZ_MSVC
+#define CZ_MSVC_MAJOR 0
 #else
 #define CZ_MSVC_MAJOR ( -1 )
 #endif
@@ -479,6 +581,8 @@
 #if !defined(CZ_MSVC_MINOR)
 #if defined(_MSC_VER)
 #define CZ_MSVC_MINOR ( _MSC_VER % 100 )
+#elif CZ_MSVC
+#define CZ_MSVC_MINOR 0
 #else
 #define CZ_MSVC_MINOR ( -1 )
 #endif
@@ -487,7 +591,7 @@
 #if !defined(CZ_MSVC_PATCH)
 #if defined(_MSC_FULL_VER)
 #define CZ_MSVC_PATCH ( _MSC_FULL_VER % 100000 )
-#elif defined(_MSC_VER)
+#elif CZ_MSVC
 #define CZ_MSVC_PATCH 0
 #else
 #define CZ_MSVC_PATCH ( -1 )
@@ -513,6 +617,8 @@
 #define CZ_GLIBC_MAJOR __GLIBC__
 #elif defined(__GNU_LIBRARY__)
 #define CZ_GLIBC_MAJOR __GNU_LIBRARY__
+#elif CZ_GLIBC
+#define CZ_GLIBC_MAJOR 0
 #else
 #define CZ_GLIBC_MAJOR ( -1 )
 #endif
@@ -523,6 +629,8 @@
 #define CZ_GLIBC_MINOR __GLIBC_MINOR__
 #elif defined(__GNU_LIBRARY_MINOR__)
 #define CZ_GLIBC_MINOR __GNU_LIBRARY_MINOR__
+#elif CZ_GLIBC
+#define CZ_GLIBC_MINOR 0
 #else
 #define CZ_GLIBC_MINOR ( -1 )
 #endif
@@ -547,8 +655,10 @@
 #define CZ_STDC_VERSION __STDC_VERSION__
 #elif defined(__STDC__)
 #define CZ_STDC_VERSION CZ_STDC_1989
-#else
+#elif CZ_STDC
 #define CZ_STDC_VERSION 0
+#else
+#define CZ_STDC_VERSION ( -1 )
 #endif
 #endif
 
@@ -990,6 +1100,14 @@
 
 // Check for user-defined feature macros
 
+#if !defined(CZ_ANSI_SOURCE)
+#if defined(_ANSI_SOURCE)
+#define CZ_ANSI_SOURCE 1
+#else
+#define CZ_ANSI_SOURCE 0
+#endif
+#endif
+
 #if !defined(CZ_ATFILE_SOURCE)
 #if defined(_ATFILE_SOURCE)
 #define CZ_ATFILE_SOURCE 1
@@ -1003,6 +1121,14 @@
 #define CZ_BSD_SOURCE 1
 #else
 #define CZ_BSD_SOURCE 0
+#endif
+#endif
+
+#if !defined(CZ_DARWIN_C_SOURCE)
+#if defined(_DARWIN_C_SOURCE)
+#define CZ_DARWIN_C_SOURCE 1
+#else
+#define CZ_DARWIN_C_SOURCE 0
 #endif
 #endif
 
@@ -1045,6 +1171,22 @@
 #define CZ_ISOC11_SOURCE 1
 #else
 #define CZ_ISOC11_SOURCE 0
+#endif
+#endif
+
+#if !defined(CZ_NETBSD_SOURCE)
+#if defined(_NETBSD_SOURCE)
+#define CZ_NETBSD_SOURCE 1
+#else
+#define CZ_NETBSD_SOURCE 0
+#endif
+#endif
+
+#if !defined(CZ_OPENBSD_SOURCE)
+#if defined(_OPENBSD_SOURCE)
+#define CZ_OPENBSD_SOURCE 1
+#else
+#define CZ_OPENBSD_SOURCE 0
 #endif
 #endif
 
