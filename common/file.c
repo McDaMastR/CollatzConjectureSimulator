@@ -383,13 +383,7 @@ static enum CzResult zero_section_posix(int fd, size_t size, size_t offset)
 		return ret;
 
 	void* zero = (char*) memory + (offset & (pageSize - 1));
-#if CZ_DARWIN
-	ret = czWrap_madvise(zero, size, MADV_ZERO);
-	if (ret)
-		memset(zero, 0, size);
-#else
-	memset(zero, 0, size);
-#endif
+	zero_memory(zero, size);
 
 	int syncFlags = MS_ASYNC;
 	ret = czWrap_msync(memory, mapSize, syncFlags);

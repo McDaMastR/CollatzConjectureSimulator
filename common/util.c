@@ -39,6 +39,19 @@ enum CzEndianness get_endianness(void)
 	return c ? CZ_ENDIANNESS_LITTLE : CZ_ENDIANNESS_BIG;
 }
 
+void zero_memory(void* restrict memory, size_t size)
+{
+#if CZ_WIN32
+	ZeroMemory(memory, size);
+#elif CZ_DARWIN
+	int res = madvise(memory, size, MADV_ZERO);
+	if (res)
+		memset(memory, 0, size);
+#else
+	memset(memory, 0, size);
+#endif
+}
+
 uint32_t ceil_pow2(uint32_t x)
 {
 	CZ_ASSUME(x != 0);

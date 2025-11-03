@@ -3592,8 +3592,8 @@ void new_high(
 	memmove(val0mod1off + difTime, val0mod1off, sizeof(StartValue) * (3 - difTime));
 	memmove(val1mod6off + difTime, val1mod6off, sizeof(StartValue) * (3 - difTime));
 
-	memset(val0mod1off + 1, 0, sizeof(StartValue) * (difTime - 1));
-	memset(val1mod6off + 1, 0, sizeof(StartValue) * (difTime - 1));
+	zero_memory(val0mod1off + 1, sizeof(StartValue) * (difTime - 1));
+	zero_memory(val1mod6off + 1, sizeof(StartValue) * (difTime - 1));
 
 	val0mod1off[0] = *startValue;
 	val1mod6off[0] = *startValue % 6 == 1 ? *startValue : 0;

@@ -54,7 +54,7 @@ static enum CzResult realloc_win32(
 #endif
 
 #if CZ_DARWIN
-static enum CzResult realloc_apple(
+static enum CzResult realloc_darwin(
 	void* restrict* restrict memory, size_t oldSize, size_t newSize, struct CzAllocFlags flags)
 {
 	enum CzResult ret;
@@ -68,9 +68,7 @@ static enum CzResult realloc_apple(
 	if (flags.zeroInitialise && oldSize < newSize) {
 		void* addedMemory = (char*) *memory + oldSize;
 		size_t addedSize = newSize - oldSize;
-		ret = czWrap_madvise(addedMemory, addedSize, MADV_ZERO);
-		if (ret)
-			memset(addedMemory, 0, addedSize);
+		zero_memory(addedMemory, addedSize);
 	}
 	return CZ_RESULT_SUCCESS;
 }
@@ -89,7 +87,7 @@ static enum CzResult realloc_other(
 	if (flags.zeroInitialise && oldSize < newSize) {
 		void* addedMemory = (char*) *memory + oldSize;
 		size_t addedSize = newSize - oldSize;
-		memset(addedMemory, 0, addedSize);
+		zero_memory(addedMemory, addedSize);
 	}
 	return CZ_RESULT_SUCCESS;
 }
@@ -109,7 +107,7 @@ enum CzResult czRealloc(void* restrict* restrict memory, size_t oldSize, size_t 
 #if CZ_WIN32
 	return realloc_win32(memory, oldSize, newSize, flags);
 #elif CZ_DARWIN
-	return realloc_apple(memory, oldSize, newSize, flags);
+	return realloc_darwin(memory, oldSize, newSize, flags);
 #else
 	return realloc_other(memory, oldSize, newSize, flags);
 #endif
@@ -126,7 +124,7 @@ static enum CzResult alloc_align_win32(
 #endif
 
 #if CZ_DARWIN
-static enum CzResult alloc_align_apple(
+static enum CzResult alloc_align_darwin(
 	void* restrict* restrict memory, size_t size, size_t alignment, size_t offset, struct CzAllocFlags flags)
 {
 	void* p;
@@ -143,11 +141,8 @@ static enum CzResult alloc_align_apple(
 	*((void**) ((uintptr_t) *memory & ~(sizeof(void*) - 1)) - 1) = p;
 	czWrap_madvise(p, paddingSize, MADV_DONTNEED);
 
-	if (flags.zeroInitialise) {
-		ret = czWrap_madvise(*memory, size, MADV_ZERO);
-		if (ret)
-			memset(*memory, 0, size);
-	}
+	if (flags.zeroInitialise)
+		zero_memory(*memory, size);
 	return CZ_RESULT_SUCCESS;
 }
 #endif
@@ -170,7 +165,7 @@ static enum CzResult alloc_align_posix(
 	*((void**) ((uintptr_t) *memory & ~(sizeof(void*) - 1)) - 1) = p;
 
 	if (flags.zeroInitialise)
-		memset(*memory, 0, size);
+		zero_memory(*memory, size);
 	return CZ_RESULT_SUCCESS;
 }
 #endif
@@ -211,7 +206,7 @@ enum CzResult czAllocAlign(
 #if CZ_WIN32
 	return alloc_align_win32(memory, size, alignment, offset, flags);
 #elif CZ_DARWIN
-	return alloc_align_apple(memory, size, alignment, offset, flags);
+	return alloc_align_darwin(memory, size, alignment, offset, flags);
 #elif CZ_WRAP_POSIX_MEMALIGN
 	return alloc_align_posix(memory, size, alignment, offset, flags);
 #else
@@ -265,7 +260,7 @@ static enum CzResult realloc_align_win32(
 #endif
 
 #if CZ_DARWIN
-static enum CzResult realloc_align_apple(
+static enum CzResult realloc_align_darwin(
 	void* restrict* restrict memory,
 	size_t oldSize,
 	size_t newSize,
@@ -275,7 +270,7 @@ static enum CzResult realloc_align_apple(
 {
 	void* oldMemory = *memory;
 	struct CzAllocFlags allocFlags = {0};
-	enum CzResult ret = alloc_align_apple(memory, newSize, alignment, offset, allocFlags);
+	enum CzResult ret = alloc_align_darwin(memory, newSize, alignment, offset, allocFlags);
 	if CZ_NOEXPECT (ret) {
 		if (flags.freeOnFail)
 			free_align_other(oldMemory);
@@ -288,9 +283,7 @@ static enum CzResult realloc_align_apple(
 	if (flags.zeroInitialise && oldSize < newSize) {
 		void* addedMemory = (char*) *memory + oldSize;
 		size_t addedSize = newSize - oldSize;
-		ret = czWrap_madvise(addedMemory, addedSize, MADV_ZERO);
-		if (ret)
-			memset(addedMemory, 0, addedSize);
+		zero_memory(addedMemory, addedSize);
 	}
 	return CZ_RESULT_SUCCESS;
 }
@@ -320,7 +313,7 @@ static enum CzResult realloc_align_posix(
 	if (flags.zeroInitialise && oldSize < newSize) {
 		void* addedMemory = (char*) *memory + oldSize;
 		size_t addedSize = newSize - oldSize;
-		memset(addedMemory, 0, addedSize);
+		zero_memory(addedMemory, addedSize);
 	}
 	return CZ_RESULT_SUCCESS;
 }
@@ -349,7 +342,7 @@ static enum CzResult realloc_align_other(
 	if (flags.zeroInitialise && oldSize < newSize) {
 		void* addedMemory = (char*) *memory + oldSize;
 		size_t addedSize = newSize - oldSize;
-		memset(addedMemory, 0, addedSize);
+		zero_memory(addedMemory, addedSize);
 	}
 	return CZ_RESULT_SUCCESS;
 }
@@ -387,7 +380,7 @@ enum CzResult czReallocAlign(
 #if CZ_WIN32
 	return realloc_align_win32(memory, oldSize, newSize, alignment, offset, flags);
 #elif CZ_DARWIN
-	return realloc_align_apple(memory, oldSize, newSize, alignment, offset, flags);
+	return realloc_align_darwin(memory, oldSize, newSize, alignment, offset, flags);
 #elif CZ_WRAP_POSIX_MEMALIGN
 	return realloc_align_posix(memory, oldSize, newSize, alignment, offset, flags);
 #else

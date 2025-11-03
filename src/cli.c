@@ -169,7 +169,7 @@ bool czCliParse(struct CzCli_* cli, int argc, char** argv)
 	void* config = cli->config;
 
 	struct CliCallbackData callbackData;
-	memset(&callbackData, 0, sizeof(callbackData)); // To fully zero initialise union member
+	zero_memory(&callbackData, sizeof(callbackData)); // To fully zero initialise union member
 
 	enum CzCliDatatype argType = CZ_CLI_DATATYPE_NONE;
 	const char* optionName = NULL;
@@ -198,7 +198,7 @@ bool czCliParse(struct CzCli_* cli, int argc, char** argv)
 
 					callbackData.callback = option.callback;
 					callbackData.type = option.type;
-					memset(&callbackData.data, 0, sizeof(callbackData.data));
+					zero_memory(&callbackData.data, sizeof(callbackData.data));
 					break;
 				}
 			}
@@ -231,7 +231,7 @@ bool czCliParse(struct CzCli_* cli, int argc, char** argv)
 
 						callbackData.callback = option.callback;
 						callbackData.type = option.type;
-						memset(&callbackData.data, 0, sizeof(callbackData.data));
+						zero_memory(&callbackData.data, sizeof(callbackData.data));
 						break;
 					}
 				}
