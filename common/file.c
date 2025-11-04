@@ -29,36 +29,594 @@
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 #define MAX_ACCESS_SIZE SSIZE_MAX
 #else
-#define MAX_ACCESS_SIZE SIZE_MAX
+#define MAX_ACCESS_SIZE LONG_MAX
 #endif
 
-static enum CzResult alloc_abspath_from_relpath_to_exe(char* restrict* restrict absPath, const char* restrict relPath)
+/* 
+ * Resolves 'path' with respect to the directory containing the executable. If path is already absolute, 'resolvedPath'
+ * is set to NULL. Otherwise, 'resolvedPath' is set to a newly allocated string with the resolved path, which should be
+ * freed with czFree().
+ */
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(2) CZ_WR_ACCESS(1) CZ_RD_ACCESS(2)
+static enum CzResult alloc_resolve_path(char* restrict* restrict resolvedPath, const char* restrict path)
 {
-	int pathLen;
-	enum CzResult ret = czWrap_getExecutablePath(&pathLen, NULL, 0, NULL);
+	if (cwk_path_is_absolute(path)) {
+		*resolvedPath = NULL;
+		return CZ_RESULT_SUCCESS;
+	}
+
+	int exePathSize;
+	enum CzResult ret = czWrap_getExecutablePath(&exePathSize, NULL, 0, NULL);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
-	char* path;
-	size_t pathSize = (size_t) pathLen + strlen(relPath);
+	char* absPath;
+	size_t absPathSize = (size_t) exePathSize + strlen(path);
 	struct CzAllocFlags flags = {0};
 
-	ret = czAlloc((void**) &path, pathSize, flags);
+	ret = czAlloc((void**) &absPath, absPathSize, flags);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
 	int dirLen;
-	ret = czWrap_getExecutablePath(NULL, path, pathLen, &dirLen);
+	ret = czWrap_getExecutablePath(NULL, absPath, exePathSize, &dirLen);
 	if CZ_NOEXPECT (ret) {
-		czFree(path);
+		czFree(absPath);
 		return ret;
 	}
 
-	path[dirLen] = 0;
-	cwk_path_get_absolute(path, relPath, path, pathSize);
-	*absPath = path;
+	absPath[dirLen] = 0;
+	cwk_path_get_absolute(absPath, path, absPath, absPathSize);
+	*resolvedPath = absPath;
 	return CZ_RESULT_SUCCESS;
 }
+
+/**********************************************************************************************************************
+ * Standard C implementation                                                                                          *
+ **********************************************************************************************************************/
+
+/* 
+ * File info passed around the stdc implementation.
+ * - 'stream' is the one and only accessible open IO stream to the file.
+ *   - Nonnull unless the stream is closed.
+ * - 'path' is the filepath with which 'stream' was opened.
+ *   - Nonnull, NUL-terminated, and nonempty.
+ * - 'mode' is the access mode with which 'stream' was opened.
+ *   - One of
+ *     - "rb" (read-only),
+ *     - "wb" (truncate, write-only),
+ *     - "r+b" (read-write), or
+ *     - "w+b" (truncate, read-write).
+ * - 'fileSize' is the current size of the file in bytes.
+ *   - At most MAX_ACCESS_SIZE (LONG_MAX).
+ *   - Updated before appropriate (potentially fileSize-modifying) functions return.
+ */
+struct FileInfoStdc
+{
+	FILE* stream;
+	const char* path;
+	const char* mode;
+	size_t fileSize;
+};
+
+/* 
+ * Synchronises info->fileSize with the actual current file size. Should be used either:
+ * - When we first open a file to obtain the initial file size; or
+ * - When we lose track of the file size, such as after a failed IO operation which left the file in an uncertain state.
+ * 
+ * In other circumstances, FileInfoStdc::fileSize should be used to keep track of the file size.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult sync_info_stdc(struct FileInfoStdc* restrict info)
+{
+	long offset = 0;
+	enum CzResult ret = czWrap_fseek(info->stream, offset, SEEK_END);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	long pos;
+	ret = czWrap_ftell(&pos, info->stream);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	info->fileSize = (size_t) pos;
+	return CZ_RESULT_SUCCESS;
+}
+
+/* 
+ * Opens a file and initialises a corresponding FileInfoStdc instance. 'mode' should only be one of the following.
+ * - "rb" = Preserve file; open for read-only.
+ * - "wb" = Destroy file; open for write-only.
+ * - "r+b" = Preserve file; open for read-write.
+ * - "w+b" = Destroy file; open for read-write.
+ * 
+ * Both 'path' and 'mode' should remain valid until the file is closed with close_file_stdc().
+ */
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(2) CZ_NULTERM_ARG(3) CZ_WR_ACCESS(1) CZ_RD_ACCESS(2) CZ_RD_ACCESS(3)
+static enum CzResult open_file_stdc(struct FileInfoStdc* restrict info, const char* path, const char* mode)
+{
+	FILE* stream;
+	enum CzResult ret = czWrap_fopen(&stream, path, mode);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	struct FileInfoStdc fileInfo = {0};
+	fileInfo.stream = stream;
+	fileInfo.path = path;
+	fileInfo.mode = mode;
+
+	if (mode[0] == 'r') {
+		ret = sync_info_stdc(&fileInfo);
+		if CZ_NOEXPECT (ret) {
+			fclose(stream);
+			return ret;
+		}
+	}
+
+	*info = fileInfo;
+	return CZ_RESULT_SUCCESS;
+}
+
+/* 
+ * Flushes and closes the file. Should be called once all IO operations on the file are executed (on the application
+ * side at least).
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult close_file_stdc(struct FileInfoStdc* restrict info)
+{
+	FILE* stream = info->stream;
+	info->stream = NULL;
+
+	enum CzResult ret = czWrap_fflush(stream);
+	if CZ_NOEXPECT (ret) {
+		czWrap_fclose(stream);
+		return ret;
+	}
+	return czWrap_fclose(stream);
+}
+
+/* 
+ * Reads from a section of the file starting at 'offset' and extending either for 'size' bytes or until EOF is reached,
+ * whichever happens first. The file is not modified. Controlled failure occurs if:
+ * - The file is empty.
+ * - 'size' is zero.
+ * - 'offset' is outside the file, including EOF.
+ * - The range to read extends past MAX_ACCESS_SIZE.
+ * 
+ * The file access mode must be "rb", "r+b", or "w+b".
+ */
+CZ_NONNULL_ARGS() CZ_RD_ACCESS(1) CZ_WR_ACCESS(2, 3)
+static enum CzResult read_section_stdc(
+	const struct FileInfoStdc* restrict info, void* restrict buffer, size_t size, size_t offset)
+{
+	if CZ_NOEXPECT (!info->fileSize)
+		return CZ_RESULT_NO_FILE;
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (offset >= info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if CZ_NOEXPECT (size > MAX_ACCESS_SIZE - offset)
+		return CZ_RESULT_BAD_OFFSET;
+
+	enum CzResult ret = czWrap_fseek(info->stream, (long) offset, SEEK_SET);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	size_t readSize = minz(size, info->fileSize - offset);
+	return czWrap_fread(NULL, buffer, sizeof(char), readSize, info->stream);
+}
+
+/* 
+ * Writes to a section of the file starting at 'offset' and extending for 'size' bytes. If needed, the file size is
+ * increased. Controlled failure occurs if:
+ * - 'size' is zero.
+ * - 'offset' is outside the file, excluding EOF.
+ * - The range to write extends past MAX_ACCESS_SIZE.
+ * 
+ * The file access mode must be "wb", "r+b", or "w+b".
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_RD_ACCESS(2, 3)
+static enum CzResult write_section_stdc(
+	struct FileInfoStdc* restrict info, const void* restrict buffer, size_t size, size_t offset)
+{
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (offset > info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if CZ_NOEXPECT (size > MAX_ACCESS_SIZE - offset)
+		return CZ_RESULT_BAD_OFFSET;
+
+	enum CzResult ret = czWrap_fseek(info->stream, (long) offset, SEEK_SET);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = czWrap_fwrite(NULL, buffer, sizeof(char), size, info->stream);
+	if CZ_NOEXPECT (ret) {
+		sync_info_stdc(info);
+		return ret;
+	}
+
+	if (size + offset > info->fileSize)
+		info->fileSize = size + offset;
+	return CZ_RESULT_SUCCESS;
+}
+
+/* 
+ * Writes to the file starting at EOF and extending for 'size' bytes. The file size is increased by 'size'. Controlled
+ * failure occurs if:
+ * - 'size' is zero.
+ * - The range to write extends past MAX_ACCESS_SIZE.
+ * 
+ * The file access mode must be "wb", "r+b", or "w+b".
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_RD_ACCESS(2, 3)
+static enum CzResult append_section_stdc(struct FileInfoStdc* restrict info, const void* restrict buffer, size_t size)
+{
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (size > MAX_ACCESS_SIZE - info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+
+	enum CzResult ret = czWrap_fseek(info->stream, (long) info->fileSize, SEEK_SET);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = czWrap_fwrite(NULL, buffer, sizeof(char), size, info->stream);
+	if CZ_NOEXPECT (ret) {
+		sync_info_stdc(info);
+		return ret;
+	}
+
+	info->fileSize += size;
+	return CZ_RESULT_SUCCESS;
+}
+
+/* 
+ * Destroys the entire file. The file size is set to zero.
+ * 
+ * If the file access mode is "rb" or "r+b", it is changed to "w+b".
+ * If the file access mode is "wb" or "w+b", it is not changed.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult remove_all_stdc(struct FileInfoStdc* restrict info)
+{
+	const char* newMode = (info->mode[0] == 'r') ? "w+b" : info->mode;
+	enum CzResult ret = czWrap_freopen(info->path, newMode, info->stream);
+	if CZ_NOEXPECT (ret) {
+		info->stream = NULL;
+		return ret;
+	}
+
+	info->mode = newMode;
+	info->fileSize = 0;
+	return CZ_RESULT_SUCCESS;
+}
+
+/* 
+ * Overwrites the entire file. The file size is set to 'size'. Controlled failure occurs if:
+ * - 'size' is zero.
+ * - The range to write extends past MAX_ACCESS_SIZE.
+ * 
+ * If the file access mode is "rb" or "r+b", it is changed to "w+b".
+ * If the file access mode is "wb" or "w+b", it is not changed.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_RD_ACCESS(2, 3)
+static enum CzResult write_all_stdc(struct FileInfoStdc* restrict info, const void* restrict buffer, size_t size)
+{
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (size > MAX_ACCESS_SIZE)
+		return CZ_RESULT_BAD_OFFSET;
+
+	enum CzResult ret = remove_all_stdc(info);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = czWrap_fwrite(NULL, buffer, sizeof(char), size, info->stream);
+	if CZ_NOEXPECT (ret) {
+		sync_info_stdc(info);
+		return ret;
+	}
+
+	info->fileSize = size;
+	return CZ_RESULT_SUCCESS;
+}
+
+/* 
+ * Zeros out a section of the file starting at 'offset' and extending either for 'size' bytes or until EOF is reached,
+ * whichever happens first. The file size is not modified. Controlled failure occurs if:
+ * - The file is empty.
+ * - 'size' is zero.
+ * - 'offset' is outside the file, including EOF.
+ * - The range to zero out extends past MAX_ACCESS_SIZE.
+ * 
+ * The file access mode must be "wb", "r+b", or "w+b".
+ */
+CZ_NONNULL_ARGS() CZ_RD_ACCESS(1)
+static enum CzResult zero_section_stdc(struct FileInfoStdc* restrict info, size_t size, size_t offset)
+{
+	if CZ_NOEXPECT (!info->fileSize)
+		return CZ_RESULT_NO_FILE;
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (offset >= info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if CZ_NOEXPECT (size > MAX_ACCESS_SIZE - offset)
+		return CZ_RESULT_BAD_OFFSET;
+
+	void* restrict buffer;
+	size_t bufferSize = minz(size, info->fileSize - offset);
+	struct CzAllocFlags flags = {0};
+	flags.zeroInitialise = true;
+
+	enum CzResult ret = czAlloc(&buffer, bufferSize, flags);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = write_section_stdc(info, buffer, bufferSize, offset);
+	czFree(buffer);
+	return ret;
+}
+
+/* 
+ * Inserts a section into the file starting at 'offset' and extending for 'size' bytes. The file size is increased by
+ * 'size'. Controlled failure occurs if:
+ * - 'size' is zero.
+ * - 'offset' is outside the file, excluding EOF.
+ * - The resultant file size would exceed MAX_ACCESS_SIZE.
+ * 
+ * The file access mode must be "r+b" or "w+b".
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_RD_ACCESS(2, 3)
+static enum CzResult insert_section_stdc(
+	struct FileInfoStdc* restrict info, const void* restrict buffer, size_t size, size_t offset)
+{
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (offset > info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if CZ_NOEXPECT (size > MAX_ACCESS_SIZE - info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if (offset == info->fileSize)
+		return append_section_stdc(info, buffer, size);
+
+	void* restrict content;
+	size_t contentSize = info->fileSize - offset;
+	struct CzAllocFlags flags = {0};
+
+	enum CzResult ret = czAlloc(&content, contentSize, flags);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = read_section_stdc(info, content, contentSize, offset);
+	if CZ_NOEXPECT (ret)
+		goto out_free_content;
+
+	ret = write_section_stdc(info, buffer, size, offset);
+	if CZ_NOEXPECT (ret)
+		goto out_free_content;
+
+	ret = write_section_stdc(info, content, contentSize, size + offset);
+out_free_content:
+	czFree(content);
+	return ret;
+}
+
+/* 
+ * Removes a section from the file starting at 'offset' and extending either for 'size' bytes or until EOF is reached,
+ * whichever happens first. The file size is decreased by the size of the removed section. Controlled failure occurs if:
+ * - The file is empty.
+ * - 'size' is zero.
+ * - 'offset' is outside the file, including EOF.
+ * - The range to remove extends past MAX_ACCESS_SIZE.
+ * 
+ * The file access mode must be "rb", "r+b", or "w+b", and is changed to "w+b".
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult remove_section_stdc(struct FileInfoStdc* restrict info, size_t size, size_t offset)
+{
+	if CZ_NOEXPECT (!info->fileSize)
+		return CZ_RESULT_NO_FILE;
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (offset >= info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if CZ_NOEXPECT (size > MAX_ACCESS_SIZE - offset)
+		return CZ_RESULT_BAD_OFFSET;
+	if (!offset && size >= info->fileSize)
+		return remove_all_stdc(info);
+
+	void* restrict content;
+	size_t contentSize = maxz(size + offset, info->fileSize) - size;
+	struct CzAllocFlags flags = {0};
+
+	enum CzResult ret = czAlloc(&content, contentSize, flags);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (offset) {
+		void* readBuffer = content;
+		size_t readSize = offset;
+		size_t readOffset = 0;
+
+		ret = read_section_stdc(info, readBuffer, readSize, readOffset);
+		if CZ_NOEXPECT (ret)
+			goto out_free_content;
+	}
+	if (size + offset < info->fileSize) {
+		void* readBuffer = (char*) content + offset;
+		size_t readSize = info->fileSize - (size + offset);
+		size_t readOffset = size + offset;
+
+		ret = read_section_stdc(info, readBuffer, readSize, readOffset);
+		if CZ_NOEXPECT (ret)
+			goto out_free_content;
+	}
+
+	ret = write_all_stdc(info, content, contentSize);
+out_free_content:
+	czFree(content);
+	return ret;
+}
+
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1) CZ_WR_ACCESS(2)
+static enum CzResult czFileSize_stdc(const char* restrict path, size_t* restrict size)
+{
+	struct FileInfoStdc info;
+	enum CzResult ret = open_file_stdc(&info, path, "rb");
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = close_file_stdc(&info);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	*size = info.fileSize;
+	return CZ_RESULT_SUCCESS;
+}
+
+enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struct CzFileFlags flags)
+{
+	enum CzResult ret;
+	const char* resolvedPath = path;
+	char* allocPath = NULL;
+
+	if (flags.relativeToExe) {
+		ret = alloc_resolve_path(&allocPath, path);
+		if CZ_NOEXPECT (ret)
+			return ret;
+		if (allocPath)
+			resolvedPath = allocPath;
+	}
+
+	ret = czFileSize_stdc(resolvedPath, size);
+	czFree(allocPath);
+	return ret;
+}
+
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1) CZ_WR_ACCESS(2, 3)
+static enum CzResult czReadFile_stdc(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
+{
+	struct FileInfoStdc info;
+	enum CzResult ret = open_file_stdc(&info, path, "rb");
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = read_section_stdc(&info, buffer, size, offset);
+	if CZ_NOEXPECT (ret) {
+		close_file_stdc(&info);
+		return ret;
+	}
+	return close_file_stdc(&info);
+}
+
+enum CzResult czReadFile(
+	const char* restrict path, void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	enum CzResult ret;
+	const char* resolvedPath = path;
+	char* allocPath = NULL;
+
+	if (flags.relativeToExe) {
+		ret = alloc_resolve_path(&allocPath, path);
+		if CZ_NOEXPECT (ret)
+			return ret;
+		if (allocPath)
+			resolvedPath = allocPath;
+	}
+
+	ret = czReadFile_stdc(resolvedPath, buffer, size, offset);
+	czFree(allocPath);
+	return ret;
+}
+
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1) CZ_RD_ACCESS(2, 3)
+static enum CzResult czWriteFile_stdc(
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	struct FileInfoStdc info;
+	const char* mode = flags.truncateFile ? "wb" : "r+b";
+	enum CzResult ret = open_file_stdc(&info, path, mode);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (flags.truncateFile || offset == CZ_EOF)
+		ret = append_section_stdc(&info, buffer, size);
+	else if (flags.overwriteFile)
+		ret = write_section_stdc(&info, buffer, size, offset);
+	else
+		ret = insert_section_stdc(&info, buffer, size, offset);
+
+	if CZ_NOEXPECT (ret) {
+		close_file_stdc(&info);
+		return ret;
+	}
+	return close_file_stdc(&info);
+}
+
+enum CzResult czWriteFile(
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	enum CzResult ret;
+	const char* resolvedPath = path;
+	char* allocPath = NULL;
+
+	if (flags.relativeToExe) {
+		ret = alloc_resolve_path(&allocPath, path);
+		if CZ_NOEXPECT (ret)
+			return ret;
+		if (allocPath)
+			resolvedPath = allocPath;
+	}
+
+	ret = czWriteFile_stdc(resolvedPath, buffer, size, offset, flags);
+	czFree(allocPath);
+	return ret;
+}
+
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1)
+static enum CzResult czTrimFile_stdc(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	struct FileInfoStdc info;
+	const char* mode = "r+b";
+	enum CzResult ret = open_file_stdc(&info, path, mode);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (offset == CZ_EOF)
+		offset = maxz(size, info.fileSize) - size;
+	if (flags.overwriteFile)
+		ret = zero_section_stdc(&info, size, offset);
+	else
+		ret = remove_section_stdc(&info, size, offset);
+
+	if CZ_NOEXPECT (ret) {
+		close_file_stdc(&info);
+		return ret;
+	}
+	return close_file_stdc(&info);
+}
+
+enum CzResult czTrimFile(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	enum CzResult ret;
+	const char* resolvedPath = path;
+	char* allocPath = NULL;
+
+	if (flags.relativeToExe) {
+		ret = alloc_resolve_path(&allocPath, path);
+		if CZ_NOEXPECT (ret)
+			return ret;
+		if (allocPath)
+			resolvedPath = allocPath;
+	}
+
+	ret = czTrimFile_stdc(resolvedPath, size, offset, flags);
+	czFree(allocPath);
+	return ret;
+}
+
+// ==================== TO REWRITE ====================
 
 #if CZ_WRAP_MULTI_BYTE_TO_WIDE_CHAR
 static enum CzResult alloc_utf16_from_utf8_win32(wchar_t* restrict* restrict utf16, const char* restrict utf8)
@@ -512,101 +1070,6 @@ static enum CzResult cut_section_posix(int fd, size_t size, size_t offset)
 }
 #endif
 
-static enum CzResult file_size_other(FILE* restrict stream, size_t* restrict size)
-{
-	long offset = 0;
-	int origin = SEEK_END; // Binary streams not guaranteed to support SEEK_END
-	enum CzResult ret = czWrap_fseek(stream, offset, origin);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	long pos;
-	ret = czWrap_ftell(&pos, stream);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	*size = (size_t) pos;
-	return CZ_RESULT_SUCCESS;
-}
-
-static enum CzResult read_section_other(FILE* restrict stream, void* restrict buffer, size_t size, size_t offset)
-{
-	if CZ_NOEXPECT (offset > LONG_MAX)
-		return CZ_RESULT_BAD_OFFSET;
-
-	enum CzResult ret = czWrap_fseek(stream, (long) offset, SEEK_SET);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	return czWrap_fread(NULL, buffer, sizeof(char), size, stream);
-}
-
-static enum CzResult write_next_other(FILE* restrict stream, const void* restrict buffer, size_t size)
-{
-	return czWrap_fwrite(NULL, buffer, sizeof(char), size, stream);
-}
-
-static enum CzResult write_section_other(FILE* restrict stream, const void* restrict buffer, size_t size, size_t offset)
-{
-	if CZ_NOEXPECT (offset > LONG_MAX)
-		return CZ_RESULT_BAD_OFFSET;
-
-	enum CzResult ret = czWrap_fseek(stream, (long) offset, SEEK_SET);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	return czWrap_fwrite(NULL, buffer, sizeof(char), size, stream);
-}
-
-static enum CzResult zero_section_other(FILE* restrict stream, size_t size, size_t offset)
-{
-	void* restrict buffer;
-	struct CzAllocFlags flags = {0};
-	flags.zeroInitialise = true;
-
-	enum CzResult ret = czAlloc(&buffer, size, flags);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	ret = write_section_other(stream, buffer, size, offset);
-	czFree(buffer);
-	return ret;
-}
-
-static enum CzResult insert_section_other(
-	FILE* restrict stream, const void* restrict buffer, size_t size, size_t offset)
-{
-	size_t fileSize;
-	enum CzResult ret = file_size_other(stream, &fileSize);
-	if CZ_NOEXPECT (ret)
-		return ret;
-	if CZ_NOEXPECT (offset > fileSize)
-		return CZ_RESULT_BAD_OFFSET;
-	if (offset == fileSize)
-		return write_section_other(stream, buffer, size, offset);
-
-	void* restrict content;
-	size_t contentSize = fileSize - offset;
-	struct CzAllocFlags allocFlags = {0};
-
-	ret = czAlloc(&content, contentSize, allocFlags);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	ret = read_section_other(stream, content, contentSize, offset);
-	if CZ_NOEXPECT (ret)
-		goto err_free_content;
-
-	ret = write_section_other(stream, buffer, size, offset);
-	if CZ_NOEXPECT (ret)
-		goto err_free_content;
-
-	ret = write_section_other(stream, content, contentSize, size + offset);
-err_free_content:
-	czFree(content);
-	return ret;
-}
-
 #if CZ_WIN32
 static enum CzResult czStreamIsTerminal_win32(FILE* restrict stream, bool* restrict istty)
 {
@@ -652,7 +1115,7 @@ static enum CzResult czStreamIsTerminal_posix(FILE* restrict stream, bool* restr
 }
 #endif
 
-static enum CzResult czStreamIsTerminal_other(FILE* restrict stream, bool* restrict istty)
+static enum CzResult czStreamIsTerminal_stdc(FILE* restrict stream, bool* restrict istty)
 {
 	(void) stream;
 	(void) istty;
@@ -666,7 +1129,7 @@ enum CzResult czStreamIsTerminal(FILE* restrict stream, bool* restrict istty)
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	return czStreamIsTerminal_posix(stream, istty);
 #else
-	return czStreamIsTerminal_other(stream, istty);
+	return czStreamIsTerminal_stdc(stream, istty);
 #endif
 }
 
@@ -706,54 +1169,6 @@ static enum CzResult czFileSize_posix(const char* restrict path, size_t* restric
 	return CZ_RESULT_SUCCESS;
 }
 #endif
-
-static enum CzResult czFileSize_other(const char* restrict path, size_t* restrict size)
-{
-	FILE* restrict file;
-	const char* mode = "rb";
-	enum CzResult ret = czWrap_fopen(&file, path, mode);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	size_t fileSize;
-	ret = file_size_other(file, &fileSize);
-	if CZ_NOEXPECT (ret) {
-		czWrap_fclose(file);
-		return ret;
-	}
-
-	ret = czWrap_fclose(file);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	*size = fileSize;
-	return CZ_RESULT_SUCCESS;
-}
-
-enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struct CzFileFlags flags)
-{
-	enum CzResult ret;
-	const char* realPath = path;
-	char* fullPath = NULL;
-
-	if (flags.relativeToExe && cwk_path_is_relative(path)) {
-		ret = alloc_abspath_from_relpath_to_exe(&fullPath, path);
-		if CZ_NOEXPECT (ret)
-			return ret;
-		realPath = fullPath;
-	}
-
-#if CZ_WIN32
-	ret = czFileSize_win32(realPath, size);
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
-	ret = czFileSize_posix(realPath, size);
-#else
-	ret = czFileSize_other(realPath, size);
-#endif
-
-	czFree(fullPath);
-	return ret;
-}
 
 #if CZ_WIN32
 static enum CzResult czReadFile_win32(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
@@ -809,51 +1224,6 @@ static enum CzResult czReadFile_posix(const char* restrict path, void* restrict 
 	return czWrap_close(fd);
 }
 #endif
-
-static enum CzResult czReadFile_other(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
-{
-	FILE* restrict file;
-	const char* mode = "rb";
-	enum CzResult ret = czWrap_fopen(&file, path, mode);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	ret = read_section_other(file, buffer, size, offset);
-	if CZ_NOEXPECT (ret) {
-		czWrap_fclose(file);
-		return ret;
-	}
-	return czWrap_fclose(file);
-}
-
-enum CzResult czReadFile(
-	const char* restrict path, void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
-{
-	if CZ_NOEXPECT (!size)
-		return CZ_RESULT_BAD_SIZE;
-
-	enum CzResult ret;
-	const char* realPath = path;
-	char* fullPath = NULL;
-
-	if (flags.relativeToExe && cwk_path_is_relative(path)) {
-		ret = alloc_abspath_from_relpath_to_exe(&fullPath, path);
-		if CZ_NOEXPECT (ret)
-			return ret;
-		realPath = fullPath;
-	}
-
-#if CZ_WIN32
-	ret = czReadFile_win32(realPath, buffer, size, offset);
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
-	ret = czReadFile_posix(realPath, buffer, size, offset);
-#else
-	ret = czReadFile_other(realPath, buffer, size, offset);
-#endif
-
-	czFree(fullPath);
-	return ret;
-}
 
 #if CZ_WIN32
 static enum CzResult truncate_write_file_win32(const wchar_t* restrict path, const void* restrict buffer, size_t size)
@@ -1051,88 +1421,6 @@ static enum CzResult insert_file_posix(
 }
 #endif
 
-static enum CzResult truncate_write_file_other(const char* restrict path, const void* restrict buffer, size_t size)
-{
-	FILE* restrict file;
-	const char* mode = "wb";
-	enum CzResult ret = czWrap_fopen(&file, path, mode);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	ret = write_next_other(file, buffer, size);
-	if CZ_NOEXPECT (ret) {
-		czWrap_fclose(file);
-		return ret;
-	}
-	return czWrap_fclose(file);
-}
-
-static enum CzResult append_file_other(const char* restrict path, const void* restrict buffer, size_t size)
-{
-	FILE* restrict file;
-	const char* mode = "ab";
-	enum CzResult ret = czWrap_fopen(&file, path, mode);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	ret = write_next_other(file, buffer, size);
-	if CZ_NOEXPECT (ret) {
-		czWrap_fclose(file);
-		return ret;
-	}
-	return czWrap_fclose(file);
-}
-
-static enum CzResult overwrite_file_other(
-	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
-{
-	FILE* restrict file;
-	const char* mode = "r+b";
-	enum CzResult ret = czWrap_fopen(&file, path, mode);
-	if (ret == CZ_RESULT_NO_FILE)
-		return offset ? CZ_RESULT_BAD_OFFSET : truncate_write_file_other(path, buffer, size);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	size_t fileSize;
-	ret = file_size_other(file, &fileSize);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-	if CZ_NOEXPECT (offset > fileSize) {
-		ret = CZ_RESULT_BAD_OFFSET;
-		goto err_close_file;
-	}
-
-	ret = write_section_other(file, buffer, size, offset);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	return czWrap_fclose(file);
-
-err_close_file:
-	czWrap_fclose(file);
-	return ret;
-}
-
-static enum CzResult insert_file_other(
-	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
-{
-	FILE* restrict file;
-	const char* mode = "r+b";
-	enum CzResult ret = czWrap_fopen(&file, path, mode);
-	if (ret == CZ_RESULT_NO_FILE)
-		return offset ? CZ_RESULT_BAD_OFFSET : truncate_write_file_other(path, buffer, size);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	ret = insert_section_other(file, buffer, size, offset);
-	if CZ_NOEXPECT (ret) {
-		czWrap_fclose(file);
-		return ret;
-	}
-	return czWrap_fclose(file);
-}
-
 #if CZ_WIN32
 static enum CzResult czWriteFile_win32(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
@@ -1169,47 +1457,6 @@ static enum CzResult czWriteFile_posix(
 	return insert_file_posix(path, buffer, size, offset);
 }
 #endif
-
-static enum CzResult czWriteFile_other(
-	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
-{
-	if (flags.truncateFile)
-		return truncate_write_file_other(path, buffer, size);
-	if (offset == CZ_EOF)
-		return append_file_other(path, buffer, size);
-	if (flags.overwriteFile)
-		return overwrite_file_other(path, buffer, size, offset);
-	return insert_file_other(path, buffer, size, offset);
-}
-
-enum CzResult czWriteFile(
-	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
-{
-	if CZ_NOEXPECT (!size)
-		return CZ_RESULT_BAD_SIZE;
-
-	enum CzResult ret;
-	const char* realPath = path;
-	char* fullPath = NULL;
-
-	if (flags.relativeToExe && cwk_path_is_relative(path)) {
-		ret = alloc_abspath_from_relpath_to_exe(&fullPath, path);
-		if CZ_NOEXPECT (ret)
-			return ret;
-		realPath = fullPath;
-	}
-
-#if CZ_WIN32
-	ret = czWriteFile_win32(realPath, buffer, size, offset, flags);
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
-	ret = czWriteFile_posix(realPath, buffer, size, offset, flags);
-#else
-	ret = czWriteFile_other(realPath, buffer, size, offset, flags);
-#endif
-
-	czFree(fullPath);
-	return ret;
-}
 
 #if CZ_WIN32
 static enum CzResult zero_file_end_win32(const wchar_t* restrict path, size_t size)
@@ -1491,197 +1738,6 @@ static enum CzResult cut_file_posix(const char* restrict path, size_t size, size
 }
 #endif
 
-static enum CzResult empty_file_other(const char* restrict path)
-{
-	FILE* restrict file;
-	const char* mode = "wb";
-	enum CzResult ret = czWrap_fopen(&file, path, mode);
-	return ret ?: czWrap_fclose(file);
-}
-
-static enum CzResult zero_file_end_other(const char* restrict path, size_t size)
-{
-	FILE* restrict file;
-	const char* mode = "r+b";
-	enum CzResult ret = czWrap_fopen(&file, path, mode);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	size_t fileSize;
-	ret = file_size_other(file, &fileSize);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-	if CZ_NOEXPECT (!fileSize) {
-		ret = CZ_RESULT_NO_FILE;
-		goto err_close_file;
-	}
-
-	size_t zeroSize = minz(size, fileSize);
-	size_t zeroOffset = fileSize - zeroSize;
-	ret = zero_section_other(file, zeroSize, zeroOffset);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	return czWrap_fclose(file);
-
-err_close_file:
-	czWrap_fclose(file);
-	return ret;
-}
-
-static enum CzResult cut_file_end_other(const char* restrict path, size_t size)
-{
-	FILE* restrict file;
-	const char* mode = "rb";
-	enum CzResult ret = czWrap_fopen(&file, path, mode);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	size_t fileSize;
-	ret = file_size_other(file, &fileSize);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-	if CZ_NOEXPECT (!fileSize) {
-		ret = CZ_RESULT_NO_FILE;
-		goto err_close_file;
-	}
-	if (size >= fileSize) {
-		czWrap_fclose(file);
-		return empty_file_other(path);
-	}
-
-	void* restrict content;
-	size_t contentSize = fileSize - size;
-	struct CzAllocFlags allocFlags = {0};
-
-	ret = czAlloc(&content, contentSize, allocFlags);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	size_t readOffset = 0;
-	ret = read_section_other(file, content, contentSize, readOffset);
-	if CZ_NOEXPECT (ret)
-		goto err_free_content;
-
-	ret = czWrap_fclose(file);
-	if CZ_NOEXPECT (ret) {
-		czFree(content);
-		return ret;
-	}
-
-	ret = truncate_write_file_other(path, content, contentSize);
-	czFree(content);
-	return ret;
-
-err_free_content:
-	czFree(content);
-err_close_file:
-	czWrap_fclose(file);
-	return ret;
-}
-
-static enum CzResult zero_file_other(const char* restrict path, size_t size, size_t offset)
-{
-	FILE* restrict file;
-	const char* mode = "r+b";
-	enum CzResult ret = czWrap_fopen(&file, path, mode);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	size_t fileSize;
-	ret = file_size_other(file, &fileSize);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-	if CZ_NOEXPECT (!fileSize) {
-		ret = CZ_RESULT_NO_FILE;
-		goto err_close_file;
-	}
-	if CZ_NOEXPECT (offset >= fileSize) {
-		ret = CZ_RESULT_BAD_OFFSET;
-		goto err_close_file;
-	}
-
-	size_t zeroSize = minz(size, fileSize - offset);
-	ret = zero_section_other(file, zeroSize, offset);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	return czWrap_fclose(file);
-
-err_close_file:
-	czWrap_fclose(file);
-	return ret;
-}
-
-static enum CzResult cut_file_other(const char* restrict path, size_t size, size_t offset)
-{
-	FILE* restrict file;
-	const char* mode = "rb";
-	enum CzResult ret = czWrap_fopen(&file, path, mode);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	size_t fileSize;
-	ret = file_size_other(file, &fileSize);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-	if CZ_NOEXPECT (!fileSize) {
-		ret = CZ_RESULT_NO_FILE;
-		goto err_close_file;
-	}
-	if CZ_NOEXPECT (offset >= fileSize) {
-		ret = CZ_RESULT_BAD_OFFSET;
-		goto err_close_file;
-	}
-	if (size >= fileSize && !offset) {
-		czWrap_fclose(file);
-		return empty_file_other(path);
-	}
-
-	void* restrict content;
-	size_t contentSize = maxz(size + offset, fileSize) - size;
-	struct CzAllocFlags allocFlags = {0};
-
-	ret = czAlloc(&content, contentSize, allocFlags);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	if (offset) {
-		void* readBuffer = content;
-		size_t readSize = offset;
-		size_t readOffset = 0;
-
-		ret = read_section_other(file, readBuffer, readSize, readOffset);
-		if CZ_NOEXPECT (ret)
-			goto err_free_content;
-	}
-	if (size + offset < fileSize) {
-		void* readBuffer = (char*) content + offset;
-		size_t readSize = fileSize - (size + offset);
-		size_t readOffset = size + offset;
-
-		ret = read_section_other(file, readBuffer, readSize, readOffset);
-		if CZ_NOEXPECT (ret)
-			goto err_free_content;
-	}
-
-	ret = czWrap_fclose(file);
-	if CZ_NOEXPECT (ret) {
-		czFree(content);
-		return ret;
-	}
-
-	ret = truncate_write_file_other(path, content, contentSize);
-	czFree(content);
-	return ret;
-
-err_free_content:
-	czFree(content);
-err_close_file:
-	czWrap_fclose(file);
-	return ret;
-}
-
 #if CZ_WIN32
 static enum CzResult czTrimFile_win32(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
 {
@@ -1716,42 +1772,3 @@ static enum CzResult czTrimFile_posix(const char* restrict path, size_t size, si
 	return cut_file_posix(path, size, offset);
 }
 #endif
-
-static enum CzResult czTrimFile_other(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
-{
-	if (offset == CZ_EOF && flags.overwriteFile)
-		return zero_file_end_other(path, size);
-	if (offset == CZ_EOF)
-		return cut_file_end_other(path, size);
-	if (flags.overwriteFile)
-		return zero_file_other(path, size, offset);
-	return cut_file_other(path, size, offset);
-}
-
-enum CzResult czTrimFile(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
-{
-	if CZ_NOEXPECT (!size)
-		return CZ_RESULT_BAD_SIZE;
-
-	enum CzResult ret;
-	const char* realPath = path;
-	char* fullPath = NULL;
-
-	if (flags.relativeToExe && cwk_path_is_relative(path)) {
-		ret = alloc_abspath_from_relpath_to_exe(&fullPath, path);
-		if CZ_NOEXPECT (ret)
-			return ret;
-		realPath = fullPath;
-	}
-
-#if CZ_WIN32
-	ret = czTrimFile_win32(realPath, size, offset, flags);
-#elif CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001
-	ret = czTrimFile_posix(realPath, size, offset, flags);
-#else
-	ret = czTrimFile_other(realPath, size, offset, flags);
-#endif
-
-	czFree(fullPath);
-	return ret;
-}
