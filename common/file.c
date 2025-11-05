@@ -128,34 +128,6 @@ struct FileInfoStdc
 };
 
 /* 
- * Synchronises info->fileSize with the actual current file size. Should be used either:
- * - When we first open a file to obtain the initial file size; or
- * - When we lose track of the file size, such as after a failed IO operation which left the file in an uncertain state.
- * 
- * In other circumstances, info->fileSize should be used directly to keep track of the file size.
- */
-CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
-static enum CzResult sync_info_stdc(struct FileInfoStdc* restrict info)
-{
-	CZ_ASSUME(info->stream != NULL);
-	CZ_ASSUME(info->path != NULL);
-	CZ_ASSUME(info->mode != NULL);
-
-	long offset = 0;
-	enum CzResult ret = czWrap_fseek(info->stream, offset, SEEK_END);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	long pos;
-	ret = czWrap_ftell(&pos, info->stream);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	info->fileSize = (size_t) pos;
-	return CZ_RESULT_SUCCESS;
-}
-
-/* 
  * Opens a file and initialises a corresponding FileInfoStdc instance. The file should not already be open. The 'path'
  * and 'mode' members of 'info' should already be set correctly, and should remain valid until the file is closed with
  * close_file_stdc().
@@ -172,16 +144,23 @@ static enum CzResult open_file_stdc(struct FileInfoStdc* restrict info)
 	if CZ_NOEXPECT (ret)
 		return ret;
 
-	if (info->mode[0] == 'r') {
-		ret = sync_info_stdc(info);
-		if CZ_NOEXPECT (ret) {
-			fclose(stream);
-			return ret;
-		}
-	}
+	long offset = 0;
+	ret = czWrap_fseek(stream, offset, SEEK_END);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	long pos;
+	ret = czWrap_ftell(&pos, stream);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
 
 	info->stream = stream;
+	info->fileSize = (size_t) pos;
 	return CZ_RESULT_SUCCESS;
+
+err_close_file:
+	fclose(stream);
+	return ret;
 }
 
 /* 
@@ -267,15 +246,11 @@ static enum CzResult write_section_stdc(
 	if CZ_NOEXPECT (ret)
 		return ret;
 
-	ret = czWrap_fwrite(NULL, buffer, sizeof(char), size, info->stream);
-	if CZ_NOEXPECT (ret) {
-		sync_info_stdc(info);
-		return ret;
-	}
-
-	if (size + offset > info->fileSize)
-		info->fileSize = size + offset;
-	return CZ_RESULT_SUCCESS;
+	size_t wrote;
+	ret = czWrap_fwrite(&wrote, buffer, sizeof(char), size, info->stream);
+	if (wrote + offset > info->fileSize)
+		info->fileSize = wrote + offset;
+	return ret;
 }
 
 /* 
@@ -303,14 +278,10 @@ static enum CzResult append_section_stdc(struct FileInfoStdc* restrict info, con
 	if CZ_NOEXPECT (ret)
 		return ret;
 
-	ret = czWrap_fwrite(NULL, buffer, sizeof(char), size, info->stream);
-	if CZ_NOEXPECT (ret) {
-		sync_info_stdc(info);
-		return ret;
-	}
-
-	info->fileSize += size;
-	return CZ_RESULT_SUCCESS;
+	size_t wrote;
+	ret = czWrap_fwrite(&wrote, buffer, sizeof(char), size, info->stream);
+	info->fileSize += wrote;
+	return ret;
 }
 
 /* 
@@ -365,14 +336,10 @@ static enum CzResult write_all_stdc(struct FileInfoStdc* restrict info, const vo
 	if CZ_NOEXPECT (ret)
 		return ret;
 
-	ret = czWrap_fwrite(NULL, buffer, sizeof(char), size, info->stream);
-	if CZ_NOEXPECT (ret) {
-		sync_info_stdc(info);
-		return ret;
-	}
-
-	info->fileSize = size;
-	return CZ_RESULT_SUCCESS;
+	size_t wrote;
+	ret = czWrap_fwrite(&wrote, buffer, sizeof(char), size, info->stream);
+	info->fileSize = wrote;
+	return ret;
 }
 
 /* 
@@ -394,8 +361,6 @@ static enum CzResult zero_section_stdc(struct FileInfoStdc* restrict info, size_
 
 	if CZ_NOEXPECT (!info->fileSize)
 		return CZ_RESULT_NO_FILE;
-	if CZ_NOEXPECT (!size)
-		return CZ_RESULT_BAD_SIZE;
 	if CZ_NOEXPECT (offset >= info->fileSize)
 		return CZ_RESULT_BAD_OFFSET;
 	if (size > info->fileSize - offset)
@@ -432,8 +397,6 @@ static enum CzResult insert_section_stdc(
 	CZ_ASSUME(info->mode != NULL);
 	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 
-	if CZ_NOEXPECT (!size)
-		return CZ_RESULT_BAD_SIZE;
 	if CZ_NOEXPECT (offset > info->fileSize)
 		return CZ_RESULT_BAD_OFFSET;
 	if CZ_NOEXPECT (size > MAX_FILE_SIZE - info->fileSize)
