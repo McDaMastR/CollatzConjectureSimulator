@@ -61,6 +61,12 @@
 #endif
 
 /* 
+ * If a function is being repeatedly interrupted by signals, it should be called at most MAX_INTERRUPT_RETRY times
+ * before we give up and return CZ_RESULT_INTERRUPT.
+ */
+#define MAX_INTERRUPT_RETRY 64
+
+/* 
  * Resolves 'path' with respect to the directory containing the executable. If path is already absolute, 'resolvedPath'
  * is set to NULL. Otherwise, 'resolvedPath' is set to a newly allocated string with the resolved path, which should be
  * freed with czFree().
@@ -98,6 +104,627 @@ static enum CzResult alloc_resolve_path(char* restrict* restrict resolvedPath, c
 	*resolvedPath = absPath;
 	return CZ_RESULT_SUCCESS;
 }
+
+/**********************************************************************************************************************
+ * POSIX implementation                                                                                               *
+ **********************************************************************************************************************/
+
+#define HAVE_FileInfoPosix ( CZ_POSIX_VERSION >= CZ_POSIX_1988 )
+
+#if HAVE_FileInfoPosix
+/* 
+ * File info passed around the POSIX implementation.
+ * - 'fildes' is the one and only accessible open file descriptor to the file.
+ *   - Nonnegative if open; -1 if closed.
+ * - 'flags' is the flag bitfield with which 'fildes' was opened.
+ *   - Must include exactly one of O_RDONLY, O_WRONLY, or O_RDWR.
+ *   - Must include O_NOCTTY.
+ *   - May include O_CREAT, O_NOFOLLOW, or O_TRUNC.
+ * - 'mode' is the file mode as given in stat::st_mode.
+ *   - Nonzero if open; undefined if closed.
+ * - 'fileSize' is the current size of the file in bytes.
+ *   - At most MAX_FILE_SIZE (maximum value of off_t) if open; undefined if closed.
+ *   - Updated before appropriate (potentially fileSize-modifying) functions return.
+ * - 'path' is the filepath with which 'fildes' was opened.
+ *   - Nonnull, NUL-terminated, and nonempty.
+ * - 'map' is the memory block mapped to the file, if any.
+ *   - Nonnull if mapped; NULL if open and unmapped; undefined if closed.
+ * - 'mapSize' is the size of the mapping in bytes.
+ *   - Nonzero and at most 'fileSize' if mapped; undefined if unmapped.
+ * - 'mapOffset' is the offset into the file at which the mapping begins.
+ *   - Multiple of the page size and less than 'fileSize' if mapped; undefined if unmapped.
+ * - 'mapProt' is the memory protection with which the mapping was created.
+ *   - Nonzero if mapped; undefined if unmapped.
+ *   - May include PROT_READ if 'flags' includes O_RDONLY or O_RDWR.
+ *   - May include PROT_WRITE if 'flags' includes O_RDWR.
+ * - 'pageSize' is the page size of the platform.
+ *   - Nonzero power-of-two if open; undefined if closed.
+ */
+struct FileInfoPosix
+{
+	int fildes;
+	int flags;
+	mode_t mode;
+	size_t fileSize;
+	const char* path;
+
+	void* map;
+	int mapProt;
+	size_t mapSize;
+	size_t mapOffset;
+	size_t pageSize;
+};
+#endif
+
+#if CZ_WRAP_FSYNC
+/* 
+ * Repeatedly calls fsync() until it executes without being interrupted by a signal, or until it has been called
+ * MAX_INTERRUPT_RETRY times.
+ */
+CZ_COPY_ATTR(czWrap_fsync)
+static enum CzResult loop_fsync(int fd)
+{
+	enum CzResult ret = CZ_RESULT_INTERNAL_ERROR;
+	for (int i = 0; i < MAX_INTERRUPT_RETRY; i++) {
+		ret = czWrap_fsync(fd);
+		if CZ_EXPECT (ret != CZ_RESULT_INTERRUPT)
+			break;
+	}
+	return ret;
+}
+#endif
+
+#if CZ_WRAP_FTRUNCATE
+/* 
+ * Repeatedly calls ftruncate() until it executes without being interrupted by a signal, or until it has been called
+ * MAX_INTERRUPT_RETRY times.
+ */
+CZ_COPY_ATTR(czWrap_ftruncate)
+static enum CzResult loop_ftruncate(int fd, off_t size)
+{
+	enum CzResult ret = CZ_RESULT_INTERNAL_ERROR;
+	for (int i = 0; i < MAX_INTERRUPT_RETRY; i++) {
+		ret = czWrap_ftruncate(fd, size);
+		if CZ_EXPECT (ret != CZ_RESULT_INTERRUPT)
+			break;
+	}
+	return ret;
+}
+#endif
+
+#if CZ_WRAP_PREAD
+/* 
+ * Repeatedly calls pread() until it executes without being interrupted by a signal, or until it has been called
+ * MAX_INTERRUPT_RETRY times.
+ */
+CZ_COPY_ATTR(czWrap_pread)
+static enum CzResult loop_pread(ssize_t* restrict res, int fd, void* restrict buffer, size_t size, off_t offset)
+{
+	enum CzResult ret = CZ_RESULT_INTERNAL_ERROR;
+	for (int i = 0; i < MAX_INTERRUPT_RETRY; i++) {
+		ret = czWrap_pread(res, fd, buffer, size, offset);
+		if CZ_EXPECT (ret != CZ_RESULT_INTERRUPT)
+			break;
+	}
+	return ret;
+}
+#endif
+
+#if CZ_WRAP_PWRITE
+/* 
+ * Repeatedly calls pwrite() until it executes without being interrupted by a signal, or until it has been called
+ * MAX_INTERRUPT_RETRY times.
+ */
+CZ_COPY_ATTR(czWrap_pwrite)
+static enum CzResult loop_pwrite(ssize_t* restrict res, int fd, const void* restrict buffer, size_t size, off_t offset)
+{
+	enum CzResult ret = CZ_RESULT_INTERNAL_ERROR;
+	for (int i = 0; i < MAX_INTERRUPT_RETRY; i++) {
+		ret = czWrap_pwrite(res, fd, buffer, size, offset);
+		if CZ_EXPECT (ret != CZ_RESULT_INTERRUPT)
+			break;
+	}
+	return ret;
+}
+#endif
+
+#define HAVE_open_file_posix ( \
+	CZ_WRAP_OPEN &&            \
+	CZ_WRAP_CLOSE &&           \
+	CZ_WRAP_FSTAT &&           \
+	CZ_WRAP_SYSCONF &&         \
+	HAVE_FileInfoPosix )
+
+#if HAVE_open_file_posix
+/* 
+ * Opens a file and initialises a corresponding FileInfoPosix instance. The file should not already be open. The 'path'
+ * and 'flags' members of 'info' should already be set correctly, and 'path' should remain valid until the file is
+ * closed with close_file_posix().
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult open_file_posix(struct FileInfoPosix* restrict info)
+{
+	CZ_ASSUME(info->fildes == -1);
+	CZ_ASSUME(info->flags != 0);
+	CZ_ASSUME(info->path != NULL);
+
+	int fd;
+	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
+	enum CzResult ret = czWrap_open(&fd, info->path, info->flags, mode);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	struct stat st;
+	ret = czWrap_fstat(fd, &st);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	long pageSize;
+	ret = czWrap_sysconf(&pageSize, _SC_PAGESIZE);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	info->fildes = fd;
+	info->mode = st.st_mode;
+	info->fileSize = (size_t) st.st_size;
+	info->map = NULL;
+	info->pageSize = (size_t) pageSize;
+	return CZ_RESULT_SUCCESS;
+
+err_close_file:
+#if CZ_WRAP_POSIX_CLOSE
+	posix_close(fd, 0);
+#else
+	close(fd);
+#endif
+	return ret;
+}
+#endif
+
+#define HAVE_close_file_posix ( \
+	CZ_WRAP_CLOSE &&            \
+	CZ_WRAP_FSYNC &&            \
+	HAVE_FileInfoPosix )
+
+#if HAVE_close_file_posix
+/* 
+ * Flushes and closes the file. The file must currently be open and unmapped, and this should be called once all IO
+ * operations on the file have executed (on the application side at least).
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult close_file_posix(struct FileInfoPosix* restrict info)
+{
+	CZ_ASSUME(info->fildes >= 0);
+	CZ_ASSUME(info->mode != 0);
+	CZ_ASSUME(info->map == NULL);
+
+	int fd = info->fildes;
+	info->fildes = -1;
+
+	bool canSync = S_ISREG(info->mode) || S_ISLNK(info->mode);
+	if (canSync) {
+		enum CzResult ret = loop_fsync(fd);
+		if CZ_NOEXPECT (ret) {
+#if CZ_WRAP_POSIX_CLOSE
+			posix_close(fd, 0);
+#else
+			close(fd);
+#endif
+			return ret;
+		}
+	}
+
+#if CZ_WRAP_POSIX_CLOSE
+	return czWrap_posix_close(fd, 0);
+#else
+	return czWrap_close(fd);
+#endif
+}
+#endif
+
+#define HAVE_truncate_all_posix ( \
+	CZ_WRAP_FTRUNCATE &&          \
+	HAVE_FileInfoPosix )
+
+#if HAVE_truncate_all_posix
+/* 
+ * Shrinks or extends the file size to 'size'. Controlled failure occurs if:
+ * - 'size' extends past MAX_FILE_SIZE.
+ * 
+ * The file must currently be open and unmapped.
+ * The file access mode must be O_WRONLY or O_RDWR.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult truncate_all_posix(struct FileInfoPosix* restrict info, size_t size)
+{
+	CZ_ASSUME(info->fildes >= 0);
+	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
+	CZ_ASSUME(info->map == NULL);
+
+	if CZ_NOEXPECT (size > MAX_FILE_SIZE)
+		return CZ_RESULT_BAD_OFFSET;
+
+	enum CzResult ret = loop_ftruncate(info->fildes, (off_t) size);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	info->fileSize = size;
+	return CZ_RESULT_SUCCESS;
+}
+#endif
+
+#define HAVE_map_section_posix ( \
+	CZ_WRAP_MMAP &&              \
+	HAVE_FileInfoPosix )
+
+#if HAVE_map_section_posix
+/* 
+ * Creates a memory mapping to the file. The mapping contains at least the section starting at 'offset' and extending
+ * either for 'size' bytes or until EOF is reached, whichever happens first. The actual mapping begins at 'offset'
+ * rounded down to a multiple of the page size, and the difference is added to the size of the mapping. Controlled
+ * failure occurs if:
+ * - The file is empty.
+ * - 'size' is zero.
+ * - 'offset' is outside the file, including EOF.
+ * 
+ * The file must currently be open and unmapped; only one mapping at a time can be handled.
+ * If 'prot' includes PROT_READ, the file access mode must be O_RDONLY or O_RDWR.
+ * If 'prot' includes PROT_WRITE, the file access mode must be O_RDWR.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult map_section_posix(struct FileInfoPosix* restrict info, size_t size, size_t offset, int prot)
+{
+	CZ_ASSUME(info->fildes >= 0);
+	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
+	CZ_ASSUME(info->map == NULL);
+	CZ_ASSUME(info->pageSize > 0);
+
+	if CZ_NOEXPECT (!info->fileSize)
+		return CZ_RESULT_NO_FILE;
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (offset >= info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if (size > info->fileSize - offset)
+		size = info->fileSize - offset;
+
+	void* map;
+	size_t mapSize = size + (offset & (info->pageSize - 1));
+	off_t mapOffset = (off_t) (offset & ~(info->pageSize - 1));
+
+	enum CzResult ret = czWrap_mmap(&map, NULL, mapSize, prot, MAP_SHARED, info->fildes, mapOffset);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	info->map = map;
+	info->mapProt = prot;
+	info->mapSize = mapSize;
+	info->mapOffset = (size_t) mapOffset;
+	return CZ_RESULT_SUCCESS;
+}
+#endif
+
+#define HAVE_unmap_section_posix ( \
+	CZ_WRAP_MSYNC &&               \
+	CZ_WRAP_MUNMAP &&              \
+	HAVE_FileInfoPosix )
+
+#if HAVE_unmap_section_posix
+/* 
+ * Flushes and unmaps the memory mapping to the file. The file must currently be open and mapped, and this should be
+ * called once all IO operations pertaining to the mapped section have executed.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult unmap_section_posix(struct FileInfoPosix* restrict info)
+{
+	CZ_ASSUME(info->fildes >= 0);
+	CZ_ASSUME(info->map != NULL);
+	CZ_ASSUME(info->mapSize > 0);
+
+	void* map = info->map;
+	info->map = NULL;
+
+	enum CzResult ret = czWrap_msync(map, info->mapSize, MS_SYNC);
+	if CZ_NOEXPECT (ret) {
+		munmap(map, info->mapSize);
+		return ret;
+	}
+	return czWrap_munmap(map, info->mapSize);
+}
+#endif
+
+#define HAVE_read_section_posix ( \
+	CZ_WRAP_PREAD &&              \
+	HAVE_FileInfoPosix )
+
+#if HAVE_read_section_posix
+/* 
+ * Reads from a section of the file starting at 'offset' and extending either for 'size' bytes or until EOF is reached,
+ * whichever happens first. The file is not modified. Controlled failure occurs if:
+ * - The file is empty.
+ * - 'size' is zero.
+ * - 'offset' is outside the file, including EOF.
+ * 
+ * The file must currently be open.
+ * The file access mode must be O_RDONLY or O_RDWR.
+ */
+CZ_NONNULL_ARGS() CZ_RD_ACCESS(1) CZ_WR_ACCESS(2, 3)
+static enum CzResult read_section_posix(
+	const struct FileInfoPosix* restrict info, void* restrict buffer, size_t size, size_t offset)
+{
+	CZ_ASSUME(info->fildes >= 0);
+	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
+
+	if CZ_NOEXPECT (!info->fileSize)
+		return CZ_RESULT_NO_FILE;
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (offset >= info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if (size > info->fileSize - offset)
+		size = info->fileSize - offset;
+
+	ssize_t lastRead = 0;
+	for (size_t total = 0; total < size; total += (size_t) lastRead) {
+		void* readBuffer = (char*) buffer + total;
+		size_t readSize = (size - total) % (MAX_ACCESS_SIZE + 1);
+		off_t readOffset = (off_t) (offset + total);
+
+		enum CzResult ret = loop_pread(&lastRead, info->fildes, readBuffer, readSize, readOffset);
+		if CZ_NOEXPECT (ret)
+			return ret;
+	}
+	return CZ_RESULT_SUCCESS;
+}
+#endif
+
+#define HAVE_write_section_posix ( \
+	CZ_WRAP_PWRITE &&              \
+	HAVE_FileInfoPosix )
+
+#if HAVE_write_section_posix
+/* 
+ * Writes to a section of the file starting at 'offset' and extending for 'size' bytes. If needed, the file size is
+ * increased. Controlled failure occurs if:
+ * - 'size' is zero.
+ * - 'offset' is outside the file, excluding EOF.
+ * - The range to write extends past MAX_FILE_SIZE.
+ * 
+ * The file must currently be open.
+ * The file access mode must be O_WRONLY or O_RDWR.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_RD_ACCESS(2, 3)
+static enum CzResult write_section_posix(
+	struct FileInfoPosix* restrict info, const void* restrict buffer, size_t size, size_t offset)
+{
+	CZ_ASSUME(info->fildes >= 0);
+	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
+
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (offset > info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if CZ_NOEXPECT (size > MAX_FILE_SIZE - offset)
+		return CZ_RESULT_BAD_OFFSET;
+
+	for (size_t total = 0; total < size;) {
+		const void* writeBuffer = (const char*) buffer + total;
+		size_t writeSize = (size - total) % (MAX_ACCESS_SIZE + 1);
+		off_t writeOffset = (off_t) (offset + total);
+
+		ssize_t lastWrote;
+		enum CzResult ret = loop_pwrite(&lastWrote, info->fildes, writeBuffer, writeSize, writeOffset);
+		if CZ_NOEXPECT (ret)
+			return ret;
+
+		total += (size_t) lastWrote;
+		if (total + offset > info->fileSize)
+			info->fileSize = total + offset;
+	}
+	return CZ_RESULT_SUCCESS;
+}
+#endif
+
+#define HAVE_append_section_posix ( \
+	CZ_WRAP_PWRITE &&               \
+	HAVE_FileInfoPosix )
+
+#if HAVE_append_section_posix
+/* 
+ * Writes to the file starting at EOF and extending for 'size' bytes. The file size is increased by 'size'. Controlled
+ * failure occurs if:
+ * - 'size' is zero.
+ * - The range to write extends past MAX_FILE_SIZE.
+ * 
+ * The file must currently be open.
+ * The file access mode must be O_WRONLY or O_RDWR.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_RD_ACCESS(2, 3)
+static enum CzResult append_section_posix(struct FileInfoPosix* restrict info, const void* restrict buffer, size_t size)
+{
+	CZ_ASSUME(info->fildes >= 0);
+	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
+
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (size > MAX_FILE_SIZE - info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+
+	for (size_t total = 0; total < size;) {
+		const void* writeBuffer = (const char*) buffer + total;
+		size_t writeSize = (size - total) % (MAX_ACCESS_SIZE + 1);
+		off_t writeOffset = (off_t) info->fileSize;
+
+		ssize_t lastWrote;
+		enum CzResult ret = loop_pwrite(&lastWrote, info->fildes, writeBuffer, writeSize, writeOffset);
+		if CZ_NOEXPECT (ret)
+			return ret;
+
+		total += (size_t) lastWrote;
+		info->fileSize += (size_t) lastWrote;
+	}
+	return CZ_RESULT_SUCCESS;
+}
+#endif
+
+#define HAVE_zero_section_posix ( \
+	HAVE_map_section_posix &&     \
+	HAVE_unmap_section_posix &&   \
+	HAVE_FileInfoPosix )
+
+#if HAVE_zero_section_posix
+/* 
+ * Zeros out a section of the file starting at 'offset' and extending either for 'size' bytes or until EOF is reached,
+ * whichever happens first. The file size is not modified. Controlled failure occurs if:
+ * - The file is empty.
+ * - 'size' is zero.
+ * - 'offset' is outside the file, including EOF.
+ * 
+ * The file must currently be open and unmapped.
+ * The file access mode must be O_RDWR.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult zero_section_posix(struct FileInfoPosix* restrict info, size_t size, size_t offset)
+{
+	CZ_ASSUME(info->fildes >= 0);
+	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
+	CZ_ASSUME(info->map == NULL);
+
+	if CZ_NOEXPECT (!info->fileSize)
+		return CZ_RESULT_NO_FILE;
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (offset >= info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if (size > info->fileSize - offset)
+		size = info->fileSize - offset;
+
+	enum CzResult ret = map_section_posix(info, size, offset, PROT_WRITE);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	void* memory = (char*) info->map + (offset - info->mapOffset);
+	zero_memory(memory, size);
+	return unmap_section_posix(info);
+}
+#endif
+
+#define HAVE_insert_section_posix ( \
+	HAVE_append_section_posix &&    \
+	HAVE_truncate_all_posix &&      \
+	HAVE_map_section_posix &&       \
+	HAVE_unmap_section_posix &&     \
+	HAVE_FileInfoPosix )
+
+#if HAVE_insert_section_posix
+/* 
+ * Inserts a section into the file starting at 'offset' and extending for 'size' bytes. The file size is increased by
+ * 'size'. Controlled failure occurs if:
+ * - 'size' is zero.
+ * - 'offset' is outside the file, excluding EOF.
+ * - The resultant file size would exceed MAX_FILE_SIZE.
+ * 
+ * The file must currently be open and unmapped.
+ * The file access mode must be O_RDWR.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_RD_ACCESS(2, 3)
+static enum CzResult insert_section_posix(
+	struct FileInfoPosix* restrict info, const void* restrict buffer, size_t size, size_t offset)
+{
+	CZ_ASSUME(info->fildes >= 0);
+	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
+	CZ_ASSUME(info->map == NULL);
+
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (offset > info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if CZ_NOEXPECT (size > MAX_FILE_SIZE - info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if (offset == info->fileSize)
+		return append_section_posix(info, buffer, size);
+
+	size_t oldSize = info->fileSize;
+	size_t newSize = oldSize + size;
+	enum CzResult ret = truncate_all_posix(info, newSize);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	size_t mapSize = newSize - offset;
+	ret = map_section_posix(info, mapSize, offset, PROT_READ | PROT_WRITE);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	void* mvDst = (char*) info->map + (size + offset - info->mapOffset);
+	const void* mvSrc = (char*) info->map + (offset - info->mapOffset);
+	size_t mvSize = oldSize - offset;
+
+	memmove(mvDst, mvSrc, mvSize);
+
+	void* cpDst = (char*) info->map + (offset - info->mapOffset);
+	const void* cpSrc = buffer;
+	size_t cpSize = size;
+
+	memcpy(cpDst, cpSrc, cpSize);
+
+	return unmap_section_posix(info);
+}
+#endif
+
+#define HAVE_remove_section_posix ( \
+	HAVE_truncate_all_posix &&      \
+	HAVE_map_section_posix &&       \
+	HAVE_unmap_section_posix &&     \
+	HAVE_FileInfoPosix )
+
+#if HAVE_remove_section_posix
+/* 
+ * Removes a section from the file starting at 'offset' and extending either for 'size' bytes or until EOF is reached,
+ * whichever happens first. The file size is decreased by the size of the removed section. Controlled failure occurs if:
+ * - The file is empty.
+ * - 'size' is zero.
+ * - 'offset' is outside the file, including EOF.
+ * 
+ * The file must currently be open and unmapped.
+ * The file access mode must be O_RDWR.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult remove_section_posix(struct FileInfoPosix* restrict info, size_t size, size_t offset)
+{
+	CZ_ASSUME(info->fildes >= 0);
+	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
+	CZ_ASSUME(info->map == NULL);
+
+	if CZ_NOEXPECT (!info->fileSize)
+		return CZ_RESULT_NO_FILE;
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (offset >= info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if (!offset && size >= info->fileSize)
+		return truncate_all_posix(info, 0);
+	if (size > info->fileSize - offset)
+		size = info->fileSize - offset;
+
+	size_t mapSize = info->fileSize - offset;
+	enum CzResult ret = map_section_posix(info, mapSize, offset, PROT_READ | PROT_WRITE);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	void* mvDst = (char*) info->map + (offset - info->mapOffset);
+	const void* mvSrc = (char*) info->map + (size + offset - info->mapOffset);
+	size_t mvSize = info->fileSize - (size + offset);
+
+	memmove(mvDst, mvSrc, mvSize);
+
+	ret = unmap_section_posix(info);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	size_t newSize = info->fileSize - size;
+	return truncate_all_posix(info, newSize);
+}
+#endif
 
 /**********************************************************************************************************************
  * Standard C implementation                                                                                          *
@@ -491,6 +1118,22 @@ out_free_content:
  * API function definitions                                                                                           *
  **********************************************************************************************************************/
 
+#define HAVE_czFileSize_posix ( CZ_WRAP_STAT )
+
+#if HAVE_czFileSize_posix
+CZ_COPY_ATTR(czFileSize)
+static enum CzResult czFileSize_posix(const char* restrict path, size_t* restrict size)
+{
+	struct stat st;
+	enum CzResult ret = czWrap_stat(path, &st);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	*size = (size_t) st.st_size;
+	return CZ_RESULT_SUCCESS;
+}
+#endif
+
 CZ_COPY_ATTR(czFileSize)
 static enum CzResult czFileSize_stdc(const char* restrict path, size_t* restrict size)
 {
@@ -524,10 +1167,42 @@ enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struc
 			resolvedPath = allocPath;
 	}
 
+#if HAVE_czFileSize_posix
+	ret = czFileSize_posix(resolvedPath, size);
+#else
 	ret = czFileSize_stdc(resolvedPath, size);
+#endif
 	czFree(allocPath);
 	return ret;
 }
+
+#define HAVE_czReadFile_posix ( \
+	HAVE_open_file_posix &&     \
+	HAVE_close_file_posix &&    \
+	HAVE_read_section_posix &&  \
+	HAVE_FileInfoPosix )
+
+#if HAVE_czReadFile_posix
+CZ_COPY_ATTR(czReadFile)
+static enum CzResult czReadFile_posix(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
+{
+	struct FileInfoPosix info = {0};
+	info.fildes = -1;
+	info.flags = O_NOCTTY | O_RDONLY;
+	info.path = path;
+
+	enum CzResult ret = open_file_posix(&info);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = read_section_posix(&info, buffer, size, offset);
+	if CZ_NOEXPECT (ret) {
+		close_file_posix(&info);
+		return ret;
+	}
+	return close_file_posix(&info);
+}
+#endif
 
 CZ_COPY_ATTR(czReadFile)
 static enum CzResult czReadFile_stdc(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
@@ -563,12 +1238,60 @@ enum CzResult czReadFile(
 			resolvedPath = allocPath;
 	}
 
+#if HAVE_czReadFile_posix
+	ret = czReadFile_posix(resolvedPath, buffer, size, offset);
+#else
 	ret = czReadFile_stdc(resolvedPath, buffer, size, offset);
+#endif
 	czFree(allocPath);
 	return ret;
 }
 
-CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1) CZ_RD_ACCESS(2, 3)
+#define HAVE_czWriteFile_posix ( \
+	HAVE_open_file_posix &&      \
+	HAVE_close_file_posix &&     \
+	HAVE_append_section_posix && \
+	HAVE_write_section_posix &&  \
+	HAVE_insert_section_posix && \
+	HAVE_FileInfoPosix )
+
+#if HAVE_czWriteFile_posix
+CZ_COPY_ATTR(czWriteFile)
+static enum CzResult czWriteFile_posix(
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	int openFlags = O_NOCTTY;
+	openFlags |= (flags.truncateFile || offset == CZ_EOF) ? O_WRONLY : O_RDWR;
+	if (flags.truncateFile || !offset || offset == CZ_EOF)
+		openFlags |= O_CREAT;
+	if (flags.truncateFile)
+		openFlags |= O_TRUNC;
+
+	struct FileInfoPosix info = {0};
+	info.fildes = -1;
+	info.flags = openFlags;
+	info.path = path;
+
+	enum CzResult ret = open_file_posix(&info);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (flags.truncateFile || offset == CZ_EOF)
+		ret = append_section_posix(&info, buffer, size);
+	else if (flags.overwriteFile)
+		ret = write_section_posix(&info, buffer, size, offset);
+	else
+		ret = insert_section_posix(&info, buffer, size, offset);
+
+	if CZ_NOEXPECT (ret) {
+		close_file_posix(&info);
+		return ret;
+	}
+	return close_file_posix(&info);
+}
+#endif
+
+CZ_COPY_ATTR(czWriteFile)
 static enum CzResult czWriteFile_stdc(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
 {
@@ -609,12 +1332,51 @@ enum CzResult czWriteFile(
 			resolvedPath = allocPath;
 	}
 
+#if HAVE_czWriteFile_posix
+	ret = czWriteFile_posix(resolvedPath, buffer, size, offset, flags);
+#else
 	ret = czWriteFile_stdc(resolvedPath, buffer, size, offset, flags);
+#endif
 	czFree(allocPath);
 	return ret;
 }
 
-CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1)
+#define HAVE_czTrimFile_posix (  \
+	HAVE_open_file_posix &&      \
+	HAVE_close_file_posix &&     \
+	HAVE_zero_section_posix &&   \
+	HAVE_remove_section_posix && \
+	HAVE_FileInfoPosix )
+
+#if HAVE_czTrimFile_posix
+CZ_COPY_ATTR(czTrimFile)
+static enum CzResult czTrimFile_posix(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	struct FileInfoPosix info = {0};
+	info.fildes = -1;
+	info.flags = O_NOCTTY | O_RDWR;
+	info.path = path;
+
+	enum CzResult ret = open_file_posix(&info);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (offset == CZ_EOF)
+		offset = (info.fileSize > size) ? info.fileSize - size : 0;
+	if (flags.overwriteFile)
+		ret = zero_section_posix(&info, size, offset);
+	else
+		ret = remove_section_posix(&info, size, offset);
+
+	if CZ_NOEXPECT (ret) {
+		close_file_posix(&info);
+		return ret;
+	}
+	return close_file_posix(&info);
+}
+#endif
+
+CZ_COPY_ATTR(czTrimFile)
 static enum CzResult czTrimFile_stdc(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
 {
 	struct FileInfoStdc info = {0};
@@ -653,7 +1415,11 @@ enum CzResult czTrimFile(const char* restrict path, size_t size, size_t offset, 
 			resolvedPath = allocPath;
 	}
 
+#if HAVE_czTrimFile_posix
+	ret = czTrimFile_posix(resolvedPath, size, offset, flags);
+#else
 	ret = czTrimFile_stdc(resolvedPath, size, offset, flags);
+#endif
 	czFree(allocPath);
 	return ret;
 }
@@ -915,203 +1681,6 @@ err_close_map:
 }
 #endif
 
-#if CZ_WRAP_PREAD
-static enum CzResult read_section_posix(int fd, void* restrict buffer, size_t size, size_t offset)
-{
-	for (size_t i = 0; i < size; i += MAX_ACCESS_SIZE) {
-		void* readBuffer = (char*) buffer + i;
-		size_t readSize = (size - i) & MAX_ACCESS_SIZE;
-		off_t readOffset = (off_t) (offset + i);
-
-		enum CzResult ret = czWrap_pread(NULL, fd, readBuffer, readSize, readOffset);
-		if CZ_NOEXPECT (ret)
-			return ret;
-	}
-	return CZ_RESULT_SUCCESS;
-}
-#endif
-
-#if CZ_WRAP_WRITE
-static enum CzResult write_next_posix(int fd, const void* restrict buffer, size_t size)
-{
-	for (size_t i = 0; i < size; i += MAX_ACCESS_SIZE) {
-		const void* writeBuffer = (const char*) buffer + i;
-		size_t writeSize = (size - i) & MAX_ACCESS_SIZE;
-		enum CzResult ret = czWrap_write(NULL, fd, writeBuffer, writeSize);
-		if CZ_NOEXPECT (ret)
-			return ret;
-	}
-	return CZ_RESULT_SUCCESS;
-}
-#endif
-
-#if CZ_WRAP_PWRITE
-static enum CzResult write_section_posix(int fd, const void* restrict buffer, size_t size, size_t offset)
-{
-	for (size_t i = 0; i < size; i += MAX_ACCESS_SIZE) {
-		const void* writeBuffer = (const char*) buffer + i;
-		size_t writeSize = (size - i) & MAX_ACCESS_SIZE;
-		off_t writeOffset = (off_t) (offset + i);
-
-		enum CzResult ret = czWrap_pwrite(NULL, fd, writeBuffer, writeSize, writeOffset);
-		if CZ_NOEXPECT (ret)
-			return ret;
-	}
-	return CZ_RESULT_SUCCESS;
-}
-#endif
-
-#if CZ_WRAP_SYSCONF && CZ_WRAP_MMAP && CZ_WRAP_MUNMAP && CZ_WRAP_MSYNC
-static enum CzResult zero_section_posix(int fd, size_t size, size_t offset)
-{
-	long confVal;
-	int confName = _SC_PAGESIZE;
-	enum CzResult ret = czWrap_sysconf(&confVal, confName);
-	if CZ_NOEXPECT (ret)
-		return ret;
-	size_t pageSize = (size_t) confVal;
-
-	void* restrict memory;
-	void* mapAddr = NULL;
-	size_t mapSize = size + (offset & (pageSize - 1));
-	int prot = PROT_WRITE;
-	int mapFlags = MAP_SHARED;
-	off_t mapOffset = (off_t) (offset & ~(pageSize - 1));
-
-	ret = czWrap_mmap(&memory, mapAddr, mapSize, prot, mapFlags, fd, mapOffset);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	void* zero = (char*) memory + (offset & (pageSize - 1));
-	zero_memory(zero, size);
-
-	int syncFlags = MS_ASYNC;
-	ret = czWrap_msync(memory, mapSize, syncFlags);
-	if CZ_NOEXPECT (ret) {
-		czWrap_munmap(memory, mapSize);
-		return ret;
-	}
-	return czWrap_munmap(memory, mapSize);
-}
-#endif
-
-#if CZ_WRAP_SYSCONF && CZ_WRAP_FSTAT && CZ_WRAP_FTRUNCATE && CZ_WRAP_MMAP && CZ_WRAP_MUNMAP && CZ_WRAP_MSYNC
-static enum CzResult insert_section_posix(int fd, const void* restrict buffer, size_t size, size_t offset)
-{
-	long confVal;
-	int confName = _SC_PAGESIZE;
-	enum CzResult ret = czWrap_sysconf(&confVal, confName);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	struct stat st;
-	ret = czWrap_fstat(fd, &st);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	size_t pageSize = (size_t) confVal;
-	size_t fileSize = (size_t) st.st_size;
-	if CZ_NOEXPECT (offset > fileSize)
-		return CZ_RESULT_BAD_OFFSET;
-	if (offset == fileSize)
-		return write_section_posix(fd, buffer, size, offset);
-
-	off_t newSize = (off_t) (size + fileSize);
-	ret = czWrap_ftruncate(fd, newSize);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	void* restrict memory;
-	void* mapAddr = NULL;
-	size_t mapSize = (size_t) newSize - (offset & ~(pageSize - 1));
-	int prot = PROT_READ | PROT_WRITE;
-	int mapFlags = MAP_SHARED;
-	off_t mapOffset = (off_t) (offset & ~(pageSize - 1));
-
-	ret = czWrap_mmap(&memory, mapAddr, mapSize, prot, mapFlags, fd, mapOffset);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	void* mvDst = (char*) memory + (offset & (pageSize - 1)) + size;
-	const void* mvSrc = (char*) memory + (offset & (pageSize - 1));
-	size_t mvSize = fileSize - offset;
-
-	void* cpDst = (char*) memory + (offset & (pageSize - 1));
-	const void* cpSrc = buffer;
-	size_t cpSize = size;
-
-	memmove(mvDst, mvSrc, mvSize);
-	memcpy(cpDst, cpSrc, cpSize);
-
-	int syncFlags = MS_ASYNC;
-	ret = czWrap_msync(memory, mapSize, syncFlags);
-	if CZ_NOEXPECT (ret) {
-		czWrap_munmap(memory, mapSize);
-		return ret;
-	}
-	return czWrap_munmap(memory, mapSize);
-}
-#endif
-
-#if CZ_WRAP_SYSCONF && CZ_WRAP_FSTAT && CZ_WRAP_FTRUNCATE && CZ_WRAP_MMAP && CZ_WRAP_MUNMAP && CZ_WRAP_MSYNC
-static enum CzResult cut_section_posix(int fd, size_t size, size_t offset)
-{
-	long confVal;
-	int confName = _SC_PAGESIZE;
-	enum CzResult ret = czWrap_sysconf(&confVal, confName);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	struct stat st;
-	ret = czWrap_fstat(fd, &st);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	size_t pageSize = (size_t) confVal;
-	size_t fileSize = (size_t) st.st_size;
-	if CZ_NOEXPECT (!fileSize)
-		return CZ_RESULT_NO_FILE;
-	if CZ_NOEXPECT (offset >= fileSize)
-		return CZ_RESULT_BAD_OFFSET;
-	if (size >= fileSize - offset) {
-		off_t newsize = (off_t) offset;
-		return czWrap_ftruncate(fd, newsize);
-	}
-
-	void* restrict memory;
-	void* mapAddr = NULL;
-	size_t mapSize = fileSize - (offset & ~(pageSize - 1));
-	int prot = PROT_READ | PROT_WRITE;
-	int mapFlags = MAP_SHARED;
-	off_t mapOffset = (off_t) (offset & ~(pageSize - 1));
-
-	ret = czWrap_mmap(&memory, mapAddr, mapSize, prot, mapFlags, fd, mapOffset);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	void* mvDst = (char*) memory + (offset & (pageSize - 1));
-	const void* mvSrc = (char*) memory + (offset & (pageSize - 1)) + size;
-	size_t mvSize = fileSize - (size + offset);
-
-	memmove(mvDst, mvSrc, mvSize);
-
-	size_t syncSize = fileSize - (size + (offset & ~(pageSize - 1)));
-	int syncFlags = MS_ASYNC;
-	ret = czWrap_msync(memory, syncSize, syncFlags);
-	if CZ_NOEXPECT (ret) {
-		czWrap_munmap(memory, mapSize);
-		return ret;
-	}
-
-	ret = czWrap_munmap(memory, mapSize);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	off_t newSize = (off_t) (fileSize - size);
-	return czWrap_ftruncate(fd, newSize);
-}
-#endif
-
 #if CZ_WIN32
 static enum CzResult czStreamIsTerminal_win32(FILE* restrict stream, bool* restrict istty)
 {
@@ -1199,19 +1768,6 @@ err_free_widepath:
 }
 #endif
 
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001
-static enum CzResult czFileSize_posix(const char* restrict path, size_t* restrict size)
-{
-	struct stat st;
-	enum CzResult ret = czWrap_stat(path, &st);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	*size = (size_t) st.st_size;
-	return CZ_RESULT_SUCCESS;
-}
-#endif
-
 #if CZ_WIN32
 static enum CzResult czReadFile_win32(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
 {
@@ -1244,26 +1800,6 @@ err_close_file:
 err_free_widepath:
 	czFree(widePath);
 	return ret;
-}
-#endif
-
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001
-static enum CzResult czReadFile_posix(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
-{
-	int fd;
-	int flags = O_RDONLY | O_NOCTTY;
-	mode_t mode = 0;
-
-	enum CzResult ret = czWrap_open(&fd, path, flags, mode);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	ret = read_section_posix(fd, buffer, size, offset);
-	if CZ_NOEXPECT (ret) {
-		czWrap_close(fd);
-		return ret;
-	}
-	return czWrap_close(fd);
 }
 #endif
 
@@ -1367,102 +1903,6 @@ static enum CzResult insert_file_win32(
 }
 #endif
 
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001
-static enum CzResult truncate_write_file_posix(const char* restrict path, const void* restrict buffer, size_t size)
-{
-	int fd;
-	int flags = O_WRONLY | O_CREAT | O_TRUNC | O_NOCTTY;
-	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
-
-	enum CzResult ret = czWrap_open(&fd, path, flags, mode);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	ret = write_next_posix(fd, buffer, size);
-	if CZ_NOEXPECT (ret) {
-		czWrap_close(fd);
-		return ret;
-	}
-	return czWrap_close(fd);
-}
-#endif
-
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001
-static enum CzResult append_file_posix(const char* restrict path, const void* restrict buffer, size_t size)
-{
-	int fd;
-	int flags = O_WRONLY | O_APPEND | O_CREAT | O_NOCTTY;
-	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
-
-	enum CzResult ret = czWrap_open(&fd, path, flags, mode);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	ret = write_next_posix(fd, buffer, size);
-	if CZ_NOEXPECT (ret) {
-		czWrap_close(fd);
-		return ret;
-	}
-	return czWrap_close(fd);
-}
-#endif
-
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001
-static enum CzResult overwrite_file_posix(
-	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
-{
-	int fd;
-	int flags = O_WRONLY | O_NOCTTY | (offset ? 0 : O_CREAT);
-	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
-
-	enum CzResult ret = czWrap_open(&fd, path, flags, mode);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	struct stat st;
-	ret = czWrap_fstat(fd, &st);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	size_t fileSize = (size_t) st.st_size;
-	if CZ_NOEXPECT (offset > fileSize) {
-		ret = CZ_RESULT_BAD_OFFSET;
-		goto err_close_file;
-	}
-
-	ret = write_section_posix(fd, buffer, size, offset);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	return czWrap_close(fd);
-
-err_close_file:
-	czWrap_close(fd);
-	return ret;
-}
-#endif
-
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001
-static enum CzResult insert_file_posix(
-	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
-{
-	int fd;
-	int flags = O_RDWR | O_NOCTTY | (offset ? 0 : O_CREAT);
-	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
-
-	enum CzResult ret = czWrap_open(&fd, path, flags, mode);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	ret = insert_section_posix(fd, buffer, size, offset);
-	if CZ_NOEXPECT (ret) {
-		czWrap_close(fd);
-		return ret;
-	}
-	return czWrap_close(fd);
-}
-#endif
-
 #if CZ_WIN32
 static enum CzResult czWriteFile_win32(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
@@ -1483,20 +1923,6 @@ static enum CzResult czWriteFile_win32(
 
 	czFree(widePath);
 	return ret;
-}
-#endif
-
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001
-static enum CzResult czWriteFile_posix(
-	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
-{
-	if (flags.truncateFile)
-		return truncate_write_file_posix(path, buffer, size);
-	if (offset == CZ_EOF)
-		return append_file_posix(path, buffer, size);
-	if (flags.overwriteFile)
-		return overwrite_file_posix(path, buffer, size, offset);
-	return insert_file_posix(path, buffer, size, offset);
 }
 #endif
 
@@ -1646,140 +2072,6 @@ static enum CzResult cut_file_win32(const wchar_t* restrict path, size_t size, s
 }
 #endif
 
-#if CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001
-static enum CzResult zero_file_end_posix(const char* restrict path, size_t size)
-{
-	int fd;
-	int flags = O_WRONLY | O_NOCTTY;
-	mode_t mode = 0;
-
-	enum CzResult ret = czWrap_open(&fd, path, flags, mode);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	struct stat st;
-	ret = czWrap_fstat(fd, &st);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	size_t fileSize = (size_t) st.st_size;
-	if CZ_NOEXPECT (!fileSize) {
-		ret = CZ_RESULT_NO_FILE;
-		goto err_close_file;
-	}
-
-	size_t zeroedSize = minz(size, fileSize);
-	size_t offset = fileSize - zeroedSize;
-	ret = zero_section_posix(fd, zeroedSize, offset);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	return czWrap_close(fd);
-
-err_close_file:
-	czWrap_close(fd);
-	return ret;
-}
-#endif
-
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001
-static enum CzResult cut_file_end_posix(const char* restrict path, size_t size)
-{
-	int fd;
-	int flags = O_WRONLY | O_NOCTTY;
-	mode_t mode = 0;
-
-	enum CzResult ret = czWrap_open(&fd, path, flags, mode);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	struct stat st;
-	ret = czWrap_fstat(fd, &st);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	size_t fileSize = (size_t) st.st_size;
-	if CZ_NOEXPECT (!fileSize) {
-		ret = CZ_RESULT_NO_FILE;
-		goto err_close_file;
-	}
-
-	off_t newSize = (off_t) (maxz(size, fileSize) - size);
-	ret = czWrap_ftruncate(fd, newSize);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	return czWrap_close(fd);
-
-err_close_file:
-	czWrap_close(fd);
-	return ret;
-}
-#endif
-
-#if CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001
-static enum CzResult zero_file_posix(const char* restrict path, size_t size, size_t offset)
-{
-	int fd;
-#if CZ_DARWIN
-	int flags = O_WRONLY | O_NOCTTY;
-#else
-	int flags = O_RDWR | O_NOCTTY;
-#endif
-	mode_t mode = 0;
-
-	enum CzResult ret = czWrap_open(&fd, path, flags, mode);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	struct stat st;
-	ret = czWrap_fstat(fd, &st);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	size_t fileSize = (size_t) st.st_size;
-	if CZ_NOEXPECT (!fileSize) {
-		ret = CZ_RESULT_NO_FILE;
-		goto err_close_file;
-	}
-	if CZ_NOEXPECT (offset >= fileSize) {
-		ret = CZ_RESULT_BAD_OFFSET;
-		goto err_close_file;
-	}
-
-	size_t zeroedSize = minz(size, fileSize - offset);
-	ret = zero_section_posix(fd, zeroedSize, offset);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	return czWrap_close(fd);
-
-err_close_file:
-	czWrap_close(fd);
-	return ret;
-}
-#endif
-
-#if CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001
-static enum CzResult cut_file_posix(const char* restrict path, size_t size, size_t offset)
-{
-	int fd;
-	int flags = O_RDWR | O_NOCTTY;
-	mode_t mode = 0;
-
-	enum CzResult ret = czWrap_open(&fd, path, flags, mode);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	ret = cut_section_posix(fd, size, offset);
-	if CZ_NOEXPECT (ret) {
-		czWrap_close(fd);
-		return ret;
-	}
-	return czWrap_close(fd);
-}
-#endif
-
 #if CZ_WIN32
 static enum CzResult czTrimFile_win32(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
 {
@@ -1799,18 +2091,5 @@ static enum CzResult czTrimFile_win32(const char* restrict path, size_t size, si
 
 	czFree(widePath);
 	return ret;
-}
-#endif
-
-#if CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001
-static enum CzResult czTrimFile_posix(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
-{
-	if (offset == CZ_EOF && flags.overwriteFile)
-		return zero_file_end_posix(path, size);
-	if (offset == CZ_EOF)
-		return cut_file_end_posix(path, size);
-	if (flags.overwriteFile)
-		return zero_file_posix(path, size, offset);
-	return cut_file_posix(path, size, offset);
 }
 #endif
