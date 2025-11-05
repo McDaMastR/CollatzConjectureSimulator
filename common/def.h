@@ -1296,6 +1296,14 @@
 #endif
 #endif
 
+#if !defined(CZ_COPY_ATTR)
+#if CZ_HAS_ATTRIBUTE(copy)
+#define CZ_COPY_ATTR(func) __attribute__ (( copy (func) ))
+#else
+#define CZ_COPY_ATTR(func)
+#endif
+#endif
+
 #if !defined(CZ_HOT)
 #if CZ_HAS_ATTRIBUTE(hot)
 #define CZ_HOT __attribute__ (( hot ))
