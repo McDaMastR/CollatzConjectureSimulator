@@ -142,11 +142,19 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  * symbolic link, the link is followed recursively. If @p path locates any other non-regular file resource, such as a
  * directory, pipe, or socket, the behaviour is platform dependent.
  * 
- * Let @e fileSize denote the size of the file located at @p path as measured in bytes, and let @e minSize denote the
- * minimum of @p size and (@e fileSize - @p offset). The file contents read include exactly @e minSize contiguous bytes
- * starting from the byte at the zero-based index @p offset. That is, all bytes whose indices lie within the interval
- * [@p offset, @e minSize + @p offset). If @p size is zero or @p offset is not less than @e fileSize, failure occurs. On
- * failure, the contents of @p buffer are undefined.
+ * Let @e fileSize denote the size of the file located at @p path as measured in bytes, let @e minSize denote the
+ * minimum of @p size and (@e fileSize - @p offset), and let @e maxSize denote the maximum of (@e fileSize - @p size)
+ * and zero. The file contents read are a contiguous block of memory whose size and offset within the file are
+ * dependent on @p size and @p offset.
+ * - If @p offset is @c CZ_EOF, the read block includes exactly (@e fileSize - @e maxSize) bytes starting from the byte
+ *   at the zero-based index @e maxSize. That is, all bytes whose indices lie within the interval
+ *   [@e maxSize, @e fileSize).
+ * - If @p offset is not @c CZ_EOF, the read block includes exactly @e minSize bytes starting from the byte at the
+ *   zero-based index @p offset. That is, all bytes whose indices lie within the interval
+ *   [@p offset, @e minSize + @p offset).
+ * 
+ * If @p size is zero or @p offset is not @c CZ_EOF and not less than @e fileSize, failure occurs. On failure, the
+ * contents of @p buffer are undefined.
  * 
  * The members of @p flags can optionally specify the following behaviour.
  * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
@@ -172,7 +180,7 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  * @retval CZ_RESULT_BAD_ACCESS Permission to read from the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path or @p buffer was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
- * @retval CZ_RESULT_BAD_OFFSET @p offset was nonzero and greater than or equal to @e fileSize.
+ * @retval CZ_RESULT_BAD_OFFSET @p offset was nonzero, not @c CZ_EOF, and greater than or equal to @e fileSize.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.

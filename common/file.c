@@ -1897,6 +1897,9 @@ static enum CzResult czReadFile_win32(PCSTR path, PVOID buffer, SIZE_T size, SIZ
 	if CZ_NOEXPECT (ret)
 		return ret;
 
+	if (offset == CZ_EOF)
+		offset = (info.fileSize > size) ? info.fileSize - size : 0;
+
 	ret = read_section_win32(&info, buffer, size, offset);
 	if CZ_NOEXPECT (ret) {
 		close_file_win32(&info);
@@ -1925,6 +1928,9 @@ static enum CzResult czReadFile_posix(const char* restrict path, void* restrict 
 	if CZ_NOEXPECT (ret)
 		return ret;
 
+	if (offset == CZ_EOF)
+		offset = (info.fileSize > size) ? info.fileSize - size : 0;
+
 	ret = read_section_posix(&info, buffer, size, offset);
 	if CZ_NOEXPECT (ret) {
 		close_file_posix(&info);
@@ -1944,6 +1950,9 @@ static enum CzResult czReadFile_stdc(const char* restrict path, void* restrict b
 	enum CzResult ret = open_file_stdc(&info);
 	if CZ_NOEXPECT (ret)
 		return ret;
+
+	if (offset == CZ_EOF)
+		offset = (info.fileSize > size) ? info.fileSize - size : 0;
 
 	ret = read_section_stdc(&info, buffer, size, offset);
 	if CZ_NOEXPECT (ret) {
