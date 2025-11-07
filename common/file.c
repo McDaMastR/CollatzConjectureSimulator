@@ -48,11 +48,15 @@
 
 /* 
  * The maximum size of a file we can handle.
+ * - Windows expresses file sizes with LARGE_INTEGER which represents signed 64-bit integers, so any file size greater
+ *   than INT64_MAX cannot be handled.
  * - POSIX expresses file sizes with off_t, so any file size greater than the maximum value of off_t cannot be handled.
  * - Standard C fseek/ftell use long integers, and since we use fseek/ftell to find file sizes, any file size greater
  *   than LONG_MAX cannot be handled.
  */
-#if CZ_DARWIN && CZ_DARWIN_C_SOURCE
+#if CZ_WIN32
+#define MAX_FILE_SIZE ( (size_t) (INT64_MAX) )
+#elif CZ_DARWIN && CZ_DARWIN_C_SOURCE
 #define MAX_FILE_SIZE ( (size_t) (OFF_MAX) )
 #elif CZ_POSIX_VERSION >= CZ_POSIX_1988
 #define MAX_FILE_SIZE ( (size_t) ((1ULL << (sizeof(off_t) * CHAR_BIT - 1)) - 1) )
@@ -104,6 +108,710 @@ static enum CzResult alloc_resolve_path(char* restrict* restrict resolvedPath, c
 	*resolvedPath = absPath;
 	return CZ_RESULT_SUCCESS;
 }
+
+/**********************************************************************************************************************
+ * Windows implementation                                                                                             *
+ **********************************************************************************************************************/
+
+#define HAVE_FileInfoWin32 CZ_WIN32
+
+#if HAVE_FileInfoWin32
+/* 
+ * File info passed around the Windows implementation.
+ * - 'file' is the one and only accessible open handle to the file.
+ *   - Nonnull if open; NULL if closed.
+ * - 'path' is the filepath with which 'fildes' was opened.
+ *   - Nonnull, NUL-terminated, nonempty, and wide (UTF-16) if open; undefined if closed.
+ * - 'access' is the access mode of the file.
+ *   - Nonzero if open; undefined if closed.
+ *   - Must include at least one of GENERIC_READ or GENERIC_WRITE.
+ * - 'disposition' is the creation disposition of the file.
+ *   - Nonzero if open; undefined if closed.
+ *   - One of CREATE_NEW, CREATE_ALWAYS, OPEN_EXISTING, OPEN_ALWAYS, or TRUNCATE_EXISTING.
+ *     - CREATE_NEW (fail if exists, create if not exists),
+ *     - CREATE_ALWAYS (truncate if exists, create if not exists),
+ *     - OPEN_EXISTING (open if exists, fail if not exists),
+ *     - OPEN_ALWAYS (open if exists, create if not exists), or
+ *     - TRUNCATE_EXISTING (truncate if exists, fail if not exists).
+ * - 'flags' are the flags and attributes of the file.
+ *   - Undefined if closed.
+ * - 'fileSize' is the current size of the file in bytes.
+ *   - At most MAX_FILE_SIZE (maximum value of LARGE_INTEGER) if open; undefined if closed.
+ *   - Updated before appropriate (potentially fileSize-modifying) functions return.
+ * - 'map' is the file mapping object to the file, if any.
+ *   - Nonnull if mapped; NULL if open and unmapped; undefined if closed.
+ * - 'mapProt' is the page protection with which the mapping was created.
+ *   - Nonzero if mapped; undefined if unmapped.
+ *   - Must include exactly one of PAGE_READONLY or PAGE_READWRITE.
+ *   - May include PAGE_READONLY if 'flags' includes GENERIC_READ.
+ *   - May include PAGE_READWRITE if 'flags' includes GENERIC_READ and GENERIC_WRITE.
+ * - 'mapSize' is the size of the mapping in bytes.
+ *   - Nonzero and at most 'fileSize' if mapped; undefined if unmapped.
+ * - 'view' is the view into the file mapping.
+ *   - Nonnull if viewed; NULL if mapped and unviewed; undefined if unmapped.
+ * - 'viewAccess' is the access mode of the view.
+ *   - Nonzero if viewed; undefined if unviewed.
+ *   - Must include at least one of FILE_MAP_READ or FILE_MAP_WRITE.
+ *   - May include FILE_MAP_READ if 'mapProt' includes PAGE_READONLY or PAGE_READWRITE.
+ *   - May include FILE_MAP_WRITE if 'mapProt' includes PAGE_READWRITE.
+ * - 'viewSize' is the size of the view in bytes.
+ *   -  Nonzero and at most 'mapSize' if viewed; undefined if unviewed.
+ * - 'viewOffset' is the offset into the mapping at which the view begins.
+ *   - Multiple of the allocation granularity and less than 'mapSize' if viewed; undefined if unviewed.
+ * - 'pageSize' is the page size of the platform.
+ *   - Nonzero power-of-two if open; undefined if closed.
+ * - 'allocationGranularity' is the virtual allocation granularity of the platform.
+ *   - Nonzero power-of-two if open; undefined if closed.
+ */
+struct FileInfoWin32
+{
+	HANDLE file;
+	PWSTR path;
+	DWORD access;
+	DWORD disposition;
+	DWORD flags;
+	SIZE_T fileSize;
+
+	HANDLE map;
+	DWORD mapProt;
+	SIZE_T mapSize;
+
+	PVOID view;
+	DWORD viewAccess;
+	SIZE_T viewSize;
+	SIZE_T viewOffset;
+
+	DWORD pageSize;
+	DWORD allocationGranularity;
+};
+#endif
+
+#define HAVE_widen_path_win32 ( CZ_WRAP_MULTI_BYTE_TO_WIDE_CHAR )
+
+#if HAVE_widen_path_win32
+/* 
+ * Translates 'path' from UTF-8 to UTF-16, and sets 'widePath' to point to newly allocated memory containing this
+ * translated path. This memory should eventually be freed with czFree().
+ */
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(2) CZ_WR_ACCESS(1) CZ_RD_ACCESS(2)
+static enum CzResult widen_path_win32(PWSTR* restrict widePath, PCSTR path)
+{
+	UINT codePage = CP_UTF8;
+	DWORD flags = MB_ERR_INVALID_CHARS;
+	INT pathSize = -1; // path is NUL-terminated
+
+	INT wcSize;
+	enum CzResult ret = czWrap_MultiByteToWideChar(&wcSize, codePage, flags, path, pathSize, NULL, 0);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	PWSTR wcStr;
+	SIZE_T allocSize = (SIZE_T) wcSize * sizeof(WCHAR);
+	struct CzAllocFlags allocFlags = {0};
+
+	ret = czAlloc((PVOID*) &wcStr, allocSize, allocFlags);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = czWrap_MultiByteToWideChar(NULL, codePage, flags, path, pathSize, wcStr, wcSize);
+	if CZ_NOEXPECT (ret) {
+		czFree(wcStr);
+		return ret;
+	}
+
+	*widePath = wcStr;
+	return CZ_RESULT_SUCCESS;
+}
+#endif
+
+#define HAVE_open_file_win32 (  \
+	CZ_WRAP_CREATE_FILE_W &&    \
+	CZ_WRAP_CLOSE_HANDLE &&     \
+	CZ_WRAP_GET_FILE_SIZE_EX && \
+	HAVE_widen_path_win32 &&    \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_open_file_win32
+/* 
+ * Opens a file and initialises a corresponding FileInfoWin32 instance. The file should not already be open. The
+ * 'access', 'disposition', and 'flags' members of 'info' should already be set correctly. The 'path' argument need not
+ * remain valid after this function returns.
+ */
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RD_ACCESS(2)
+static enum CzResult open_file_win32(struct FileInfoWin32* restrict info, PCSTR path)
+{
+	CZ_ASSUME(info->file == NULL);
+
+	PWSTR widePath;
+	enum CzResult ret = widen_path_win32(&widePath, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	HANDLE file;
+	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+	PSECURITY_ATTRIBUTES security = NULL;
+	HANDLE template = NULL;
+
+	ret = czWrap_CreateFileW(
+		&file, widePath, info->access, shareMode, security, info->disposition, info->flags, template);
+	if CZ_NOEXPECT (ret)
+		goto err_free_path;
+
+	LARGE_INTEGER fileSize;
+	ret = czWrap_GetFileSizeEx(file, &fileSize);
+	if CZ_NOEXPECT (ret)
+		goto err_close_file;
+
+	SYSTEM_INFO sysInfo;
+	GetSystemInfo(&sysInfo);
+
+	info->file = file;
+	info->path = widePath;
+	info->fileSize = (SIZE_T) fileSize.QuadPart;
+	info->map = NULL;
+	info->view = NULL;
+	info->pageSize = sysInfo.dwPageSize;
+	info->allocationGranularity = sysInfo.dwAllocationGranularity;
+	return CZ_RESULT_SUCCESS;
+
+err_close_file:
+	CloseHandle(file);
+err_free_path:
+	czFree(widePath);
+	return ret;
+}
+#endif
+
+#define HAVE_close_file_win32 (   \
+	CZ_WRAP_CLOSE_HANDLE &&       \
+	CZ_WRAP_FLUSH_FILE_BUFFERS && \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_close_file_win32
+/* 
+ * Flushes and closes the file. The file must currently be open and unmapped, and this should be called once all IO
+ * operations on the file have executed (on the application side at least).
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult close_file_win32(struct FileInfoWin32* restrict info)
+{
+	CZ_ASSUME(info->file != NULL);
+	CZ_ASSUME(info->map == NULL);
+
+	HANDLE file = info->file;
+	info->file = NULL;
+	czFree(info->path);
+
+	BOOL canFlush = info->access & GENERIC_WRITE;
+	if (canFlush) {
+		enum CzResult ret = czWrap_FlushFileBuffers(file);
+		if CZ_NOEXPECT (ret) {
+			CloseHandle(file);
+			return ret;
+		}
+	}
+	return czWrap_CloseHandle(file);
+}
+#endif
+
+#define HAVE_truncate_all_win32 (  \
+	CZ_WRAP_SET_END_OF_FILE &&     \
+	CZ_WRAP_SET_FILE_POINTER_EX && \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_truncate_all_win32
+/* 
+ * Shrinks or extends the file size to 'size'. Controlled failure occurs if:
+ * - 'size' extends past MAX_FILE_SIZE.
+ * 
+ * The file must currently be open and unmapped.
+ * The file access mode must include GENERIC_WRITE.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult truncate_all_win32(struct FileInfoWin32* restrict info, SIZE_T size)
+{
+	CZ_ASSUME(info->file != NULL);
+	CZ_ASSUME(info->map == NULL);
+
+	if CZ_NOEXPECT (size > MAX_FILE_SIZE)
+		return CZ_RESULT_BAD_OFFSET;
+
+	LARGE_INTEGER moveDistance = {.QuadPart = (LONGLONG) size};
+	enum CzResult ret = czWrap_SetFilePointerEx(info->file, moveDistance, NULL, FILE_BEGIN);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = czWrap_SetEndOfFile(info->file);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	info->fileSize = size;
+	return CZ_RESULT_SUCCESS;
+}
+#endif
+
+#define HAVE_map_section_win32 (     \
+	CZ_WRAP_CREATE_FILE_MAPPING_W && \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_map_section_win32
+/* 
+ * Creates a file mapping to the file. The mapping begins at the start of the file and extends for 'size' bytes. If
+ * 'size' is greater than the current file size, the file size is increased to 'size'. Controlled failure occurs if:
+ * - The file is empty.
+ * - 'size' is zero.
+ * - 'size' extends past MAX_FILE_SIZE.
+ * 
+ * The file must currently be open and unmapped.
+ * If 'prot' includes PAGE_READONLY, the file access mode must include GENERIC_READ.
+ * If 'prot' includes PAGE_READWRITE, the file access mode must include GENERIC_READ and GENERIC_WRITE.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult map_section_win32(struct FileInfoWin32* restrict info, SIZE_T size, DWORD prot)
+{
+	CZ_ASSUME(info->file != NULL);
+	CZ_ASSUME(info->map == NULL);
+
+	if CZ_NOEXPECT (!info->fileSize)
+		return CZ_RESULT_NO_FILE;
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (size > MAX_FILE_SIZE)
+		return CZ_RESULT_BAD_OFFSET;
+
+	PSECURITY_ATTRIBUTES attr = NULL;
+	ULARGE_INTEGER mapSize = {.QuadPart = (ULONGLONG) size};
+	PCWSTR name = NULL;
+
+	enum CzResult ret = czWrap_CreateFileMappingW(
+		&info->map, info->file, attr, prot, mapSize.HighPart, mapSize.LowPart, name);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	info->mapProt = prot;
+	info->mapSize = size;
+	if (size > info->fileSize)
+		info->fileSize = size;
+	return CZ_RESULT_SUCCESS;
+}
+#endif
+
+#define HAVE_unmap_section_win32 ( \
+	CZ_WRAP_CLOSE_HANDLE &&        \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_unmap_section_win32
+/* 
+ * Unmaps the file mapping to the file. This should be called once all views to the mapped section have closed. The file
+ * must currently be open, mapped, and unviewed.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult unmap_section_win32(struct FileInfoWin32* restrict info)
+{
+	CZ_ASSUME(info->file != NULL);
+	CZ_ASSUME(info->map != NULL);
+	CZ_ASSUME(info->view == NULL);
+
+	HANDLE map = info->map;
+	info->map = NULL;
+	return czWrap_CloseHandle(map);
+}
+#endif
+
+#define HAVE_view_section_win32 ( \
+	CZ_WRAP_MAP_VIEW_OF_FILE &&   \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_view_section_win32
+/* 
+ * Creates a view into the file mapping of the file. The view contains at least the section starting at 'offset' and
+ * extending for 'size' bytes. The actual view begins at 'offset' rounded down to a multiple of the allocation
+ * granularity, and the difference is added to the size of the view. Controlled failure occurs if:
+ * - 'size' is zero.
+ * - 'offset' is outside the mapping.
+ * - The range to view extends past the mapping.
+ * 
+ * The file must currently be open, mapped, and unviewed.
+ * If 'access' includes FILE_MAP_READ, the mapping protection must include PAGE_READONLY or PAGE_READWRITE.
+ * If 'access' includes FILE_MAP_WRITE, the mapping protection must include PAGE_READWRITE.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult view_section_win32(struct FileInfoWin32* restrict info, SIZE_T size, SIZE_T offset, DWORD access)
+{
+	CZ_ASSUME(info->file != NULL);
+	CZ_ASSUME(info->map != NULL);
+	CZ_ASSUME(info->view == NULL);
+
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (offset >= info->mapSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if CZ_NOEXPECT (size > info->mapSize - offset)
+		return CZ_RESULT_BAD_OFFSET;
+
+	info->viewAccess = access;
+	info->viewSize = size + (offset & (info->allocationGranularity - 1));
+	info->viewOffset = size + (offset & ~(info->allocationGranularity - 1));
+
+	ULARGE_INTEGER viewOffset = {.QuadPart = (ULONGLONG) info->viewOffset};
+	return czWrap_MapViewOfFile(
+		&info->view, info->map, access, viewOffset.HighPart, viewOffset.LowPart, info->viewSize);
+}
+#endif
+
+#define HAVE_unview_section_win32 ( \
+	CZ_WRAP_FLUSH_VIEW_OF_FILE &&   \
+	CZ_WRAP_UNMAP_VIEW_OF_FILE &&   \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_unview_section_win32
+/* 
+ * Unmaps and flushes the view into the file mapping. This should be called once all IO operations pertaining to the
+ * viewed section have executed. The file must currently be open, mapped, and viewed.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+enum CzResult unview_section_win32(struct FileInfoWin32* restrict info)
+{
+	CZ_ASSUME(info->file != NULL);
+	CZ_ASSUME(info->map != NULL);
+	CZ_ASSUME(info->view != NULL);
+
+	PVOID view = info->view;
+	info->view = NULL;
+
+	enum CzResult ret = czWrap_FlushViewOfFile(view, info->viewSize);
+	if CZ_NOEXPECT (ret) {
+		UnmapViewOfFile(view);
+		return ret;
+	}
+	return czWrap_UnmapViewOfFile(view);
+}
+#endif
+
+#define HAVE_read_section_win32 ( \
+	CZ_WRAP_READ_FILE &&          \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_read_section_win32
+/* 
+ * Reads from a section of the file starting at 'offset' and extending either for 'size' bytes or until EOF is reached,
+ * whichever happens first. The file is not modified. Controlled failure occurs if:
+ * - The file is empty.
+ * - 'size' is zero.
+ * - 'offset' is outside the file, including EOF.
+ * 
+ * The file must currently be open.
+ * The file access mode must include GENERIC_READ.
+ */
+CZ_NONNULL_ARGS() CZ_RD_ACCESS(1) CZ_WR_ACCESS(2, 3)
+static enum CzResult read_section_win32(
+	const struct FileInfoWin32* restrict info, PVOID buffer, SIZE_T size, SIZE_T offset)
+{
+	CZ_ASSUME(info->file != NULL);
+
+	if CZ_NOEXPECT (!info->fileSize)
+		return CZ_RESULT_NO_FILE;
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (offset >= info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if (size > info->fileSize - offset)
+		size = info->fileSize - offset;
+
+	DWORD lastRead = 0;
+	for (SIZE_T total = 0; total < size; total += (SIZE_T) lastRead) {
+		PVOID readBuffer = (PCHAR) buffer + total;
+		DWORD readSize = (DWORD) ((size - total) % (MAX_ACCESS_SIZE + 1));
+		ULARGE_INTEGER readOffset = {.QuadPart = (ULONGLONG) (offset + total)};
+
+		OVERLAPPED overlapped = {0};
+		overlapped.Offset = readOffset.LowPart;
+		overlapped.OffsetHigh = readOffset.HighPart;
+
+		enum CzResult ret = czWrap_ReadFile(info->file, readBuffer, readSize, &lastRead, &overlapped);
+		if CZ_NOEXPECT (ret)
+			return ret;
+	}
+	return CZ_RESULT_SUCCESS;
+}
+#endif
+
+#define HAVE_write_section_win32 ( \
+	CZ_WRAP_WRITE_FILE &&          \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_write_section_win32
+/* 
+ * Writes to a section of the file starting at 'offset' and extending for 'size' bytes. If needed, the file size is
+ * increased. Controlled failure occurs if:
+ * - 'size' is zero.
+ * - 'offset' is outside the file, excluding EOF.
+ * - The range to write extends past MAX_FILE_SIZE.
+ * 
+ * The file must currently be open.
+ * The file access mode must include GENERIC_WRITE.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_RD_ACCESS(2, 3)
+static enum CzResult write_section_win32(
+	struct FileInfoWin32* restrict info, LPCVOID buffer, SIZE_T size, SIZE_T offset)
+{
+	CZ_ASSUME(info->file != NULL);
+
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (offset > info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if CZ_NOEXPECT (size > MAX_FILE_SIZE - offset)
+		return CZ_RESULT_BAD_OFFSET;
+
+	for (SIZE_T total = 0; total < size;) {
+		LPCVOID writeBuffer = (LPCSTR) buffer + total;
+		DWORD writeSize = (DWORD) ((size - total) % (MAX_ACCESS_SIZE + 1));
+		ULARGE_INTEGER writeOffset = {.QuadPart = (ULONGLONG) (offset + total)};
+
+		OVERLAPPED overlapped = {0};
+		overlapped.Offset = writeOffset.LowPart;
+		overlapped.OffsetHigh = writeOffset.HighPart;
+
+		DWORD lastWrote;
+		enum CzResult ret = czWrap_WriteFile(info->file, writeBuffer, writeSize, &lastWrote, &overlapped);
+		if CZ_NOEXPECT (ret)
+			return ret;
+
+		total += (SIZE_T) lastWrote;
+		if (total + offset > info->fileSize)
+			info->fileSize = total + offset;
+	}
+	return CZ_RESULT_SUCCESS;
+}
+#endif
+
+#define HAVE_append_section_win32 ( \
+	CZ_WRAP_WRITE_FILE &&           \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_append_section_win32
+/* 
+ * Writes to the file starting at EOF and extending for 'size' bytes. The file size is increased by 'size'. Controlled
+ * failure occurs if:
+ * - 'size' is zero.
+ * - The range to write extends past MAX_FILE_SIZE.
+ * 
+ * The file must currently be open.
+ * The file access mode must include GENERIC_WRITE.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_RD_ACCESS(2, 3)
+static enum CzResult append_section_win32(struct FileInfoWin32* restrict info, LPCVOID buffer, SIZE_T size)
+{
+	CZ_ASSUME(info->file != NULL);
+
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (size > MAX_FILE_SIZE - info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+
+	for (SIZE_T total = 0; total < size;) {
+		LPCVOID writeBuffer = (LPCSTR) buffer + total;
+		DWORD writeSize = (DWORD) ((size - total) % (MAX_ACCESS_SIZE + 1));
+		ULARGE_INTEGER writeOffset = {.QuadPart = (ULONGLONG) info->fileSize};
+
+		OVERLAPPED overlapped = {0};
+		overlapped.Offset = writeOffset.LowPart;
+		overlapped.OffsetHigh = writeOffset.HighPart;
+
+		DWORD lastWrote;
+		enum CzResult ret = czWrap_WriteFile(info->file, writeBuffer, writeSize, &lastWrote, &overlapped);
+		if CZ_NOEXPECT (ret)
+			return ret;
+
+		total += (SIZE_T) lastWrote;
+		info->fileSize += (SIZE_T) lastWrote;
+	}
+	return CZ_RESULT_SUCCESS;
+}
+#endif
+
+#define HAVE_zero_section_win32 ( \
+	CZ_WRAP_DEVICE_IO_CONTROL &&  \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_zero_section_win32
+/* 
+ * Zeros out a section of the file starting at 'offset' and extending either for 'size' bytes or until EOF is reached,
+ * whichever happens first. The file size is not modified. Controlled failure occurs if:
+ * - The file is empty.
+ * - 'size' is zero.
+ * - 'offset' is outside the file, including EOF.
+ * 
+ * The file must currently be open.
+ * The file access mode must include GENERIC_WRITE.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult zero_section_win32(struct FileInfoWin32* restrict info, SIZE_T size, SIZE_T offset)
+{
+	CZ_ASSUME(info->file != NULL);
+
+	if CZ_NOEXPECT (!info->fileSize)
+		return CZ_RESULT_NO_FILE;
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (offset >= info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if (size > info->fileSize - offset)
+		size = info->fileSize - offset;
+
+	FILE_ZERO_DATA_INFORMATION zeroInfo = {0};
+	zeroInfo.FileOffset.QuadPart = (LONGLONG) offset;
+	zeroInfo.BeyondFinalZero.QuadPart = (LONGLONG) (offset + size);
+
+	DWORD controlCode = FSCTL_SET_ZERO_DATA;
+	PVOID outBuffer = NULL;
+	DWORD outBufferSize = 0;
+	PDWORD bytesReturned = NULL;
+	OVERLAPPED overlapped = {0};
+
+	return czWrap_DeviceIoControl(
+		info->file, controlCode, &zeroInfo, sizeof(zeroInfo), outBuffer, outBufferSize, bytesReturned, &overlapped);
+}
+#endif
+
+#define HAVE_insert_section_win32 ( \
+	HAVE_map_section_win32 &&       \
+	HAVE_unmap_section_win32 &&     \
+	HAVE_view_section_win32 &&      \
+	HAVE_unview_section_win32 &&    \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_insert_section_win32
+/* 
+ * Inserts a section into the file starting at 'offset' and extending for 'size' bytes. The file size is increased by
+ * 'size'. Controlled failure occurs if:
+ * - 'size' is zero.
+ * - 'offset' is outside the file, excluding EOF.
+ * - The resultant file size would exceed MAX_FILE_SIZE.
+ * 
+ * The file must currently be open and unmapped.
+ * The file access mode must include GENERIC_READ and GENERIC_WRITE.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_RD_ACCESS(2, 3)
+static enum CzResult insert_section_win32(
+	struct FileInfoWin32* restrict info, LPCVOID buffer, SIZE_T size, SIZE_T offset)
+{
+	CZ_ASSUME(info->file != NULL);
+	CZ_ASSUME(info->map == NULL);
+
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (offset > info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if CZ_NOEXPECT (size > MAX_FILE_SIZE - info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if (offset == info->fileSize)
+		return append_section_win32(info, buffer, size);
+
+	SIZE_T oldSize = info->fileSize;
+	SIZE_T newSize = oldSize + size;
+	enum CzResult ret = map_section_win32(info, newSize, PAGE_READWRITE);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	SIZE_T viewSize = newSize - offset;
+	ret = view_section_win32(info, viewSize, offset, FILE_MAP_READ | FILE_MAP_WRITE);
+	if CZ_NOEXPECT (ret)
+		goto err_unmap_file;
+
+	PVOID mvDst = (PCHAR) info->view + (size + offset - info->viewOffset);
+	LPCVOID mvSrc = (PCHAR) info->view + (offset - info->viewOffset);
+	SIZE_T mvSize = oldSize - offset;
+
+	memmove(mvDst, mvSrc, mvSize);
+
+	PVOID cpDst = (PCHAR) info->view + (offset - info->viewOffset);
+	LPCVOID cpSrc = buffer;
+	SIZE_T cpSize = size;
+
+	memcpy(cpDst, cpSrc, cpSize);
+
+	ret = unview_section_win32(info);
+	if CZ_NOEXPECT (ret)
+		goto err_unmap_file;
+
+	return unmap_section_win32(info);
+
+err_unmap_file:
+	unmap_section_win32(info);
+	return ret;
+}
+#endif
+
+#define HAVE_remove_section_win32 ( \
+	HAVE_map_section_win32 &&       \
+	HAVE_unmap_section_win32 &&     \
+	HAVE_view_section_win32 &&      \
+	HAVE_unview_section_win32 &&    \
+	HAVE_truncate_all_win32 &&      \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_remove_section_win32
+/* 
+ * Removes a section from the file starting at 'offset' and extending either for 'size' bytes or until EOF is reached,
+ * whichever happens first. The file size is decreased by the size of the removed section. Controlled failure occurs if:
+ * - The file is empty.
+ * - 'size' is zero.
+ * - 'offset' is outside the file, including EOF.
+ * 
+ * The file must currently be open and unmapped.
+ * The file access mode must include GENERIC_READ and GENERIC_WRITE.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult remove_section_win32(struct FileInfoWin32* restrict info, SIZE_T size, SIZE_T offset)
+{
+	CZ_ASSUME(info->file != NULL);
+	CZ_ASSUME(info->map == NULL);
+
+	if CZ_NOEXPECT (!info->fileSize)
+		return CZ_RESULT_NO_FILE;
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (offset >= info->fileSize)
+		return CZ_RESULT_BAD_OFFSET;
+	if (!offset && size >= info->fileSize)
+		return truncate_all_win32(info, 0);
+	if (size > info->fileSize - offset)
+		size = info->fileSize - offset;
+
+	SIZE_T mapSize = info->fileSize;
+	enum CzResult ret = map_section_win32(info, mapSize, PAGE_READWRITE);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	SIZE_T viewSize = mapSize - offset;
+	ret = view_section_win32(info, viewSize, offset, FILE_MAP_READ | FILE_MAP_WRITE);
+	if CZ_NOEXPECT (ret)
+		goto err_unmap_file;
+
+	PVOID mvDst = (PCHAR) info->view + (offset - info->viewOffset);
+	LPCVOID mvSrc = (PCHAR) info->view + (size + offset - info->viewOffset);
+	SIZE_T mvSize = mapSize - (size + offset);
+
+	memmove(mvDst, mvSrc, mvSize);
+
+	ret = unview_section_win32(info);
+	if CZ_NOEXPECT (ret)
+		goto err_unmap_file;
+
+	ret = unmap_section_win32(info);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	SIZE_T newSize = mapSize - size;
+	return truncate_all_win32(info, newSize);
+
+err_unmap_file:
+	unmap_section_win32(info);
+	return ret;
+}
+#endif
 
 /**********************************************************************************************************************
  * POSIX implementation                                                                                               *
@@ -245,8 +953,6 @@ CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
 static enum CzResult open_file_posix(struct FileInfoPosix* restrict info)
 {
 	CZ_ASSUME(info->fildes == -1);
-	CZ_ASSUME(info->flags != 0);
-	CZ_ASSUME(info->path != NULL);
 
 	int fd;
 	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
@@ -295,7 +1001,6 @@ CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
 static enum CzResult close_file_posix(struct FileInfoPosix* restrict info)
 {
 	CZ_ASSUME(info->fildes >= 0);
-	CZ_ASSUME(info->mode != 0);
 	CZ_ASSUME(info->map == NULL);
 
 	int fd = info->fildes;
@@ -338,7 +1043,6 @@ CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
 static enum CzResult truncate_all_posix(struct FileInfoPosix* restrict info, size_t size)
 {
 	CZ_ASSUME(info->fildes >= 0);
-	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 	CZ_ASSUME(info->map == NULL);
 
 	if CZ_NOEXPECT (size > MAX_FILE_SIZE)
@@ -375,9 +1079,7 @@ CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
 static enum CzResult map_section_posix(struct FileInfoPosix* restrict info, size_t size, size_t offset, int prot)
 {
 	CZ_ASSUME(info->fildes >= 0);
-	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 	CZ_ASSUME(info->map == NULL);
-	CZ_ASSUME(info->pageSize > 0);
 
 	if CZ_NOEXPECT (!info->fileSize)
 		return CZ_RESULT_NO_FILE;
@@ -419,7 +1121,6 @@ static enum CzResult unmap_section_posix(struct FileInfoPosix* restrict info)
 {
 	CZ_ASSUME(info->fildes >= 0);
 	CZ_ASSUME(info->map != NULL);
-	CZ_ASSUME(info->mapSize > 0);
 
 	void* map = info->map;
 	info->map = NULL;
@@ -453,7 +1154,6 @@ static enum CzResult read_section_posix(
 	const struct FileInfoPosix* restrict info, void* restrict buffer, size_t size, size_t offset)
 {
 	CZ_ASSUME(info->fildes >= 0);
-	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 
 	if CZ_NOEXPECT (!info->fileSize)
 		return CZ_RESULT_NO_FILE;
@@ -498,7 +1198,6 @@ static enum CzResult write_section_posix(
 	struct FileInfoPosix* restrict info, const void* restrict buffer, size_t size, size_t offset)
 {
 	CZ_ASSUME(info->fildes >= 0);
-	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 
 	if CZ_NOEXPECT (!size)
 		return CZ_RESULT_BAD_SIZE;
@@ -543,7 +1242,6 @@ CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_RD_ACCESS(2, 3)
 static enum CzResult append_section_posix(struct FileInfoPosix* restrict info, const void* restrict buffer, size_t size)
 {
 	CZ_ASSUME(info->fildes >= 0);
-	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 
 	if CZ_NOEXPECT (!size)
 		return CZ_RESULT_BAD_SIZE;
@@ -587,7 +1285,6 @@ CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
 static enum CzResult zero_section_posix(struct FileInfoPosix* restrict info, size_t size, size_t offset)
 {
 	CZ_ASSUME(info->fildes >= 0);
-	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 	CZ_ASSUME(info->map == NULL);
 
 	if CZ_NOEXPECT (!info->fileSize)
@@ -632,7 +1329,6 @@ static enum CzResult insert_section_posix(
 	struct FileInfoPosix* restrict info, const void* restrict buffer, size_t size, size_t offset)
 {
 	CZ_ASSUME(info->fildes >= 0);
-	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 	CZ_ASSUME(info->map == NULL);
 
 	if CZ_NOEXPECT (!size)
@@ -692,7 +1388,6 @@ CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
 static enum CzResult remove_section_posix(struct FileInfoPosix* restrict info, size_t size, size_t offset)
 {
 	CZ_ASSUME(info->fildes >= 0);
-	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 	CZ_ASSUME(info->map == NULL);
 
 	if CZ_NOEXPECT (!info->fileSize)
@@ -763,8 +1458,6 @@ CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
 static enum CzResult open_file_stdc(struct FileInfoStdc* restrict info)
 {
 	CZ_ASSUME(info->stream == NULL);
-	CZ_ASSUME(info->path != NULL);
-	CZ_ASSUME(info->mode != NULL);
 
 	FILE* stream;
 	enum CzResult ret = czWrap_fopen(&stream, info->path, info->mode);
@@ -798,9 +1491,6 @@ CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
 static enum CzResult close_file_stdc(struct FileInfoStdc* restrict info)
 {
 	CZ_ASSUME(info->stream != NULL);
-	CZ_ASSUME(info->path != NULL);
-	CZ_ASSUME(info->mode != NULL);
-	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 
 	FILE* stream = info->stream;
 	info->stream = NULL;
@@ -827,9 +1517,6 @@ static enum CzResult read_section_stdc(
 	const struct FileInfoStdc* restrict info, void* restrict buffer, size_t size, size_t offset)
 {
 	CZ_ASSUME(info->stream != NULL);
-	CZ_ASSUME(info->path != NULL);
-	CZ_ASSUME(info->mode != NULL);
-	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 
 	if CZ_NOEXPECT (!info->fileSize)
 		return CZ_RESULT_NO_FILE;
@@ -858,9 +1545,6 @@ static enum CzResult write_section_stdc(
 	struct FileInfoStdc* restrict info, const void* restrict buffer, size_t size, size_t offset)
 {
 	CZ_ASSUME(info->stream != NULL);
-	CZ_ASSUME(info->path != NULL);
-	CZ_ASSUME(info->mode != NULL);
-	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 
 	if CZ_NOEXPECT (!size)
 		return CZ_RESULT_BAD_SIZE;
@@ -892,9 +1576,6 @@ CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_RD_ACCESS(2, 3)
 static enum CzResult append_section_stdc(struct FileInfoStdc* restrict info, const void* restrict buffer, size_t size)
 {
 	CZ_ASSUME(info->stream != NULL);
-	CZ_ASSUME(info->path != NULL);
-	CZ_ASSUME(info->mode != NULL);
-	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 
 	if CZ_NOEXPECT (!size)
 		return CZ_RESULT_BAD_SIZE;
@@ -921,9 +1602,6 @@ CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
 static enum CzResult remove_all_stdc(struct FileInfoStdc* restrict info)
 {
 	CZ_ASSUME(info->stream != NULL);
-	CZ_ASSUME(info->path != NULL);
-	CZ_ASSUME(info->mode != NULL);
-	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 
 	if (info->mode[0] == 'r')
 		info->mode = "w+b";
@@ -950,9 +1628,6 @@ CZ_NONNULL_ARGS() CZ_RW_ACCESS(1) CZ_RD_ACCESS(2, 3)
 static enum CzResult write_all_stdc(struct FileInfoStdc* restrict info, const void* restrict buffer, size_t size)
 {
 	CZ_ASSUME(info->stream != NULL);
-	CZ_ASSUME(info->path != NULL);
-	CZ_ASSUME(info->mode != NULL);
-	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 
 	if CZ_NOEXPECT (!size)
 		return CZ_RESULT_BAD_SIZE;
@@ -982,12 +1657,11 @@ CZ_NONNULL_ARGS() CZ_RD_ACCESS(1)
 static enum CzResult zero_section_stdc(struct FileInfoStdc* restrict info, size_t size, size_t offset)
 {
 	CZ_ASSUME(info->stream != NULL);
-	CZ_ASSUME(info->path != NULL);
-	CZ_ASSUME(info->mode != NULL);
-	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 
 	if CZ_NOEXPECT (!info->fileSize)
 		return CZ_RESULT_NO_FILE;
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
 	if CZ_NOEXPECT (offset >= info->fileSize)
 		return CZ_RESULT_BAD_OFFSET;
 	if (size > info->fileSize - offset)
@@ -1020,10 +1694,9 @@ static enum CzResult insert_section_stdc(
 	struct FileInfoStdc* restrict info, const void* restrict buffer, size_t size, size_t offset)
 {
 	CZ_ASSUME(info->stream != NULL);
-	CZ_ASSUME(info->path != NULL);
-	CZ_ASSUME(info->mode != NULL);
-	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
 	if CZ_NOEXPECT (offset > info->fileSize)
 		return CZ_RESULT_BAD_OFFSET;
 	if CZ_NOEXPECT (size > MAX_FILE_SIZE - info->fileSize)
@@ -1066,9 +1739,6 @@ CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
 static enum CzResult remove_section_stdc(struct FileInfoStdc* restrict info, size_t size, size_t offset)
 {
 	CZ_ASSUME(info->stream != NULL);
-	CZ_ASSUME(info->path != NULL);
-	CZ_ASSUME(info->mode != NULL);
-	CZ_ASSUME(info->fileSize <= MAX_FILE_SIZE);
 
 	if CZ_NOEXPECT (!info->fileSize)
 		return CZ_RESULT_NO_FILE;
@@ -1118,6 +1788,35 @@ out_free_content:
  * API function definitions                                                                                           *
  **********************************************************************************************************************/
 
+#define HAVE_czFileSize_win32 ( \
+	CZ_WRAP_GET_FILE_ATTRIBUTES_EX_W && \
+	HAVE_widen_path_win32 )
+
+#if HAVE_czFileSize_win32
+CZ_COPY_ATTR(czFileSize)
+static enum CzResult czFileSize_win32(PCSTR path, PSIZE_T size)
+{
+	PWSTR widePath;
+	enum CzResult ret = widen_path_win32(&widePath, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	WIN32_FILE_ATTRIBUTE_DATA attr;
+	ret = czWrap_GetFileAttributesExW(widePath, GetFileExInfoStandard, &attr);
+	if CZ_NOEXPECT (ret)
+		goto out_free_path;
+
+	ULARGE_INTEGER fileSize;
+	fileSize.LowPart = attr.nFileSizeLow;
+	fileSize.HighPart = attr.nFileSizeHigh;
+
+	*size = (SIZE_T) fileSize.QuadPart;
+out_free_path:
+	czFree(widePath);
+	return ret;
+}
+#endif
+
 #define HAVE_czFileSize_posix ( CZ_WRAP_STAT )
 
 #if HAVE_czFileSize_posix
@@ -1145,11 +1844,12 @@ static enum CzResult czFileSize_stdc(const char* restrict path, size_t* restrict
 	if CZ_NOEXPECT (ret)
 		return ret;
 
+	size_t fileSize = info.fileSize;
 	ret = close_file_stdc(&info);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
-	*size = info.fileSize;
+	*size = fileSize;
 	return CZ_RESULT_SUCCESS;
 }
 
@@ -1167,7 +1867,9 @@ enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struc
 			resolvedPath = allocPath;
 	}
 
-#if HAVE_czFileSize_posix
+#if HAVE_czFileSize_win32
+	ret = czFileSize_win32(resolvedPath, size);
+#elif HAVE_czFileSize_posix
 	ret = czFileSize_posix(resolvedPath, size);
 #else
 	ret = czFileSize_stdc(resolvedPath, size);
@@ -1175,6 +1877,34 @@ enum CzResult czFileSize(const char* restrict path, size_t* restrict size, struc
 	czFree(allocPath);
 	return ret;
 }
+
+#define HAVE_czReadFile_win32 ( \
+	HAVE_open_file_win32 &&     \
+	HAVE_close_file_win32 &&    \
+	HAVE_read_section_win32 &&  \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_czReadFile_win32
+CZ_COPY_ATTR(czReadFile)
+static enum CzResult czReadFile_win32(PCSTR path, PVOID buffer, SIZE_T size, SIZE_T offset)
+{
+	struct FileInfoWin32 info = {0};
+	info.access = GENERIC_READ;
+	info.disposition = OPEN_EXISTING;
+	info.flags = FILE_FLAG_SEQUENTIAL_SCAN;
+
+	enum CzResult ret = open_file_win32(&info, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = read_section_win32(&info, buffer, size, offset);
+	if CZ_NOEXPECT (ret) {
+		close_file_win32(&info);
+		return ret;
+	}
+	return close_file_win32(&info);
+}
+#endif
 
 #define HAVE_czReadFile_posix ( \
 	HAVE_open_file_posix &&     \
@@ -1238,7 +1968,9 @@ enum CzResult czReadFile(
 			resolvedPath = allocPath;
 	}
 
-#if HAVE_czReadFile_posix
+#if HAVE_czReadFile_win32
+	ret = czReadFile_win32(resolvedPath, buffer, size, offset);
+#elif HAVE_czReadFile_posix
 	ret = czReadFile_posix(resolvedPath, buffer, size, offset);
 #else
 	ret = czReadFile_stdc(resolvedPath, buffer, size, offset);
@@ -1247,12 +1979,66 @@ enum CzResult czReadFile(
 	return ret;
 }
 
+#define HAVE_czWriteFile_win32 ( \
+	HAVE_open_file_win32 &&      \
+	HAVE_close_file_win32 &&     \
+	HAVE_append_section_win32 && \
+	HAVE_insert_section_win32 && \
+	HAVE_write_section_win32 &&  \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_czWriteFile_win32
+CZ_COPY_ATTR(czWriteFile)
+static enum CzResult czWriteFile_win32(PCSTR path, LPCVOID buffer, SIZE_T size, SIZE_T offset, struct CzFileFlags flags)
+{
+	DWORD access = GENERIC_WRITE;
+	if (!flags.overwriteFile && !flags.truncateFile && offset != CZ_EOF)
+		access |= GENERIC_READ;
+
+	DWORD disposition;
+	if (flags.truncateFile)
+		disposition = CREATE_ALWAYS;
+	else if (!offset || offset == CZ_EOF)
+		disposition = OPEN_ALWAYS;
+	else
+		disposition = OPEN_EXISTING;
+
+	DWORD flags = FILE_ATTRIBUTE_NORMAL;
+	if (flags.overwriteFile || flags.truncateFile || offset == CZ_EOF)
+		flags |= FILE_FLAG_SEQUENTIAL_SCAN;
+	else
+		flags |= FILE_FLAG_RANDOM_ACCESS;
+
+	struct FileInfoWin32 info = {0};
+	info.access = access;
+	info.disposition = disposition;
+	info.flags = flags;
+
+	enum CzResult ret = open_file_win32(&info, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (flags.truncateFile || offset == CZ_EOF)
+		ret = append_section_win32(&info, buffer, size);
+	else if (flags.overwriteFile)
+		ret = write_section_win32(&info, buffer, size, offset);
+	else
+		ret = insert_section_win32(&info, buffer, size, offset);
+
+	if CZ_NOEXPECT (ret) {
+		close_file_win32(&info);
+		return ret;
+	}
+	return close_file_win32(&info);
+}
+#endif
+
 #define HAVE_czWriteFile_posix ( \
 	HAVE_open_file_posix &&      \
 	HAVE_close_file_posix &&     \
 	HAVE_append_section_posix && \
-	HAVE_write_section_posix &&  \
 	HAVE_insert_section_posix && \
+	HAVE_write_section_posix &&  \
 	HAVE_FileInfoPosix )
 
 #if HAVE_czWriteFile_posix
@@ -1261,7 +2047,7 @@ static enum CzResult czWriteFile_posix(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
 {
 	int openFlags = O_NOCTTY;
-	openFlags |= (flags.truncateFile || offset == CZ_EOF) ? O_WRONLY : O_RDWR;
+	openFlags |= (flags.overwriteFile || flags.truncateFile || offset == CZ_EOF) ? O_WRONLY : O_RDWR;
 	if (flags.truncateFile || !offset || offset == CZ_EOF)
 		openFlags |= O_CREAT;
 	if (flags.truncateFile)
@@ -1332,7 +2118,9 @@ enum CzResult czWriteFile(
 			resolvedPath = allocPath;
 	}
 
-#if HAVE_czWriteFile_posix
+#if HAVE_czWriteFile_win32
+	ret = czWriteFile_win32(resolvedPath, buffer, size, offset, flags);
+#elif HAVE_czWriteFile_posix
 	ret = czWriteFile_posix(resolvedPath, buffer, size, offset, flags);
 #else
 	ret = czWriteFile_stdc(resolvedPath, buffer, size, offset, flags);
@@ -1341,11 +2129,56 @@ enum CzResult czWriteFile(
 	return ret;
 }
 
+#define HAVE_czTrimFile_win32 (  \
+	HAVE_open_file_win32 &&      \
+	HAVE_close_file_win32 &&     \
+	HAVE_remove_section_win32 && \
+	HAVE_zero_section_win32 &&   \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_czTrimFile_win32
+CZ_COPY_ATTR(czTrimFile)
+static enum CzResult czTrimFile_win32(PCSTR path, SIZE_T size, SIZE_T offset, struct CzFileFlags flags)
+{
+	DWORD access = GENERIC_WRITE;
+	if (!flags.overwriteFile)
+		access |= GENERIC_READ;
+
+	DWORD flags = 0;
+	if (flags.overwriteFile)
+		flags |= FILE_FLAG_SEQUENTIAL_SCAN;
+	else
+		flags |= FILE_FLAG_RANDOM_ACCESS;
+
+	struct FileInfoWin32 info = {0};
+	info.access = access;
+	info.disposition = OPEN_EXISTING;
+	info.flags = flags;
+
+	enum CzResult ret = open_file_win32(&info, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (offset == CZ_EOF)
+		offset = (info.fileSize > size) ? info.fileSize - size : 0;
+	if (flags.overwriteFile)
+		ret = zero_section_win32(&info, size, offset);
+	else
+		ret = remove_section_win32(&info, size, offset);
+
+	if CZ_NOEXPECT (ret) {
+		close_file_win32(&info);
+		return ret;
+	}
+	return close_file_win32(&info);
+}
+#endif
+
 #define HAVE_czTrimFile_posix (  \
 	HAVE_open_file_posix &&      \
 	HAVE_close_file_posix &&     \
-	HAVE_zero_section_posix &&   \
 	HAVE_remove_section_posix && \
+	HAVE_zero_section_posix &&   \
 	HAVE_FileInfoPosix )
 
 #if HAVE_czTrimFile_posix
@@ -1415,7 +2248,9 @@ enum CzResult czTrimFile(const char* restrict path, size_t size, size_t offset, 
 			resolvedPath = allocPath;
 	}
 
-#if HAVE_czTrimFile_posix
+#if HAVE_czTrimFile_win32
+	ret = czTrimFile_win32(resolvedPath, size, offset, flags);
+#elif HAVE_czTrimFile_posix
 	ret = czTrimFile_posix(resolvedPath, size, offset, flags);
 #else
 	ret = czTrimFile_stdc(resolvedPath, size, offset, flags);
@@ -1424,264 +2259,11 @@ enum CzResult czTrimFile(const char* restrict path, size_t size, size_t offset, 
 	return ret;
 }
 
-// ==================== TO REWRITE ====================
+#define HAVE_czStreamIsTerminal_win32 ( \
+	CZ_WRAP_FILENO &&                   \
+	CZ_WRAP_GET_OSFHANDLE )
 
-#if CZ_WRAP_MULTI_BYTE_TO_WIDE_CHAR
-static enum CzResult alloc_utf16_from_utf8_win32(wchar_t* restrict* restrict utf16, const char* restrict utf8)
-{
-	unsigned int codePage = CP_UTF8;
-	unsigned long flags = MB_ERR_INVALID_CHARS;
-	const char* mbStr = utf8;
-	int mbSize = -1; // utf8 is NUL-terminated
-	wchar_t* wcStr = NULL;
-	int wcSize = 0; // first get required length of utf16
-
-	enum CzResult ret = czWrap_MultiByteToWideChar(&wcSize, codePage, flags, mbStr, mbSize, wcStr, wcSize);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	size_t allocSize = (size_t) wcSize * sizeof(wchar_t);
-	struct CzAllocFlags allocFlags = {0};
-	ret = czAlloc((void**) &wcStr, allocSize, allocFlags);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	ret = czWrap_MultiByteToWideChar(&wcSize, codePage, flags, mbStr, mbSize, wcStr, wcSize);
-	if CZ_NOEXPECT (ret) {
-		czFree(wcStr);
-		return ret;
-	}
-
-	*utf16 = wcStr;
-	return CZ_RESULT_SUCCESS;
-}
-#endif
-
-#if CZ_WRAP_SET_FILE_POINTER_EX && CZ_WRAP_SET_END_OF_FILE
-static enum CzResult truncate_win32(HANDLE file, size_t size)
-{
-	if CZ_NOEXPECT (size > ULLONG_MAX)
-		return CZ_RESULT_BAD_SIZE;
-
-	ULARGE_INTEGER newSize = {.QuadPart = (ULONGLONG) size};
-	LARGE_INTEGER moveDistance;
-	memcpy(&moveDistance, &newSize, sizeof(newSize)); // Ensure strict aliasing
-
-	PLARGE_INTEGER newFilePtr = NULL;
-	DWORD moveMethod = FILE_BEGIN;
-	enum CzResult ret = czWrap_SetFilePointerEx(file, moveDistance, newFilePtr, moveMethod);
-	return ret ?: czWrap_SetEndOfFile(file);
-}
-#endif
-
-#if CZ_WRAP_READ_FILE
-static enum CzResult read_section_win32(HANDLE file, void* restrict buffer, size_t size, size_t offset)
-{
-	for (size_t i = 0; i < size; i += MAX_ACCESS_SIZE) {
-		LPVOID readBuffer = (PCHAR) buffer + i;
-		DWORD readSize = (DWORD) ((size - i) & MAX_ACCESS_SIZE);
-		ULARGE_INTEGER readOffset = {.QuadPart = (ULONGLONG) (offset + i)};
-
-		OVERLAPPED overlapped = {0};
-		overlapped.Offset = readOffset.LowPart;
-		overlapped.OffsetHigh = readOffset.HighPart;
-
-		LPDWORD bytesRead = NULL;
-		enum CzResult ret = czWrap_ReadFile(file, readBuffer, readSize, bytesRead, &overlapped);
-		if CZ_NOEXPECT (ret)
-			return ret;
-	}
-	return CZ_RESULT_SUCCESS;
-}
-#endif
-
-#if CZ_WRAP_WRITE_FILE
-static enum CzResult write_section_win32(HANDLE file, const void* restrict buffer, size_t size, size_t offset)
-{
-	for (size_t i = 0; i < size; i += MAX_ACCESS_SIZE) {
-		LPCVOID writeBuffer = (LPCSTR) buffer + i;
-		DWORD writeSize = (DWORD) ((size - i) & MAX_ACCESS_SIZE);
-		ULARGE_INTEGER writeOffset = {.QuadPart = (ULONGLONG) (offset + i)};
-
-		OVERLAPPED overlapped = {0};
-		if (offset == CZ_EOF) {
-			overlapped.Offset = UINT32_MAX;
-			overlapped.OffsetHigh = UINT32_MAX;
-		}
-		else {
-			overlapped.Offset = writeOffset.LowPart;
-			overlapped.OffsetHigh = writeOffset.HighPart;
-		}
-
-		LPDWORD bytesWritten = NULL;
-		enum CzResult ret = czWrap_WriteFile(file, writeBuffer, writeSize, bytesWritten, &overlapped);
-		if CZ_NOEXPECT (ret)
-			return ret;
-	}
-	return CZ_RESULT_SUCCESS;
-}
-#endif
-
-#if CZ_WRAP_DEVICE_IO_CONTROL
-static enum CzResult zero_section_win32(HANDLE file, size_t size, size_t offset)
-{
-	FILE_ZERO_DATA_INFORMATION zeroInfo = {0};
-	zeroInfo.FileOffset.QuadPart = (LONGLONG) offset;
-	zeroInfo.BeyondFinalZero.QuadPart = (LONGLONG) (offset + size);
-
-	DWORD controlCode = FSCTL_SET_ZERO_DATA;
-	LPVOID outBuffer = NULL;
-	DWORD outBufferSize = 0;
-	LPDWORD bytesReturned = NULL;
-	OVERLAPPED overlapped = {0};
-
-	return czWrap_DeviceIoControl(
-		file, controlCode, &zeroInfo, sizeof(zeroInfo), outBuffer, outBufferSize, bytesReturned, &overlapped);
-}
-#endif
-
-#if CZ_WIN32
-static enum CzResult insert_section_win32(HANDLE file, const void* restrict buffer, size_t size, size_t offset)
-{
-	SYSTEM_INFO sysInfo;
-	GetSystemInfo(&sysInfo);
-
-	LARGE_INTEGER fileSizeLarge;
-	enum CzResult ret = czWrap_GetFileSizeEx(file, &fileSizeLarge);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	size_t granularity = (size_t) sysInfo.dwAllocationGranularity;
-	size_t fileSize = (size_t) fileSizeLarge.QuadPart;
-	size_t newSize = size + fileSize;
-
-	if CZ_NOEXPECT (offset > fileSize)
-		return CZ_RESULT_BAD_OFFSET;
-	if (offset == fileSize)
-		return write_section_win32(file, buffer, size, offset);
-
-	HANDLE mapping;
-	LPSECURITY_ATTRIBUTES mappingAttr = NULL;
-	DWORD protect = PAGE_READWRITE;
-	ULARGE_INTEGER maxSize = {.QuadPart = (ULONGLONG) newSize};
-	LPCWSTR mappingName = NULL;
-
-	ret = czWrap_CreateFileMappingW(
-		&mapping, file, mappingAttr, protect, maxSize.HighPart, maxSize.LowPart, mappingName);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	void* view;
-	DWORD viewAccess = FILE_MAP_ALL_ACCESS;
-	ULARGE_INTEGER viewOffset = {.QuadPart = (ULONGLONG) (offset & ~(granularity - 1))};
-	SIZE_T viewSize = newSize - (offset & ~(granularity - 1));
-
-	ret = czWrap_MapViewOfFile(&view, mapping, viewAccess, viewOffset.HighPart, viewOffset.LowPart, viewSize);
-	if CZ_NOEXPECT (ret)
-		goto err_close_map;
-
-	void* mvDst = (char*) view + (offset & (granularity - 1)) + size;
-	const void* mvSrc = (char*) view + (offset & (granularity - 1));
-	size_t mvSize = fileSize - offset;
-
-	void* cpDst = (char*) view + (offset & (granularity - 1));
-	const void* cpSrc = buffer;
-	size_t cpSize = size;
-
-	memmove(mvDst, mvSrc, mvSize);
-	memcpy(cpDst, cpSrc, cpSize);
-
-	ret = czWrap_FlushViewOfFile(view, viewSize);
-	if CZ_NOEXPECT (ret)
-		goto err_unmap_view;
-
-	ret = czWrap_UnmapViewOfFile(view);
-	if CZ_NOEXPECT (ret)
-		goto err_close_map;
-
-	return czWrap_CloseHandle(mapping);
-
-err_unmap_view:
-	czWrap_UnmapViewOfFile(view);
-err_close_map:
-	czWrap_CloseHandle(mapping);
-	return ret;
-}
-#endif
-
-#if CZ_WIN32
-static enum CzResult cut_section_win32(HANDLE file, size_t size, size_t offset)
-{
-	SYSTEM_INFO sysInfo;
-	GetSystemInfo(&sysInfo);
-
-	LARGE_INTEGER fileSizeLarge;
-	enum CzResult ret = czWrap_GetFileSizeEx(file, &fileSizeLarge);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	size_t granularity = (size_t) sysInfo.dwAllocationGranularity;
-	size_t fileSize = (size_t) fileSizeLarge.QuadPart;
-	if CZ_NOEXPECT (!fileSize)
-		return CZ_RESULT_NO_FILE;
-	if CZ_NOEXPECT (offset >= fileSize)
-		return CZ_RESULT_BAD_OFFSET;
-	if (size >= fileSize - offset) {
-		size_t newSize = offset;
-		return truncate_win32(file, newSize);
-	}
-
-	HANDLE mapping;
-	LPSECURITY_ATTRIBUTES mappingAttr = NULL;
-	DWORD protect = PAGE_READWRITE;
-	ULARGE_INTEGER maxSize = {.QuadPart = (ULONGLONG) fileSize};
-	LPCWSTR mappingName = NULL;
-
-	ret = czWrap_CreateFileMappingW(
-		&mapping, file, mappingAttr, protect, maxSize.HighPart, maxSize.LowPart, mappingName);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	void* view;
-	DWORD viewAccess = FILE_MAP_ALL_ACCESS;
-	ULARGE_INTEGER viewOffset = {.QuadPart = (ULONGLONG) (offset & ~(granularity - 1))};
-	SIZE_T viewSize = fileSize - (offset & ~(granularity - 1));
-
-	ret = czWrap_MapViewOfFile(&view, mapping, viewAccess, viewOffset.HighPart, viewOffset.LowPart, viewSize);
-	if CZ_NOEXPECT (ret)
-		goto err_close_map;
-
-	void* mvDst = (char*) view + (offset & (granularity - 1));
-	const void* mvSrc = (char*) view + (offset & (granularity - 1)) + size;
-	size_t mvSize = fileSize - (size + offset);
-
-	memmove(mvDst, mvSrc, mvSize);
-
-	SIZE_T flushSize = fileSize - (size + (offset & ~(granularity - 1)));
-	ret = czWrap_FlushViewOfFile(view, flushSize);
-	if CZ_NOEXPECT (ret)
-		goto err_unmap_view;
-
-	ret = czWrap_UnmapViewOfFile(view);
-	if CZ_NOEXPECT (ret)
-		goto err_close_map;
-
-	ret = czWrap_CloseHandle(mapping);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	size_t newSize = fileSize - size;
-	return truncate_win32(file, newSize);
-
-err_unmap_view:
-	czWrap_UnmapViewOfFile(view);
-err_close_map:
-	czWrap_CloseHandle(mapping);
-	return ret;
-}
-#endif
-
-#if CZ_WIN32
+#if HAVE_czStreamIsTerminal_win32
 static enum CzResult czStreamIsTerminal_win32(FILE* restrict stream, bool* restrict istty)
 {
 	int fd;
@@ -1708,7 +2290,11 @@ out_not_tty:
 }
 #endif
 
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001
+#define HAVE_czStreamIsTerminal_posix ( \
+	CZ_WRAP_FILENO &&                   \
+	CZ_WRAP_ISATTY )
+
+#if HAVE_czStreamIsTerminal_posix
 static enum CzResult czStreamIsTerminal_posix(FILE* restrict stream, bool* restrict istty)
 {
 	int fd;
@@ -1735,361 +2321,11 @@ static enum CzResult czStreamIsTerminal_stdc(FILE* restrict stream, bool* restri
 
 enum CzResult czStreamIsTerminal(FILE* restrict stream, bool* restrict istty)
 {
-#if CZ_WIN32
+#if HAVE_czStreamIsTerminal_win32
 	return czStreamIsTerminal_win32(stream, istty);
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
+#elif HAVE_czStreamIsTerminal_posix
 	return czStreamIsTerminal_posix(stream, istty);
 #else
 	return czStreamIsTerminal_stdc(stream, istty);
 #endif
 }
-
-#if CZ_WIN32
-static enum CzResult czFileSize_win32(const char* restrict path, size_t* restrict size)
-{
-	wchar_t* restrict widePath;
-	enum CzResult ret = alloc_utf16_from_utf8_win32(&widePath, path);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	WIN32_FILE_ATTRIBUTE_DATA attr;
-	ret = czWrap_GetFileAttributesExW(widePath, GetFileExInfoStandard, &attr);
-	if CZ_NOEXPECT (ret)
-		goto err_free_widepath;
-
-	ULARGE_INTEGER fileSize;
-	fileSize.LowPart = attr.nFileSizeLow;
-	fileSize.HighPart = attr.nFileSizeHigh;
-
-	*size = (size_t) fileSize.QuadPart;
-err_free_widepath:
-	czFree(widePath);
-	return ret;
-}
-#endif
-
-#if CZ_WIN32
-static enum CzResult czReadFile_win32(const char* restrict path, void* restrict buffer, size_t size, size_t offset)
-{
-	wchar_t* restrict widePath;
-	enum CzResult ret = alloc_utf16_from_utf8_win32(&widePath, path);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	HANDLE file;
-	DWORD access = GENERIC_READ;
-	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
-	LPSECURITY_ATTRIBUTES security = NULL;
-	DWORD disposition = OPEN_EXISTING;
-	DWORD flags = FILE_FLAG_SEQUENTIAL_SCAN;
-	HANDLE template = NULL;
-
-	ret = czWrap_CreateFileW(&file, widePath, access, shareMode, security, disposition, flags, template);
-	if CZ_NOEXPECT (ret)
-		goto err_free_widepath;
-
-	ret = read_section_win32(file, buffer, size, offset);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	czFree(widePath);
-	return czWrap_CloseHandle(file);
-
-err_close_file:
-	czWrap_CloseHandle(file);
-err_free_widepath:
-	czFree(widePath);
-	return ret;
-}
-#endif
-
-#if CZ_WIN32
-static enum CzResult truncate_write_file_win32(const wchar_t* restrict path, const void* restrict buffer, size_t size)
-{
-	HANDLE file;
-	DWORD access = GENERIC_WRITE;
-	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
-	LPSECURITY_ATTRIBUTES security = NULL;
-	DWORD disposition = OPEN_EXISTING;
-	DWORD flags = FILE_FLAG_SEQUENTIAL_SCAN;
-	HANDLE template = NULL;
-
-	enum CzResult ret = czWrap_CreateFileW(&file, path, access, shareMode, security, disposition, flags, template);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	size_t offset = 0;
-	ret = write_section_win32(file, buffer, size, offset);
-	if CZ_NOEXPECT (ret) {
-		czWrap_CloseHandle(file);
-		return ret;
-	}
-	return czWrap_CloseHandle(file);
-}
-#endif
-
-#if CZ_WIN32
-static enum CzResult append_file_win32(const wchar_t* restrict path, const void* restrict buffer, size_t size)
-{
-	HANDLE file;
-	DWORD access = GENERIC_WRITE;
-	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
-	LPSECURITY_ATTRIBUTES security = NULL;
-	DWORD disposition = OPEN_ALWAYS;
-	DWORD flags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
-	HANDLE template = NULL;
-
-	enum CzResult ret = czWrap_CreateFileW(&file, path, access, shareMode, security, disposition, flags, template);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	size_t offset = CZ_EOF;
-	ret = write_section_win32(file, buffer, size, offset);
-	if CZ_NOEXPECT (ret) {
-		czWrap_CloseHandle(file);
-		return ret;
-	}
-	return czWrap_CloseHandle(file);
-}
-#endif
-
-#if CZ_WIN32
-static enum CzResult overwrite_file_win32(
-	const wchar_t* restrict path, const void* restrict buffer, size_t size, size_t offset)
-{
-	HANDLE file;
-	DWORD access = GENERIC_WRITE;
-	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
-	LPSECURITY_ATTRIBUTES security = NULL;
-	DWORD disposition = offset ? OPEN_EXISTING : OPEN_ALWAYS;
-	DWORD flags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
-	HANDLE template = NULL;
-
-	enum CzResult ret = czWrap_CreateFileW(&file, path, access, shareMode, security, disposition, flags, template);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	ret = write_section_win32(file, buffer, size, offset);
-	if CZ_NOEXPECT (ret) {
-		czWrap_CloseHandle(file);
-		return ret;
-	}
-	return czWrap_CloseHandle(file);
-}
-#endif
-
-#if CZ_WIN32
-static enum CzResult insert_file_win32(
-	const wchar_t* restrict path, const void* restrict buffer, size_t size, size_t offset)
-{
-	HANDLE file;
-	DWORD access = GENERIC_READ | GENERIC_WRITE;
-	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
-	LPSECURITY_ATTRIBUTES security = NULL;
-	DWORD disposition = offset ? OPEN_EXISTING : OPEN_ALWAYS;
-	DWORD flags = FILE_ATTRIBUTE_NORMAL;
-	HANDLE template = NULL;
-
-	enum CzResult ret = czWrap_CreateFileW(&file, path, access, shareMode, security, disposition, flags, template);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	ret = insert_section_win32(file, buffer, size, offset);
-	if CZ_NOEXPECT (ret) {
-		czWrap_CloseHandle(file);
-		return ret;
-	}
-	return czWrap_CloseHandle(file);
-}
-#endif
-
-#if CZ_WIN32
-static enum CzResult czWriteFile_win32(
-	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
-{
-	wchar_t* restrict widePath;
-	enum CzResult ret = alloc_utf16_from_utf8_win32(&widePath, path);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	if (flags.truncateFile)
-		ret = truncate_write_file_win32(widePath, buffer, size);
-	else if (offset == CZ_EOF)
-		ret = append_file_win32(widePath, buffer, size);
-	else if (flags.overwriteFile)
-		ret = overwrite_file_win32(widePath, buffer, size, offset);
-	else
-		ret = insert_file_win32(widePath, buffer, size, offset);
-
-	czFree(widePath);
-	return ret;
-}
-#endif
-
-#if CZ_WIN32
-static enum CzResult zero_file_end_win32(const wchar_t* restrict path, size_t size)
-{
-	HANDLE file;
-	DWORD access = GENERIC_READ | GENERIC_WRITE;
-	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
-	LPSECURITY_ATTRIBUTES security = NULL;
-	DWORD disposition = OPEN_EXISTING;
-	DWORD flags = FILE_FLAG_RANDOM_ACCESS;
-	HANDLE template = NULL;
-
-	enum CzResult ret = czWrap_CreateFileW(&file, path, access, shareMode, security, disposition, flags, template);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	LARGE_INTEGER fileSizeLarge;
-	ret = czWrap_GetFileSizeEx(file, &fileSizeLarge);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	size_t fileSize = (size_t) fileSizeLarge.QuadPart;
-	if CZ_NOEXPECT (!fileSize) {
-		ret = CZ_RESULT_NO_FILE;
-		goto err_close_file;
-	}
-
-	size_t zeroedSize = minz(size, fileSize);
-	size_t offset = fileSize - zeroedSize;
-	ret = zero_section_win32(file, zeroedSize, offset);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	return czWrap_CloseHandle(file);
-
-err_close_file:
-	czWrap_CloseHandle(file);
-	return ret;
-}
-#endif
-
-#if CZ_WIN32
-static enum CzResult cut_file_end_win32(const wchar_t* restrict path, size_t size)
-{
-	HANDLE file;
-	DWORD access = GENERIC_READ | GENERIC_WRITE;
-	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
-	LPSECURITY_ATTRIBUTES security = NULL;
-	DWORD disposition = OPEN_EXISTING;
-	DWORD flags = FILE_FLAG_RANDOM_ACCESS;
-	HANDLE template = NULL;
-
-	enum CzResult ret = czWrap_CreateFileW(&file, path, access, shareMode, security, disposition, flags, template);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	LARGE_INTEGER fileSizeLarge;
-	ret = czWrap_GetFileSizeEx(file, &fileSizeLarge);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	size_t fileSize = (size_t) fileSizeLarge.QuadPart;
-	if CZ_NOEXPECT (!fileSize) {
-		ret = CZ_RESULT_NO_FILE;
-		goto err_close_file;
-	}
-
-	size_t newSize = maxz(size, fileSize) - size;
-	ret = truncate_win32(file, newSize);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	return czWrap_CloseHandle(file);
-
-err_close_file:
-	czWrap_CloseHandle(file);
-	return ret;
-}
-#endif
-
-#if CZ_WIN32
-static enum CzResult zero_file_win32(const wchar_t* restrict path, size_t size, size_t offset)
-{
-	HANDLE file;
-	DWORD access = GENERIC_READ | GENERIC_WRITE;
-	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
-	LPSECURITY_ATTRIBUTES security = NULL;
-	DWORD disposition = OPEN_EXISTING;
-	DWORD flags = FILE_FLAG_RANDOM_ACCESS;
-	HANDLE template = NULL;
-
-	enum CzResult ret = czWrap_CreateFileW(&file, path, access, shareMode, security, disposition, flags, template);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	LARGE_INTEGER fileSizeLarge;
-	ret = czWrap_GetFileSizeEx(file, &fileSizeLarge);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	size_t fileSize = (size_t) fileSizeLarge.QuadPart;
-	if CZ_NOEXPECT (!fileSize) {
-		ret = CZ_RESULT_NO_FILE;
-		goto err_close_file;
-	}
-	if CZ_NOEXPECT (offset >= fileSize) {
-		ret = CZ_RESULT_BAD_OFFSET;
-		goto err_close_file;
-	}
-
-	size_t zeroedSize = minz(size, fileSize - offset);
-	ret = zero_section_win32(file, zeroedSize, offset);
-	if CZ_NOEXPECT (ret)
-		goto err_close_file;
-
-	return czWrap_CloseHandle(file);
-
-err_close_file:
-	czWrap_CloseHandle(file);
-	return ret;
-}
-#endif
-
-#if CZ_WIN32
-static enum CzResult cut_file_win32(const wchar_t* restrict path, size_t size, size_t offset)
-{
-	HANDLE file;
-	DWORD access = GENERIC_READ | GENERIC_WRITE;
-	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
-	LPSECURITY_ATTRIBUTES security = NULL;
-	DWORD disposition = OPEN_EXISTING;
-	DWORD flags = FILE_FLAG_RANDOM_ACCESS;
-	HANDLE template = NULL;
-
-	enum CzResult ret = czWrap_CreateFileW(&file, path, access, shareMode, security, disposition, flags, template);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	ret = cut_section_win32(file, size, offset);
-	if CZ_NOEXPECT (ret) {
-		czWrap_CloseHandle(file);
-		return ret;
-	}
-	return czWrap_CloseHandle(file);
-}
-#endif
-
-#if CZ_WIN32
-static enum CzResult czTrimFile_win32(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
-{
-	wchar_t* restrict widePath;
-	enum CzResult ret = alloc_utf16_from_utf8_win32(&widePath, path);
-	if CZ_NOEXPECT (ret)
-		return ret;
-
-	if (offset == CZ_EOF && flags.overwriteFile)
-		ret = zero_file_end_win32(widePath, size);
-	else if (offset == CZ_EOF)
-		ret = cut_file_end_win32(widePath, size);
-	else if (flags.overwriteFile)
-		ret = zero_file_win32(widePath, size, offset);
-	else
-		ret = cut_file_win32(widePath, size, offset);
-
-	czFree(widePath);
-	return ret;
-}
-#endif
