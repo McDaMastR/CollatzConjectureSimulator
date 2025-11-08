@@ -1301,7 +1301,7 @@ static enum CzResult zero_section_posix(struct FileInfoPosix* restrict info, siz
 		return ret;
 
 	void* memory = (char*) info->map + (offset - info->mapOffset);
-	zero_memory(memory, size);
+	memset(memory, 0, size);
 	return unmap_section_posix(info);
 }
 #endif

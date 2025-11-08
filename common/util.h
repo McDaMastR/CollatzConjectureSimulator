@@ -27,9 +27,6 @@ double program_time(void);
 CZ_CONST CZ_USE_RET
 enum CzEndianness get_endianness(void);
 
-CZ_UNSEQUENCED CZ_NONNULL_ARGS() CZ_WR_ACCESS(1, 2)
-void zero_memory(void* memory, size_t size);
-
 CZ_CONST CZ_USE_RET
 uint32_t ceil_pow2(uint32_t x);
 CZ_CONST CZ_USE_RET

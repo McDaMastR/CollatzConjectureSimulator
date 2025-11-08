@@ -68,7 +68,7 @@ static enum CzResult realloc_darwin(
 	if (flags.zeroInitialise && oldSize < newSize) {
 		void* addedMemory = (char*) *memory + oldSize;
 		size_t addedSize = newSize - oldSize;
-		zero_memory(addedMemory, addedSize);
+		memset(addedMemory, 0, addedSize);
 	}
 	return CZ_RESULT_SUCCESS;
 }
@@ -87,7 +87,7 @@ static enum CzResult realloc_other(
 	if (flags.zeroInitialise && oldSize < newSize) {
 		void* addedMemory = (char*) *memory + oldSize;
 		size_t addedSize = newSize - oldSize;
-		zero_memory(addedMemory, addedSize);
+		memset(addedMemory, 0, addedSize);
 	}
 	return CZ_RESULT_SUCCESS;
 }
@@ -142,7 +142,7 @@ static enum CzResult alloc_align_darwin(
 	czWrap_madvise(p, paddingSize, MADV_DONTNEED);
 
 	if (flags.zeroInitialise)
-		zero_memory(*memory, size);
+		memset(*memory, 0, size);
 	return CZ_RESULT_SUCCESS;
 }
 #endif
@@ -165,7 +165,7 @@ static enum CzResult alloc_align_posix(
 	*((void**) ((uintptr_t) *memory & ~(sizeof(void*) - 1)) - 1) = p;
 
 	if (flags.zeroInitialise)
-		zero_memory(*memory, size);
+		memset(*memory, 0, size);
 	return CZ_RESULT_SUCCESS;
 }
 #endif
@@ -283,7 +283,7 @@ static enum CzResult realloc_align_darwin(
 	if (flags.zeroInitialise && oldSize < newSize) {
 		void* addedMemory = (char*) *memory + oldSize;
 		size_t addedSize = newSize - oldSize;
-		zero_memory(addedMemory, addedSize);
+		memset(addedMemory, 0, addedSize);
 	}
 	return CZ_RESULT_SUCCESS;
 }
@@ -313,7 +313,7 @@ static enum CzResult realloc_align_posix(
 	if (flags.zeroInitialise && oldSize < newSize) {
 		void* addedMemory = (char*) *memory + oldSize;
 		size_t addedSize = newSize - oldSize;
-		zero_memory(addedMemory, addedSize);
+		memset(addedMemory, 0, addedSize);
 	}
 	return CZ_RESULT_SUCCESS;
 }
@@ -342,7 +342,7 @@ static enum CzResult realloc_align_other(
 	if (flags.zeroInitialise && oldSize < newSize) {
 		void* addedMemory = (char*) *memory + oldSize;
 		size_t addedSize = newSize - oldSize;
-		zero_memory(addedMemory, addedSize);
+		memset(addedMemory, 0, addedSize);
 	}
 	return CZ_RESULT_SUCCESS;
 }

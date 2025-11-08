@@ -42,6 +42,8 @@ set_target_properties(whereami PROPERTIES
 	C_STANDARD 17
 	C_STANDARD_REQUIRED OFF
 	C_EXTENSIONS ON
+
+	ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/whereami
 )
 
 target_compile_options(whereami PRIVATE
