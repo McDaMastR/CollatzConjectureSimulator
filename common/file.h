@@ -49,12 +49,12 @@ struct CzFileFlags
 	bool relativeToExe : 1;
 
 	/**
-	 * @brief Whether to destroy any overwritten file contents.
+	 * @brief Whether to destroy overwritten file contents.
 	 */
 	bool overwriteFile : 1;
 
 	/**
-	 * @brief Whether to fully truncate the file before any further access.
+	 * @brief Whether to fully truncate the file before further access.
 	 */
 	bool truncateFile : 1;
 };
