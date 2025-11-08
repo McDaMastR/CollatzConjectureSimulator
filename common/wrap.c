@@ -610,12 +610,13 @@ enum CzResult czWrap_fopen(FILE* restrict* res, const char* path, const char* mo
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
 	case ENOENT:
 		if (mode[0] == 'r')
 			return CZ_RESULT_NO_FILE;
 		return CZ_RESULT_BAD_PATH;
 	case ENOMEM:
-	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
 	case EMFILE:
 	case ENFILE:
@@ -657,12 +658,13 @@ enum CzResult czWrap_fopen(FILE* restrict* res, const char* path, const char* mo
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
 	case ENOENT:
 		if (mode[0] == 'r')
 			return CZ_RESULT_NO_FILE;
 		return CZ_RESULT_BAD_PATH;
 	case ENOMEM:
-	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
 	case EMFILE:
 	case ENFILE:
@@ -702,12 +704,13 @@ enum CzResult czWrap_fopen(FILE* restrict* res, const char* path, const char* mo
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
 	case ENOENT:
 		if (mode[0] == 'r')
 			return CZ_RESULT_NO_FILE;
 		return CZ_RESULT_BAD_PATH;
 	case ENOMEM:
-	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
 	case EMFILE:
 	case ENFILE:
@@ -743,8 +746,9 @@ enum CzResult czWrap_fopen(FILE* restrict* res, const char* path, const char* mo
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EMFILE:
 	case ENFILE:
@@ -777,8 +781,9 @@ enum CzResult czWrap_fopen(FILE* restrict* res, const char* path, const char* mo
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EMFILE:
 	case ENFILE:
@@ -807,7 +812,7 @@ enum CzResult czWrap_fopen(FILE* restrict* res, const char* path, const char* mo
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
@@ -942,12 +947,13 @@ enum CzResult czWrap_freopen(const char* path, const char* mode, FILE* stream)
 	case ENETUNREACH:
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
+	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
 	case ENOENT:
 		if (mode[0] == 'r')
 			return CZ_RESULT_NO_FILE;
 		return CZ_RESULT_BAD_PATH;
 	case ENOMEM:
-	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
 	case EMFILE:
 	case ENFILE:
@@ -999,12 +1005,13 @@ enum CzResult czWrap_freopen(const char* path, const char* mode, FILE* stream)
 	case EDESTADDRREQ:
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
+	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
 	case ENOENT:
 		if (mode[0] == 'r')
 			return CZ_RESULT_NO_FILE;
 		return CZ_RESULT_BAD_PATH;
 	case ENOMEM:
-	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
 	case EMFILE:
 	case ENFILE:
@@ -1050,12 +1057,13 @@ enum CzResult czWrap_freopen(const char* path, const char* mode, FILE* stream)
 		return CZ_RESULT_INTERRUPT;
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
+	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
 	case ENOENT:
 		if (mode[0] == 'r')
 			return CZ_RESULT_NO_FILE;
 		return CZ_RESULT_BAD_PATH;
 	case ENOMEM:
-	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
 	case EMFILE:
 	case ENFILE:
@@ -1096,8 +1104,9 @@ enum CzResult czWrap_freopen(const char* path, const char* mode, FILE* stream)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EMFILE:
 	case ENFILE:
@@ -1135,8 +1144,9 @@ enum CzResult czWrap_freopen(const char* path, const char* mode, FILE* stream)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EMFILE:
 	case ENFILE:
@@ -1169,7 +1179,7 @@ enum CzResult czWrap_freopen(const char* path, const char* mode, FILE* stream)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
@@ -1269,7 +1279,7 @@ enum CzResult czWrap_fclose(FILE* stream)
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
 	default:
@@ -1296,7 +1306,7 @@ enum CzResult czWrap_fclose(FILE* stream)
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
 	default:
@@ -1319,7 +1329,7 @@ enum CzResult czWrap_fclose(FILE* stream)
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
 	default:
@@ -1338,8 +1348,9 @@ enum CzResult czWrap_fclose(FILE* stream)
 		return CZ_RESULT_INTERRUPT;
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -1358,7 +1369,7 @@ enum CzResult czWrap_fclose(FILE* stream)
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -1373,7 +1384,7 @@ enum CzResult czWrap_fclose(FILE* stream)
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -1412,8 +1423,9 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -1442,8 +1454,9 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -1468,8 +1481,9 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -1492,8 +1506,9 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -1511,8 +1526,9 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -1553,8 +1569,9 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -1583,8 +1600,9 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -1609,8 +1627,9 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -1633,8 +1652,9 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -1676,8 +1696,9 @@ enum CzResult czWrap_ftell(long* res, FILE* stream)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -1705,8 +1726,9 @@ enum CzResult czWrap_ftell(long* res, FILE* stream)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -1730,8 +1752,9 @@ enum CzResult czWrap_ftell(long* res, FILE* stream)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -1792,8 +1815,9 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -1821,8 +1845,9 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -1846,8 +1871,9 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -1907,8 +1933,9 @@ enum CzResult czWrap_fgetpos(FILE* stream, fpos_t* pos)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -1938,8 +1965,9 @@ enum CzResult czWrap_fgetpos(FILE* stream, fpos_t* pos)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -1962,8 +1990,9 @@ enum CzResult czWrap_fgetpos(FILE* stream, fpos_t* pos)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -2022,8 +2051,9 @@ enum CzResult czWrap_fsetpos(FILE* stream, const fpos_t* pos)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -2052,8 +2082,9 @@ enum CzResult czWrap_fsetpos(FILE* stream, const fpos_t* pos)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -2076,8 +2107,9 @@ enum CzResult czWrap_fsetpos(FILE* stream, const fpos_t* pos)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -2097,8 +2129,9 @@ enum CzResult czWrap_fsetpos(FILE* stream, const fpos_t* pos)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -2139,8 +2172,9 @@ enum CzResult czWrap_rewind(FILE* stream)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -2174,8 +2208,9 @@ enum CzResult czWrap_rewind(FILE* stream)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -2197,8 +2232,9 @@ enum CzResult czWrap_rewind(FILE* stream)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -2216,8 +2252,9 @@ enum CzResult czWrap_rewind(FILE* stream)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -2310,8 +2347,9 @@ enum CzResult czWrap_fwrite(size_t* res, const void* buffer, size_t size, size_t
 		return CZ_RESULT_INTERRUPT;
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -2327,7 +2365,7 @@ enum CzResult czWrap_fwrite(size_t* res, const void* buffer, size_t size, size_t
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -2367,7 +2405,7 @@ enum CzResult czWrap_fflush(FILE* stream)
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
 	default:
@@ -2394,7 +2432,7 @@ enum CzResult czWrap_fflush(FILE* stream)
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
 	default:
@@ -2417,7 +2455,7 @@ enum CzResult czWrap_fflush(FILE* stream)
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
 	default:
@@ -2436,8 +2474,9 @@ enum CzResult czWrap_fflush(FILE* stream)
 		return CZ_RESULT_INTERRUPT;
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -2456,7 +2495,7 @@ enum CzResult czWrap_fflush(FILE* stream)
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -2471,7 +2510,7 @@ enum CzResult czWrap_fflush(FILE* stream)
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -2552,10 +2591,10 @@ enum CzResult czWrap_remove(const char* path)
 		return CZ_RESULT_BAD_PATH;
 	case EBUSY:
 		return CZ_RESULT_IN_USE;
+	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
 	case ENOENT:
 		return CZ_RESULT_NO_FILE;
-	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -2806,10 +2845,10 @@ enum CzResult czWrap_unlink(const char* path)
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
+	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
 	case ENOENT:
 		return CZ_RESULT_NO_FILE;
-	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -2968,10 +3007,10 @@ enum CzResult czWrap_unlinkat(int fd, const char* path, int flags)
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
+	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
 	case ENOENT:
 		return CZ_RESULT_NO_FILE;
-	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -3835,7 +3874,7 @@ enum CzResult czWrap_fallocate(int fd, int mode, off_t offset, off_t size)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case ENOSYS:
 	case EOPNOTSUPP:
 		return CZ_RESULT_NO_SUPPORT;
@@ -3881,7 +3920,7 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EOPNOTSUPP:
 		return CZ_RESULT_NO_SUPPORT;
 	default:
@@ -3907,7 +3946,7 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -3927,7 +3966,7 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case ENOTSUP:
 		return CZ_RESULT_NO_SUPPORT;
 	default:
@@ -3951,7 +3990,7 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -3971,7 +4010,7 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -4002,9 +4041,10 @@ enum CzResult czWrap_fsync(int fd)
 		return CZ_RESULT_BAD_FILE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
 	case ENOBUFS:
 	case ENOMEM:
-	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
@@ -4021,7 +4061,7 @@ enum CzResult czWrap_fsync(int fd)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
 	default:
@@ -4045,9 +4085,10 @@ enum CzResult czWrap_fsync(int fd)
 		return CZ_RESULT_BAD_FILE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
 	case ENOBUFS:
 	case ENOMEM:
-	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -4059,7 +4100,7 @@ enum CzResult czWrap_fsync(int fd)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -4097,7 +4138,7 @@ enum CzResult czWrap_fdatasync(int fd)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
 	default:
@@ -4121,9 +4162,10 @@ enum CzResult czWrap_fdatasync(int fd)
 		return CZ_RESULT_BAD_FILE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
 	case ENOBUFS:
 	case ENOMEM:
-	case ENOSPC:
 		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -4137,7 +4179,7 @@ enum CzResult czWrap_fdatasync(int fd)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -4197,7 +4239,7 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
@@ -4257,8 +4299,9 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EMFILE:
 	case ENFILE:
@@ -4313,7 +4356,7 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
@@ -4360,7 +4403,7 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
@@ -4404,7 +4447,7 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
@@ -4448,7 +4491,7 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
@@ -4483,7 +4526,7 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
@@ -4555,7 +4598,7 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
@@ -4616,8 +4659,9 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EMFILE:
 	case ENFILE:
@@ -4678,7 +4722,7 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
@@ -4726,7 +4770,7 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
@@ -4771,7 +4815,7 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
@@ -4824,7 +4868,7 @@ enum CzResult czWrap_creat(int* res, const char* path, mode_t mode)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
@@ -4855,8 +4899,9 @@ enum CzResult czWrap_creat(int* res, const char* path, mode_t mode)
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOMEM:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EMFILE:
 	case ENFILE:
@@ -4892,7 +4937,7 @@ enum CzResult czWrap_creat(int* res, const char* path, mode_t mode)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
@@ -4922,7 +4967,7 @@ enum CzResult czWrap_creat(int* res, const char* path, mode_t mode)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
@@ -4949,7 +4994,7 @@ enum CzResult czWrap_creat(int* res, const char* path, mode_t mode)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
@@ -4974,7 +5019,7 @@ enum CzResult czWrap_creat(int* res, const char* path, mode_t mode)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EMFILE:
 	case ENFILE:
 		return CZ_RESULT_NO_OPEN;
@@ -5003,7 +5048,7 @@ enum CzResult czWrap_close(int fd)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
 	default:
@@ -5016,7 +5061,7 @@ enum CzResult czWrap_close(int fd)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -5402,6 +5447,7 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
+	case ECONNRESET:
 	case EINTEGRITY:
 	case EISDIR:
 	case ESPIPE:
@@ -5419,8 +5465,6 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ECONNRESET:
-		return CZ_RESULT_NO_CONNECTION;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -5543,7 +5587,7 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
 	default:
@@ -5571,7 +5615,7 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
 	default:
@@ -5598,7 +5642,7 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
 	default:
@@ -5625,8 +5669,9 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 	case ENETUNREACH:
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
-	case ENOBUFS:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOBUFS:
 		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -5655,8 +5700,9 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 	case ENETUNREACH:
 	case EPIPE:
 		return CZ_RESULT_NO_CONNECTION;
-	case ENOBUFS:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOBUFS:
 		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -5675,7 +5721,7 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -5727,7 +5773,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
 	default:
@@ -5760,7 +5806,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
 	default:
@@ -5775,6 +5821,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 		return CZ_RESULT_BAD_ADDRESS;
 	case EFBIG:
 	case EINTEGRITY:
+	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EINVAL:
@@ -5787,10 +5834,8 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case EPIPE:
-		return CZ_RESULT_NO_CONNECTION;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	case EDQUOT:
 		return CZ_RESULT_NO_QUOTA;
 	default:
@@ -5810,8 +5855,9 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOBUFS:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOBUFS:
 		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -5834,8 +5880,9 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-	case ENOBUFS:
 	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOBUFS:
 		return CZ_RESULT_NO_MEMORY;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -5858,7 +5905,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
-		return CZ_RESULT_NO_MEMORY;
+		return CZ_RESULT_NO_DISK;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -6419,10 +6466,6 @@ enum CzResult czWrap_GetFileAttributesExW(LPCWSTR path, GET_FILEEX_INFO_LEVELS l
 	case ERROR_PROC_NOT_FOUND:
 		return CZ_RESULT_NO_FILE;
 	case ERROR_DEVICE_NO_RESOURCES:
-	case ERROR_DISK_FULL:
-	case ERROR_DISK_RESOURCES_EXHAUSTED:
-	case ERROR_DISK_TOO_FRAGMENTED:
-	case ERROR_HANDLE_DISK_FULL:
 	case ERROR_NOT_ENOUGH_MEMORY:
 	case ERROR_OUT_OF_STRUCTURES:
 	case ERROR_OUTOFMEMORY:
@@ -6492,13 +6535,10 @@ enum CzResult czWrap_GetFileSizeEx(HANDLE file, PLARGE_INTEGER size)
 		return CZ_RESULT_IN_USE;
 	case ERROR_NO_DATA:
 	case ERROR_PIPE_NOT_CONNECTED:
+	case ERROR_REQ_NOT_ACCEP:
 	case ERROR_VC_DISCONNECTED:
 		return CZ_RESULT_NO_CONNECTION;
 	case ERROR_DEVICE_NO_RESOURCES:
-	case ERROR_DISK_FULL:
-	case ERROR_DISK_RESOURCES_EXHAUSTED:
-	case ERROR_DISK_TOO_FRAGMENTED:
-	case ERROR_HANDLE_DISK_FULL:
 	case ERROR_NOT_ENOUGH_MEMORY:
 	case ERROR_OUT_OF_STRUCTURES:
 	case ERROR_OUTOFMEMORY:
@@ -6614,6 +6654,11 @@ enum CzResult czWrap_CreateFileW(
 	case ERROR_REQ_NOT_ACCEP:
 	case ERROR_VC_DISCONNECTED:
 		return CZ_RESULT_NO_CONNECTION;
+	case ERROR_DISK_FULL:
+	case ERROR_DISK_RESOURCES_EXHAUSTED:
+	case ERROR_DISK_TOO_FRAGMENTED:
+	case ERROR_HANDLE_DISK_FULL:
+		return CZ_RESULT_NO_DISK;
 	case ERROR_BAD_NETPATH:
 	case ERROR_BAD_UNIT:
 	case ERROR_DEV_NOT_EXIST:
@@ -6625,10 +6670,6 @@ enum CzResult czWrap_CreateFileW(
 	case ERROR_PROC_NOT_FOUND:
 		return CZ_RESULT_NO_FILE;
 	case ERROR_DEVICE_NO_RESOURCES:
-	case ERROR_DISK_FULL:
-	case ERROR_DISK_RESOURCES_EXHAUSTED:
-	case ERROR_DISK_TOO_FRAGMENTED:
-	case ERROR_HANDLE_DISK_FULL:
 	case ERROR_NOT_ENOUGH_MEMORY:
 	case ERROR_OUT_OF_STRUCTURES:
 	case ERROR_OUTOFMEMORY:
@@ -6672,11 +6713,12 @@ enum CzResult czWrap_CloseHandle(HANDLE handle)
 	case ERROR_NOT_READY:
 	case ERROR_OPERATION_IN_PROGRESS:
 		return CZ_RESULT_IN_USE;
-	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_DISK_FULL:
 	case ERROR_DISK_RESOURCES_EXHAUSTED:
 	case ERROR_DISK_TOO_FRAGMENTED:
 	case ERROR_HANDLE_DISK_FULL:
+		return CZ_RESULT_NO_DISK;
+	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_NOT_ENOUGH_MEMORY:
 	case ERROR_OUT_OF_STRUCTURES:
 	case ERROR_OUTOFMEMORY:
@@ -6740,11 +6782,12 @@ enum CzResult czWrap_SetEndOfFile(HANDLE file)
 	case ERROR_REQ_NOT_ACCEP:
 	case ERROR_VC_DISCONNECTED:
 		return CZ_RESULT_NO_CONNECTION;
-	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_DISK_FULL:
 	case ERROR_DISK_RESOURCES_EXHAUSTED:
 	case ERROR_DISK_TOO_FRAGMENTED:
 	case ERROR_HANDLE_DISK_FULL:
+		return CZ_RESULT_NO_DISK;
+	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_NOT_ENOUGH_MEMORY:
 	case ERROR_OUT_OF_STRUCTURES:
 	case ERROR_OUTOFMEMORY:
@@ -6825,11 +6868,12 @@ enum CzResult czWrap_SetFilePointerEx(
 	case ERROR_REQ_NOT_ACCEP:
 	case ERROR_VC_DISCONNECTED:
 		return CZ_RESULT_NO_CONNECTION;
-	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_DISK_FULL:
 	case ERROR_DISK_RESOURCES_EXHAUSTED:
 	case ERROR_DISK_TOO_FRAGMENTED:
 	case ERROR_HANDLE_DISK_FULL:
+		return CZ_RESULT_NO_DISK;
+	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_NOT_ENOUGH_MEMORY:
 	case ERROR_OUT_OF_STRUCTURES:
 	case ERROR_OUTOFMEMORY:
@@ -6923,13 +6967,10 @@ enum CzResult czWrap_ReadFile(
 		return CZ_RESULT_INTERRUPT;
 	case ERROR_NO_DATA:
 	case ERROR_PIPE_NOT_CONNECTED:
+	case ERROR_REQ_NOT_ACCEP:
 	case ERROR_VC_DISCONNECTED:
 		return CZ_RESULT_NO_CONNECTION;
 	case ERROR_DEVICE_NO_RESOURCES:
-	case ERROR_DISK_FULL:
-	case ERROR_DISK_RESOURCES_EXHAUSTED:
-	case ERROR_DISK_TOO_FRAGMENTED:
-	case ERROR_HANDLE_DISK_FULL:
 	case ERROR_NOT_ENOUGH_MEMORY:
 	case ERROR_OUT_OF_STRUCTURES:
 	case ERROR_OUTOFMEMORY:
@@ -7013,13 +7054,15 @@ enum CzResult czWrap_WriteFile(
 		return CZ_RESULT_INTERRUPT;
 	case ERROR_NO_DATA:
 	case ERROR_PIPE_NOT_CONNECTED:
+	case ERROR_REQ_NOT_ACCEP:
 	case ERROR_VC_DISCONNECTED:
 		return CZ_RESULT_NO_CONNECTION;
-	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_DISK_FULL:
 	case ERROR_DISK_RESOURCES_EXHAUSTED:
 	case ERROR_DISK_TOO_FRAGMENTED:
 	case ERROR_HANDLE_DISK_FULL:
+		return CZ_RESULT_NO_DISK;
+	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_NOT_ENOUGH_MEMORY:
 	case ERROR_OUT_OF_STRUCTURES:
 	case ERROR_OUTOFMEMORY:
@@ -7107,6 +7150,11 @@ enum CzResult czWrap_DeleteFileW(LPCWSTR path)
 	case ERROR_REQ_NOT_ACCEP:
 	case ERROR_VC_DISCONNECTED:
 		return CZ_RESULT_NO_CONNECTION;
+	case ERROR_DISK_FULL:
+	case ERROR_DISK_RESOURCES_EXHAUSTED:
+	case ERROR_DISK_TOO_FRAGMENTED:
+	case ERROR_HANDLE_DISK_FULL:
+		return CZ_RESULT_NO_DISK;
 	case ERROR_BAD_NETPATH:
 	case ERROR_DEV_NOT_EXIST:
 	case ERROR_DEVICE_UNREACHABLE:
@@ -7116,10 +7164,6 @@ enum CzResult czWrap_DeleteFileW(LPCWSTR path)
 	case ERROR_PROC_NOT_FOUND:
 		return CZ_RESULT_NO_FILE;
 	case ERROR_DEVICE_NO_RESOURCES:
-	case ERROR_DISK_FULL:
-	case ERROR_DISK_RESOURCES_EXHAUSTED:
-	case ERROR_DISK_TOO_FRAGMENTED:
-	case ERROR_HANDLE_DISK_FULL:
 	case ERROR_NOT_ENOUGH_MEMORY:
 	case ERROR_OUTOFMEMORY:
 	case ERROR_OUT_OF_STRUCTURES:
@@ -7203,11 +7247,12 @@ enum CzResult czWrap_CreateFileMappingW(
 	case ERROR_REQ_NOT_ACCEP:
 	case ERROR_VC_DISCONNECTED:
 		return CZ_RESULT_NO_CONNECTION;
-	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_DISK_FULL:
 	case ERROR_DISK_RESOURCES_EXHAUSTED:
 	case ERROR_DISK_TOO_FRAGMENTED:
 	case ERROR_HANDLE_DISK_FULL:
+		return CZ_RESULT_NO_DISK;
+	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_NOT_ENOUGH_MEMORY:
 	case ERROR_OUT_OF_STRUCTURES:
 	case ERROR_OUTOFMEMORY:
@@ -7267,11 +7312,12 @@ enum CzResult czWrap_MapViewOfFile(
 	case ERROR_SHARING_PAUSED:
 	case ERROR_SHARING_VIOLATION:
 		return CZ_RESULT_IN_USE;
-	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_DISK_FULL:
 	case ERROR_DISK_RESOURCES_EXHAUSTED:
 	case ERROR_DISK_TOO_FRAGMENTED:
 	case ERROR_HANDLE_DISK_FULL:
+		return CZ_RESULT_NO_DISK;
+	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_NOT_ENOUGH_MEMORY:
 	case ERROR_OUT_OF_STRUCTURES:
 	case ERROR_OUTOFMEMORY:
@@ -7318,11 +7364,12 @@ enum CzResult czWrap_UnmapViewOfFile(LPCVOID baseAddress)
 	case ERROR_SHARING_PAUSED:
 	case ERROR_SHARING_VIOLATION:
 		return CZ_RESULT_IN_USE;
-	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_DISK_FULL:
 	case ERROR_DISK_RESOURCES_EXHAUSTED:
 	case ERROR_DISK_TOO_FRAGMENTED:
 	case ERROR_HANDLE_DISK_FULL:
+		return CZ_RESULT_NO_DISK;
+	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_NOT_ENOUGH_MEMORY:
 	case ERROR_OUT_OF_STRUCTURES:
 	case ERROR_OUTOFMEMORY:
@@ -7366,11 +7413,12 @@ enum CzResult czWrap_FlushViewOfFile(LPCVOID baseAddress, SIZE_T numberOfBytesTo
 	case ERROR_SHARING_PAUSED:
 	case ERROR_SHARING_VIOLATION:
 		return CZ_RESULT_IN_USE;
-	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_DISK_FULL:
 	case ERROR_DISK_RESOURCES_EXHAUSTED:
 	case ERROR_DISK_TOO_FRAGMENTED:
 	case ERROR_HANDLE_DISK_FULL:
+		return CZ_RESULT_NO_DISK;
+	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_NOT_ENOUGH_MEMORY:
 	case ERROR_OUT_OF_STRUCTURES:
 	case ERROR_OUTOFMEMORY:
@@ -7408,11 +7456,12 @@ enum CzResult czWrap_FlushFileBuffers(HANDLE file)
 	case ERROR_SHARING_PAUSED:
 	case ERROR_SHARING_VIOLATION:
 		return CZ_RESULT_IN_USE;
-	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_DISK_FULL:
 	case ERROR_DISK_RESOURCES_EXHAUSTED:
 	case ERROR_DISK_TOO_FRAGMENTED:
 	case ERROR_HANDLE_DISK_FULL:
+		return CZ_RESULT_NO_DISK;
+	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_NOT_ENOUGH_MEMORY:
 	case ERROR_OUT_OF_STRUCTURES:
 	case ERROR_OUTOFMEMORY:
@@ -7502,11 +7551,12 @@ enum CzResult czWrap_DeviceIoControl(
 	case ERROR_REQ_NOT_ACCEP:
 	case ERROR_VC_DISCONNECTED:
 		return CZ_RESULT_NO_CONNECTION;
-	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_DISK_FULL:
 	case ERROR_DISK_RESOURCES_EXHAUSTED:
 	case ERROR_DISK_TOO_FRAGMENTED:
 	case ERROR_HANDLE_DISK_FULL:
+		return CZ_RESULT_NO_DISK;
+	case ERROR_DEVICE_NO_RESOURCES:
 	case ERROR_NOT_ENOUGH_MEMORY:
 	case ERROR_OUT_OF_STRUCTURES:
 	case ERROR_OUTOFMEMORY:

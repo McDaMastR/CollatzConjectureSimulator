@@ -552,6 +552,7 @@ enum CzResult czWrap_posix_madvise(int* res, void* addr, size_t size, int advice
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_OPEN The maximum number of open files or streams was reached.
@@ -634,6 +635,7 @@ enum CzResult czWrap_fdopen(FILE* restrict* res, int fd, const char* mode);
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_OPEN The maximum number of open files or streams was reached.
@@ -721,6 +723,7 @@ enum CzResult czWrap_fmemopen(FILE* restrict* res, void* buffer, size_t size, co
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
@@ -747,6 +750,7 @@ enum CzResult czWrap_fclose(FILE* stream);
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
@@ -799,6 +803,7 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence);
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
@@ -826,6 +831,7 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence);
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
@@ -878,6 +884,7 @@ enum CzResult czWrap_ftell(long* res, FILE* stream);
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
@@ -906,6 +913,7 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream);
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
@@ -931,6 +939,7 @@ enum CzResult czWrap_fgetpos(FILE* stream, fpos_t* pos);
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
@@ -953,6 +962,7 @@ enum CzResult czWrap_fsetpos(FILE* stream, const fpos_t* pos);
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
@@ -1008,6 +1018,7 @@ enum CzResult czWrap_fread(size_t* res, void* buffer, size_t size, size_t count,
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
  * @pre @p buffer is nonnull.
@@ -1031,6 +1042,7 @@ enum CzResult czWrap_fwrite(size_t* res, const void* buffer, size_t size, size_t
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  */
@@ -1051,6 +1063,7 @@ enum CzResult czWrap_fflush(FILE* stream);
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
@@ -1126,6 +1139,7 @@ enum CzResult czWrap_rmdir(const char* path);
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
@@ -1187,6 +1201,7 @@ enum CzResult czWrap_unlink(const char* path);
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
@@ -1681,7 +1696,7 @@ enum CzResult czWrap_posix_fadvise(int* res, int fd, off_t offset, off_t size, i
  * @retval CZ_RESULT_BAD_SIZE @p size was nonpositive or (@p offset + @p size) was too large.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
- * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the filesystem or platform.
  * 
  * @pre @p fd is an open file descriptor with write access.
@@ -1731,7 +1746,7 @@ enum CzResult czWrap_fallocate(int fd, int mode, off_t offset, off_t size);
  * @retval CZ_RESULT_BAD_OFFSET @p offset was negative.
  * @retval CZ_RESULT_BAD_SIZE @p size was nonpositive or (@p offset + @p size) was too large.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
- * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the filesystem or platform.
  * 
  * @pre @p fd is an open file descriptor with write access.
@@ -1789,6 +1804,7 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
  * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
@@ -1832,6 +1848,7 @@ enum CzResult czWrap_fsync(int fd);
  * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
@@ -1876,6 +1893,7 @@ enum CzResult czWrap_fdatasync(int fd);
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_OPEN The maximum number of open files was reached.
@@ -1945,6 +1963,7 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode);
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_OPEN The maximum number of open files was reached.
@@ -1993,6 +2012,7 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_OPEN The maximum number of open files was reached.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
@@ -2031,7 +2051,7 @@ enum CzResult czWrap_creat(int* res, const char* path, mode_t mode);
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
- * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
  * @pre @p fd is an open file descriptor.
@@ -2260,6 +2280,7 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
@@ -2321,6 +2342,7 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
  * @retval CZ_RESULT_BAD_SIZE @p size was too large.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
  * 
@@ -2675,6 +2697,7 @@ enum CzResult czWrap_GetFileSizeEx(HANDLE file, PLARGE_INTEGER size);
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_OPEN The maximum number of open files was reached.
@@ -2721,6 +2744,7 @@ enum CzResult czWrap_CreateFileW(
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
@@ -2758,6 +2782,7 @@ enum CzResult czWrap_CloseHandle(HANDLE handle);
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
@@ -2801,6 +2826,7 @@ enum CzResult czWrap_SetEndOfFile(HANDLE file);
  * @retval CZ_RESULT_BAD_OFFSET The resultant file offset was invalid.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
@@ -2895,6 +2921,7 @@ enum CzResult czWrap_ReadFile(
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal or IO cancellation.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
@@ -2937,6 +2964,7 @@ enum CzResult czWrap_WriteFile(
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
@@ -2985,6 +3013,7 @@ enum CzResult czWrap_DeleteFileW(LPCWSTR path);
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
@@ -3038,6 +3067,7 @@ enum CzResult czWrap_CreateFileMappingW(
  * @retval CZ_RESULT_BAD_FILE @p fileMappingObject or the corresponding file was invalid.
  * @retval CZ_RESULT_BAD_OFFSET The file offset was not a multiple of the allocation granularity.
  * @retval CZ_RESULT_IN_USE @p fileMappingObject or the corresponding file was already in use by the system.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
@@ -3081,6 +3111,7 @@ enum CzResult czWrap_MapViewOfFile(
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ADDRESS @p baseAddress was an invalid pointer or mapping view.
  * @retval CZ_RESULT_IN_USE The mapping view was already in use by the system.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
@@ -3118,6 +3149,7 @@ enum CzResult czWrap_UnmapViewOfFile(LPCVOID baseAddress);
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ADDRESS The address range was invalid.
  * @retval CZ_RESULT_IN_USE The mapping view was already in use by the system.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
@@ -3153,6 +3185,7 @@ enum CzResult czWrap_FlushViewOfFile(LPCVOID baseAddress, SIZE_T numberOfBytesTo
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_IN_USE The mapping view was already in use by the system.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
@@ -3201,6 +3234,7 @@ enum CzResult czWrap_FlushFileBuffers(HANDLE file);
  * @retval CZ_RESULT_BAD_SIZE @p outBufferSize was too small.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
  * 
