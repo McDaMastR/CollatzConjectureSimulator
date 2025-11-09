@@ -128,7 +128,7 @@ set(COMPILE_WARNINGS_MSVC
 	/wd4820 # Don't care about struct padding
 )
 
-set(MACRO_DEFINITIONS_APPLE
+set(MACRO_DEFINITIONS_DARWIN
 	_DARWIN_C_SOURCE=1
 	_DARWIN_USE_64_BIT_INODE=1
 )
@@ -137,17 +137,17 @@ set(MACRO_DEFINITIONS_MINGW
 	$<${USING_EXCESS_WARNINGS}:__MINGW_MSVC_COMPAT_WARNINGS=1>
 )
 
-set(MACRO_DEFINITIONS_WIN32
+set(MACRO_DEFINITIONS_WINDOWS
 	_CRT_NONSTDC_NO_WARNINGS=1
 	_CRT_SECURE_NO_WARNINGS=1
 )
 
-set(LINK_LIBRARIES_APPLE
+set(LINK_LIBRARIES_DARWIN
 	$<LINK_LIBRARY:FRAMEWORK,CoreFoundation>
 	$<LINK_LIBRARY:FRAMEWORK,IOKit>
 )
 
-set(INCLUDE_HEADERS_APPLE
+set(INCLUDE_HEADERS_DARWIN
 	<CoreFoundation/CoreFoundation.h$<ANGLE-R>
 	<IOKit/pwr_mgt/IOPMLib.h$<ANGLE-R>
 )
@@ -163,7 +163,7 @@ set(INCLUDE_HEADERS_UNIX
 	<sys/uio.h$<ANGLE-R>
 )
 
-set(INCLUDE_HEADERS_WIN32
+set(INCLUDE_HEADERS_WINDOWS
 	<intrin.h$<ANGLE-R>
 	<io.h$<ANGLE-R>
 	<windows.h$<ANGLE-R>
@@ -193,9 +193,9 @@ target_compile_definitions(cltzCommon
 		_XOPEN_SOURCE=800
 
 		$<$<NOT:$<CONFIG:DEBUG>>:NDEBUG=1>
-		$<${USING_APPLE}:${MACRO_DEFINITIONS_APPLE}>
+		$<${USING_DARWIN}:${MACRO_DEFINITIONS_DARWIN}>
 		$<${USING_MINGW}:${MACRO_DEFINITIONS_MINGW}>
-		$<${USING_WIN32}:${MACRO_DEFINITIONS_WIN32}>
+		$<${USING_WINDOWS}:${MACRO_DEFINITIONS_WINDOWS}>
 )
 
 target_compile_options(cltzCommon
@@ -229,7 +229,7 @@ target_link_libraries(cltzCommon
 		volk::volk
 
 		# OS-specific libraries
-		$<${USING_APPLE}:${LINK_LIBRARIES_APPLE}>
+		$<${USING_DARWIN}:${LINK_LIBRARIES_DARWIN}>
 )
 
 target_precompile_headers(cltzCommon
@@ -282,9 +282,9 @@ target_precompile_headers(cltzCommon
 		$<${USING_SYS_PARAM_H}:<sys/param.h$<ANGLE-R>>
 
 		# OS-specific headers
-		$<${USING_APPLE}:${INCLUDE_HEADERS_APPLE}>
+		$<${USING_DARWIN}:${INCLUDE_HEADERS_DARWIN}>
 		$<${USING_UNIX}:${INCLUDE_HEADERS_UNIX}>
-		$<${USING_WIN32}:${INCLUDE_HEADERS_WIN32}>
+		$<${USING_WINDOWS}:${INCLUDE_HEADERS_WINDOWS}>
 )
 
 target_sources(cltzCommon
