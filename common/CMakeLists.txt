@@ -53,61 +53,61 @@ set(COMPILE_WARNINGS_GNU
 	# Warnings ON
 	-Wall
 	-Wextra
-	-Walloc-zero
-	-Walloca
 	-Warray-bounds=2
-	-Wattribute-alias=2
-	-Wbidi-chars=any,ucn
-	-Wcast-align=strict
 	-Wcast-qual
 	-Wconversion
 	-Wdate-time
 	-Wdisabled-optimization
 	-Wdouble-promotion
-	-Wduplicated-branches
-	-Wduplicated-cond
-	-Wflex-array-member-not-at-end
 	-Wfloat-equal
 	-Wformat=2
-	-Wformat-overflow=2
 	-Wformat-signedness
-	-Wformat-truncation=2
-	-Wimplicit-fallthrough=5
 	-Winit-self
 	-Winvalid-pch
-	-Winvalid-utf8
 	-Wlogical-op
 	-Wmissing-declarations
 	-Wmissing-format-attribute
 	-Wmissing-include-dirs
-	-Wmissing-noreturn
 	-Wmissing-prototypes
-	-Wmissing-variable-declarations
 	-Wnested-externs
-	-Wnull-dereference
 	-Wold-style-definition
-	-Wopenacc-parallelism
 	-Wpacked
 	-Wpointer-arith
 	-Wredundant-decls
 	-Wshadow
-	-Wshift-overflow=2
 	-Wstack-protector
 	-Wstrict-overflow=5
 	-Wstrict-prototypes
-	-Wstringop-overflow=4
 	-Wswitch-default
 	-Wsync-nand
 	-Wtrampolines
-	-Wtrivial-auto-var-init
 	-Wundef
 	-Wunsafe-loop-optimizations
-	-Wunused-const-variable=2
-	-Wunused-macros
-	-Wuse-after-free=3
 	-Wvector-operation-performance
 	-Wwrite-strings
 
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,6>:-Wduplicated-cond>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,6>:-Wnull-dereference>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,6>:-Wshift-overflow=2>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,6>:-Wunused-const-variable=2>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,7>:-Walloc-zero>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,7>:-Walloca>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,7>:-Wduplicated-branches>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,7>:-Wformat-overflow=2>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,7>:-Wformat-truncation=2>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,7>:-Wimplicit-fallthrough=5>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,7>:-Wstringop-overflow=4>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,7>:-Wunused-macros>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,8>:-Wcast-align=strict>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,9>:-Wattribute-alias=2>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,9>:-Wmissing-noreturn>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,12>:-Wbidi-chars=any,ucn>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,12>:-Wopenacc-parallelism>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,12>:-Wtrivial-auto-var-init>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,13>:-Winvalid-utf8>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,14>:-Wflex-array-member-not-at-end>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,14>:-Wmissing-variable-declarations>
+	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,14>:-Wuse-after-free=3>
 	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,15>:-Wc11-c23-compat>
 	$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,15>:-Wleading-whitespace=blanks>
 
@@ -260,7 +260,7 @@ target_precompile_headers(cltzCommon
 		<signal.h>
 		<string.h>
 		<time.h>
-		# <uchar.h> # Not supported on Mac
+		# <uchar.h> # Not supported on macOS
 		<wchar.h>
 		<wctype.h>
 

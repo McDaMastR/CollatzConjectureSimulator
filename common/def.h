@@ -1371,7 +1371,7 @@
 #endif
 
 #if !defined(CZ_FREE)
-#if CZ_HAS_ATTRIBUTE(malloc) && !CZ_CLANG
+#if CZ_HAS_ATTRIBUTE(malloc) && CZ_GNUC_VERSION >= CZ_MAKE_VERSION(11, 1)
 #define CZ_FREE(func, arg) __attribute__ (( malloc(func, arg) ))
 #else
 #define CZ_FREE(func, arg)
