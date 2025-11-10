@@ -138,6 +138,7 @@ set(MACRO_DEFINITIONS_MINGW
 )
 
 set(MACRO_DEFINITIONS_WINDOWS
+	_CRT_DECLARE_NONSTDC_NAMES=1
 	_CRT_NONSTDC_NO_WARNINGS=1
 	_CRT_SECURE_NO_WARNINGS=1
 )
@@ -200,12 +201,17 @@ target_compile_definitions(cltzCommon
 
 target_compile_options(cltzCommon
 	PUBLIC
-		$<$<C_COMPILER_ID:MSVC>:/Oi>
-
+		$<$<C_COMPILER_ID:AppleClang,Clang,GNU>:-ftabstop=4>
 		$<$<AND:$<C_COMPILER_ID:AppleClang,Clang,GNU>,$<CONFIG:DEBUG>>:-Og;-g>
 		$<$<AND:$<C_COMPILER_ID:AppleClang,Clang,GNU>,$<CONFIG:RELEASE>>:-O3>
 		$<$<AND:$<C_COMPILER_ID:AppleClang,Clang,GNU>,$<CONFIG:MINSIZEREL>>:-Os>
 		$<$<AND:$<C_COMPILER_ID:AppleClang,Clang,GNU>,$<CONFIG:RELWITHDEBINFO>>:-O2;-g>
+
+		$<$<C_COMPILER_ID:MSVC>:/utf-8>
+		$<$<AND:$<C_COMPILER_ID:MSVC>,$<CONFIG:DEBUG>>:/Od;/Z7>
+		$<$<AND:$<C_COMPILER_ID:MSVC>,$<CONFIG:RELEASE>>:/GL;/GS-;/Gw;/O2>
+		$<$<AND:$<C_COMPILER_ID:MSVC>,$<CONFIG:MINSIZEREL>>:/GS-;/Gw;/O1>
+		$<$<AND:$<C_COMPILER_ID:MSVC>,$<CONFIG:RELWITHDEBINFO>>:/O2;/Z7>
 
 		$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:AppleClang,Clang>>:${COMPILE_WARNINGS_CLANG}>
 		$<$<AND:${USING_EXCESS_WARNINGS},$<C_COMPILER_ID:GNU>>:${COMPILE_WARNINGS_GNU}>
@@ -213,8 +219,6 @@ target_compile_options(cltzCommon
 
 		$<$<AND:${USING_STATIC_ANALYSIS},$<C_COMPILER_ID:GNU>>:-fanalyzer>
 		$<$<AND:${USING_STATIC_ANALYSIS},$<C_COMPILER_ID:MSVC>>:/analyze>
-
-		$<$<C_COMPILER_ID:AppleClang,Clang,GNU>:-ftabstop=4>
 )
 
 target_link_libraries(cltzCommon
