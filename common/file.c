@@ -1992,7 +1992,6 @@ enum CzResult czReadFile(
 	HAVE_open_file_win32 &&      \
 	HAVE_close_file_win32 &&     \
 	HAVE_append_section_win32 && \
-	HAVE_insert_section_win32 && \
 	HAVE_write_section_win32 &&  \
 	HAVE_FileInfoWin32 )
 
@@ -2000,10 +1999,6 @@ enum CzResult czReadFile(
 CZ_COPY_ATTR(czWriteFile)
 static enum CzResult czWriteFile_win32(PCSTR path, LPCVOID buffer, SIZE_T size, SIZE_T offset, struct CzFileFlags flags)
 {
-	DWORD access = GENERIC_WRITE;
-	if (!flags.overwriteFile && !flags.truncateFile && offset != CZ_EOF)
-		access |= GENERIC_READ;
-
 	DWORD disposition;
 	if (flags.truncateFile)
 		disposition = CREATE_ALWAYS;
@@ -2012,16 +2007,10 @@ static enum CzResult czWriteFile_win32(PCSTR path, LPCVOID buffer, SIZE_T size, 
 	else
 		disposition = OPEN_EXISTING;
 
-	DWORD flags = FILE_ATTRIBUTE_NORMAL;
-	if (flags.overwriteFile || flags.truncateFile || offset == CZ_EOF)
-		flags |= FILE_FLAG_SEQUENTIAL_SCAN;
-	else
-		flags |= FILE_FLAG_RANDOM_ACCESS;
-
 	struct FileInfoWin32 info = {0};
-	info.access = access;
+	info.access = GENERIC_WRITE;
 	info.disposition = disposition;
-	info.flags = flags;
+	info.flags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
 
 	enum CzResult ret = open_file_win32(&info, path);
 	if CZ_NOEXPECT (ret)
@@ -2029,10 +2018,8 @@ static enum CzResult czWriteFile_win32(PCSTR path, LPCVOID buffer, SIZE_T size, 
 
 	if (flags.truncateFile || offset == CZ_EOF)
 		ret = append_section_win32(&info, buffer, size);
-	else if (flags.overwriteFile)
-		ret = write_section_win32(&info, buffer, size, offset);
 	else
-		ret = insert_section_win32(&info, buffer, size, offset);
+		ret = write_section_win32(&info, buffer, size, offset);
 
 	if CZ_NOEXPECT (ret) {
 		close_file_win32(&info);
@@ -2046,7 +2033,6 @@ static enum CzResult czWriteFile_win32(PCSTR path, LPCVOID buffer, SIZE_T size, 
 	HAVE_open_file_posix &&      \
 	HAVE_close_file_posix &&     \
 	HAVE_append_section_posix && \
-	HAVE_insert_section_posix && \
 	HAVE_write_section_posix &&  \
 	HAVE_FileInfoPosix )
 
@@ -2055,8 +2041,7 @@ CZ_COPY_ATTR(czWriteFile)
 static enum CzResult czWriteFile_posix(
 	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
 {
-	int openFlags = O_NOCTTY;
-	openFlags |= (flags.overwriteFile || flags.truncateFile || offset == CZ_EOF) ? O_WRONLY : O_RDWR;
+	int openFlags = O_NOCTTY | O_WRONLY;
 	if (flags.truncateFile || !offset || offset == CZ_EOF)
 		openFlags |= O_CREAT;
 	if (flags.truncateFile)
@@ -2073,10 +2058,8 @@ static enum CzResult czWriteFile_posix(
 
 	if (flags.truncateFile || offset == CZ_EOF)
 		ret = append_section_posix(&info, buffer, size);
-	else if (flags.overwriteFile)
-		ret = write_section_posix(&info, buffer, size, offset);
 	else
-		ret = insert_section_posix(&info, buffer, size, offset);
+		ret = write_section_posix(&info, buffer, size, offset);
 
 	if CZ_NOEXPECT (ret) {
 		close_file_posix(&info);
@@ -2100,10 +2083,8 @@ static enum CzResult czWriteFile_stdc(
 
 	if (flags.truncateFile || offset == CZ_EOF)
 		ret = append_section_stdc(&info, buffer, size);
-	else if (flags.overwriteFile)
-		ret = write_section_stdc(&info, buffer, size, offset);
 	else
-		ret = insert_section_stdc(&info, buffer, size, offset);
+		ret = write_section_stdc(&info, buffer, size, offset);
 
 	if CZ_NOEXPECT (ret) {
 		close_file_stdc(&info);
@@ -2133,6 +2114,138 @@ enum CzResult czWriteFile(
 	ret = czWriteFile_posix(resolvedPath, buffer, size, offset, flags);
 #else
 	ret = czWriteFile_stdc(resolvedPath, buffer, size, offset, flags);
+#endif
+	czFree(allocPath);
+	return ret;
+}
+
+#define HAVE_czInsertFile_win32 ( \
+	HAVE_open_file_win32 &&       \
+	HAVE_close_file_win32 &&      \
+	HAVE_append_section_win32 &&  \
+	HAVE_insert_section_win32 &&  \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_czInsertFile_win32
+CZ_COPY_ATTR(czInsertFile)
+static enum CzResult czInsertFile_win32(PCSTR path, LPCVOID buffer, SIZE_T size, SIZE_T offset)
+{
+	DWORD access = GENERIC_WRITE;
+	if (offset != CZ_EOF)
+		access |= GENERIC_READ;
+
+	DWORD openFlags = FILE_ATTRIBUTE_NORMAL;
+	if (offset == CZ_EOF)
+		openFlags |= FILE_FLAG_SEQUENTIAL_SCAN;
+	else
+		openFlags |= FILE_FLAG_RANDOM_ACCESS;
+
+	struct FileInfoWin32 info = {0};
+	info.access = access;
+	info.disposition = (!offset || offset == CZ_EOF) ? OPEN_ALWAYS : OPEN_EXISTING;
+	info.flags = openFlags;
+
+	enum CzResult ret = open_file_win32(&info, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (offset == CZ_EOF)
+		ret = append_section_win32(&info, buffer, size);
+	else
+		ret = insert_section_win32(&info, buffer, size, offset);
+
+	if CZ_NOEXPECT (ret) {
+		close_file_win32(&info);
+		return ret;
+	}
+	return close_file_win32(&info);
+}
+#endif
+
+#define HAVE_czInsertFile_posix ( \
+	HAVE_open_file_posix &&       \
+	HAVE_close_file_posix &&      \
+	HAVE_append_section_posix &&  \
+	HAVE_insert_section_posix &&  \
+	HAVE_FileInfoPosix )
+
+#if HAVE_czInsertFile_posix
+CZ_COPY_ATTR(czInsertFile)
+static enum CzResult czInsertFile_posix(
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
+{
+	int openFlags = O_NOCTTY;
+	openFlags |= (offset == CZ_EOF) ? O_WRONLY : O_RDWR;
+	if (!offset || offset == CZ_EOF)
+		openFlags |= O_CREAT;
+
+	struct FileInfoPosix info = {0};
+	info.fildes = -1;
+	info.flags = openFlags;
+	info.path = path;
+
+	enum CzResult ret = open_file_posix(&info);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (offset == CZ_EOF)
+		ret = append_section_posix(&info, buffer, size);
+	else
+		ret = insert_section_posix(&info, buffer, size, offset);
+
+	if CZ_NOEXPECT (ret) {
+		close_file_posix(&info);
+		return ret;
+	}
+	return close_file_posix(&info);
+}
+#endif
+
+CZ_COPY_ATTR(czInsertFile)
+static enum CzResult czInsertFile_stdc(
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
+{
+	struct FileInfoStdc info = {0};
+	info.path = path;
+	info.mode = "r+b";
+
+	enum CzResult ret = open_file_stdc(&info);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (offset == CZ_EOF)
+		ret = append_section_stdc(&info, buffer, size);
+	else
+		ret = insert_section_stdc(&info, buffer, size, offset);
+
+	if CZ_NOEXPECT (ret) {
+		close_file_stdc(&info);
+		return ret;
+	}
+	return close_file_stdc(&info);
+}
+
+enum CzResult czInsertFile(
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	enum CzResult ret;
+	const char* resolvedPath = path;
+	char* allocPath = NULL;
+
+	if (flags.relativeToExe) {
+		ret = alloc_resolve_path(&allocPath, path);
+		if CZ_NOEXPECT (ret)
+			return ret;
+		if (allocPath)
+			resolvedPath = allocPath;
+	}
+
+#if HAVE_czInsertFile_win32
+	ret = czInsertFile_win32(resolvedPath, buffer, size, offset);
+#elif HAVE_czInsertFile_posix
+	ret = czInsertFile_posix(resolvedPath, buffer, size, offset);
+#else
+	ret = czInsertFile_stdc(resolvedPath, buffer, size, offset);
 #endif
 	czFree(allocPath);
 	return ret;
@@ -2222,7 +2335,7 @@ static enum CzResult czClearFile_stdc(const char* restrict path, size_t size, si
 	return close_file_stdc(&info);
 }
 
-enum CzResult czClearFile(const char* path, size_t size, size_t offset, struct CzFileFlags flags)
+enum CzResult czClearFile(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
 {
 	enum CzResult ret;
 	const char* resolvedPath = path;
