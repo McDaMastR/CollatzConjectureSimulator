@@ -38,8 +38,8 @@
 /**
  * @brief Specifies the behaviour of file and IO functions.
  * 
- * A set of flags specifying the desired behaviour of @ref czFileSize, @ref czReadFile, @ref czWriteFile, or
- * @ref czTrimFile.
+ * A set of flags specifying the desired behaviour of @ref czFileSize, @ref czReadFile, @ref czWriteFile,
+ * @ref czClearFile, or @ref czTrimFile.
  */
 struct CzFileFlags
 {
@@ -147,11 +147,11 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  * and zero. The file contents read are a contiguous block of memory whose size and offset within the file are
  * dependent on @p size and @p offset.
  * - If @p offset is @c CZ_EOF, the read block includes exactly (@e fileSize - @e maxSize) bytes starting from the byte
- *   at the zero-based index @e maxSize. That is, all bytes whose indices lie within the interval
- *   [@e maxSize, @e fileSize).
+ *   at the zero-based index @e maxSize. That is, all bytes whose indices lie within the interval [@e maxSize,
+ *   @e fileSize).
  * - If @p offset is not @c CZ_EOF, the read block includes exactly @e minSize bytes starting from the byte at the
- *   zero-based index @p offset. That is, all bytes whose indices lie within the interval
- *   [@p offset, @e minSize + @p offset).
+ *   zero-based index @p offset. That is, all bytes whose indices lie within the interval [@p offset,
+ *   @e minSize + @p offset).
  * 
  * If @p size is zero or @p offset is not @c CZ_EOF and not less than @e fileSize, failure occurs. On failure, the
  * contents of @p buffer are undefined.
@@ -166,8 +166,8 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  * Thread-safety is guaranteed for an invocation @b A to @ref czReadFile if the following conditions are satisfied.
  * - For any concurrent invocation @b B to @ref czReadFile, the @p buffer arguments of @b A and @b B are nonoverlapping
  *   in memory. If overlap does occur, the contents of the overlapping memory are undefined.
- * - For any concurrent invocation @b C to @ref czWriteFile or @ref czTrimFile, the @p path arguments of @b A and @b C
- *   locate distinct system resources. If they locate the same resource, the behaviour is undefined.
+ * - For any concurrent invocation @b C to @ref czWriteFile, @ref czClearFile, or @ref czTrimFile, the @p path arguments
+ *   of @b A and @b C locate distinct system resources. If they locate the same resource, the behaviour is undefined.
  * 
  * @param[in] path The path to the file.
  * @param[out] buffer The memory to write the file contents to.
@@ -186,7 +186,7 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal or IO cancellation.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
- * @retval CZ_RESULT_NO_FILE The file did not exist or @e fileSize was zero.
+ * @retval CZ_RESULT_NO_FILE The file did not exist or was empty.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_OPEN The maximum number of open files was reached.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
@@ -275,8 +275,8 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  *   writing to it.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czWriteFile if the following conditions are satisfied.
- * - For any concurrent invocation @b B to @ref czWriteFile or @ref czTrimFile, the @p path arguments of @b A and @b B
- *   locate distinct system resources. If they locate the same resource, the behaviour is undefined.
+ * - For any concurrent invocation @b B to @ref czWriteFile, @ref czClearFile, or @ref czTrimFile, the @p path arguments
+ *   of @b A and @b B locate distinct system resources. If they locate the same resource, the behaviour is undefined.
  * 
  * @param[in] path The path to the file.
  * @param[in] buffer The memory to read the new file contents from.
@@ -313,6 +313,70 @@ CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1) CZ_RD_ACCESS(2, 3)
 enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, size_t offset, struct CzFileFlags flags);
 
 /**
+ * @brief Zeros out a file.
+ * 
+ * Synchronously zeros the contents of the file located at the filepath @p path. If the filepath style of @p path is not
+ * POSIX or Windows style, or is unsupported by the platform, failure occurs. If @p path is an invalid filepath or
+ * locates a nonexistent or invalid resource, failure occurs. If @p path locates a symbolic link, the link is followed
+ * recursively. If @p path locates any other non-regular file resource, such as a directory, pipe, or socket, the
+ * behaviour is platform dependent.
+ * 
+ * Let @e fileSize denote the size of the file located at @p path as measured in bytes, let @e minSize denote the
+ * minimum of @p size and (@e fileSize - @p offset), and let @e maxSize denote the maximum of (@e fileSize - @p size)
+ * and zero. The file contents cleared are a contiguous block of memory whose size and offset within the file are
+ * dependent on @p size and @p offset.
+ * - If @p offset is @c CZ_EOF, the cleared block includes exactly (@e fileSize - @e maxSize) bytes starting from the
+ *   byte at the zero-based index @e maxSize. That is, all bytes whose indices lie within the interval [@e maxSize,
+ *   @e fileSize).
+ * - If @p offset is not @c CZ_EOF, the cleared block includes exactly @e minSize bytes starting from the byte at the
+ *   zero-based index @p offset. That is, all bytes whose indices lie within the interval [@p offset,
+ *   @e minSize + @p offset).
+ * 
+ * If @p size is zero or @p offset is not @c CZ_EOF and not less than @e fileSize, failure occurs. On failure, the
+ * contents of the file are undefined.
+ * 
+ * The members of @p flags can optionally specify the following behaviour.
+ * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
+ *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
+ *   working directory of the program.
+ * - @p flags.overwriteFile is ignored.
+ * - @p flags.truncateFile is ignored.
+ * 
+ * Thread-safety is guaranteed for an invocation @b A to @ref czClearFile if the following conditions are satisfied.
+ * - For any concurrent invocation @b B to @ref czWriteFile or @ref czTrimFile, the @p path arguments of @b A and @b B
+ *   locate distinct system resources. If they locate the same resource, the behaviour is undefined.
+ * 
+ * @param[in] path The path to the file.
+ * @param[in] size The number of bytes to clear.
+ * @param[in] offset The first byte to clear.
+ * @param[in] flags Binary flags describing additional behaviour.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to read from or write to the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_OFFSET @p offset was nonzero, not @c CZ_EOF, and greater than or equal to @e fileSize.
+ * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
+ * @retval CZ_RESULT_BAD_SIZE @p size was zero.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal or IO cancellation.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
+ * @retval CZ_RESULT_NO_FILE The file did not exist or was empty.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_OPEN The maximum number of open files was reached.
+ * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @pre @p path is nonnull and NUL-terminated.
+ * 
+ * @warning Invalid usage can result in permanent loss of file data.
+ */
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1)
+enum CzResult czClearFile(const char* path, size_t size, size_t offset, struct CzFileFlags flags);
+
+/**
  * @brief Trims a file.
  * 
  * Synchronously trims the contents of the file located at the filepath @p path. If the filepath style of @p path is not
@@ -326,30 +390,26 @@ enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, siz
  * and zero. The file contents trimmed are a contiguous block of memory whose size and offset within the file are
  * dependent on @p size and @p offset.
  * - If @p offset is @c CZ_EOF, the trimmed block includes exactly (@e fileSize - @e maxSize) bytes starting from the
- *   byte at the zero-based index @e maxSize. That is, all bytes whose indices lie within the interval
- *   [@e maxSize, @e fileSize).
+ *   byte at the zero-based index @e maxSize. That is, all bytes whose indices lie within the interval [@e maxSize,
+ *   @e fileSize). The file size is decreased to @e maxSize.
  * - If @p offset is not @c CZ_EOF, the trimmed block includes exactly @e minSize bytes starting from the byte at the
- *   zero-based index @p offset. That is, all bytes whose indices lie within the interval
- *   [@p offset, @e minSize + @p offset).
+ *   zero-based index @p offset. That is, all bytes whose indices lie within the interval [@p offset,
+ *   @e minSize + @p offset). Any previous file contents in the interval [@e minSize + @p offset, @e fileSize) are moved
+ *   to the memory in the interval [@p offset, @e fileSize - @e minSize). The file size is decreased by @e minSize.
  * 
- * Following the trim operation, the file contents in and proceeding the trimmed block are dependent on
- * @p flags.overwriteFile. If @p offset is @c CZ_EOF and @p flags.overwriteFile is not set, @e fileSize is decreased to
- * @e maxSize. If @p offset is not @c CZ_EOF and @p flags.overwriteFile is not set, @e fileSize is decreased by
- * @e minSize. If @p size is zero or @p offset is not @c CZ_EOF and not less than @e fileSize, failure occurs. On
- * failure, the contents of the file are undefined.
+ * If @p size is zero or @p offset is not @c CZ_EOF and not less than @e fileSize, failure occurs. On failure, the
+ * contents of the file are undefined.
  * 
  * The members of @p flags can optionally specify the following behaviour.
  * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
  *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
  *   working directory of the program.
- * - If @p flags.overwriteFile is set, the trimmed file contents are overwritten with zeros. Otherwise if @p offset is
- *   not @c CZ_EOF, any previous file contents in the interval [@e minSize + @p offset, @e fileSize) are moved to the
- *   memory in the interval [@p offset, @e fileSize - @e minSize).
+ * - @p flags.overwriteFile is ignored.
  * - @p flags.truncateFile is ignored.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czTrimFile if the following conditions are satisfied.
- * - For any concurrent invocation @b B to @ref czWriteFile or @ref czTrimFile, the @p path arguments of @b A and @b B
- *   locate distinct system resources. If they locate the same resource, the behaviour is undefined.
+ * - For any concurrent invocation @b B to @ref czWriteFile, @ref czClearFile, or @ref czTrimFile, the @p path arguments
+ *   of @b A and @b B locate distinct system resources. If they locate the same resource, the behaviour is undefined.
  * 
  * @param[in] path The path to the file.
  * @param[in] size The number of bytes to trim.
@@ -368,7 +428,7 @@ enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, siz
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal or IO cancellation.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
- * @retval CZ_RESULT_NO_FILE The file did not exist or @e fileSize was zero.
+ * @retval CZ_RESULT_NO_FILE The file did not exist or was empty.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_OPEN The maximum number of open files was reached.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.

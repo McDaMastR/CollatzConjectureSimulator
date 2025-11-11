@@ -2138,31 +2138,20 @@ enum CzResult czWriteFile(
 	return ret;
 }
 
-#define HAVE_czTrimFile_win32 (  \
+#define HAVE_czClearFile_win32 ( \
 	HAVE_open_file_win32 &&      \
 	HAVE_close_file_win32 &&     \
-	HAVE_remove_section_win32 && \
 	HAVE_zero_section_win32 &&   \
 	HAVE_FileInfoWin32 )
 
-#if HAVE_czTrimFile_win32
-CZ_COPY_ATTR(czTrimFile)
-static enum CzResult czTrimFile_win32(PCSTR path, SIZE_T size, SIZE_T offset, struct CzFileFlags flags)
+#if HAVE_czClearFile_win32
+CZ_COPY_ATTR(czClearFile)
+static enum CzResult czClearFile_win32(PCSTR path, SIZE_T size, SIZE_T offset)
 {
-	DWORD access = GENERIC_WRITE;
-	if (!flags.overwriteFile)
-		access |= GENERIC_READ;
-
-	DWORD flags = 0;
-	if (flags.overwriteFile)
-		flags |= FILE_FLAG_SEQUENTIAL_SCAN;
-	else
-		flags |= FILE_FLAG_RANDOM_ACCESS;
-
 	struct FileInfoWin32 info = {0};
-	info.access = access;
+	info.access = GENERIC_WRITE;
 	info.disposition = OPEN_EXISTING;
-	info.flags = flags;
+	info.flags = FILE_FLAG_SEQUENTIAL_SCAN;
 
 	enum CzResult ret = open_file_win32(&info, path);
 	if CZ_NOEXPECT (ret)
@@ -2170,11 +2159,8 @@ static enum CzResult czTrimFile_win32(PCSTR path, SIZE_T size, SIZE_T offset, st
 
 	if (offset == CZ_EOF)
 		offset = (info.fileSize > size) ? info.fileSize - size : 0;
-	if (flags.overwriteFile)
-		ret = zero_section_win32(&info, size, offset);
-	else
-		ret = remove_section_win32(&info, size, offset);
 
+	ret = zero_section_win32(&info, size, offset);
 	if CZ_NOEXPECT (ret) {
 		close_file_win32(&info);
 		return ret;
@@ -2183,16 +2169,15 @@ static enum CzResult czTrimFile_win32(PCSTR path, SIZE_T size, SIZE_T offset, st
 }
 #endif
 
-#define HAVE_czTrimFile_posix (  \
+#define HAVE_czClearFile_posix ( \
 	HAVE_open_file_posix &&      \
 	HAVE_close_file_posix &&     \
-	HAVE_remove_section_posix && \
 	HAVE_zero_section_posix &&   \
 	HAVE_FileInfoPosix )
 
-#if HAVE_czTrimFile_posix
-CZ_COPY_ATTR(czTrimFile)
-static enum CzResult czTrimFile_posix(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
+#if HAVE_czClearFile_posix
+CZ_COPY_ATTR(czClearFile)
+static enum CzResult czClearFile_posix(const char* restrict path, size_t size, size_t offset)
 {
 	struct FileInfoPosix info = {0};
 	info.fildes = -1;
@@ -2205,11 +2190,8 @@ static enum CzResult czTrimFile_posix(const char* restrict path, size_t size, si
 
 	if (offset == CZ_EOF)
 		offset = (info.fileSize > size) ? info.fileSize - size : 0;
-	if (flags.overwriteFile)
-		ret = zero_section_posix(&info, size, offset);
-	else
-		ret = remove_section_posix(&info, size, offset);
 
+	ret = zero_section_posix(&info, size, offset);
 	if CZ_NOEXPECT (ret) {
 		close_file_posix(&info);
 		return ret;
@@ -2218,8 +2200,8 @@ static enum CzResult czTrimFile_posix(const char* restrict path, size_t size, si
 }
 #endif
 
-CZ_COPY_ATTR(czTrimFile)
-static enum CzResult czTrimFile_stdc(const char* restrict path, size_t size, size_t offset, struct CzFileFlags flags)
+CZ_COPY_ATTR(czClearFile)
+static enum CzResult czClearFile_stdc(const char* restrict path, size_t size, size_t offset)
 {
 	struct FileInfoStdc info = {0};
 	info.path = path;
@@ -2231,11 +2213,117 @@ static enum CzResult czTrimFile_stdc(const char* restrict path, size_t size, siz
 
 	if (offset == CZ_EOF)
 		offset = (info.fileSize > size) ? info.fileSize - size : 0;
-	if (flags.overwriteFile)
-		ret = zero_section_stdc(&info, size, offset);
-	else
-		ret = remove_section_stdc(&info, size, offset);
 
+	ret = zero_section_stdc(&info, size, offset);
+	if CZ_NOEXPECT (ret) {
+		close_file_stdc(&info);
+		return ret;
+	}
+	return close_file_stdc(&info);
+}
+
+enum CzResult czClearFile(const char* path, size_t size, size_t offset, struct CzFileFlags flags)
+{
+	enum CzResult ret;
+	const char* resolvedPath = path;
+	char* allocPath = NULL;
+
+	if (flags.relativeToExe) {
+		ret = alloc_resolve_path(&allocPath, path);
+		if CZ_NOEXPECT (ret)
+			return ret;
+		if (allocPath)
+			resolvedPath = allocPath;
+	}
+
+#if HAVE_czClearFile_win32
+	ret = czClearFile_win32(resolvedPath, size, offset);
+#elif HAVE_czClearFile_posix
+	ret = czClearFile_posix(resolvedPath, size, offset);
+#else
+	ret = czClearFile_stdc(resolvedPath, size, offset);
+#endif
+	czFree(allocPath);
+	return ret;
+}
+
+#define HAVE_czTrimFile_win32 (  \
+	HAVE_open_file_win32 &&      \
+	HAVE_close_file_win32 &&     \
+	HAVE_remove_section_win32 && \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_czTrimFile_win32
+CZ_COPY_ATTR(czTrimFile)
+static enum CzResult czTrimFile_win32(PCSTR path, SIZE_T size, SIZE_T offset)
+{
+	struct FileInfoWin32 info = {0};
+	info.access = GENERIC_READ | GENERIC_WRITE;
+	info.disposition = OPEN_EXISTING;
+	info.flags = FILE_FLAG_RANDOM_ACCESS;
+
+	enum CzResult ret = open_file_win32(&info, path);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (offset == CZ_EOF)
+		offset = (info.fileSize > size) ? info.fileSize - size : 0;
+
+	ret = remove_section_win32(&info, size, offset);
+	if CZ_NOEXPECT (ret) {
+		close_file_win32(&info);
+		return ret;
+	}
+	return close_file_win32(&info);
+}
+#endif
+
+#define HAVE_czTrimFile_posix (  \
+	HAVE_open_file_posix &&      \
+	HAVE_close_file_posix &&     \
+	HAVE_remove_section_posix && \
+	HAVE_FileInfoPosix )
+
+#if HAVE_czTrimFile_posix
+CZ_COPY_ATTR(czTrimFile)
+static enum CzResult czTrimFile_posix(const char* restrict path, size_t size, size_t offset)
+{
+	struct FileInfoPosix info = {0};
+	info.fildes = -1;
+	info.flags = O_NOCTTY | O_RDWR;
+	info.path = path;
+
+	enum CzResult ret = open_file_posix(&info);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (offset == CZ_EOF)
+		offset = (info.fileSize > size) ? info.fileSize - size : 0;
+
+	ret = remove_section_posix(&info, size, offset);
+	if CZ_NOEXPECT (ret) {
+		close_file_posix(&info);
+		return ret;
+	}
+	return close_file_posix(&info);
+}
+#endif
+
+CZ_COPY_ATTR(czTrimFile)
+static enum CzResult czTrimFile_stdc(const char* restrict path, size_t size, size_t offset)
+{
+	struct FileInfoStdc info = {0};
+	info.path = path;
+	info.mode = "rb";
+
+	enum CzResult ret = open_file_stdc(&info);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	if (offset == CZ_EOF)
+		offset = (info.fileSize > size) ? info.fileSize - size : 0;
+
+	ret = remove_section_stdc(&info, size, offset);
 	if CZ_NOEXPECT (ret) {
 		close_file_stdc(&info);
 		return ret;
@@ -2258,11 +2346,11 @@ enum CzResult czTrimFile(const char* restrict path, size_t size, size_t offset, 
 	}
 
 #if HAVE_czTrimFile_win32
-	ret = czTrimFile_win32(resolvedPath, size, offset, flags);
+	ret = czTrimFile_win32(resolvedPath, size, offset);
 #elif HAVE_czTrimFile_posix
-	ret = czTrimFile_posix(resolvedPath, size, offset, flags);
+	ret = czTrimFile_posix(resolvedPath, size, offset);
 #else
-	ret = czTrimFile_stdc(resolvedPath, size, offset, flags);
+	ret = czTrimFile_stdc(resolvedPath, size, offset);
 #endif
 	czFree(allocPath);
 	return ret;
