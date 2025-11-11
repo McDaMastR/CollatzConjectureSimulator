@@ -117,7 +117,7 @@ enum CzResult czStreamIsTerminal(FILE* stream, bool* istty);
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
- * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was invalid or unsupported.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
@@ -179,7 +179,7 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to read from the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path or @p buffer was an invalid pointer.
- * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was invalid or unsupported.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was nonzero, not @c CZ_EOF, and greater than or equal to @e fileSize.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
@@ -197,6 +197,47 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  * @pre @p buffer is nonnull.
  * @pre @p path and @p buffer do not overlap in memory.
  * @pre @p size is less than or equal to the size of @p buffer.
+ * 
+ * Example 1: @e fileSize = 80, @p size = 16, @p offset = 48.
+@verbatim
+                                            offset      size+offset         fileSize
+                                                 │                │                │
+┌────────────────────────────────────────────────┬────────────────┬────────────────┐
+│                    48 bytes                    │    16 bytes    │    16 bytes    │
+└────────────────────────────────────────────────┴────────────────┴────────────────┘
+                                                 └────────────────┘
+												        Read
+@endverbatim
+ * Example 2: @e fileSize = 80, @p size = 48, @p offset = 48.
+@verbatim
+                                            offset                         fileSize      size+offset
+                                                 │                                │                │
+┌────────────────────────────────────────────────┬────────────────────────────────┬────────────────┐
+│                    48 bytes                    │            32 bytes            │    16 bytes    │
+└────────────────────────────────────────────────┴────────────────────────────────┴────────────────┘
+                                                 └────────────────────────────────┘
+												                Read
+@endverbatim
+ * Example 3: @e fileSize = 80, @p size = 1024, @p offset = 0.
+@verbatim
+                                                                          fileSize             size
+                                                                                 │                │
+┌────────────────────────────────────────────────────────────────────────────────┬──────....──────┐
+│                                    80 bytes                                    │                │
+└────────────────────────────────────────────────────────────────────────────────┴──────....──────┘
+└────────────────────────────────────────────────────────────────────────────────┘
+                                       Read
+@endverbatim
+ * Example 4: @e fileSize = 80, @p size = 64, @p offset = CZ_EOF.
+@verbatim
+                 fileSize-size                                             fileSize
+                 │                                                                │
+┌────────────────┬────────────────────────────────────────────────────────────────┐
+│    16 bytes    │                            64 bytes                            │
+└────────────────┴────────────────────────────────────────────────────────────────┘
+                 └────────────────────────────────────────────────────────────────┘
+				                                Read
+@endverbatim
  */
 CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1) CZ_WR_ACCESS(2, 3)
 enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t offset, struct CzFileFlags flags);
@@ -247,7 +288,7 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to write to the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path or @p buffer was an invalid pointer.
- * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was invalid or unsupported.
  * @retval CZ_RESULT_BAD_OFFSET The file did exist and @p offset was not @c CZ_EOF and greater than @e fileSize.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
@@ -319,7 +360,7 @@ enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, siz
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to read from or write to the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
- * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was invalid or unsupported.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was nonzero, not @c CZ_EOF, and greater than or equal to @e fileSize.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
