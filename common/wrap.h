@@ -2645,7 +2645,7 @@ enum CzResult czWrap_GetFileAttributesExW(LPCWSTR path, GET_FILEEX_INFO_LEVELS l
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
- * @retval CZ_RESULT_BAD_ADDRESS @p size was an invalid pointer.
+ * @retval CZ_RESULT_BAD_ADDRESS @p fileInformation was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
@@ -2659,6 +2659,51 @@ enum CzResult czWrap_GetFileAttributesExW(LPCWSTR path, GET_FILEEX_INFO_LEVELS l
  */
 CZ_NONNULL_ARGS() CZ_WR_ACCESS(3)
 enum CzResult czWrap_GetFileInformationByHandleEx(
+	HANDLE file, FILE_INFO_BY_HANDLE_CLASS fileInformationClass, PVOID fileInformation, DWORD bufferSize);
+#endif
+
+/**
+ * @def CZ_WRAP_SET_FILE_INFORMATION_BY_HANDLE
+ * 
+ * @brief Specifies whether @c SetFileInformationByHandle is defined.
+ */
+#if !defined(CZ_WRAP_SET_FILE_INFORMATION_BY_HANDLE)
+#if CZ_WIN32
+#define CZ_WRAP_SET_FILE_INFORMATION_BY_HANDLE 1
+#else
+#define CZ_WRAP_SET_FILE_INFORMATION_BY_HANDLE 0
+#endif
+#endif
+
+#if CZ_WRAP_SET_FILE_INFORMATION_BY_HANDLE
+/**
+ * @brief Wraps @c SetFileInformationByHandle.
+ * 
+ * Calls @c SetFileInformationByHandle with @p file, @p fileInformationClass, @p fileInformation, and @p bufferSize.
+ * 
+ * @param[in] file The first argument to pass to @c SetFileInformationByHandle.
+ * @param[in] fileInformationClass The second argument to pass to @c SetFileInformationByHandle.
+ * @param[in] fileInformation The third argument to pass to @c SetFileInformationByHandle.
+ * @param[in] bufferSize The fourth argument to pass to @c SetFileInformationByHandle.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p fileInformation was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @pre @p file is nonnull.
+ * @pre @p fileInformation is nonnull.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_SET_FILE_INFORMATION_BY_HANDLE is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS() CZ_RD_ACCESS(3)
+enum CzResult czWrap_SetFileInformationByHandle(
 	HANDLE file, FILE_INFO_BY_HANDLE_CLASS fileInformationClass, PVOID fileInformation, DWORD bufferSize);
 #endif
 

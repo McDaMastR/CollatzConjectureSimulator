@@ -329,9 +329,8 @@ static enum CzResult close_file_win32(struct FileInfoWin32* restrict info)
 }
 #endif
 
-#define HAVE_truncate_all_win32 (  \
-	CZ_WRAP_SET_END_OF_FILE &&     \
-	CZ_WRAP_SET_FILE_POINTER_EX && \
+#define HAVE_truncate_all_win32 (             \
+	CZ_WRAP_SET_FILE_INFORMATION_BY_HANDLE && \
 	HAVE_FileInfoWin32 )
 
 #if HAVE_truncate_all_win32
@@ -351,12 +350,11 @@ static enum CzResult truncate_all_win32(struct FileInfoWin32* restrict info, SIZ
 	if CZ_NOEXPECT (size > MAX_FILE_SIZE)
 		return CZ_RESULT_BAD_OFFSET;
 
-	LARGE_INTEGER moveDistance = {.QuadPart = (LONGLONG) size};
-	enum CzResult ret = czWrap_SetFilePointerEx(info->file, moveDistance, NULL, FILE_BEGIN);
-	if CZ_NOEXPECT (ret)
-		return ret;
+	LARGE_INTEGER eof = {.QuadPart = (LONGLONG) size};
+	FILE_END_OF_FILE_INFO eofInfo = {0};
+	eofInfo.EndOfFile = eof;
 
-	ret = czWrap_SetEndOfFile(info->file);
+	enum CzResult ret = czWrap_SetFileInformationByHandle(info->file, FileEndOfFileInfo, &eofInfo, sizeof(eofInfo));
 	if CZ_NOEXPECT (ret)
 		return ret;
 
