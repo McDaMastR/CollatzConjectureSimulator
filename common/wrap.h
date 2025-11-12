@@ -2619,6 +2619,50 @@ enum CzResult czWrap_GetFileAttributesExW(LPCWSTR path, GET_FILEEX_INFO_LEVELS l
 #endif
 
 /**
+ * @def CZ_WRAP_GET_FILE_INFORMATION_BY_HANDLE_EX
+ * 
+ * @brief Specifies whether @c GetFileInformationByHandleEx is defined.
+ */
+#if !defined(CZ_WRAP_GET_FILE_INFORMATION_BY_HANDLE_EX)
+#if CZ_WIN32
+#define CZ_WRAP_GET_FILE_INFORMATION_BY_HANDLE_EX 1
+#else
+#define CZ_WRAP_GET_FILE_INFORMATION_BY_HANDLE_EX 0
+#endif
+#endif
+
+#if CZ_WRAP_GET_FILE_INFORMATION_BY_HANDLE_EX
+/**
+ * @brief Wraps @c GetFileInformationByHandleEx.
+ * 
+ * Calls @c GetFileInformationByHandleEx with @p file, @p fileInformationClass, @p fileInformation, and @p bufferSize.
+ * 
+ * @param[in] file The first argument to pass to @c GetFileInformationByHandleEx.
+ * @param[in] fileInformationClass The second argument to pass to @c GetFileInformationByHandleEx.
+ * @param[out] fileInformation The third argument to pass to @c GetFileInformationByHandleEx.
+ * @param[in] bufferSize The fourth argument to pass to @c GetFileInformationByHandleEx.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p size was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @pre @p file is nonnull.
+ * @pre @p fileInformation is nonnull.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_GET_FILE_INFORMATION_BY_HANDLE_EX is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(3)
+enum CzResult czWrap_GetFileInformationByHandleEx(
+	HANDLE file, FILE_INFO_BY_HANDLE_CLASS fileInformationClass, PVOID fileInformation, DWORD bufferSize);
+#endif
+
+/**
  * @def CZ_WRAP_GET_FILE_SIZE_EX
  * 
  * @brief Specifies whether @c GetFileSizeEx is defined.
@@ -2657,6 +2701,47 @@ enum CzResult czWrap_GetFileAttributesExW(LPCWSTR path, GET_FILEEX_INFO_LEVELS l
  */
 CZ_NONNULL_ARGS() CZ_WR_ACCESS(2)
 enum CzResult czWrap_GetFileSizeEx(HANDLE file, PLARGE_INTEGER size);
+#endif
+
+/**
+ * @def CZ_WRAP_GET_FILE_TYPE
+ * 
+ * @brief Specifies whether @c GetFileType is defined.
+ */
+#if !defined(CZ_WRAP_GET_FILE_TYPE)
+#if CZ_WIN32
+#define CZ_WRAP_GET_FILE_TYPE 1
+#else
+#define CZ_WRAP_GET_FILE_TYPE 0
+#endif
+#endif
+
+#if CZ_WRAP_GET_FILE_TYPE
+/**
+ * @brief Wraps @c GetFileType.
+ * 
+ * Calls @c GetFileType with @p file. On success, the returned @c DWORD is synchronously written to @p res. On failure,
+ * the contents of @p res are unchanged.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] file The argument to pass to @c GetFileType.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @pre @p res is nonnull.
+ * @pre @p file is nonnull.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_GET_FILE_TYPE is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
+enum CzResult czWrap_GetFileType(PDWORD res, HANDLE file);
 #endif
 
 /**

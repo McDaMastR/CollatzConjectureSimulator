@@ -49,6 +49,11 @@ struct CzFileFlags
 	bool relativeToExe : 1;
 
 	/**
+	 * @brief Whether to examine symbolic links rather than follow them.
+	 */
+	bool openSymLink : 1;
+
+	/**
 	 * @brief Whether to fully truncate the file before further access.
 	 */
 	bool truncateFile : 1;
@@ -87,14 +92,16 @@ enum CzResult czStreamIsTerminal(FILE* stream, bool* istty);
  * Determines the size of the file located at the filepath @p path and synchronously writes the file size to @p size.
  * The file size is measured in bytes. If the filepath style of @p path is not POSIX or Windows style, or is unsupported
  * by the platform, failure occurs. If @p path is an invalid filepath or locates a nonexistent or invalid resource,
- * failure occurs. If @p path locates a symbolic link, the link is followed recursively. If @p path locates any other
- * non-regular file resource, such as a directory, pipe, or socket, the behaviour is platform dependent. On failure, the
- * contents of @p size are unchanged.
+ * failure occurs. If @p path locates a symbolic link, the behaviour is dependent on @p flags.openSymLink. If @p path
+ * locates any other non-regular file resource, such as a directory, pipe, or socket, the behaviour is platform
+ * dependent. On failure, the contents of @p size are unchanged.
  * 
  * The members of @p flags can optionally specify the following behaviour.
  * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
  *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
  *   working directory of the program.
+ * - If @p flags.openSymLink is set and @p path locates a symbolic link, the file examined is the symbolic link itself.
+ *   Otherwise if @p path locates a symbolic link, it is followed recursively to the linked file.
  * - @p flags.truncateFile is ignored.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czFileSize if the following conditions are satisfied.
@@ -155,6 +162,7 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
  *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
  *   working directory of the program.
+ * - @p flags.openSymLink is ignored.
  * - @p flags.truncateFile is ignored.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czReadFile if the following conditions are satisfied.
@@ -261,6 +269,7 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
  *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
  *   working directory of the program.
+ * - @p flags.openSymLink is ignored.
  * - If @p flags.truncateFile is set, the file is truncated and its contents are destroyed prior to writing the contents
  *   of @p buffer to it; @p offset is ignored. Otherwise, the file is unaltered prior to writing to it.
  * 
@@ -327,6 +336,7 @@ enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, siz
  * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
  *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
  *   working directory of the program.
+ * - @p flags.openSymLink is ignored.
  * - @p flags.truncateFile is ignored.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czInsertFile if the following conditions are satisfied.
@@ -393,6 +403,7 @@ enum CzResult czInsertFile(const char* path, const void* buffer, size_t size, si
  * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
  *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
  *   working directory of the program.
+ * - @p flags.openSymLink is ignored.
  * - @p flags.truncateFile is ignored.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czClearFile if the following conditions are satisfied.
@@ -458,6 +469,7 @@ enum CzResult czClearFile(const char* path, size_t size, size_t offset, struct C
  * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
  *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
  *   working directory of the program.
+ * - @p flags.openSymLink is ignored.
  * - @p flags.truncateFile is ignored.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czTrimFile if the following conditions are satisfied.
