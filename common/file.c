@@ -2024,26 +2024,18 @@ enum CzResult czReadFile(
 
 #if HAVE_czWriteFile_win32
 CZ_COPY_ATTR(czWriteFile)
-static enum CzResult czWriteFile_win32(PCSTR path, LPCVOID buffer, SIZE_T size, SIZE_T offset, struct CzFileFlags flags)
+static enum CzResult czWriteFile_win32(PCSTR path, LPCVOID buffer, SIZE_T size, SIZE_T offset)
 {
-	DWORD disposition;
-	if (flags.truncateFile)
-		disposition = CREATE_ALWAYS;
-	else if (!offset || offset == CZ_EOF)
-		disposition = OPEN_ALWAYS;
-	else
-		disposition = OPEN_EXISTING;
-
 	struct FileInfoWin32 info = {0};
 	info.access = GENERIC_WRITE;
-	info.disposition = disposition;
+	info.disposition = (!offset || offset == CZ_EOF) ? OPEN_ALWAYS : OPEN_EXISTING;
 
 	DWORD openFlags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
 	enum CzResult ret = open_file_win32(&info, path, openFlags);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
-	if (flags.truncateFile || offset == CZ_EOF)
+	if (offset == CZ_EOF)
 		ret = append_section_win32(&info, buffer, size);
 	else
 		ret = write_section_win32(&info, buffer, size, offset);
@@ -2066,13 +2058,11 @@ static enum CzResult czWriteFile_win32(PCSTR path, LPCVOID buffer, SIZE_T size, 
 #if HAVE_czWriteFile_posix
 CZ_COPY_ATTR(czWriteFile)
 static enum CzResult czWriteFile_posix(
-	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
 {
 	int openFlags = O_NOCTTY | O_WRONLY;
-	if (flags.truncateFile || !offset || offset == CZ_EOF)
+	if (!offset || offset == CZ_EOF)
 		openFlags |= O_CREAT;
-	if (flags.truncateFile)
-		openFlags |= O_TRUNC;
 
 	struct FileInfoPosix info = {0};
 	info.fildes = -1;
@@ -2083,7 +2073,7 @@ static enum CzResult czWriteFile_posix(
 	if CZ_NOEXPECT (ret)
 		return ret;
 
-	if (flags.truncateFile || offset == CZ_EOF)
+	if (offset == CZ_EOF)
 		ret = append_section_posix(&info, buffer, size);
 	else
 		ret = write_section_posix(&info, buffer, size, offset);
@@ -2098,17 +2088,17 @@ static enum CzResult czWriteFile_posix(
 
 CZ_COPY_ATTR(czWriteFile)
 static enum CzResult czWriteFile_stdc(
-	const char* restrict path, const void* restrict buffer, size_t size, size_t offset, struct CzFileFlags flags)
+	const char* restrict path, const void* restrict buffer, size_t size, size_t offset)
 {
 	struct FileInfoStdc info = {0};
 	info.path = path;
-	info.mode = flags.truncateFile ? "wb" : "r+b";
+	info.mode = "r+b";
 
 	enum CzResult ret = open_file_stdc(&info);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
-	if (flags.truncateFile || offset == CZ_EOF)
+	if (offset == CZ_EOF)
 		ret = append_section_stdc(&info, buffer, size);
 	else
 		ret = write_section_stdc(&info, buffer, size, offset);
@@ -2136,11 +2126,11 @@ enum CzResult czWriteFile(
 	}
 
 #if HAVE_czWriteFile_win32
-	ret = czWriteFile_win32(resolvedPath, buffer, size, offset, flags);
+	ret = czWriteFile_win32(resolvedPath, buffer, size, offset);
 #elif HAVE_czWriteFile_posix
-	ret = czWriteFile_posix(resolvedPath, buffer, size, offset, flags);
+	ret = czWriteFile_posix(resolvedPath, buffer, size, offset);
 #else
-	ret = czWriteFile_stdc(resolvedPath, buffer, size, offset, flags);
+	ret = czWriteFile_stdc(resolvedPath, buffer, size, offset);
 #endif
 	czFree(allocPath);
 	return ret;
@@ -2272,6 +2262,106 @@ enum CzResult czInsertFile(
 	ret = czInsertFile_posix(resolvedPath, buffer, size, offset);
 #else
 	ret = czInsertFile_stdc(resolvedPath, buffer, size, offset);
+#endif
+	czFree(allocPath);
+	return ret;
+}
+
+#define HAVE_czRewriteFile_win32 ( \
+	HAVE_open_file_win32 &&        \
+	HAVE_close_file_win32 &&       \
+	HAVE_append_section_win32 &&   \
+	HAVE_FileInfoWin32 )
+
+#if HAVE_czRewriteFile_win32
+CZ_COPY_ATTR(czRewriteFile)
+static enum CzResult czRewriteFile_win32(PCSTR path, LPCVOID buffer, SIZE_T size)
+{
+	struct FileInfoWin32 info = {0};
+	info.access = GENERIC_WRITE;
+	info.disposition = CREATE_ALWAYS;
+
+	DWORD openFlags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
+	enum CzResult ret = open_file_win32(&info, path, openFlags);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = append_section_win32(&info, buffer, size);
+	if CZ_NOEXPECT (ret) {
+		close_file_win32(&info);
+		return ret;
+	}
+	return close_file_win32(&info);
+}
+#endif
+
+#define HAVE_czRewriteFile_posix ( \
+	HAVE_open_file_posix &&        \
+	HAVE_close_file_posix &&       \
+	HAVE_append_section_posix &&   \
+	HAVE_FileInfoPosix )
+
+#if HAVE_czRewriteFile_posix
+CZ_COPY_ATTR(czRewriteFile)
+static enum CzResult czRewriteFile_posix(const char* restrict path, const void* restrict buffer, size_t size)
+{
+	struct FileInfoPosix info = {0};
+	info.fildes = -1;
+	info.flags = O_NOCTTY | O_WRONLY | O_CREAT | O_TRUNC;
+	info.path = path;
+
+	enum CzResult ret = open_file_posix(&info);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = append_section_posix(&info, buffer, size);
+	if CZ_NOEXPECT (ret) {
+		close_file_posix(&info);
+		return ret;
+	}
+	return close_file_posix(&info);
+}
+#endif
+
+CZ_COPY_ATTR(czRewriteFile)
+static enum CzResult czRewriteFile_stdc(const char* restrict path, const void* restrict buffer, size_t size)
+{
+	struct FileInfoStdc info = {0};
+	info.path = path;
+	info.mode = "wb";
+
+	enum CzResult ret = open_file_stdc(&info);
+	if CZ_NOEXPECT (ret)
+		return ret;
+
+	ret = append_section_stdc(&info, buffer, size);
+	if CZ_NOEXPECT (ret) {
+		close_file_stdc(&info);
+		return ret;
+	}
+	return close_file_stdc(&info);
+}
+
+enum CzResult czRewriteFile(const char* path, const void* buffer, size_t size, struct CzFileFlags flags)
+{
+	enum CzResult ret;
+	const char* resolvedPath = path;
+	char* allocPath = NULL;
+
+	if (flags.relativeToExe) {
+		ret = alloc_resolve_path(&allocPath, path);
+		if CZ_NOEXPECT (ret)
+			return ret;
+		if (allocPath)
+			resolvedPath = allocPath;
+	}
+
+#if HAVE_czRewriteFile_win32
+	ret = czRewriteFile_win32(resolvedPath, buffer, size);
+#elif HAVE_czRewriteFile_posix
+	ret = czRewriteFile_posix(resolvedPath, buffer, size);
+#else
+	ret = czRewriteFile_stdc(resolvedPath, buffer, size);
 #endif
 	czFree(allocPath);
 	return ret;

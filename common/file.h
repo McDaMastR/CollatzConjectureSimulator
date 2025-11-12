@@ -52,11 +52,6 @@ struct CzFileFlags
 	 * @brief Whether to examine symbolic links rather than follow them.
 	 */
 	bool openSymLink : 1;
-
-	/**
-	 * @brief Whether to fully truncate the file before further access.
-	 */
-	bool truncateFile : 1;
 };
 
 /**
@@ -102,7 +97,6 @@ enum CzResult czStreamIsTerminal(FILE* stream, bool* istty);
  *   working directory of the program.
  * - If @p flags.openSymLink is set and @p path locates a symbolic link, the file examined is the symbolic link itself.
  *   Otherwise if @p path locates a symbolic link, it is followed recursively to the linked file.
- * - @p flags.truncateFile is ignored.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czFileSize if the following conditions are satisfied.
  * - For any concurrent invocation @b B to @ref czFileSize, the @p size arguments of @b A and @b B are nonoverlapping in
@@ -163,7 +157,6 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
  *   working directory of the program.
  * - @p flags.openSymLink is ignored.
- * - @p flags.truncateFile is ignored.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czReadFile if the following conditions are satisfied.
  * - For any concurrent invocation @b B to @ref czReadFile, the @p buffer arguments of @b A and @b B are nonoverlapping
@@ -270,8 +263,6 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
  *   working directory of the program.
  * - @p flags.openSymLink is ignored.
- * - If @p flags.truncateFile is set, the file is truncated and its contents are destroyed prior to writing the contents
- *   of @p buffer to it; @p offset is ignored. Otherwise, the file is unaltered prior to writing to it.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czWriteFile if the following conditions are satisfied.
  * - For any concurrent invocation @b B to @ref czWriteFile, @ref czInsertFile, @ref czClearFile, or @ref czTrimFile,
@@ -337,7 +328,6 @@ enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, siz
  *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
  *   working directory of the program.
  * - @p flags.openSymLink is ignored.
- * - @p flags.truncateFile is ignored.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czInsertFile if the following conditions are satisfied.
  * - For any concurrent invocation @b B to @ref czWriteFile, @ref czInsertFile, @ref czClearFile, or @ref czTrimFile,
@@ -377,6 +367,62 @@ CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1) CZ_RD_ACCESS(2, 3)
 enum CzResult czInsertFile(const char* path, const void* buffer, size_t size, size_t offset, struct CzFileFlags flags);
 
 /**
+ * @brief Overwrites an entire file.
+ * 
+ * Reads the contents of @p buffer and synchronously writes the contents to the file located at the filepath @p path. If
+ * the filepath style of @p path is not POSIX or Windows style, or is unsupported by the platform, failure occurs. If
+ * @p path is an invalid filepath or locates an invalid resource, failure occurs. If @p path locates a nonexistent
+ * resource, a regular file is created at the location. If @p path locates a symbolic link, the link is followed
+ * recursively. If @p path locates any other non-regular file resource, such as a directory, pipe, or socket, the
+ * behaviour is platform dependent.
+ * 
+ * The file contents written include exactly the first @p size contiguous bytes. That is, all bytes whose indices lie
+ * within the interval [0, @p size). The file size is changed to @p size and any previous file contents are destroyed.
+ * If @p size is zero, failure occurs. On failure, the contents of the file are undefined.
+ * 
+ * The members of @p flags can optionally specify the following behaviour.
+ * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
+ *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
+ *   working directory of the program.
+ * - @p flags.openSymLink is ignored.
+ * 
+ * Thread-safety is guaranteed for an invocation @b A to @ref czRewriteFile if the following conditions are satisfied.
+ * - For any concurrent invocation @b B to @ref czWriteFile, @ref czInsertFile, @ref czRewriteFile, @ref czClearFile, or
+ *   @ref czTrimFile, the @p path arguments of @b A and @b B locate distinct system resources. If they locate the same
+ *   resource, the behaviour is undefined.
+ * 
+ * @param[in] path The path to the file.
+ * @param[in] buffer The memory to read the new file contents from.
+ * @param[in] size The number of bytes to write.
+ * @param[in] flags Binary flags describing additional behaviour.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to write to the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p path or @p buffer was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
+ * @retval CZ_RESULT_BAD_SIZE @p size was zero.
+ * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal or IO cancellation.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_OPEN The maximum number of open files was reached.
+ * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @pre @p path is nonnull and NUL-terminated.
+ * @pre @p buffer is nonnull.
+ * @pre @p path and @p buffer do not overlap in memory.
+ * @pre @p size is less than or equal to the size of @p buffer.
+ * 
+ * @warning Invalid usage can result in permanent loss of file data.
+ */
+CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1) CZ_RD_ACCESS(2, 3)
+enum CzResult czRewriteFile(const char* path, const void* buffer, size_t size, struct CzFileFlags flags);
+
+/**
  * @brief Zeros out a file.
  * 
  * Synchronously zeros the contents of the file located at the filepath @p path. If the filepath style of @p path is not
@@ -404,7 +450,6 @@ enum CzResult czInsertFile(const char* path, const void* buffer, size_t size, si
  *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
  *   working directory of the program.
  * - @p flags.openSymLink is ignored.
- * - @p flags.truncateFile is ignored.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czClearFile if the following conditions are satisfied.
  * - For any concurrent invocation @b B to @ref czWriteFile, @ref czInsertFile, or @ref czTrimFile, the @p path
@@ -470,7 +515,6 @@ enum CzResult czClearFile(const char* path, size_t size, size_t offset, struct C
  *   executable file of the program. Otherwise if @p path is relative, it is interpreted as relative to the current
  *   working directory of the program.
  * - @p flags.openSymLink is ignored.
- * - @p flags.truncateFile is ignored.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czTrimFile if the following conditions are satisfied.
  * - For any concurrent invocation @b B to @ref czWriteFile, @ref czInsertFile, @ref czClearFile, or @ref czTrimFile,

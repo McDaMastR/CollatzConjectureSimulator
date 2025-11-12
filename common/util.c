@@ -166,12 +166,9 @@ bool save_pipeline_cache(VkDevice device, VkPipelineCache cache, const char* fil
 	VK_CALLR(vkGetPipelineCacheData, device, cache, &dataSize, data);
 	if CZ_NOEXPECT (vkres) { goto err_free_data; }
 
-	size_t offset = 0;
 	struct CzFileFlags fileFlags = {0};
 	fileFlags.relativeToExe = true;
-	fileFlags.truncateFile = true;
-
-	czres = czWriteFile(filename, data, dataSize, offset, fileFlags);
+	czres = czRewriteFile(filename, data, dataSize, fileFlags);
 	if CZ_NOEXPECT (czres) { goto err_free_data; }
 
 	czFree(data);
