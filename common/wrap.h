@@ -1691,9 +1691,11 @@ enum CzResult czWrap_posix_fadvise(int* res, int fd, off_t offset, off_t size, i
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
+ * @retval CZ_RESULT_BAD_ALIGNMENT @p offset or @p size was not a multiple of the block size.
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
- * @retval CZ_RESULT_BAD_OFFSET @p offset was negative or too large.
- * @retval CZ_RESULT_BAD_SIZE @p size was nonpositive or (@p offset + @p size) was too large.
+ * @retval CZ_RESULT_BAD_OFFSET @p offset was negative.
+ * @retval CZ_RESULT_BAD_RANGE (@p offset + @p size) was too large.
+ * @retval CZ_RESULT_BAD_SIZE @p size was nonpositive.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
@@ -1744,7 +1746,8 @@ enum CzResult czWrap_fallocate(int fd, int mode, off_t offset, off_t size);
  * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was negative.
- * @retval CZ_RESULT_BAD_SIZE @p size was nonpositive or (@p offset + @p size) was too large.
+ * @retval CZ_RESULT_BAD_RANGE (@p offset + @p size) was too large.
+ * @retval CZ_RESULT_BAD_SIZE @p size was nonpositive.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the filesystem or platform.

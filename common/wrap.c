@@ -3846,29 +3846,37 @@ enum CzResult czWrap_fallocate(int fd, int mode, off_t offset, off_t size)
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EINVAL:
+		struct stat st;
+		fstat(fd, &st);
 		if (offset < 0)
 			return CZ_RESULT_BAD_OFFSET;
 		if (size <= 0)
 			return CZ_RESULT_BAD_SIZE;
-		if (mode == FALLOC_FL_ZERO_RANGE)
+		if (!S_ISREG(st.st_mode) && mode == FALLOC_FL_COLLAPSE_RANGE)
 			return CZ_RESULT_BAD_FILE;
-		if (mode & (FALLOC_FL_COLLAPSE_RANGE | FALLOC_FL_INSERT_RANGE)) {
-			struct stat st = {0};
-			fstat(fd, &st);
-			if (st.st_blksize && offset & (st.st_blksize - 1))
-				return CZ_RESULT_BAD_OFFSET;
-			if (st.st_blksize && size & (st.st_blksize - 1))
-				return CZ_RESULT_BAD_SIZE;
-
-			if (mode == FALLOC_FL_INSERT_RANGE)
-				return CZ_RESULT_BAD_OFFSET;
-			if (mode == FALLOC_FL_COLLAPSE_RANGE)
-				return CZ_RESULT_BAD_SIZE;
+		if (!S_ISREG(st.st_mode) && mode == FALLOC_FL_INSERT_RANGE)
+			return CZ_RESULT_BAD_FILE;
+		if (!S_ISREG(st.st_mode) && mode == FALLOC_FL_ZERO_RANGE)
+			return CZ_RESULT_BAD_FILE;
+		if (size >= st.st_size - offset && mode == FALLOC_FL_COLLAPSE_RANGE)
+			return CZ_RESULT_BAD_RANGE;
+		if (offset >= st.st_size && mode == FALLOC_FL_INSERT_RANGE)
+			return CZ_RESLT_BAD_RANGE;
+		if (offset & (st.st_blksize - 1) && mode == FALLOC_FL_COLLAPSE_RANGE)
+			return CZ_RESULT_BAD_ALIGNMENT;
+		if (offset & (st.st_blksize - 1) && mode == FALLOC_FL_INSERT_RANGE)
+			return CZ_RESULT_BAD_ALIGNMENT;
+		if (size & (st.st_blksize - 1) && mode == FALLOC_FL_COLLAPSE_RANGE)
+			return CZ_RESULT_BAD_ALIGNMENT;
+		if (size & (st.st_blksize - 1) && mode == FALLOC_FL_INSERT_RANGE)
+			return CZ_RESULT_BAD_ALIGNMENT;
+		if (mode & FALLOC_FL_COLLAPSE_RANGE && mode != FALLOC_FL_COLLAPSE_RANGE)
 			return CZ_RESULT_BAD_ACCESS;
-		}
+		if (mode & FALLOC_FL_INSERT_RANGE && mode != FALLOC_FL_INSERT_RANGE)
+			return CZ_RESULT_BAD_ACCESS;
 		return CZ_RESULT_INTERNAL_ERROR;
 	case EFBIG:
-		return CZ_RESULT_BAD_SIZE;
+		return CZ_RESULT_BAD_RANGE;
 	case ETXTBSY:
 		return CZ_RESULT_IN_USE;
 	case EINTR:
@@ -3916,7 +3924,7 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 			return CZ_RESULT_BAD_SIZE;
 		return CZ_RESULT_NO_SUPPORT;
 	case EFBIG:
-		return CZ_RESULT_BAD_SIZE;
+		return CZ_RESULT_BAD_RANGE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -3942,7 +3950,7 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 			return CZ_RESULT_BAD_SIZE;
 		return CZ_RESULT_NO_SUPPORT;
 	case EFBIG:
-		return CZ_RESULT_BAD_SIZE;
+		return CZ_RESULT_BAD_RANGE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -3960,9 +3968,11 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 	case EINVAL:
 		if (offset < 0)
 			return CZ_RESULT_BAD_OFFSET;
-		return CZ_RESULT_BAD_SIZE;
+		if (size <= 0)
+			return CZ_RESULT_BAD_SIZE;
+		return CZ_RESULT_INTERNAL_ERROR;
 	case EFBIG:
-		return CZ_RESULT_BAD_SIZE;
+		return CZ_RESULT_BAD_RANGE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -3986,7 +3996,7 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 			return CZ_RESULT_BAD_SIZE;
 		return CZ_RESULT_NO_SUPPORT;
 	case EFBIG:
-		return CZ_RESULT_BAD_SIZE;
+		return CZ_RESULT_BAD_RANGE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -4002,11 +4012,13 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EINVAL:
+		if (offset < 0)
+			return CZ_RESULT_BAD_OFFSET;
 		if (!size)
 			return CZ_RESULT_BAD_SIZE;
-		return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_INTERNAL_ERROR;
 	case EFBIG:
-		return CZ_RESULT_BAD_SIZE;
+		return CZ_RESULT_BAD_RANGE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:

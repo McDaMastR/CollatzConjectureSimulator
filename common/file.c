@@ -348,7 +348,7 @@ static enum CzResult truncate_all_win32(struct FileInfoWin32* restrict info, SIZ
 	CZ_ASSUME(info->map == NULL);
 
 	if CZ_NOEXPECT (size > MAX_FILE_SIZE)
-		return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_BAD_RANGE;
 
 	LARGE_INTEGER eof = {.QuadPart = (LONGLONG) size};
 	FILE_END_OF_FILE_INFO eofInfo = {0};
@@ -390,7 +390,7 @@ static enum CzResult map_section_win32(struct FileInfoWin32* restrict info, SIZE
 	if CZ_NOEXPECT (!size)
 		return CZ_RESULT_BAD_SIZE;
 	if CZ_NOEXPECT (size > MAX_FILE_SIZE)
-		return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_BAD_RANGE;
 
 	PSECURITY_ATTRIBUTES attr = NULL;
 	ULARGE_INTEGER mapSize = {.QuadPart = (ULONGLONG) size};
@@ -460,7 +460,7 @@ static enum CzResult view_section_win32(struct FileInfoWin32* restrict info, SIZ
 	if CZ_NOEXPECT (offset >= info->mapSize)
 		return CZ_RESULT_BAD_OFFSET;
 	if CZ_NOEXPECT (size > info->mapSize - offset)
-		return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_BAD_RANGE;
 
 	info->viewAccess = access;
 	info->viewSize = size + (offset & (info->allocationGranularity - 1));
@@ -575,7 +575,7 @@ static enum CzResult write_section_win32(
 	if CZ_NOEXPECT (offset > info->fileSize)
 		return CZ_RESULT_BAD_OFFSET;
 	if CZ_NOEXPECT (size > MAX_FILE_SIZE - offset)
-		return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_BAD_RANGE;
 
 	for (SIZE_T total = 0; total < size;) {
 		LPCVOID writeBuffer = (LPCSTR) buffer + total;
@@ -621,7 +621,7 @@ static enum CzResult append_section_win32(struct FileInfoWin32* restrict info, L
 	if CZ_NOEXPECT (!size)
 		return CZ_RESULT_BAD_SIZE;
 	if CZ_NOEXPECT (size > MAX_FILE_SIZE - info->fileSize)
-		return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_BAD_RANGE;
 
 	for (SIZE_T total = 0; total < size;) {
 		LPCVOID writeBuffer = (LPCSTR) buffer + total;
@@ -718,7 +718,7 @@ static enum CzResult insert_section_win32(
 	if CZ_NOEXPECT (offset > info->fileSize)
 		return CZ_RESULT_BAD_OFFSET;
 	if CZ_NOEXPECT (size > MAX_FILE_SIZE - info->fileSize)
-		return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_BAD_RANGE;
 	if (offset == info->fileSize)
 		return append_section_win32(info, buffer, size);
 
@@ -1059,7 +1059,7 @@ static enum CzResult truncate_all_posix(struct FileInfoPosix* restrict info, siz
 	CZ_ASSUME(info->map == NULL);
 
 	if CZ_NOEXPECT (size > MAX_FILE_SIZE)
-		return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_BAD_RANGE;
 
 	enum CzResult ret = loop_ftruncate(info->fildes, (off_t) size);
 	if CZ_NOEXPECT (ret)
@@ -1217,7 +1217,7 @@ static enum CzResult write_section_posix(
 	if CZ_NOEXPECT (offset > info->fileSize)
 		return CZ_RESULT_BAD_OFFSET;
 	if CZ_NOEXPECT (size > MAX_FILE_SIZE - offset)
-		return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_BAD_RANGE;
 
 	for (size_t total = 0; total < size;) {
 		const void* writeBuffer = (const char*) buffer + total;
@@ -1259,7 +1259,7 @@ static enum CzResult append_section_posix(struct FileInfoPosix* restrict info, c
 	if CZ_NOEXPECT (!size)
 		return CZ_RESULT_BAD_SIZE;
 	if CZ_NOEXPECT (size > MAX_FILE_SIZE - info->fileSize)
-		return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_BAD_RANGE;
 
 	for (size_t total = 0; total < size;) {
 		const void* writeBuffer = (const char*) buffer + total;
@@ -1349,7 +1349,7 @@ static enum CzResult insert_section_posix(
 	if CZ_NOEXPECT (offset > info->fileSize)
 		return CZ_RESULT_BAD_OFFSET;
 	if CZ_NOEXPECT (size > MAX_FILE_SIZE - info->fileSize)
-		return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_BAD_RANGE;
 	if (offset == info->fileSize)
 		return append_section_posix(info, buffer, size);
 
@@ -1564,7 +1564,7 @@ static enum CzResult write_section_stdc(
 	if CZ_NOEXPECT (offset > info->fileSize)
 		return CZ_RESULT_BAD_OFFSET;
 	if CZ_NOEXPECT (size > MAX_FILE_SIZE - offset)
-		return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_BAD_RANGE;
 
 	enum CzResult ret = czWrap_fseek(info->stream, (long) offset, SEEK_SET);
 	if CZ_NOEXPECT (ret)
@@ -1593,7 +1593,7 @@ static enum CzResult append_section_stdc(struct FileInfoStdc* restrict info, con
 	if CZ_NOEXPECT (!size)
 		return CZ_RESULT_BAD_SIZE;
 	if CZ_NOEXPECT (size > MAX_FILE_SIZE - info->fileSize)
-		return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_BAD_RANGE;
 
 	enum CzResult ret = czWrap_fseek(info->stream, (long) info->fileSize, SEEK_SET);
 	if CZ_NOEXPECT (ret)
@@ -1645,7 +1645,7 @@ static enum CzResult write_all_stdc(struct FileInfoStdc* restrict info, const vo
 	if CZ_NOEXPECT (!size)
 		return CZ_RESULT_BAD_SIZE;
 	if CZ_NOEXPECT (size > MAX_FILE_SIZE)
-		return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_BAD_RANGE;
 
 	enum CzResult ret = remove_all_stdc(info);
 	if CZ_NOEXPECT (ret)
@@ -1713,7 +1713,7 @@ static enum CzResult insert_section_stdc(
 	if CZ_NOEXPECT (offset > info->fileSize)
 		return CZ_RESULT_BAD_OFFSET;
 	if CZ_NOEXPECT (size > MAX_FILE_SIZE - info->fileSize)
-		return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_BAD_RANGE;
 	if (offset == info->fileSize)
 		return append_section_stdc(info, buffer, size);
 

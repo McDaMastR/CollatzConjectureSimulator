@@ -39,7 +39,7 @@
  * @brief Specifies the behaviour of file and IO functions.
  * 
  * A set of flags specifying the desired behaviour of @ref czFileSize, @ref czReadFile, @ref czWriteFile,
- * @ref czInsertFile, @ref czClearFile, or @ref czTrimFile.
+ * @ref czInsertFile, @ref czRewriteFile, @ref czClearFile, or @ref czTrimFile.
  */
 struct CzFileFlags
 {
@@ -101,9 +101,9 @@ enum CzResult czStreamIsTerminal(FILE* stream, bool* istty);
  * Thread-safety is guaranteed for an invocation @b A to @ref czFileSize if the following conditions are satisfied.
  * - For any concurrent invocation @b B to @ref czFileSize, the @p size arguments of @b A and @b B are nonoverlapping in
  *   memory. If overlap does occur, the contents of the overlapping memory are undefined.
- * - For any concurrent invocation @b C to @ref czWriteFile, @ref czInsertFile, or @ref czTrimFile, the @p path
- *   arguments of @b A and @b C locate distinct system resources. If they locate the same resource, the behaviour is
- *   undefined.
+ * - For any concurrent invocation @b C to @ref czWriteFile, @ref czInsertFile, @ref czRewriteFile, or @ref czTrimFile,
+ *   the @p path arguments of @b A and @b C locate distinct system resources. If they locate the same resource, the
+ *   behaviour is undefined.
  * 
  * @param[in] path The path to the file.
  * @param[out] size The memory to write the size to.
@@ -161,9 +161,9 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  * Thread-safety is guaranteed for an invocation @b A to @ref czReadFile if the following conditions are satisfied.
  * - For any concurrent invocation @b B to @ref czReadFile, the @p buffer arguments of @b A and @b B are nonoverlapping
  *   in memory. If overlap does occur, the contents of the overlapping memory are undefined.
- * - For any concurrent invocation @b C to @ref czWriteFile, @ref czInsertFile, @ref czClearFile, or @ref czTrimFile,
- *   the @p path arguments of @b A and @b C locate distinct system resources. If they locate the same resource, the
- *   behaviour is undefined.
+ * - For any concurrent invocation @b C to @ref czWriteFile, @ref czInsertFile, @ref czRewriteFile, @ref czClearFile, or
+ *   @ref czTrimFile, the @p path arguments of @b A and @b C locate distinct system resources. If they locate the same
+ *   resource, the behaviour is undefined.
  * 
  * @param[in] path The path to the file.
  * @param[out] buffer The memory to write the file contents to.
@@ -265,9 +265,9 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  * - @p flags.openSymLink is ignored.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czWriteFile if the following conditions are satisfied.
- * - For any concurrent invocation @b B to @ref czWriteFile, @ref czInsertFile, @ref czClearFile, or @ref czTrimFile,
- *   the @p path arguments of @b A and @b B locate distinct system resources. If they locate the same resource, the
- *   behaviour is undefined.
+ * - For any concurrent invocation @b B to @ref czWriteFile, @ref czInsertFile, @ref czRewriteFile, @ref czClearFile, or
+ *   @ref czTrimFile, the @p path arguments of @b A and @b B locate distinct system resources. If they locate the same
+ *   resource, the behaviour is undefined.
  * 
  * @param[in] path The path to the file.
  * @param[in] buffer The memory to read the new file contents from.
@@ -282,6 +282,7 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was invalid or unsupported.
  * @retval CZ_RESULT_BAD_OFFSET The file did exist and @p offset was not @c CZ_EOF and greater than @e fileSize.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
+ * @retval CZ_RESULT_BAD_RANGE (@p size + @p offset) was greater than the maximum file size.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal or IO cancellation.
@@ -314,9 +315,8 @@ enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, siz
  * behaviour is platform dependent.
  * 
  * Let @e fileSize denote the size of the file located at @p path as measured in bytes if it exists, and zero otherwise.
- * Let @e maxSize denote the maximum of (@p size + @p offset) and @e fileSize. The file contents written include exactly
- * @p size contiguous bytes starting from the byte at the zero-based index @p offset. That is, all bytes whose indices
- * lie within the interval [@p offset, @p size + @p offset).
+ * The file contents written include exactly @p size contiguous bytes starting from the byte at the zero-based index
+ * @p offset. That is, all bytes whose indices lie within the interval [@p offset, @p size + @p offset).
  * 
  * If @p offset is @e fileSize or @c CZ_EOF, the contents of @p buffer are appended to the file. If @p offset is less
  * than @e fileSize, any previous file contents in the interval [@p offset, @e fileSize) are moved to the memory in the
@@ -330,9 +330,9 @@ enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, siz
  * - @p flags.openSymLink is ignored.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czInsertFile if the following conditions are satisfied.
- * - For any concurrent invocation @b B to @ref czWriteFile, @ref czInsertFile, @ref czClearFile, or @ref czTrimFile,
- *   the @p path arguments of @b A and @b B locate distinct system resources. If they locate the same resource, the
- *   behaviour is undefined.
+ * - For any concurrent invocation @b B to @ref czWriteFile, @ref czInsertFile, @ref czRewriteFile, @ref czClearFile, or
+ *   @ref czTrimFile, the @p path arguments of @b A and @b B locate distinct system resources. If they locate the same
+ *   resource, the behaviour is undefined.
  * 
  * @param[in] path The path to the file.
  * @param[in] buffer The memory to read the new file contents from.
@@ -347,6 +347,7 @@ enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, siz
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was invalid or unsupported.
  * @retval CZ_RESULT_BAD_OFFSET The file did exist and @p offset was not @c CZ_EOF and greater than @e fileSize.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
+ * @retval CZ_RESULT_BAD_RANGE (@p size + @e fileSize) was greater than the maximum file size.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal or IO cancellation.
@@ -402,6 +403,7 @@ enum CzResult czInsertFile(const char* path, const void* buffer, size_t size, si
  * @retval CZ_RESULT_BAD_ADDRESS @p path or @p buffer was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was invalid or unsupported.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
+ * @retval CZ_RESULT_BAD_RANGE @p size was greater than the maximum file size.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal or IO cancellation.
@@ -452,9 +454,9 @@ enum CzResult czRewriteFile(const char* path, const void* buffer, size_t size, s
  * - @p flags.openSymLink is ignored.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czClearFile if the following conditions are satisfied.
- * - For any concurrent invocation @b B to @ref czWriteFile, @ref czInsertFile, or @ref czTrimFile, the @p path
- *   arguments of @b A and @b B locate distinct system resources. If they locate the same resource, the behaviour is
- *   undefined.
+ * - For any concurrent invocation @b B to @ref czWriteFile, @ref czInsertFile, @ref czRewriteFile, or @ref czTrimFile,
+ *   the @p path arguments of @b A and @b B locate distinct system resources. If they locate the same resource, the
+ *   behaviour is undefined.
  * 
  * @param[in] path The path to the file.
  * @param[in] size The number of bytes to clear.
@@ -517,9 +519,9 @@ enum CzResult czClearFile(const char* path, size_t size, size_t offset, struct C
  * - @p flags.openSymLink is ignored.
  * 
  * Thread-safety is guaranteed for an invocation @b A to @ref czTrimFile if the following conditions are satisfied.
- * - For any concurrent invocation @b B to @ref czWriteFile, @ref czInsertFile, @ref czClearFile, or @ref czTrimFile,
- *   the @p path arguments of @b A and @b B locate distinct system resources. If they locate the same resource, the
- *   behaviour is undefined.
+ * - For any concurrent invocation @b B to @ref czWriteFile, @ref czInsertFile, @ref czRewriteFile, @ref czClearFile, or
+ *   @ref czTrimFile, the @p path arguments of @b A and @b B locate distinct system resources. If they locate the same
+ *   resource, the behaviour is undefined.
  * 
  * @param[in] path The path to the file.
  * @param[in] size The number of bytes to trim.
