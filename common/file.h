@@ -55,33 +55,6 @@ struct CzFileFlags
 };
 
 /**
- * @brief Determines if an IO stream is a terminal.
- * 
- * Determines whether @p stream refers to a terminal or terminal emulator (abbreviated TTY) and synchronously writes the
- * result to @p istty. If @p stream does refer to a TTY, @p istty is set to true. Otherwise, @p istty is set to false.
- * If the platform does not support this ability, failure occurs. On failure, the contents of @p istty are unchanged.
- * 
- * Thread-safety is guaranteed for an invocation @b A to @ref czStreamIsTerminal if the following conditions are
- * satisfied.
- * - For any concurrent invocation @b B to @ref czStreamIsTerminal, the @p istty arguments of @b A and @b B are
- *   nonoverlapping in memory. If overlap does occur, the contents of the overlapping memory are undefined.
- * 
- * @param[in] stream The open IO stream.
- * @param[out] istty The memory to write the result to.
- * 
- * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
- * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
- * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
- * 
- * @pre @p stream is nonnull.
- * @pre @p istty is nonnull.
- * @pre @p stream and @p istty do not overlap in memory.
- */
-CZ_REPRODUCIBLE CZ_NONNULL_ARGS() CZ_WR_ACCESS(2)
-enum CzResult czStreamIsTerminal(FILE* stream, bool* istty);
-
-/**
  * @brief Obtains the size of a file.
  * 
  * Determines the size of the file located at the filepath @p path and synchronously writes the file size to @p size.
@@ -114,6 +87,7 @@ enum CzResult czStreamIsTerminal(FILE* stream, bool* istty);
  * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from the file.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
@@ -176,6 +150,7 @@ enum CzResult czFileSize(const char* path, size_t* size, struct CzFileFlags flag
  * @retval CZ_RESULT_BAD_ACCESS Permission to read from the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path or @p buffer was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from the file.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was nonzero, not @c CZ_EOF, and greater than or equal to @e fileSize.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
@@ -280,6 +255,7 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  * @retval CZ_RESULT_BAD_ACCESS Permission to write to the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path or @p buffer was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when writing to the file.
  * @retval CZ_RESULT_BAD_OFFSET The file did exist and @p offset was not @c CZ_EOF and greater than @e fileSize.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_BAD_RANGE (@p size + @p offset) was greater than the maximum file size.
@@ -345,6 +321,7 @@ enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, siz
  * @retval CZ_RESULT_BAD_ACCESS Permission to read from or write to the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path or @p buffer was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from or writing to the file.
  * @retval CZ_RESULT_BAD_OFFSET The file did exist and @p offset was not @c CZ_EOF and greater than @e fileSize.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_BAD_RANGE (@p size + @e fileSize) was greater than the maximum file size.
@@ -402,6 +379,7 @@ enum CzResult czInsertFile(const char* path, const void* buffer, size_t size, si
  * @retval CZ_RESULT_BAD_ACCESS Permission to write to the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path or @p buffer was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when writing to the file.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_BAD_RANGE @p size was greater than the maximum file size.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
@@ -468,6 +446,7 @@ enum CzResult czRewriteFile(const char* path, const void* buffer, size_t size, s
  * @retval CZ_RESULT_BAD_ACCESS Permission to read from or write to the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from or writing to the file.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was nonzero, not @c CZ_EOF, and greater than or equal to @e fileSize.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
@@ -533,6 +512,7 @@ enum CzResult czClearFile(const char* path, size_t size, size_t offset, struct C
  * @retval CZ_RESULT_BAD_ACCESS Permission to read from or write to the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from or writing to the file.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was nonzero, not @c CZ_EOF, and greater than or equal to @e fileSize.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
@@ -552,3 +532,30 @@ enum CzResult czClearFile(const char* path, size_t size, size_t offset, struct C
  */
 CZ_NONNULL_ARGS() CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1)
 enum CzResult czTrimFile(const char* path, size_t size, size_t offset, struct CzFileFlags flags);
+
+/**
+ * @brief Determines if an IO stream is a terminal.
+ * 
+ * Determines whether @p stream refers to a terminal or terminal emulator (abbreviated TTY) and synchronously writes the
+ * result to @p istty. If @p stream does refer to a TTY, @p istty is set to true. Otherwise, @p istty is set to false.
+ * If the platform does not support this ability, failure occurs. On failure, the contents of @p istty are unchanged.
+ * 
+ * Thread-safety is guaranteed for an invocation @b A to @ref czStreamIsTerminal if the following conditions are
+ * satisfied.
+ * - For any concurrent invocation @b B to @ref czStreamIsTerminal, the @p istty arguments of @b A and @b B are
+ *   nonoverlapping in memory. If overlap does occur, the contents of the overlapping memory are undefined.
+ * 
+ * @param[in] stream The open IO stream.
+ * @param[out] istty The memory to write the result to.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @pre @p stream is nonnull.
+ * @pre @p istty is nonnull.
+ * @pre @p stream and @p istty do not overlap in memory.
+ */
+CZ_REPRODUCIBLE CZ_NONNULL_ARGS() CZ_WR_ACCESS(2)
+enum CzResult czStreamIsTerminal(FILE* stream, bool* istty);

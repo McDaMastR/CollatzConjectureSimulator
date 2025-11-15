@@ -549,6 +549,7 @@ enum CzResult czWrap_posix_madvise(int* res, void* addr, size_t size, int advice
  * @retval CZ_RESULT_BAD_ACCESS Permission to open the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path or @p mode was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when creating the file.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
@@ -630,6 +631,7 @@ enum CzResult czWrap_fdopen(FILE* restrict* res, int fd, const char* mode);
  * @retval CZ_RESULT_BAD_ACCESS Permission to open the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path, @p mode, or @p stream was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when flushing, closing, or creating the file.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
@@ -644,7 +646,7 @@ enum CzResult czWrap_fdopen(FILE* restrict* res, int fd, const char* mode);
  * @pre @p path is NUL-terminated.
  * @pre @p mode is nonnull and NUL-terminated.
  */
-CZ_NONNULL_ARGS(2) CZ_NULTERM_ARG(1) CZ_NULTERM_ARG(2) CZ_RD_ACCESS(1) CZ_RD_ACCESS(2) CZ_RW_ACCESS(3)
+CZ_NONNULL_ARGS(2, 3) CZ_NULTERM_ARG(1) CZ_NULTERM_ARG(2) CZ_RD_ACCESS(1) CZ_RD_ACCESS(2) CZ_RW_ACCESS(3)
 enum CzResult czWrap_freopen(const char* path, const char* mode, FILE* stream);
 
 /**
@@ -719,6 +721,7 @@ enum CzResult czWrap_fmemopen(FILE* restrict* res, void* buffer, size_t size, co
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to flush the file was denied.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when flushing or closing the file.
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
@@ -746,6 +749,7 @@ enum CzResult czWrap_fclose(FILE* stream);
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to flush the file was denied.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when flushing the file.
  * @retval CZ_RESULT_BAD_OFFSET @p whence or the resultant file offset was invalid.
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
@@ -799,6 +803,7 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence);
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to flush the file was denied.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when flushing the file.
  * @retval CZ_RESULT_BAD_OFFSET @p whence or the resultant file offset was invalid.
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
@@ -828,6 +833,7 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence);
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to flush the file was denied.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when flushing the file.
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
@@ -881,6 +887,7 @@ enum CzResult czWrap_ftell(long* res, FILE* stream);
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to flush the file was denied.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when flushing the file.
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
@@ -910,6 +917,7 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream);
  * @retval CZ_RESULT_BAD_ACCESS Permission to flush the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p stream or @p pos was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when flushing the file.
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
@@ -936,6 +944,7 @@ enum CzResult czWrap_fgetpos(FILE* stream, fpos_t* pos);
  * @retval CZ_RESULT_BAD_ACCESS Permission to flush the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p stream or @p pos was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when flushing the file.
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
@@ -959,6 +968,7 @@ enum CzResult czWrap_fsetpos(FILE* stream, const fpos_t* pos);
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when flushing the file.
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
@@ -986,6 +996,7 @@ enum CzResult czWrap_rewind(FILE* stream);
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from the file.
  * @retval CZ_RESULT_BAD_OFFSET The file was already at @c EOF.
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
@@ -1014,6 +1025,7 @@ enum CzResult czWrap_fread(size_t* res, void* buffer, size_t size, size_t count,
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when writing to the file.
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
@@ -1038,6 +1050,7 @@ enum CzResult czWrap_fwrite(size_t* res, const void* buffer, size_t size, size_t
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to flush the file was denied.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when flushing the file.
  * @retval CZ_RESULT_BAD_STREAM @p stream was an invalid IO stream.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
@@ -1061,6 +1074,7 @@ enum CzResult czWrap_fflush(FILE* stream);
  * @retval CZ_RESULT_BAD_ACCESS Permission to delete the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when deleting the file.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
@@ -1098,6 +1112,7 @@ enum CzResult czWrap_remove(const char* path);
  * @retval CZ_RESULT_BAD_ACCESS Permission to delete the directory was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was not an empty directory.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when deleting the directory.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The directory was already in use by the system.
  * @retval CZ_RESULT_NO_FILE The directory did not exist.
@@ -1137,6 +1152,7 @@ enum CzResult czWrap_rmdir(const char* path);
  * @retval CZ_RESULT_BAD_ACCESS Permission to delete the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when deleting the file.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
@@ -1199,6 +1215,7 @@ enum CzResult czWrap_unlink(const char* path);
  * @retval CZ_RESULT_BAD_ACCESS Permission to delete the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when deleting the file.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
@@ -1321,6 +1338,7 @@ enum CzResult czWrap_isatty(int* res, int fd);
  * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path or @p st was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from the file.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
@@ -1376,6 +1394,7 @@ enum CzResult czWrap_stat(const char* path, struct stat* st);
  * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path or @p st was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from the file.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
@@ -1416,6 +1435,7 @@ enum CzResult czWrap_lstat(const char* path, struct stat* st);
  * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
  * @retval CZ_RESULT_BAD_ADDRESS @p st was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from the file.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
  * @pre @p fd is an open file descriptor.
@@ -1476,6 +1496,7 @@ enum CzResult czWrap_fstat(int fd, struct stat* st);
  * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path or @p st was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from the file.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
@@ -1540,6 +1561,7 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
  * @retval CZ_RESULT_BAD_ACCESS Permission to truncate the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when truncating the file.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_BAD_SIZE @p size was negative or too large.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
@@ -1603,6 +1625,7 @@ enum CzResult czWrap_truncate(const char* path, off_t size);
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to truncate the file was denied.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when truncating the file.
  * @retval CZ_RESULT_BAD_SIZE @p size was negative or too large.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
@@ -1652,6 +1675,7 @@ enum CzResult czWrap_ftruncate(int fd, off_t size);
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when enacting @p advice.
  * @retval CZ_RESULT_BAD_SIZE @p size was negative.
  * 
  * @pre @p fd is an open file descriptor.
@@ -1693,6 +1717,7 @@ enum CzResult czWrap_posix_fadvise(int* res, int fd, off_t offset, off_t size, i
  * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
  * @retval CZ_RESULT_BAD_ALIGNMENT @p offset or @p size was not a multiple of the block size.
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from or writing to the file.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was negative.
  * @retval CZ_RESULT_BAD_RANGE (@p offset + @p size) was too large.
  * @retval CZ_RESULT_BAD_SIZE @p size was nonpositive.
@@ -1745,6 +1770,7 @@ enum CzResult czWrap_fallocate(int fd, int mode, off_t offset, off_t size);
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from or writing to the file.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was negative.
  * @retval CZ_RESULT_BAD_RANGE (@p offset + @p size) was too large.
  * @retval CZ_RESULT_BAD_SIZE @p size was nonpositive.
@@ -1806,6 +1832,7 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from or writing to the file.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
@@ -1850,6 +1877,7 @@ enum CzResult czWrap_fsync(int fd);
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from or writing to the file.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
@@ -1893,6 +1921,7 @@ enum CzResult czWrap_fdatasync(int fd);
  * @retval CZ_RESULT_BAD_ACCESS Permission to open the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when creating the file.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
@@ -1963,6 +1992,7 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode);
  * @retval CZ_RESULT_BAD_ACCESS Permission to open the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when creating the file.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
@@ -2012,6 +2042,7 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
  * @retval CZ_RESULT_BAD_ACCESS Permission to create the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when creating the file.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
@@ -2053,6 +2084,7 @@ enum CzResult czWrap_creat(int* res, const char* path, mode_t mode);
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from or writing to the file.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_QUOTA The block or inode quota was exhausted.
@@ -2090,6 +2122,7 @@ enum CzResult czWrap_close(int fd);
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS @p fd or @p flag was invalid.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from or writing to the file.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * 
  * @pre @p fd is an open file descriptor.
@@ -2169,6 +2202,7 @@ enum CzResult czWrap_lseek(off_t* res, int fd, off_t offset, int whence);
  * @retval CZ_RESULT_BAD_ACCESS Permission to read from the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p buffer was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from the file.
  * @retval CZ_RESULT_BAD_OFFSET The file was already at @c EOF.
  * @retval CZ_RESULT_BAD_SIZE @p size was too large.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
@@ -2232,6 +2266,7 @@ enum CzResult czWrap_read(ssize_t* res, int fd, void* buffer, size_t size);
  * @retval CZ_RESULT_BAD_ACCESS Permission to read from the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p buffer was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from the file.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was an invalid file offset.
  * @retval CZ_RESULT_BAD_SIZE @p size was too large.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
@@ -2279,6 +2314,7 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
  * @retval CZ_RESULT_BAD_ACCESS Permission to write to the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p buffer was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when writing to the file.
  * @retval CZ_RESULT_BAD_SIZE @p size was too large.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
@@ -2341,6 +2377,7 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
  * @retval CZ_RESULT_BAD_ACCESS Permission to write to the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p buffer was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when writing to the file.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was an invalid file offset.
  * @retval CZ_RESULT_BAD_SIZE @p size was too large.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
@@ -2487,6 +2524,7 @@ enum CzResult czWrap_munmap(void* addr, size_t size);
  * @retval CZ_RESULT_BAD_ACCESS @p flags was invalid.
  * @retval CZ_RESULT_BAD_ADDRESS The address range was invalid or unmapped.
  * @retval CZ_RESULT_BAD_ALIGNMENT @p addr was not page-aligned.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when writing to the file.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
  * @retval CZ_RESULT_IN_USE The mapped memory was already in use by the system.
  * 
@@ -2605,6 +2643,7 @@ enum CzResult czWrap_MultiByteToWideChar(
  * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path or @p info was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from the file.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
@@ -2650,6 +2689,7 @@ enum CzResult czWrap_GetFileAttributesExW(LPCWSTR path, GET_FILEEX_INFO_LEVELS l
  * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p fileInformation was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from the file.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
@@ -2694,6 +2734,7 @@ enum CzResult czWrap_GetFileInformationByHandleEx(
  * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p fileInformation was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from or writing to the file.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
@@ -2737,6 +2778,7 @@ enum CzResult czWrap_SetFileInformationByHandle(
  * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p size was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from the file.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
@@ -2778,6 +2820,7 @@ enum CzResult czWrap_GetFileSizeEx(HANDLE file, PLARGE_INTEGER size);
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from the file.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
@@ -2827,6 +2870,7 @@ enum CzResult czWrap_GetFileType(PDWORD res, HANDLE file);
  * @retval CZ_RESULT_BAD_ACCESS Permission to open the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path or @p securityAttributes was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when creating, reading from, or writing to the file.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
@@ -2913,6 +2957,7 @@ enum CzResult czWrap_CloseHandle(HANDLE handle);
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from or writing to the file.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
@@ -3002,6 +3047,7 @@ enum CzResult czWrap_SetFilePointerEx(
  * @retval CZ_RESULT_BAD_ACCESS Permission to read from the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p buffer or @p numberOfBytesRead was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from the file.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was an invalid file offset.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal or IO cancellation.
@@ -3050,6 +3096,7 @@ enum CzResult czWrap_ReadFile(
  * @retval CZ_RESULT_BAD_ACCESS Permission to write to the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p buffer or @p numberOfBytesWritten was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when writing to the file.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was an invalid file offset.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal or IO cancellation.
@@ -3094,6 +3141,7 @@ enum CzResult czWrap_WriteFile(
  * @retval CZ_RESULT_BAD_ACCESS Permission to delete the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p path was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from or writing to the file.
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
@@ -3144,6 +3192,7 @@ enum CzResult czWrap_DeleteFileW(LPCWSTR path);
  * @retval CZ_RESULT_BAD_ACCESS Permission to create a mapping object for the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p fileMappingAttributes or @p name was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from or writing to the file.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
@@ -3198,6 +3247,7 @@ enum CzResult czWrap_CreateFileMappingW(
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ACCESS Permission to map a view of @p fileMappingObject was denied.
  * @retval CZ_RESULT_BAD_FILE @p fileMappingObject or the corresponding file was invalid.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from or writing to the file.
  * @retval CZ_RESULT_BAD_OFFSET The file offset was not a multiple of the allocation granularity.
  * @retval CZ_RESULT_IN_USE @p fileMappingObject or the corresponding file was already in use by the system.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
@@ -3243,6 +3293,7 @@ enum CzResult czWrap_MapViewOfFile(
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ADDRESS @p baseAddress was an invalid pointer or mapping view.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from or writing to the file.
  * @retval CZ_RESULT_IN_USE The mapping view was already in use by the system.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
@@ -3281,6 +3332,7 @@ enum CzResult czWrap_UnmapViewOfFile(LPCVOID baseAddress);
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ADDRESS The address range was invalid.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when flushing the file.
  * @retval CZ_RESULT_IN_USE The mapping view was already in use by the system.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
@@ -3317,6 +3369,7 @@ enum CzResult czWrap_FlushViewOfFile(LPCVOID baseAddress, SIZE_T numberOfBytesTo
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when flushing the file.
  * @retval CZ_RESULT_IN_USE The mapping view was already in use by the system.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
@@ -3364,6 +3417,7 @@ enum CzResult czWrap_FlushFileBuffers(HANDLE file);
  * @retval CZ_RESULT_BAD_ACCESS Permission to access the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p inBuffer, @p outBuffer, @p bytesReturned, or @p overlapped was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from or writing to the file.
  * @retval CZ_RESULT_BAD_SIZE @p outBufferSize was too small.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.

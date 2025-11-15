@@ -600,6 +600,8 @@ enum CzResult czWrap_fopen(FILE* restrict* res, const char* path, const char* mo
 	case EOPNOTSUPP:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EILSEQ:
 	case ELOOP:
 	case ENAMETOOLONG:
@@ -690,6 +692,8 @@ enum CzResult czWrap_fopen(FILE* restrict* res, const char* path, const char* mo
 	case ENXIO:
 	case EOPNOTSUPP:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
@@ -926,6 +930,8 @@ enum CzResult czWrap_freopen(const char* path, const char* mode, FILE* stream)
 	case EOVERFLOW:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EILSEQ:
 	case ELOOP:
 	case ENAMETOOLONG:
@@ -978,6 +984,8 @@ enum CzResult czWrap_freopen(const char* path, const char* mode, FILE* stream)
 	case ENXIO:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
@@ -1038,6 +1046,8 @@ enum CzResult czWrap_freopen(const char* path, const char* mode, FILE* stream)
 	case ENXIO:
 	case EOPNOTSUPP:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
@@ -1262,6 +1272,8 @@ enum CzResult czWrap_fclose(FILE* stream)
 	case EOVERFLOW:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_STREAM;
@@ -1292,6 +1304,8 @@ enum CzResult czWrap_fclose(FILE* stream)
 		return CZ_RESULT_BAD_ACCESS;
 	case EFBIG:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
@@ -1319,6 +1333,8 @@ enum CzResult czWrap_fclose(FILE* stream)
 	case EFBIG:
 	case EINTEGRITY:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_STREAM;
@@ -1340,6 +1356,8 @@ enum CzResult czWrap_fclose(FILE* stream)
 	case EFBIG:
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
@@ -1360,6 +1378,8 @@ enum CzResult czWrap_fclose(FILE* stream)
 	case EFBIG:
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
@@ -1375,6 +1395,8 @@ enum CzResult czWrap_fclose(FILE* stream)
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_1988
 	switch (errno) {
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
@@ -1410,6 +1432,8 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
@@ -1441,6 +1465,8 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
@@ -1472,6 +1498,8 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
@@ -1497,6 +1525,8 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
@@ -1518,6 +1548,8 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		return CZ_RESULT_BAD_OFFSET;
 	case EBADF:
@@ -1556,6 +1588,8 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
@@ -1587,6 +1621,8 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
@@ -1618,6 +1654,8 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
@@ -1643,6 +1681,8 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
@@ -1685,6 +1725,8 @@ enum CzResult czWrap_ftell(long* res, FILE* stream)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_STREAM;
@@ -1716,6 +1758,8 @@ enum CzResult czWrap_ftell(long* res, FILE* stream)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
@@ -1745,6 +1789,8 @@ enum CzResult czWrap_ftell(long* res, FILE* stream)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_STREAM;
@@ -1804,6 +1850,8 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_STREAM;
@@ -1835,6 +1883,8 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
@@ -1864,6 +1914,8 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_STREAM;
@@ -1922,6 +1974,8 @@ enum CzResult czWrap_fgetpos(FILE* stream, fpos_t* pos)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_STREAM;
@@ -1955,6 +2009,8 @@ enum CzResult czWrap_fgetpos(FILE* stream, fpos_t* pos)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
@@ -1983,6 +2039,8 @@ enum CzResult czWrap_fgetpos(FILE* stream, fpos_t* pos)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_STREAM;
@@ -2040,6 +2098,8 @@ enum CzResult czWrap_fsetpos(FILE* stream, const fpos_t* pos)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_STREAM;
@@ -2072,6 +2132,8 @@ enum CzResult czWrap_fsetpos(FILE* stream, const fpos_t* pos)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
@@ -2100,6 +2162,8 @@ enum CzResult czWrap_fsetpos(FILE* stream, const fpos_t* pos)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_STREAM;
@@ -2123,6 +2187,8 @@ enum CzResult czWrap_fsetpos(FILE* stream, const fpos_t* pos)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
@@ -2161,6 +2227,8 @@ enum CzResult czWrap_rewind(FILE* stream)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_STREAM;
@@ -2201,6 +2269,8 @@ enum CzResult czWrap_rewind(FILE* stream)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_STREAM;
@@ -2226,6 +2296,8 @@ enum CzResult czWrap_rewind(FILE* stream)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
@@ -2246,6 +2318,8 @@ enum CzResult czWrap_rewind(FILE* stream)
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
@@ -2294,6 +2368,8 @@ enum CzResult czWrap_fread(size_t* res, void* buffer, size_t size, size_t count,
 	case ENXIO:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
@@ -2339,6 +2415,8 @@ enum CzResult czWrap_fwrite(size_t* res, const void* buffer, size_t size, size_t
 	case EFBIG:
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
@@ -2388,6 +2466,8 @@ enum CzResult czWrap_fflush(FILE* stream)
 	case EOVERFLOW:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_STREAM;
@@ -2418,6 +2498,8 @@ enum CzResult czWrap_fflush(FILE* stream)
 		return CZ_RESULT_BAD_ACCESS;
 	case EFBIG:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
@@ -2445,6 +2527,8 @@ enum CzResult czWrap_fflush(FILE* stream)
 	case EFBIG:
 	case EINTEGRITY:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_STREAM;
@@ -2466,6 +2550,8 @@ enum CzResult czWrap_fflush(FILE* stream)
 	case EFBIG:
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
@@ -2486,6 +2572,8 @@ enum CzResult czWrap_fflush(FILE* stream)
 	case EFBIG:
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
@@ -2501,6 +2589,8 @@ enum CzResult czWrap_fflush(FILE* stream)
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_1988
 	switch (errno) {
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBADF:
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
@@ -2536,6 +2626,8 @@ enum CzResult czWrap_remove(const char* path)
 	case ENOTEMPTY:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
@@ -2555,17 +2647,19 @@ enum CzResult czWrap_remove(const char* path)
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case ENOTEMPTY:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case EBUSY:
 		return CZ_RESULT_IN_USE;
 	case ENOMEM:
@@ -2584,6 +2678,8 @@ enum CzResult czWrap_remove(const char* path)
 	case EINTEGRITY:
 	case ENOTEMPTY:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 	case ELOOP:
 	case ENAMETOOLONG:
@@ -2604,18 +2700,20 @@ enum CzResult czWrap_remove(const char* path)
 	case EPERM:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EEXIST:
 	case ENOTEMPTY:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case EBUSY:
 	case ETXTBSY:
 		return CZ_RESULT_IN_USE;
@@ -2628,10 +2726,6 @@ enum CzResult czWrap_remove(const char* path)
 	case EPERM:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EEXIST:
 	case ENOTEMPTY:
 		return CZ_RESULT_BAD_FILE;
@@ -2639,6 +2733,10 @@ enum CzResult czWrap_remove(const char* path)
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case EBUSY:
 		return CZ_RESULT_IN_USE;
 	default:
@@ -2669,6 +2767,8 @@ enum CzResult czWrap_rmdir(const char* path)
 	case ENOTDIR:
 	case ENOTEMPTY:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 		return CZ_RESULT_BAD_PATH;
@@ -2715,6 +2815,8 @@ enum CzResult czWrap_rmdir(const char* path)
 	case ENOTDIR:
 	case ENOTEMPTY:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 	case ELOOP:
 	case ENAMETOOLONG:
@@ -2732,18 +2834,20 @@ enum CzResult czWrap_rmdir(const char* path)
 	case EPERM:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EEXIST:
 	case ENOTEMPTY:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case EBUSY:
 		return CZ_RESULT_IN_USE;
 	default:
@@ -2755,10 +2859,6 @@ enum CzResult czWrap_rmdir(const char* path)
 	case EPERM:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EEXIST:
 	case ENOTEMPTY:
 		return CZ_RESULT_BAD_FILE;
@@ -2766,6 +2866,10 @@ enum CzResult czWrap_rmdir(const char* path)
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case EBUSY:
 		return CZ_RESULT_IN_USE;
 	default:
@@ -2794,6 +2898,8 @@ enum CzResult czWrap_unlink(const char* path)
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
@@ -2813,16 +2919,18 @@ enum CzResult czWrap_unlink(const char* path)
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EISDIR:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case EBUSY:
 		return CZ_RESULT_IN_USE;
 	case ENOMEM:
@@ -2841,6 +2949,8 @@ enum CzResult czWrap_unlink(const char* path)
 	case EINTEGRITY:
 	case EISDIR:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
@@ -2858,14 +2968,14 @@ enum CzResult czWrap_unlink(const char* path)
 	case EPERM:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case EBUSY:
 	case ETXTBSY:
 		return CZ_RESULT_IN_USE;
@@ -2878,13 +2988,13 @@ enum CzResult czWrap_unlink(const char* path)
 	case EPERM:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
+	case ENAMETOOLONG:
+	case ENOTDIR:
+		return CZ_RESULT_BAD_PATH;
 	case ENOENT:
 		if (!path[0])
 			return CZ_RESULT_BAD_PATH;
 		return CZ_RESULT_NO_FILE;
-	case ENAMETOOLONG:
-	case ENOTDIR:
-		return CZ_RESULT_BAD_PATH;
 	case EBUSY:
 		return CZ_RESULT_IN_USE;
 	default:
@@ -2896,13 +3006,13 @@ enum CzResult czWrap_unlink(const char* path)
 	case EPERM:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
+	case ENAMETOOLONG:
+	case ENOTDIR:
+		return CZ_RESULT_BAD_PATH;
 	case ENOENT:
 		if (!path[0])
 			return CZ_RESULT_BAD_PATH;
 		return CZ_RESULT_NO_FILE;
-	case ENAMETOOLONG:
-	case ENOTDIR:
-		return CZ_RESULT_BAD_PATH;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -2938,6 +3048,8 @@ enum CzResult czWrap_unlinkat(int fd, const char* path, int flags)
 		if (flags & AT_REMOVEDIR)
 			return CZ_RESULT_BAD_FILE;
 		return CZ_RESULT_BAD_PATH;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 		return CZ_RESULT_BAD_PATH;
@@ -2959,6 +3071,8 @@ enum CzResult czWrap_unlinkat(int fd, const char* path, int flags)
 		return CZ_RESULT_BAD_ADDRESS;
 	case EISDIR:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
@@ -3003,6 +3117,8 @@ enum CzResult czWrap_unlinkat(int fd, const char* path, int flags)
 		if (flags & AT_RESOLVE_BENEATH)
 			return CZ_RESULT_BAD_FILE;
 		return CZ_RESULT_BAD_ACCESS;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
@@ -3140,6 +3256,8 @@ enum CzResult czWrap_stat(const char* path, struct stat* st)
 		return CZ_RESULT_BAD_ADDRESS;
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
@@ -3155,16 +3273,16 @@ enum CzResult czWrap_stat(const char* path, struct stat* st)
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	default:
@@ -3179,6 +3297,8 @@ enum CzResult czWrap_stat(const char* path, struct stat* st)
 	case EINTEGRITY:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
@@ -3192,16 +3312,18 @@ enum CzResult czWrap_stat(const char* path, struct stat* st)
 	switch (errno) {
 	case EACCES:
 		return CZ_RESULT_BAD_ACCESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -3209,13 +3331,13 @@ enum CzResult czWrap_stat(const char* path, struct stat* st)
 	switch (errno) {
 	case EACCES:
 		return CZ_RESULT_BAD_ACCESS;
+	case ENAMETOOLONG:
+	case ENOTDIR:
+		return CZ_RESULT_BAD_PATH;
 	case ENOENT:
 		if (!path[0])
 			return CZ_RESULT_BAD_PATH;
 		return CZ_RESULT_NO_FILE;
-	case ENAMETOOLONG:
-	case ENOTDIR:
-		return CZ_RESULT_BAD_PATH;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -3242,6 +3364,8 @@ enum CzResult czWrap_lstat(const char* path, struct stat* st)
 		return CZ_RESULT_BAD_ADDRESS;
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
@@ -3256,15 +3380,15 @@ enum CzResult czWrap_lstat(const char* path, struct stat* st)
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	default:
@@ -3279,6 +3403,8 @@ enum CzResult czWrap_lstat(const char* path, struct stat* st)
 	case EINTEGRITY:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
@@ -3291,15 +3417,17 @@ enum CzResult czWrap_lstat(const char* path, struct stat* st)
 	switch (errno) {
 	case EACCES:
 		return CZ_RESULT_BAD_ACCESS;
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
+	case ENAMETOOLONG:
+	case ENOTDIR:
+		return CZ_RESULT_BAD_PATH;
 	case ENOENT:
 		if (!path[0])
 			return CZ_RESULT_BAD_PATH;
 		return CZ_RESULT_NO_FILE;
-	case EOVERFLOW:
-		return CZ_RESULT_BAD_FILE;
-	case ENAMETOOLONG:
-	case ENOTDIR:
-		return CZ_RESULT_BAD_PATH;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -3307,13 +3435,13 @@ enum CzResult czWrap_lstat(const char* path, struct stat* st)
 	switch (errno) {
 	case EACCES:
 		return CZ_RESULT_BAD_ACCESS;
+	case ENAMETOOLONG:
+	case ENOTDIR:
+		return CZ_RESULT_BAD_PATH;
 	case ENOENT:
 		if (!path[0])
 			return CZ_RESULT_BAD_PATH;
 		return CZ_RESULT_NO_FILE;
-	case ENAMETOOLONG:
-	case ENOTDIR:
-		return CZ_RESULT_BAD_PATH;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -3340,6 +3468,8 @@ enum CzResult czWrap_fstat(int fd, struct stat* st)
 		return CZ_RESULT_BAD_ADDRESS;
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -3365,6 +3495,8 @@ enum CzResult czWrap_fstat(int fd, struct stat* st)
 	case EINTEGRITY:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -3374,6 +3506,8 @@ enum CzResult czWrap_fstat(int fd, struct stat* st)
 		return CZ_RESULT_BAD_ACCESS;
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -3410,6 +3544,8 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
 	case ENOTCAPABLE:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
@@ -3427,6 +3563,12 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_FILE;
+	case ELOOP:
+	case ENAMETOOLONG:
+	case ENOTDIR:
+		return CZ_RESULT_BAD_PATH;
 	case ENOENT:
 		if (path[0])
 			return CZ_RESULT_NO_FILE;
@@ -3434,12 +3576,6 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
 		if (flag & AT_EMPTY_PATH)
 			return CZ_RESULT_NO_FILE;
 #endif
-		return CZ_RESULT_BAD_PATH;
-	case EOVERFLOW:
-		return CZ_RESULT_BAD_FILE;
-	case ELOOP:
-	case ENAMETOOLONG:
-	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
@@ -3461,6 +3597,8 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
 		if (flags & AT_RESOLVE_BENEATH)
 			return CZ_RESULT_BAD_FILE;
 		return CZ_RESULT_BAD_ACCESS;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
@@ -3476,16 +3614,18 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_ACCESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -3516,6 +3656,8 @@ enum CzResult czWrap_truncate(const char* path, off_t size)
 	case EDEADLK:
 	case EISDIR:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
@@ -3542,6 +3684,8 @@ enum CzResult czWrap_truncate(const char* path, off_t size)
 		return CZ_RESULT_BAD_ADDRESS;
 	case EISDIR:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
@@ -3569,6 +3713,8 @@ enum CzResult czWrap_truncate(const char* path, off_t size)
 	case EINTEGRITY:
 	case EISDIR:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
@@ -3588,16 +3734,18 @@ enum CzResult czWrap_truncate(const char* path, off_t size)
 	case EACCES:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EISDIR:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case EFBIG:
 		return CZ_RESULT_BAD_SIZE;
 	case EINVAL:
@@ -3614,16 +3762,18 @@ enum CzResult czWrap_truncate(const char* path, off_t size)
 	case EACCES:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EISDIR:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case EFBIG:
 	case EINVAL:
 		return CZ_RESULT_BAD_SIZE;
@@ -3657,6 +3807,8 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 		return CZ_RESULT_BAD_ACCESS;
 	case EDEADLK:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EFBIG:
 		return CZ_RESULT_BAD_SIZE;
 	case EINVAL:
@@ -3676,6 +3828,8 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 		return CZ_RESULT_BAD_ACCESS;
 	case EISDIR:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EFBIG:
 	case EINVAL:
 		return CZ_RESULT_BAD_SIZE;
@@ -3699,6 +3853,8 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EFBIG:
 		return CZ_RESULT_BAD_SIZE;
 	case EINVAL:
@@ -3714,6 +3870,8 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EFBIG:
 		return CZ_RESULT_BAD_SIZE;
 	case EINVAL:
@@ -3730,6 +3888,8 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 	case EBADF:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EFBIG:
 		return CZ_RESULT_BAD_SIZE;
 	case EINVAL:
@@ -3745,6 +3905,8 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EFBIG:
 		return CZ_RESULT_BAD_SIZE;
 	case EINVAL:
@@ -3794,6 +3956,8 @@ enum CzResult czWrap_posix_fadvise(int* res, int fd, off_t offset, off_t size, i
 	case ENODEV:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -3845,6 +4009,8 @@ enum CzResult czWrap_fallocate(int fd, int mode, off_t offset, off_t size)
 	case ENODEV:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		struct stat st;
 		fstat(fd, &st);
@@ -3917,6 +4083,8 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 	case ENODEV:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		if (offset < 0)
 			return CZ_RESULT_BAD_OFFSET;
@@ -3943,6 +4111,8 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 	case ENODEV:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		if (offset < 0)
 			return CZ_RESULT_BAD_OFFSET;
@@ -3965,6 +4135,8 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 	case ENODEV:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		if (offset < 0)
 			return CZ_RESULT_BAD_OFFSET;
@@ -3989,6 +4161,8 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 	case ENODEV:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		if (offset < 0)
 			return CZ_RESULT_BAD_OFFSET;
@@ -4011,6 +4185,8 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 	case ENODEV:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		if (offset < 0)
 			return CZ_RESULT_BAD_OFFSET;
@@ -4051,6 +4227,8 @@ enum CzResult czWrap_fsync(int fd)
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -4070,6 +4248,8 @@ enum CzResult czWrap_fsync(int fd)
 	case EROFS:
 	case EINVAL:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -4086,6 +4266,8 @@ enum CzResult czWrap_fsync(int fd)
 	case EINTEGRITY:
 	case EINVAL:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -4095,6 +4277,8 @@ enum CzResult czWrap_fsync(int fd)
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -4109,6 +4293,8 @@ enum CzResult czWrap_fsync(int fd)
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -4147,6 +4333,8 @@ enum CzResult czWrap_fdatasync(int fd)
 	case EROFS:
 	case EINVAL:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -4163,6 +4351,8 @@ enum CzResult czWrap_fdatasync(int fd)
 	case EINTEGRITY:
 	case EINVAL:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -4172,6 +4362,8 @@ enum CzResult czWrap_fdatasync(int fd)
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -4188,6 +4380,8 @@ enum CzResult czWrap_fdatasync(int fd)
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -4220,12 +4414,6 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		if (flags & O_CREAT)
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EDEADLK:
 	case EEXIST:
 	case EISDIR:
@@ -4237,10 +4425,18 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 		if (flags & (O_DIRECTORY | O_SEARCH))
 			return CZ_RESULT_BAD_FILE;
 		return CZ_RESULT_BAD_PATH;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EILSEQ:
 	case ELOOP:
 	case ENAMETOOLONG:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		if (flags & O_CREAT)
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case EAGAIN:
 	case ETXTBSY:
 		return CZ_RESULT_IN_USE;
@@ -4282,16 +4478,6 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 		return CZ_RESULT_BAD_PATH;
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		if (flags & O_CREAT)
-			return CZ_RESULT_BAD_PATH;
-#if CZ_GNU_SOURCE
-		if (flags & O_TMPFILE && flags & (O_WRONLY | O_RDWR))
-			return CZ_RESULT_NO_SUPPORT;
-#endif
-		return CZ_RESULT_NO_FILE;
 	case EEXIST:
 	case EFBIG:
 	case ENODEV:
@@ -4305,6 +4491,16 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case ELOOP:
 	case ENAMETOOLONG:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		if (flags & O_CREAT)
+			return CZ_RESULT_BAD_PATH;
+#if CZ_GNU_SOURCE
+		if (flags & O_TMPFILE && flags & (O_WRONLY | O_RDWR))
+			return CZ_RESULT_NO_SUPPORT;
+#endif
+		return CZ_RESULT_NO_FILE;
 	case EBUSY:
 	case ETXTBSY:
 	case EWOULDBLOCK:
@@ -4351,6 +4547,8 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 		if (flags & O_DIRECTORY)
 			return CZ_RESULT_BAD_FILE;
 		return CZ_RESULT_BAD_PATH;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 		return CZ_RESULT_BAD_PATH;
@@ -4390,12 +4588,6 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 		if (flags & (O_DSYNC | O_RSYNC | O_SYNC))
 			return CZ_RESULT_NO_SUPPORT
 		return CZ_RESULT_BAD_FILE;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		if (flags & O_CREAT)
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EEXIST:
 	case EISDIR:
 	case ENXIO:
@@ -4409,6 +4601,12 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case ELOOP:
 	case ENAMETOOLONG:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		if (flags & O_CREAT)
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case EAGAIN:
 	case ETXTBSY:
 		return CZ_RESULT_IN_USE;
@@ -4435,12 +4633,6 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 		if (flags & (O_DSYNC | O_RSYNC | O_SYNC))
 			return CZ_RESULT_NO_SUPPORT
 		return CZ_RESULT_BAD_FILE;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		if (flags & O_CREAT)
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EEXIST:
 	case EISDIR:
 	case ENXIO:
@@ -4453,6 +4645,12 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case ELOOP:
 	case ENAMETOOLONG:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		if (flags & O_CREAT)
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case EAGAIN:
 	case ETXTBSY:
 		return CZ_RESULT_IN_USE;
@@ -4479,12 +4677,6 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 		if (flags & (O_DSYNC | O_RSYNC | O_SYNC))
 			return CZ_RESULT_NO_SUPPORT
 		return CZ_RESULT_BAD_FILE;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		if (flags & O_CREAT)
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EEXIST:
 	case EISDIR:
 	case ENXIO:
@@ -4497,6 +4689,12 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case ELOOP:
 	case ENAMETOOLONG:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		if (flags & O_CREAT)
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case EAGAIN:
 	case ETXTBSY:
 		return CZ_RESULT_IN_USE;
@@ -4517,12 +4715,6 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case EACCES:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		if (flags & O_CREAT)
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EEXIST:
 	case EISDIR:
 		return CZ_RESULT_BAD_FILE;
@@ -4533,6 +4725,12 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case ELOOP:
 	case ENAMETOOLONG:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		if (flags & O_CREAT)
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
 	case EINTR:
@@ -4579,12 +4777,6 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		if (flags & O_CREAT)
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EDEADLK:
 	case EEXIST:
 	case EISDIR:
@@ -4596,10 +4788,18 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 		if (flags & (O_DIRECTORY | O_SEARCH))
 			return CZ_RESULT_BAD_FILE;
 		return CZ_RESULT_BAD_PATH;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EILSEQ:
 	case ELOOP:
 	case ENAMETOOLONG:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		if (flags & O_CREAT)
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case EAGAIN:
 	case ETXTBSY:
 		return CZ_RESULT_IN_USE;
@@ -4642,16 +4842,6 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 		return CZ_RESULT_BAD_PATH;
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		if (flags & O_CREAT)
-			return CZ_RESULT_BAD_PATH;
-#if CZ_GNU_SOURCE
-		if (flags & O_TMPFILE && flags & (O_WRONLY | O_RDWR))
-			return CZ_RESULT_NO_SUPPORT;
-#endif
-		return CZ_RESULT_NO_FILE;
 	case EEXIST:
 	case EFBIG:
 	case ENODEV:
@@ -4665,6 +4855,16 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 	case ELOOP:
 	case ENAMETOOLONG:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		if (flags & O_CREAT)
+			return CZ_RESULT_BAD_PATH;
+#if CZ_GNU_SOURCE
+		if (flags & O_TMPFILE && flags & (O_WRONLY | O_RDWR))
+			return CZ_RESULT_NO_SUPPORT;
+#endif
+		return CZ_RESULT_NO_FILE;
 	case EBUSY:
 	case ETXTBSY:
 	case EWOULDBLOCK:
@@ -4717,6 +4917,8 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 		if (flags & O_DIRECTORY)
 			return CZ_RESULT_BAD_FILE;
 		return CZ_RESULT_BAD_PATH;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ELOOP:
 	case ENAMETOOLONG:
 		return CZ_RESULT_BAD_PATH;
@@ -4757,12 +4959,6 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 		if (flags & (O_DSYNC | O_RSYNC | O_SYNC))
 			return CZ_RESULT_NO_SUPPORT
 		return CZ_RESULT_BAD_FILE;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		if (flags & O_CREAT)
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EEXIST:
 	case EISDIR:
 	case ENXIO:
@@ -4776,6 +4972,12 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 	case ELOOP:
 	case ENAMETOOLONG:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		if (flags & O_CREAT)
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case EAGAIN:
 	case ETXTBSY:
 		return CZ_RESULT_IN_USE;
@@ -4803,12 +5005,6 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 		if (flags & (O_DSYNC | O_RSYNC | O_SYNC))
 			return CZ_RESULT_NO_SUPPORT
 		return CZ_RESULT_BAD_FILE;
-	case ENOENT:
-		if (!path[0])
-			return CZ_RESULT_BAD_PATH;
-		if (flags & O_CREAT)
-			return CZ_RESULT_BAD_PATH;
-		return CZ_RESULT_NO_FILE;
 	case EEXIST:
 	case EISDIR:
 	case ENXIO:
@@ -4821,6 +5017,12 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 	case ELOOP:
 	case ENAMETOOLONG:
 		return CZ_RESULT_BAD_PATH;
+	case ENOENT:
+		if (!path[0])
+			return CZ_RESULT_BAD_PATH;
+		if (flags & O_CREAT)
+			return CZ_RESULT_BAD_PATH;
+		return CZ_RESULT_NO_FILE;
 	case EAGAIN:
 	case ETXTBSY:
 		return CZ_RESULT_IN_USE;
@@ -4868,6 +5070,8 @@ enum CzResult czWrap_creat(int* res, const char* path, mode_t mode)
 	case EISDIR:
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EILSEQ:
 	case ELOOP:
 	case ENAMETOOLONG:
@@ -4938,6 +5142,8 @@ enum CzResult czWrap_creat(int* res, const char* path, mode_t mode)
 	case ENXIO:
 	case EOPNOTSUPP:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 	case ELOOP:
 	case ENAMETOOLONG:
@@ -5057,6 +5263,8 @@ enum CzResult czWrap_close(int fd)
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -5083,6 +5291,8 @@ enum CzResult czWrap_close(int fd)
 		return CZ_RESULT_SUCCESS;
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 #if POSIX_CLOSE_RESTART
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
@@ -5094,6 +5304,8 @@ enum CzResult czWrap_close(int fd)
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	default:
@@ -5121,6 +5333,8 @@ enum CzResult czWrap_posix_close(int fd, int flag)
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_ACCESS;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	default:
@@ -5230,7 +5444,7 @@ enum CzResult czWrap_read(ssize_t* res, int fd, void* buffer, size_t size)
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
 	case EIO:
-		return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		if (size > INT_MAX)
 			return CZ_RESULT_BAD_SIZE;
@@ -5261,6 +5475,8 @@ enum CzResult czWrap_read(ssize_t* res, int fd, void* buffer, size_t size)
 	case EINVAL:
 	case EISDIR:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
 #if EAGAIN != EWOULDBLOCK
@@ -5282,6 +5498,8 @@ enum CzResult czWrap_read(ssize_t* res, int fd, void* buffer, size_t size)
 	case EINTEGRITY:
 	case EISDIR:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		if (size > INT_MAX)
 			return CZ_RESULT_BAD_SIZE;
@@ -5303,6 +5521,8 @@ enum CzResult czWrap_read(ssize_t* res, int fd, void* buffer, size_t size)
 	case EISDIR:
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
 	case EAGAIN:
@@ -5333,6 +5553,8 @@ enum CzResult czWrap_read(ssize_t* res, int fd, void* buffer, size_t size)
 	case EISDIR:
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
 	case EAGAIN:
@@ -5362,6 +5584,8 @@ enum CzResult czWrap_read(ssize_t* res, int fd, void* buffer, size_t size)
 	case EINVAL:
 	case EISDIR:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EWOULDBLOCK:
 		return CZ_RESULT_IN_USE;
 	case EINTR:
@@ -5407,7 +5631,7 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
 	case EIO:
-		return CZ_RESULT_BAD_OFFSET;
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		if (size > INT_MAX)
 			return CZ_RESULT_BAD_SIZE;
@@ -5435,6 +5659,8 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
 	case EISDIR:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
 	case EINVAL:
@@ -5464,6 +5690,8 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
 	case EISDIR:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
 	case EINVAL:
@@ -5488,6 +5716,8 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
 	case ENXIO:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
@@ -5510,6 +5740,8 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
 	case ENXIO:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
 	case EINVAL:
@@ -5534,6 +5766,8 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
 	case EISDIR:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		if (offset < 0)
 			return CZ_RESULT_BAD_OFFSET;
@@ -5581,6 +5815,8 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 	case EFBIG:
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		if (size > INT_MAX)
 			return CZ_RESULT_BAD_SIZE;
@@ -5615,6 +5851,8 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 	case EFBIG:
 	case EINVAL:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
 #if EAGAIN != EWOULDBLOCK
@@ -5643,6 +5881,8 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 	case EFBIG:
 	case EINTEGRITY:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		if (size > INT_MAX)
 			return CZ_RESULT_BAD_SIZE;
@@ -5668,6 +5908,8 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 	case EFBIG:
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
 #if EAGAIN != EWOULDBLOCK
@@ -5697,6 +5939,8 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 	case EINVAL:
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ERANGE:
 		return CZ_RESULT_BAD_SIZE;
 	case EAGAIN:
@@ -5726,6 +5970,8 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 	case EFBIG:
 	case EINVAL:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case ERANGE:
 		return CZ_RESULT_BAD_SIZE;
 	case EAGAIN:
@@ -5776,6 +6022,8 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		if (size > INT_MAX)
 			return CZ_RESULT_BAD_SIZE;
@@ -5803,6 +6051,8 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
 	case EINVAL:
@@ -5836,6 +6086,8 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 	case EPIPE:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		if (offset < 0)
 			return CZ_RESULT_BAD_OFFSET;
@@ -5861,6 +6113,8 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 	case ENXIO:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		return CZ_RESULT_BAD_OFFSET;
 	case EAGAIN:
@@ -5882,6 +6136,8 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 	case ENXIO:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		if (offset < 0)
 			return CZ_RESULT_BAD_OFFSET;
@@ -5906,6 +6162,8 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 	case EFBIG:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		if (offset < 0)
 			return CZ_RESULT_BAD_OFFSET;
@@ -6275,6 +6533,8 @@ enum CzResult czWrap_msync(void* addr, size_t size, int flags)
 	switch (errno) {
 	case ENOMEM:
 		return CZ_RESULT_BAD_ADDRESS;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EINVAL:
 		if (!size)
 			return CZ_RESULT_BAD_SIZE;
@@ -6298,6 +6558,8 @@ enum CzResult czWrap_msync(void* addr, size_t size, int flags)
 		return CZ_RESULT_BAD_ALIGNMENT;
 	case ENOMEM:
 		return CZ_RESULT_BAD_ADDRESS;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
 	case EBUSY:
 		return CZ_RESULT_IN_USE;
 	default:
@@ -6417,6 +6679,7 @@ enum CzResult czWrap_GetFileAttributesExW(LPCWSTR path, GET_FILEEX_INFO_LEVELS l
 	case ERROR_BAD_PIPE:
 	case ERROR_BROKEN_PIPE:
 	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
+	case ERROR_DATA_CHECKSUM_ERROR:
 	case ERROR_DIRECTORY_NOT_SUPPORTED:
 	case ERROR_EA_FILE_CORRUPT:
 	case ERROR_EA_LIST_INCONSISTENT:
@@ -6431,6 +6694,27 @@ enum CzResult czWrap_GetFileAttributesExW(LPCWSTR path, GET_FILEEX_INFO_LEVELS l
 	case ERROR_VIRUS_DELETED:
 	case ERROR_VIRUS_INFECTED:
 		return CZ_RESULT_BAD_FILE;
+	case ERROR_ADAP_HDW_ERR:
+	case ERROR_BAD_REM_ADAP:
+	case ERROR_DISK_CHANGE:
+	case ERROR_IMAGE_SUBSYSTEM_NOT_PRESENT:
+	case ERROR_INTERMIXED_KERNEL_EA_OPERATION:
+	case ERROR_INVALID_CAP:
+	case ERROR_INVALID_TARGET_HANDLE:
+	case ERROR_MAX_THRDS_REACHED:
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_NO_VOLUME_LABEL:
+	case ERROR_NOT_READ_FROM_COPY:
+	case ERROR_READ_FAULT:
+	case ERROR_SECURITY_STREAM_IS_INCONSISTENT:
+	case ERROR_TOO_MANY_CMDS:
+	case ERROR_TOO_MANY_NAMES:
+	case ERROR_TOO_MANY_SESS:
+	case ERROR_TOO_MANY_TCBS:
+	case ERROR_UNDEFINED_SCOPE:
+	case ERROR_UNEXP_NET_ERR:
+	case ERROR_WRONG_DISK:
+		return CZ_RESULT_BAD_IO;
 	case ERROR_BAD_ARGUMENTS:
 	case ERROR_BAD_DEVICE_PATH:
 	case ERROR_BAD_NET_NAME:
@@ -6525,6 +6809,7 @@ enum CzResult czWrap_GetFileInformationByHandleEx(
 	case ERROR_BAD_PIPE:
 	case ERROR_BROKEN_PIPE:
 	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
+	case ERROR_DATA_CHECKSUM_ERROR:
 	case ERROR_DEV_NOT_EXIST:
 	case ERROR_DEVICE_UNREACHABLE:
 	case ERROR_DIRECTORY_NOT_SUPPORTED:
@@ -6540,6 +6825,27 @@ enum CzResult czWrap_GetFileInformationByHandleEx(
 	case ERROR_VIRUS_DELETED:
 	case ERROR_VIRUS_INFECTED:
 		return CZ_RESULT_BAD_FILE;
+	case ERROR_ADAP_HDW_ERR:
+	case ERROR_BAD_REM_ADAP:
+	case ERROR_DISK_CHANGE:
+	case ERROR_IMAGE_SUBSYSTEM_NOT_PRESENT:
+	case ERROR_INTERMIXED_KERNEL_EA_OPERATION:
+	case ERROR_INVALID_CAP:
+	case ERROR_INVALID_TARGET_HANDLE:
+	case ERROR_MAX_THRDS_REACHED:
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_NO_VOLUME_LABEL:
+	case ERROR_NOT_READ_FROM_COPY:
+	case ERROR_READ_FAULT:
+	case ERROR_SECURITY_STREAM_IS_INCONSISTENT:
+	case ERROR_TOO_MANY_CMDS:
+	case ERROR_TOO_MANY_NAMES:
+	case ERROR_TOO_MANY_SESS:
+	case ERROR_TOO_MANY_TCBS:
+	case ERROR_UNDEFINED_SCOPE:
+	case ERROR_UNEXP_NET_ERR:
+	case ERROR_WRONG_DISK:
+		return CZ_RESULT_BAD_IO;
 	case ERROR_BUSY:
 	case ERROR_DRIVE_LOCKED:
 	case ERROR_FILE_CHECKED_OUT:
@@ -6598,6 +6904,7 @@ enum CzResult czWrap_SetFileInformationByHandle(
 	case ERROR_BAD_PIPE:
 	case ERROR_BROKEN_PIPE:
 	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
+	case ERROR_DATA_CHECKSUM_ERROR:
 	case ERROR_DEV_NOT_EXIST:
 	case ERROR_DEVICE_UNREACHABLE:
 	case ERROR_DIRECTORY_NOT_SUPPORTED:
@@ -6613,6 +6920,29 @@ enum CzResult czWrap_SetFileInformationByHandle(
 	case ERROR_VIRUS_DELETED:
 	case ERROR_VIRUS_INFECTED:
 		return CZ_RESULT_BAD_FILE;
+	case ERROR_ADAP_HDW_ERR:
+	case ERROR_BAD_REM_ADAP:
+	case ERROR_DISK_CHANGE:
+	case ERROR_IMAGE_SUBSYSTEM_NOT_PRESENT:
+	case ERROR_INTERMIXED_KERNEL_EA_OPERATION:
+	case ERROR_INVALID_CAP:
+	case ERROR_INVALID_TARGET_HANDLE:
+	case ERROR_MAX_THRDS_REACHED:
+	case ERROR_NET_WRITE_FAULT:
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_NO_VOLUME_LABEL:
+	case ERROR_NOT_READ_FROM_COPY:
+	case ERROR_READ_FAULT:
+	case ERROR_SECURITY_STREAM_IS_INCONSISTENT:
+	case ERROR_TOO_MANY_CMDS:
+	case ERROR_TOO_MANY_NAMES:
+	case ERROR_TOO_MANY_SESS:
+	case ERROR_TOO_MANY_TCBS:
+	case ERROR_UNDEFINED_SCOPE:
+	case ERROR_UNEXP_NET_ERR:
+	case ERROR_WRITE_FAULT:
+	case ERROR_WRONG_DISK:
+		return CZ_RESULT_BAD_IO;
 	case ERROR_BUSY:
 	case ERROR_DRIVE_LOCKED:
 	case ERROR_FILE_CHECKED_OUT:
@@ -6675,6 +7005,7 @@ enum CzResult czWrap_GetFileSizeEx(HANDLE file, PLARGE_INTEGER size)
 	case ERROR_BAD_PIPE:
 	case ERROR_BROKEN_PIPE:
 	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
+	case ERROR_DATA_CHECKSUM_ERROR:
 	case ERROR_DEV_NOT_EXIST:
 	case ERROR_DEVICE_UNREACHABLE:
 	case ERROR_DIRECTORY_NOT_SUPPORTED:
@@ -6690,6 +7021,27 @@ enum CzResult czWrap_GetFileSizeEx(HANDLE file, PLARGE_INTEGER size)
 	case ERROR_VIRUS_DELETED:
 	case ERROR_VIRUS_INFECTED:
 		return CZ_RESULT_BAD_FILE;
+	case ERROR_ADAP_HDW_ERR:
+	case ERROR_BAD_REM_ADAP:
+	case ERROR_DISK_CHANGE:
+	case ERROR_IMAGE_SUBSYSTEM_NOT_PRESENT:
+	case ERROR_INTERMIXED_KERNEL_EA_OPERATION:
+	case ERROR_INVALID_CAP:
+	case ERROR_INVALID_TARGET_HANDLE:
+	case ERROR_MAX_THRDS_REACHED:
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_NO_VOLUME_LABEL:
+	case ERROR_NOT_READ_FROM_COPY:
+	case ERROR_READ_FAULT:
+	case ERROR_SECURITY_STREAM_IS_INCONSISTENT:
+	case ERROR_TOO_MANY_CMDS:
+	case ERROR_TOO_MANY_NAMES:
+	case ERROR_TOO_MANY_SESS:
+	case ERROR_TOO_MANY_TCBS:
+	case ERROR_UNDEFINED_SCOPE:
+	case ERROR_UNEXP_NET_ERR:
+	case ERROR_WRONG_DISK:
+		return CZ_RESULT_BAD_IO;
 	case ERROR_BUSY:
 	case ERROR_DRIVE_LOCKED:
 	case ERROR_FILE_CHECKED_OUT:
@@ -6748,6 +7100,7 @@ enum CzResult czWrap_GetFileType(PDWORD res, HANDLE file)
 	case ERROR_BAD_PIPE:
 	case ERROR_BROKEN_PIPE:
 	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
+	case ERROR_DATA_CHECKSUM_ERROR:
 	case ERROR_DEV_NOT_EXIST:
 	case ERROR_DEVICE_UNREACHABLE:
 	case ERROR_DIRECTORY_NOT_SUPPORTED:
@@ -6763,6 +7116,27 @@ enum CzResult czWrap_GetFileType(PDWORD res, HANDLE file)
 	case ERROR_VIRUS_DELETED:
 	case ERROR_VIRUS_INFECTED:
 		return CZ_RESULT_BAD_FILE;
+	case ERROR_ADAP_HDW_ERR:
+	case ERROR_BAD_REM_ADAP:
+	case ERROR_DISK_CHANGE:
+	case ERROR_IMAGE_SUBSYSTEM_NOT_PRESENT:
+	case ERROR_INTERMIXED_KERNEL_EA_OPERATION:
+	case ERROR_INVALID_CAP:
+	case ERROR_INVALID_TARGET_HANDLE:
+	case ERROR_MAX_THRDS_REACHED:
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_NO_VOLUME_LABEL:
+	case ERROR_NOT_READ_FROM_COPY:
+	case ERROR_READ_FAULT:
+	case ERROR_SECURITY_STREAM_IS_INCONSISTENT:
+	case ERROR_TOO_MANY_CMDS:
+	case ERROR_TOO_MANY_NAMES:
+	case ERROR_TOO_MANY_SESS:
+	case ERROR_TOO_MANY_TCBS:
+	case ERROR_UNDEFINED_SCOPE:
+	case ERROR_UNEXP_NET_ERR:
+	case ERROR_WRONG_DISK:
+		return CZ_RESULT_BAD_IO;
 	case ERROR_BUSY:
 	case ERROR_DRIVE_LOCKED:
 	case ERROR_FILE_CHECKED_OUT:
@@ -6837,9 +7211,9 @@ enum CzResult czWrap_CreateFileW(
 	case ERROR_BAD_FILE_TYPE:
 	case ERROR_BAD_PIPE:
 	case ERROR_BROKEN_PIPE:
-	case ERROR_CANNOT_MAKE:
 	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
 	case ERROR_CURRENT_DIRECTORY:
+	case ERROR_DATA_CHECKSUM_ERROR:
 	case ERROR_DIR_NOT_EMPTY:
 	case ERROR_DIRECTORY_NOT_SUPPORTED:
 	case ERROR_EA_FILE_CORRUPT:
@@ -6858,6 +7232,31 @@ enum CzResult czWrap_CreateFileW(
 	case ERROR_VIRUS_DELETED:
 	case ERROR_VIRUS_INFECTED:
 		return CZ_RESULT_BAD_FILE;
+	case ERROR_ADAP_HDW_ERR:
+	case ERROR_BAD_REM_ADAP:
+	case ERROR_CANNOT_MAKE:
+	case ERROR_DISK_CHANGE:
+	case ERROR_IMAGE_SUBSYSTEM_NOT_PRESENT:
+	case ERROR_INTERMIXED_KERNEL_EA_OPERATION:
+	case ERROR_INVALID_CAP:
+	case ERROR_INVALID_TARGET_HANDLE:
+	case ERROR_MAX_THRDS_REACHED:
+	case ERROR_NET_WRITE_FAULT:
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_NO_VOLUME_LABEL:
+	case ERROR_NOT_READ_FROM_COPY:
+	case ERROR_OPEN_FAILED:
+	case ERROR_READ_FAULT:
+	case ERROR_SECURITY_STREAM_IS_INCONSISTENT:
+	case ERROR_TOO_MANY_CMDS:
+	case ERROR_TOO_MANY_NAMES:
+	case ERROR_TOO_MANY_SESS:
+	case ERROR_TOO_MANY_TCBS:
+	case ERROR_UNDEFINED_SCOPE:
+	case ERROR_UNEXP_NET_ERR:
+	case ERROR_WRITE_FAULT:
+	case ERROR_WRONG_DISK:
+		return CZ_RESULT_BAD_IO;
 	case ERROR_BAD_ARGUMENTS:
 	case ERROR_BAD_DEVICE_PATH:
 	case ERROR_BAD_NET_NAME:
@@ -6991,6 +7390,7 @@ enum CzResult czWrap_SetEndOfFile(HANDLE file)
 	case ERROR_BAD_PIPE:
 	case ERROR_BROKEN_PIPE:
 	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
+	case ERROR_DATA_CHECKSUM_ERROR:
 	case ERROR_DEV_NOT_EXIST:
 	case ERROR_DEVICE_UNREACHABLE:
 	case ERROR_DIRECTORY_NOT_SUPPORTED:
@@ -7006,6 +7406,30 @@ enum CzResult czWrap_SetEndOfFile(HANDLE file)
 	case ERROR_VIRUS_DELETED:
 	case ERROR_VIRUS_INFECTED:
 		return CZ_RESULT_BAD_FILE;
+	case ERROR_ADAP_HDW_ERR:
+	case ERROR_BAD_REM_ADAP:
+	case ERROR_DISK_CHANGE:
+	case ERROR_IMAGE_SUBSYSTEM_NOT_PRESENT:
+	case ERROR_INTERMIXED_KERNEL_EA_OPERATION:
+	case ERROR_INVALID_CAP:
+	case ERROR_INVALID_TARGET_HANDLE:
+	case ERROR_MAX_THRDS_REACHED:
+	case ERROR_NET_WRITE_FAULT:
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_NO_RANGES_PROCESSED:
+	case ERROR_NO_VOLUME_LABEL:
+	case ERROR_NOT_READ_FROM_COPY:
+	case ERROR_READ_FAULT:
+	case ERROR_SECURITY_STREAM_IS_INCONSISTENT:
+	case ERROR_TOO_MANY_CMDS:
+	case ERROR_TOO_MANY_NAMES:
+	case ERROR_TOO_MANY_SESS:
+	case ERROR_TOO_MANY_TCBS:
+	case ERROR_UNDEFINED_SCOPE:
+	case ERROR_UNEXP_NET_ERR:
+	case ERROR_WRITE_FAULT:
+	case ERROR_WRONG_DISK:
+		return CZ_RESULT_BAD_IO;
 	case ERROR_BUSY:
 	case ERROR_DRIVE_LOCKED:
 	case ERROR_FILE_CHECKED_OUT:
@@ -7070,6 +7494,7 @@ enum CzResult czWrap_SetFilePointerEx(
 	case ERROR_BAD_PIPE:
 	case ERROR_BROKEN_PIPE:
 	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
+	case ERROR_DATA_CHECKSUM_ERROR:
 	case ERROR_DEV_NOT_EXIST:
 	case ERROR_DEVICE_UNREACHABLE:
 	case ERROR_DIRECTORY_NOT_SUPPORTED:
@@ -7171,6 +7596,7 @@ enum CzResult czWrap_ReadFile(
 	case ERROR_BAD_PIPE:
 	case ERROR_BROKEN_PIPE:
 	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
+	case ERROR_DATA_CHECKSUM_ERROR:
 	case ERROR_DEV_NOT_EXIST:
 	case ERROR_DEVICE_UNREACHABLE:
 	case ERROR_DIRECTORY_NOT_SUPPORTED:
@@ -7186,6 +7612,28 @@ enum CzResult czWrap_ReadFile(
 	case ERROR_VIRUS_DELETED:
 	case ERROR_VIRUS_INFECTED:
 		return CZ_RESULT_BAD_FILE;
+	case ERROR_ADAP_HDW_ERR:
+	case ERROR_BAD_REM_ADAP:
+	case ERROR_DISK_CHANGE:
+	case ERROR_IMAGE_SUBSYSTEM_NOT_PRESENT:
+	case ERROR_INTERMIXED_KERNEL_EA_OPERATION:
+	case ERROR_INVALID_CAP:
+	case ERROR_INVALID_TARGET_HANDLE:
+	case ERROR_MAX_THRDS_REACHED:
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_NO_RANGES_PROCESSED:
+	case ERROR_NO_VOLUME_LABEL:
+	case ERROR_NOT_READ_FROM_COPY:
+	case ERROR_READ_FAULT:
+	case ERROR_SECURITY_STREAM_IS_INCONSISTENT:
+	case ERROR_TOO_MANY_CMDS:
+	case ERROR_TOO_MANY_NAMES:
+	case ERROR_TOO_MANY_SESS:
+	case ERROR_TOO_MANY_TCBS:
+	case ERROR_UNDEFINED_SCOPE:
+	case ERROR_UNEXP_NET_ERR:
+	case ERROR_WRONG_DISK:
+		return CZ_RESULT_BAD_IO;
 	case ERROR_BAD_ARGUMENTS:
 	case ERROR_INVALID_FIELD_IN_PARAMETER_LIST:
 	case ERROR_INVALID_PARAMETER:
@@ -7259,6 +7707,7 @@ enum CzResult czWrap_WriteFile(
 	case ERROR_BAD_PIPE:
 	case ERROR_BROKEN_PIPE:
 	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
+	case ERROR_DATA_CHECKSUM_ERROR:
 	case ERROR_DEV_NOT_EXIST:
 	case ERROR_DEVICE_UNREACHABLE:
 	case ERROR_DIRECTORY_NOT_SUPPORTED:
@@ -7273,6 +7722,28 @@ enum CzResult czWrap_WriteFile(
 	case ERROR_VIRUS_DELETED:
 	case ERROR_VIRUS_INFECTED:
 		return CZ_RESULT_BAD_FILE;
+	case ERROR_ADAP_HDW_ERR:
+	case ERROR_BAD_REM_ADAP:
+	case ERROR_DISK_CHANGE:
+	case ERROR_IMAGE_SUBSYSTEM_NOT_PRESENT:
+	case ERROR_INTERMIXED_KERNEL_EA_OPERATION:
+	case ERROR_INVALID_CAP:
+	case ERROR_INVALID_TARGET_HANDLE:
+	case ERROR_MAX_THRDS_REACHED:
+	case ERROR_NET_WRITE_FAULT:
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_NO_RANGES_PROCESSED:
+	case ERROR_NO_VOLUME_LABEL:
+	case ERROR_SECURITY_STREAM_IS_INCONSISTENT:
+	case ERROR_TOO_MANY_CMDS:
+	case ERROR_TOO_MANY_NAMES:
+	case ERROR_TOO_MANY_SESS:
+	case ERROR_TOO_MANY_TCBS:
+	case ERROR_UNDEFINED_SCOPE:
+	case ERROR_UNEXP_NET_ERR:
+	case ERROR_WRITE_FAULT:
+	case ERROR_WRONG_DISK:
+		return CZ_RESULT_BAD_IO;
 	case ERROR_BAD_ARGUMENTS:
 	case ERROR_INVALID_FIELD_IN_PARAMETER_LIST:
 	case ERROR_INVALID_PARAMETER:
@@ -7344,6 +7815,7 @@ enum CzResult czWrap_DeleteFileW(LPCWSTR path)
 	case ERROR_BAD_PIPE:
 	case ERROR_BROKEN_PIPE:
 	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
+	case ERROR_DATA_CHECKSUM_ERROR:
 	case ERROR_DIRECTORY_NOT_SUPPORTED:
 	case ERROR_EA_FILE_CORRUPT:
 	case ERROR_EA_LIST_INCONSISTENT:
@@ -7357,6 +7829,29 @@ enum CzResult czWrap_DeleteFileW(LPCWSTR path)
 	case ERROR_VIRUS_DELETED:
 	case ERROR_VIRUS_INFECTED:
 		return CZ_RESULT_BAD_FILE;
+	case ERROR_ADAP_HDW_ERR:
+	case ERROR_BAD_REM_ADAP:
+	case ERROR_DISK_CHANGE:
+	case ERROR_IMAGE_SUBSYSTEM_NOT_PRESENT:
+	case ERROR_INTERMIXED_KERNEL_EA_OPERATION:
+	case ERROR_INVALID_CAP:
+	case ERROR_INVALID_TARGET_HANDLE:
+	case ERROR_MAX_THRDS_REACHED:
+	case ERROR_NET_WRITE_FAULT:
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_NO_VOLUME_LABEL:
+	case ERROR_NOT_READ_FROM_COPY:
+	case ERROR_READ_FAULT:
+	case ERROR_SECURITY_STREAM_IS_INCONSISTENT:
+	case ERROR_TOO_MANY_CMDS:
+	case ERROR_TOO_MANY_NAMES:
+	case ERROR_TOO_MANY_SESS:
+	case ERROR_TOO_MANY_TCBS:
+	case ERROR_UNDEFINED_SCOPE:
+	case ERROR_UNEXP_NET_ERR:
+	case ERROR_WRITE_FAULT:
+	case ERROR_WRONG_DISK:
+		return CZ_RESULT_BAD_IO;
 	case ERROR_BAD_ARGUMENTS:
 	case ERROR_BAD_DEVICE_PATH:
 	case ERROR_BAD_NET_NAME:
@@ -7456,6 +7951,7 @@ enum CzResult czWrap_CreateFileMappingW(
 	case ERROR_BAD_UNIT:
 	case ERROR_BROKEN_PIPE:
 	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
+	case ERROR_DATA_CHECKSUM_ERROR:
 	case ERROR_DEV_NOT_EXIST:
 	case ERROR_DEVICE_UNREACHABLE:
 	case ERROR_DIRECTORY_NOT_SUPPORTED;
@@ -7471,6 +7967,31 @@ enum CzResult czWrap_CreateFileMappingW(
 	case ERROR_VIRUS_DELETED:
 	case ERROR_VIRUS_INFECTED:
 		return CZ_RESULT_BAD_FILE;
+	case ERROR_ADAP_HDW_ERR:
+	case ERROR_BAD_REM_ADAP:
+	case ERROR_DISK_CHANGE:
+	case ERROR_IMAGE_SUBSYSTEM_NOT_PRESENT:
+	case ERROR_INTERMIXED_KERNEL_EA_OPERATION:
+	case ERROR_INVALID_CAP:
+	case ERROR_INVALID_TARGET_HANDLE:
+	case ERROR_MAX_THRDS_REACHED:
+	case ERROR_NET_WRITE_FAULT:
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_NO_RANGES_PROCESSED:
+	case ERROR_NO_VOLUME_LABEL:
+	case ERROR_NOT_READ_FROM_COPY:
+	case ERROR_OPEN_FAILED:
+	case ERROR_READ_FAULT:
+	case ERROR_SECURITY_STREAM_IS_INCONSISTENT:
+	case ERROR_TOO_MANY_CMDS:
+	case ERROR_TOO_MANY_NAMES:
+	case ERROR_TOO_MANY_SESS:
+	case ERROR_TOO_MANY_TCBS:
+	case ERROR_UNDEFINED_SCOPE:
+	case ERROR_UNEXP_NET_ERR:
+	case ERROR_WRITE_FAULT:
+	case ERROR_WRONG_DISK:
+		return CZ_RESULT_BAD_IO;
 	case ERROR_BUSY:
 	case ERROR_DRIVE_LOCKED:
 	case ERROR_FILE_CHECKED_OUT:
@@ -7535,11 +8056,36 @@ enum CzResult czWrap_MapViewOfFile(
 	case ERROR_WRITE_PROTECT:
 		return CZ_RESULT_BAD_ACCESS;
 	case ERROR_BAD_UNIT:
+	case ERROR_DATA_CHECKSUM_ERROR:
 	case ERROR_DEV_NOT_EXIST:
 	case ERROR_DEVICE_UNREACHABLE:
 	case ERROR_VIRUS_DELETED:
 	case ERROR_VIRUS_INFECTED:
 		return CZ_RESULT_BAD_FILE;
+	case ERROR_ADAP_HDW_ERR:
+	case ERROR_BAD_REM_ADAP:
+	case ERROR_DISK_CHANGE:
+	case ERROR_IMAGE_SUBSYSTEM_NOT_PRESENT:
+	case ERROR_INTERMIXED_KERNEL_EA_OPERATION:
+	case ERROR_INVALID_CAP:
+	case ERROR_INVALID_TARGET_HANDLE:
+	case ERROR_MAX_THRDS_REACHED:
+	case ERROR_NET_WRITE_FAULT:
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_NO_RANGES_PROCESSED:
+	case ERROR_NO_VOLUME_LABEL:
+	case ERROR_NOT_READ_FROM_COPY:
+	case ERROR_READ_FAULT:
+	case ERROR_SECURITY_STREAM_IS_INCONSISTENT:
+	case ERROR_TOO_MANY_CMDS:
+	case ERROR_TOO_MANY_NAMES:
+	case ERROR_TOO_MANY_SESS:
+	case ERROR_TOO_MANY_TCBS:
+	case ERROR_UNDEFINED_SCOPE:
+	case ERROR_UNEXP_NET_ERR:
+	case ERROR_WRITE_FAULT:
+	case ERROR_WRONG_DISK:
+		return CZ_RESULT_BAD_IO;
 	case ERROR_OFFSET_ALIGNMENT_VIOLATION:
 		return CZ_RESULT_BAD_OFFSET;
 	case ERROR_BUSY:
@@ -7594,6 +8140,30 @@ enum CzResult czWrap_UnmapViewOfFile(LPCVOID baseAddress)
 	case ERROR_INVALID_FIELD_IN_PARAMETER_LIST:
 	case ERROR_INVALID_PARAMETER:
 		return CZ_RESULT_BAD_ADDRESS;
+	case ERROR_ADAP_HDW_ERR:
+	case ERROR_BAD_REM_ADAP:
+	case ERROR_DISK_CHANGE:
+	case ERROR_IMAGE_SUBSYSTEM_NOT_PRESENT:
+	case ERROR_INTERMIXED_KERNEL_EA_OPERATION:
+	case ERROR_INVALID_CAP:
+	case ERROR_INVALID_TARGET_HANDLE:
+	case ERROR_MAX_THRDS_REACHED:
+	case ERROR_NET_WRITE_FAULT:
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_NO_RANGES_PROCESSED:
+	case ERROR_NO_VOLUME_LABEL:
+	case ERROR_NOT_READ_FROM_COPY:
+	case ERROR_READ_FAULT:
+	case ERROR_SECURITY_STREAM_IS_INCONSISTENT:
+	case ERROR_TOO_MANY_CMDS:
+	case ERROR_TOO_MANY_NAMES:
+	case ERROR_TOO_MANY_SESS:
+	case ERROR_TOO_MANY_TCBS:
+	case ERROR_UNDEFINED_SCOPE:
+	case ERROR_UNEXP_NET_ERR:
+	case ERROR_WRITE_FAULT:
+	case ERROR_WRONG_DISK:
+		return CZ_RESULT_BAD_IO;
 	case ERROR_BUSY:
 	case ERROR_DRIVE_LOCKED:
 	case ERROR_FILE_CHECKED_OUT:
@@ -7643,6 +8213,30 @@ enum CzResult czWrap_FlushViewOfFile(LPCVOID baseAddress, SIZE_T numberOfBytesTo
 	case ERROR_INVALID_FIELD_IN_PARAMETER_LIST:
 	case ERROR_INVALID_PARAMETER:
 		return CZ_RESULT_BAD_ADDRESS;
+	case ERROR_ADAP_HDW_ERR:
+	case ERROR_BAD_REM_ADAP:
+	case ERROR_DISK_CHANGE:
+	case ERROR_IMAGE_SUBSYSTEM_NOT_PRESENT:
+	case ERROR_INTERMIXED_KERNEL_EA_OPERATION:
+	case ERROR_INVALID_CAP:
+	case ERROR_INVALID_TARGET_HANDLE:
+	case ERROR_MAX_THRDS_REACHED:
+	case ERROR_NET_WRITE_FAULT:
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_NO_RANGES_PROCESSED:
+	case ERROR_NO_VOLUME_LABEL:
+	case ERROR_NOT_READ_FROM_COPY:
+	case ERROR_READ_FAULT:
+	case ERROR_SECURITY_STREAM_IS_INCONSISTENT:
+	case ERROR_TOO_MANY_CMDS:
+	case ERROR_TOO_MANY_NAMES:
+	case ERROR_TOO_MANY_SESS:
+	case ERROR_TOO_MANY_TCBS:
+	case ERROR_UNDEFINED_SCOPE:
+	case ERROR_UNEXP_NET_ERR:
+	case ERROR_WRITE_FAULT:
+	case ERROR_WRONG_DISK:
+		return CZ_RESULT_BAD_IO;
 	case ERROR_BUSY:
 	case ERROR_DRIVE_LOCKED:
 	case ERROR_FILE_CHECKED_OUT:
@@ -7686,6 +8280,29 @@ enum CzResult czWrap_FlushFileBuffers(HANDLE file)
 		return CZ_RESULT_SUCCESS;
 
 	switch (GetLastError()) {
+	case ERROR_ADAP_HDW_ERR:
+	case ERROR_BAD_REM_ADAP:
+	case ERROR_DISK_CHANGE:
+	case ERROR_IMAGE_SUBSYSTEM_NOT_PRESENT:
+	case ERROR_INTERMIXED_KERNEL_EA_OPERATION:
+	case ERROR_INVALID_CAP:
+	case ERROR_INVALID_TARGET_HANDLE:
+	case ERROR_MAX_THRDS_REACHED:
+	case ERROR_NET_WRITE_FAULT:
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_NO_VOLUME_LABEL:
+	case ERROR_NOT_READ_FROM_COPY:
+	case ERROR_READ_FAULT:
+	case ERROR_SECURITY_STREAM_IS_INCONSISTENT:
+	case ERROR_TOO_MANY_CMDS:
+	case ERROR_TOO_MANY_NAMES:
+	case ERROR_TOO_MANY_SESS:
+	case ERROR_TOO_MANY_TCBS:
+	case ERROR_UNDEFINED_SCOPE:
+	case ERROR_UNEXP_NET_ERR:
+	case ERROR_WRITE_FAULT:
+	case ERROR_WRONG_DISK:
+		return CZ_RESULT_BAD_IO;
 	case ERROR_BUSY:
 	case ERROR_DRIVE_LOCKED:
 	case ERROR_FILE_CHECKED_OUT:
@@ -7754,6 +8371,7 @@ enum CzResult czWrap_DeviceIoControl(
 	case ERROR_BROKEN_PIPE:
 	case ERROR_COMPRESSED_FILE_NOT_SUPPORTED:
 	case ERROR_CURRENT_DIRECTORY:
+	case ERROR_DATA_CHECKSUM_ERROR:
 	case ERROR_DEV_NOT_EXIST:
 	case ERROR_DEVICE_UNREACHABLE:
 	case ERROR_DIRECTORY_NOT_SUPPORTED:
@@ -7771,6 +8389,32 @@ enum CzResult czWrap_DeviceIoControl(
 	case ERROR_VIRUS_DELETED:
 	case ERROR_VIRUS_INFECTED:
 		return CZ_RESULT_BAD_FILE;
+	case ERROR_ADAP_HDW_ERR:
+	case ERROR_BAD_REM_ADAP:
+	case ERROR_CANNOT_MAKE:
+	case ERROR_DISK_CHANGE:
+	case ERROR_IMAGE_SUBSYSTEM_NOT_PRESENT:
+	case ERROR_INTERMIXED_KERNEL_EA_OPERATION:
+	case ERROR_INVALID_CAP:
+	case ERROR_INVALID_TARGET_HANDLE:
+	case ERROR_MAX_THRDS_REACHED:
+	case ERROR_NET_WRITE_FAULT:
+	case ERROR_NO_MORE_SEARCH_HANDLES:
+	case ERROR_NO_RANGES_PROCESSED:
+	case ERROR_NO_VOLUME_LABEL:
+	case ERROR_NOT_READ_FROM_COPY:
+	case ERROR_OPEN_FAILED:
+	case ERROR_READ_FAULT:
+	case ERROR_SECURITY_STREAM_IS_INCONSISTENT:
+	case ERROR_TOO_MANY_CMDS:
+	case ERROR_TOO_MANY_NAMES:
+	case ERROR_TOO_MANY_SESS:
+	case ERROR_TOO_MANY_TCBS:
+	case ERROR_UNDEFINED_SCOPE:
+	case ERROR_UNEXP_NET_ERR:
+	case ERROR_WRITE_FAULT:
+	case ERROR_WRONG_DISK:
+		return CZ_RESULT_BAD_IO;
 	case ERROR_EAS_DIDNT_FIT:
 	case ERROR_INSUFFICIENT_BUFFER:
 	case ERROR_MORE_DATA:
