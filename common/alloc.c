@@ -22,22 +22,116 @@
  * Windows implementation                                                                                             *
  **********************************************************************************************************************/
 
-#define HAVE_realloc_win32 ( 1 )
+#define HAVE_alloc_win32 ( 1 )
+
+#if HAVE_alloc_win32
+/* 
+ * Allocates 'size' bytes and sets 'memory' to point to the allocation. The contents of the allocation are
+ * uninitialised. Controlled failure occurs if:
+ * - 'size' is zero.
+ * - 'size' is greater than PTRDIFF_MAX.
+ */
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
+static enum CzResult alloc_win32(void* restrict* memory, size_t size)
+{
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (size > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
+	return czWrap_malloc(memory, size);
+}
+#endif
+
+#define HAVE_alloc_zero_win32 ( 1 )
+
+#if HAVE_alloc_zero_win32
+/* 
+ * Allocates 'size' bytes and sets 'memory' to point to the allocation. The contents of the allocation are zeroed out.
+ * Controlled failure occurs if:
+ * - 'size' is zero.
+ * - 'size' is greater than PTRDIFF_MAX.
+ */
+CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
+static enum CzResult alloc_zero_win32(void* restrict* memory, size_t size)
+{
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (size > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
+	return czWrap_calloc(memory, size, sizeof(char));
+}
+#endif
+
+#define HAVE_free_win32 ( 1 )
+
+#if HAVE_free_win32
+/* 
+ * Deallocates the allocation pointed to by 'memory'. Controlled failure occurs if:
+ * - 'memory' is NULL.
+ */
+static enum CzResult free_win32(void* memory)
+{
+	if CZ_NOEXPECT (!memory)
+		return CZ_RESULT_BAD_ADDRESS;
+
+	free(memory);
+	return CZ_RESULT_SUCCESS;
+}
+#endif
+
+#define HAVE_realloc_win32 ( HAVE_free_win32 )
 
 #if HAVE_realloc_win32
+/* 
+ * Reallocates the allocation of 'oldSize' bytes pointed to by '*memory' to an allocation of 'newSize' bytes. '*memory'
+ * must be nonnull. If 'newSize' is zero, the memory is freed. Controlled failure occurs if:
+ * - 'oldSize' is zero.
+ * - 'oldSize' is greater than PTRDIFF_MAX.
+ * - 'newSize' is greater than PTRDIFF_MAX.
+ */
 CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
-static enum CzResult realloc_win32(void* restrict* memory, size_t newSize)
+static enum CzResult realloc_win32(void* restrict* memory, size_t oldSize, size_t newSize)
 {
+	CZ_ASSUME(*memory != NULL);
+
+	if CZ_NOEXPECT (!oldSize)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (oldSize > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (newSize > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
+	if (!newSize)
+		return free_win32(*memory);
 	return czWrap_realloc(memory, *memory, newSize);
 }
 #endif
 
-#define HAVE_realloc_zero_win32 ( CZ_WRAP_RECALLOC )
+#define HAVE_realloc_zero_win32 ( \
+	CZ_WRAP_RECALLOC &&           \
+	HAVE_free_win32 )
 
 #if HAVE_realloc_zero_win32
+/* 
+ * Reallocates the allocation of 'oldSize' bytes pointed to by '*memory' to an allocation of 'newSize' bytes, and zeros
+ * out any new memory. '*memory' must be nonnull. If 'newSize' is zero, the memory is freed. Controlled failure occurs
+ * if:
+ * - 'oldSize' is zero.
+ * - 'oldSize' is greater than PTRDIFF_MAX.
+ * - 'newSize' is greater than PTRDIFF_MAX.
+ */
 CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
-static enum CzResult realloc_zero_win32(void* restrict* memory, size_t newSize)
+static enum CzResult realloc_zero_win32(void* restrict* memory, size_t oldSize, size_t newSize)
 {
+	CZ_ASSUME(*memory != NULL);
+
+	if CZ_NOEXPECT (!oldSize)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (oldSize > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (newSize > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
+	if (!newSize)
+		return free_win32(*memory);
 	return czWrap_recalloc(memory, *memory, newSize, sizeof(char));
 }
 #endif
@@ -45,9 +139,21 @@ static enum CzResult realloc_zero_win32(void* restrict* memory, size_t newSize)
 #define HAVE_alloc_align_win32 ( CZ_WRAP_ALIGNED_OFFSET_MALLOC )
 
 #if HAVE_alloc_align_win32
+/* 
+ * Allocates 'size' bytes and sets 'memory' to point to the allocation. The byte at index 'offset' of the allocation is
+ * aligned to 'alignment'. The contents of the allocation are uninitialised. Controlled failure occurs if:
+ * - 'size' is zero.
+ * - 'size' is greater than PTRDIFF_MAX.
+ * - 'alignment' is not a power of two.
+ * - 'offset' is not less than 'size'.
+ */
 CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
 static enum CzResult alloc_align_win32(void* restrict* memory, size_t size, size_t alignment, size_t offset)
 {
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (size > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
 	return czWrap_aligned_offset_malloc(memory, size, alignment, offset);
 }
 #endif
@@ -55,9 +161,21 @@ static enum CzResult alloc_align_win32(void* restrict* memory, size_t size, size
 #define HAVE_alloc_align_zero_win32 ( CZ_WRAP_ALIGNED_OFFSET_RECALLOC )
 
 #if HAVE_alloc_align_zero_win32
+/* 
+ * Allocates 'size' bytes and sets 'memory' to point to the allocation. The byte at index 'offset' of the allocation is
+ * aligned to 'alignment'. The contents of the allocation are zeroed out. Controlled failure occurs if:
+ * - 'size' is zero.
+ * - 'size' is greater than PTRDIFF_MAX.
+ * - 'alignment' is not a power of two.
+ * - 'offset' is not less than 'size'.
+ */
 CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
 static enum CzResult alloc_align_zero_win32(void* restrict* memory, size_t size, size_t alignment, size_t offset)
 {
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (size > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
 	return czWrap_aligned_offset_recalloc(memory, NULL, size, sizeof(char), alignment, offset);
 }
 #endif
@@ -65,30 +183,82 @@ static enum CzResult alloc_align_zero_win32(void* restrict* memory, size_t size,
 #define HAVE_free_align_win32 ( CZ_WIN32 )
 
 #if HAVE_free_align_win32
-CZ_NONNULL_ARGS()
+/* 
+ * Deallocates the allocation pointed to by 'memory'. Controlled failure occurs if:
+ * - 'memory' is NULL.
+ */
 static enum CzResult free_align_win32(void* memory)
 {
+	if CZ_NOEXPECT (!memory)
+		return CZ_RESULT_BAD_ADDRESS;
+
 	_aligned_free(memory);
 	return CZ_RESULT_SUCCESS;
 }
 #endif
 
-#define HAVE_realloc_align_win32 ( CZ_WRAP_ALIGNED_OFFSET_REALLOC )
+#define HAVE_realloc_align_win32 (    \
+	CZ_WRAP_ALIGNED_OFFSET_REALLOC && \
+	HAVE_free_align_win32 )
 
 #if HAVE_realloc_align_win32
+/* 
+ * Reallocates the allocation of 'oldSize' bytes pointed to by '*memory' to an allocation of 'newSize' bytes. The byte
+ * at index 'offset' of the allocation is aligned to 'alignment'. '*memory' must be nonnull. If 'newSize' is zero, the
+ * memory is freed. Controlled failure occurs if:
+ * - 'oldSize' is zero.
+ * - 'oldSize' is greater than PTRDIFF_MAX.
+ * - 'newSize' is greater than PTRDIFF_MAX.
+ * - 'alignment' is not a power of two.
+ * - 'offset' is not less than 'newSize'.
+ */
 CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
-static enum CzResult realloc_align_win32(void* restrict* memory, size_t newSize, size_t alignment, size_t offset)
+static enum CzResult realloc_align_win32(
+	void* restrict* memory, size_t oldSize, size_t newSize, size_t alignment, size_t offset)
 {
+	CZ_ASSUME(*memory != NULL);
+
+	if CZ_NOEXPECT (!oldSize)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (oldSize > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (newSize > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
+	if (!newSize)
+		return free_align_win32(*memory);
 	return czWrap_aligned_offset_realloc(memory, *memory, newSize, alignment, offset);
 }
 #endif
 
-#define HAVE_realloc_align_zero_win32 ( CZ_WRAP_ALIGNED_OFFSET_RECALLOC )
+#define HAVE_realloc_align_zero_win32 ( \
+	CZ_WRAP_ALIGNED_OFFSET_RECALLOC &&  \
+	HAVE_free_align_win32 )
 
 #if HAVE_realloc_align_zero_win32
+/* 
+ * Reallocates the allocation of 'oldSize' bytes pointed to by '*memory' to an allocation of 'newSize' bytes, and zeros
+ * out any new memory. The byte at index 'offset' of the allocation is aligned to 'alignment'. '*memory' must be
+ * nonnull. If 'newSize' is zero, the memory is freed. Controlled failure occurs if:
+ * - 'oldSize' is zero.
+ * - 'oldSize' is greater than PTRDIFF_MAX.
+ * - 'newSize' is greater than PTRDIFF_MAX.
+ * - 'alignment' is not a power of two.
+ * - 'offset' is not less than 'newSize'.
+ */
 CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
-static enum CzResult realloc_align_zero_win32(void* restrict* memory, size_t newSize, size_t alignment, size_t offset)
+static enum CzResult realloc_align_zero_win32(
+	void* restrict* memory, size_t oldSize, size_t newSize, size_t alignment, size_t offset)
 {
+	CZ_ASSUME(*memory != NULL);
+
+	if CZ_NOEXPECT (!oldSize)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (oldSize > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (newSize > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
+	if (!newSize)
+		return free_align_win32(*memory);
 	return czWrap_aligned_offset_recalloc(memory, *memory, newSize, sizeof(char), alignment, offset);
 }
 #endif
@@ -99,29 +269,91 @@ static enum CzResult realloc_align_zero_win32(void* restrict* memory, size_t new
 
 #define ADDR_ALIGN_STDC(ptr) ( *((void**) ((uintptr_t) ptr & ~(sizeof(void*) - 1)) - 1) )
 
+/* 
+ * Allocates 'size' bytes and sets 'memory' to point to the allocation. The contents of the allocation are
+ * uninitialised. Controlled failure occurs if:
+ * - 'size' is zero.
+ * - 'size' is greater than PTRDIFF_MAX.
+ */
 CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
 static enum CzResult alloc_stdc(void* restrict* memory, size_t size)
 {
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (size > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
 	return czWrap_malloc(memory, size);
 }
 
+/* 
+ * Allocates 'size' bytes and sets 'memory' to point to the allocation. The contents of the allocation are zeroed out.
+ * Controlled failure occurs if:
+ * - 'size' is zero.
+ * - 'size' is greater than PTRDIFF_MAX.
+ */
 CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
 static enum CzResult alloc_zero_stdc(void* restrict* memory, size_t size)
 {
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (size > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
 	return czWrap_calloc(memory, size, sizeof(char));
 }
 
-CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
-static enum CzResult realloc_stdc(void* restrict* memory, size_t newSize)
+/* 
+ * Deallocates the allocation pointed to by 'memory'. Controlled failure occurs if:
+ * - 'memory' is NULL.
+ */
+static enum CzResult free_stdc(void* memory)
 {
+	if CZ_NOEXPECT (!memory)
+		return CZ_RESULT_BAD_ADDRESS;
+
+	free(memory);
+	return CZ_RESULT_SUCCESS;
+}
+
+/* 
+ * Reallocates the allocation of 'oldSize' bytes pointed to by '*memory' to an allocation of 'newSize' bytes. '*memory'
+ * must be nonnull. If 'newSize' is zero, the memory is freed. Controlled failure occurs if:
+ * - 'oldSize' is zero.
+ * - 'oldSize' is greater than PTRDIFF_MAX.
+ * - 'newSize' is greater than PTRDIFF_MAX.
+ */
+CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+static enum CzResult realloc_stdc(void* restrict* memory, size_t oldSize, size_t newSize)
+{
+	CZ_ASSUME(*memory != NULL);
+
+	if CZ_NOEXPECT (!oldSize)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (oldSize > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (newSize > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
+	if (!newSize)
+		return free_stdc(*memory);
 	return czWrap_realloc(memory, *memory, newSize);
 }
 
+/* 
+ * Reallocates the allocation of 'oldSize' bytes pointed to by '*memory' to an allocation of 'newSize' bytes, and zeros
+ * out any new memory. '*memory' must be nonnull. 'newSize' must be greater than 'oldSize'. Controlled failure occurs
+ * if:
+ * - 'oldSize' is zero.
+ * - 'newSize' is greater than PTRDIFF_MAX.
+ */
 CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
 static enum CzResult realloc_zero_stdc(void* restrict* memory, size_t oldSize, size_t newSize)
 {
-	if (oldSize >= newSize)
-		return realloc_stdc(memory, newSize);
+	CZ_ASSUME(*memory != NULL);
+	CZ_ASSUME(newSize > oldSize);
+
+	if CZ_NOEXPECT (!oldSize)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (newSize > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
 
 	if (newSize - oldSize > oldSize) {
 		void* oldMemory = *memory;
@@ -130,11 +362,11 @@ static enum CzResult realloc_zero_stdc(void* restrict* memory, size_t oldSize, s
 			return ret;
 
 		memcpy(*memory, oldMemory, oldSize);
-		free(oldMemory);
+		free_stdc(oldMemory);
 		return CZ_RESULT_SUCCESS;
 	}
 
-	enum CzResult ret = realloc_stdc(memory, newSize);
+	enum CzResult ret = realloc_stdc(memory, oldSize, newSize);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
@@ -144,9 +376,29 @@ static enum CzResult realloc_zero_stdc(void* restrict* memory, size_t oldSize, s
 	return CZ_RESULT_SUCCESS;
 }
 
+/* 
+ * Allocates 'size' bytes and sets 'memory' to point to the allocation. The byte at index 'offset' of the allocation is
+ * aligned to 'alignment'. The contents of the allocation are uninitialised. Controlled failure occurs if:
+ * - 'size' is zero.
+ * - 'size' is greater than PTRDIFF_MAX.
+ * - 'alignment' is not a power of two.
+ * - 'offset' is not less than 'size'.
+ */
 CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
 static enum CzResult alloc_align_stdc(void* restrict* memory, size_t size, size_t alignment, size_t offset)
 {
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (size > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (!alignment)
+		return CZ_RESULT_BAD_ALIGNMENT;
+	if CZ_NOEXPECT (alignment & (alignment - 1))
+		return CZ_RESULT_BAD_ALIGNMENT;
+	if CZ_NOEXPECT (offset >= size)
+		return CZ_RESULT_BAD_OFFSET;
+
+	offset &= alignment - 1;
 	if (alignment < sizeof(void*))
 		alignment = sizeof(void*);
 
@@ -163,9 +415,29 @@ static enum CzResult alloc_align_stdc(void* restrict* memory, size_t size, size_
 	return CZ_RESULT_SUCCESS;
 }
 
+/* 
+ * Allocates 'size' bytes and sets 'memory' to point to the allocation. The byte at index 'offset' of the allocation is
+ * aligned to 'alignment'. The contents of the allocation are zeroed out. Controlled failure occurs if:
+ * - 'size' is zero.
+ * - 'size' is greater than PTRDIFF_MAX.
+ * - 'alignment' is not a power of two.
+ * - 'offset' is not less than 'size'.
+ */
 CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
 static enum CzResult alloc_align_zero_stdc(void* restrict* memory, size_t size, size_t alignment, size_t offset)
 {
+	if CZ_NOEXPECT (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (size > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (!alignment)
+		return CZ_RESULT_BAD_ALIGNMENT;
+	if CZ_NOEXPECT (alignment & (alignment - 1))
+		return CZ_RESULT_BAD_ALIGNMENT;
+	if CZ_NOEXPECT (offset >= size)
+		return CZ_RESULT_BAD_OFFSET;
+
+	offset &= alignment - 1;
 	if (alignment < sizeof(void*))
 		alignment = sizeof(void*);
 
@@ -182,18 +454,43 @@ static enum CzResult alloc_align_zero_stdc(void* restrict* memory, size_t size, 
 	return CZ_RESULT_SUCCESS;
 }
 
-CZ_NONNULL_ARGS()
+/* 
+ * Deallocates the allocation pointed to by 'memory'. Controlled failure occurs if:
+ * - 'memory' is NULL.
+ */
 static enum CzResult free_align_stdc(void* memory)
 {
+	if CZ_NOEXPECT (!memory)
+		return CZ_RESULT_BAD_ADDRESS;
+
 	void* addr = ADDR_ALIGN_STDC(memory);
 	free(addr);
 	return CZ_RESULT_SUCCESS;
 }
 
+/* 
+ * Reallocates the allocation of 'oldSize' bytes pointed to by '*memory' to an allocation of 'newSize' bytes. The byte
+ * at index 'offset' of the allocation is aligned to 'alignment'. '*memory' must be nonnull. If 'newSize' is zero, the
+ * memory is freed. Controlled failure occurs if:
+ * - 'oldSize' is zero.
+ * - 'oldSize' is greater than PTRDIFF_MAX.
+ * - 'newSize' is greater than PTRDIFF_MAX.
+ * - 'alignment' is not a power of two.
+ * - 'offset' is not less than 'newSize'.
+ */
 CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
 static enum CzResult realloc_align_stdc(
 	void* restrict* memory, size_t oldSize, size_t newSize, size_t alignment, size_t offset)
 {
+	CZ_ASSUME(*memory != NULL);
+
+	if CZ_NOEXPECT (!oldSize)
+		return CZ_RESULT_BAD_SIZE;
+	if CZ_NOEXPECT (oldSize > PTRDIFF_MAX)
+		return CZ_RESULT_BAD_SIZE;
+	if (!newSize)
+		return free_align_stdc(*memory);
+
 	void* oldMemory = *memory;
 	enum CzResult ret = alloc_align_stdc(memory, newSize, alignment, offset);
 	if CZ_NOEXPECT (ret)
@@ -204,12 +501,24 @@ static enum CzResult realloc_align_stdc(
 	return free_align_stdc(oldMemory);
 }
 
+/* 
+ * Reallocates the allocation of 'oldSize' bytes pointed to by '*memory' to an allocation of 'newSize' bytes, and zeros
+ * out any new memory. The byte at index 'offset' of the allocation is aligned to 'alignment'. '*memory' must be
+ * nonnull. 'newSize' must be greater than 'oldSize'. Controlled failure occurs if:
+ * - 'oldSize' is zero.
+ * - 'newSize' is greater than PTRDIFF_MAX.
+ * - 'alignment' is not a power of two.
+ * - 'offset' is not less than 'newSize'.
+ */
 CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
 static enum CzResult realloc_align_zero_stdc(
 	void* restrict* memory, size_t oldSize, size_t newSize, size_t alignment, size_t offset)
 {
-	if (oldSize >= newSize)
-		return realloc_align_stdc(memory, oldSize, newSize, alignment, offset);
+	CZ_ASSUME(*memory != NULL);
+	CZ_ASSUME(newSize > oldSize);
+
+	if CZ_NOEXPECT (!oldSize)
+		return CZ_RESULT_BAD_SIZE;
 
 	void* oldMemory = *memory;
 	enum CzResult ret = alloc_align_zero_stdc(memory, newSize, alignment, offset);
@@ -224,26 +533,64 @@ static enum CzResult realloc_align_zero_stdc(
  * API function definitions                                                                                           *
  **********************************************************************************************************************/
 
-enum CzResult czAlloc(void* restrict* memory, size_t size, struct CzAllocFlags flags)
-{
-	if CZ_NOEXPECT (!size)
-		return CZ_RESULT_BAD_SIZE;
+#define HAVE_czAlloc_win32 ( \
+	HAVE_alloc_win32 &&      \
+	HAVE_alloc_zero_win32 )
 
+#if HAVE_czAlloc_win32
+CZ_COPY_ATTR(czAlloc)
+static enum CzResult czAlloc_win32(void* restrict* memory, size_t size, struct CzAllocFlags flags)
+{
+	if (flags.zeroInitialise)
+		return alloc_zero_win32(memory, size);
+	return alloc_win32(memory, size);
+}
+#endif
+
+CZ_COPY_ATTR(czAlloc)
+static enum CzResult czAlloc_stdc(void* restrict* memory, size_t size, struct CzAllocFlags flags)
+{
 	if (flags.zeroInitialise)
 		return alloc_zero_stdc(memory, size);
 	return alloc_stdc(memory, size);
 }
 
+enum CzResult czAlloc(void* restrict* memory, size_t size, struct CzAllocFlags flags)
+{
+#if HAVE_czAlloc_win32
+	return czAlloc_win32(memory, size, flags);
+#else
+	return czAlloc_stdc(memory, size, flags);
+#endif
+}
+
+#define HAVE_czFree_win32 ( HAVE_free_win32 )
+
+#if HAVE_czFree_win32
+CZ_COPY_ATTR(czFree)
+static enum CzResult czFree_win32(void* memory)
+{
+	return free_win32(memory);
+}
+#endif
+
+CZ_COPY_ATTR(czFree)
+static enum CzResult czFree_stdc(void* memory)
+{
+	return free_stdc(memory);
+}
+
 enum CzResult czFree(void* memory)
 {
-	if CZ_NOEXPECT (!memory)
-		return CZ_RESULT_BAD_ADDRESS;
-
-	free(memory);
-	return CZ_RESULT_SUCCESS;
+#if HAVE_czFree_win32
+	return free_win32(memory);
+#else
+	return free_stdc(memory);
+#endif
 }
 
 #define HAVE_czRealloc_win32 ( \
+	HAVE_free_win32 &&         \
 	HAVE_realloc_win32 &&      \
 	HAVE_realloc_zero_win32 )
 
@@ -251,16 +598,14 @@ enum CzResult czFree(void* memory)
 CZ_COPY_ATTR(czRealloc)
 static enum CzResult czRealloc_win32(void* restrict* memory, size_t oldSize, size_t newSize, struct CzAllocFlags flags)
 {
-	(void) oldSize;
-
 	enum CzResult ret;
 	if (flags.zeroInitialise)
-		ret = realloc_zero_win32(memory, newSize);
+		ret = realloc_zero_win32(memory, oldSize, newSize);
 	else
-		ret = realloc_win32(memory, newSize);
+		ret = realloc_win32(memory, oldSize, newSize);
 
 	if CZ_NOEXPECT (ret && flags.freeOnFail)
-		free(*memory);
+		free_win32(*memory);
 	return ret;
 }
 #endif
@@ -269,28 +614,18 @@ CZ_COPY_ATTR(czRealloc)
 static enum CzResult czRealloc_stdc(void* restrict* memory, size_t oldSize, size_t newSize, struct CzAllocFlags flags)
 {
 	enum CzResult ret;
-	if (flags.zeroInitialise)
+	if (flags.zeroInitialise && newSize > oldSize)
 		ret = realloc_zero_stdc(memory, oldSize, newSize);
 	else
-		ret = realloc_stdc(memory, newSize);
+		ret = realloc_stdc(memory, oldSize, newSize);
 
 	if CZ_NOEXPECT (ret && flags.freeOnFail)
-		free(*memory);
+		free_stdc(*memory);
 	return ret;
 }
 
 enum CzResult czRealloc(void* restrict* memory, size_t oldSize, size_t newSize, struct CzAllocFlags flags)
 {
-	if CZ_NOEXPECT (!oldSize) {
-		if (flags.freeOnFail)
-			free(*memory);
-		return CZ_RESULT_BAD_SIZE;
-	}
-	if CZ_NOEXPECT (!newSize) {
-		free(*memory);
-		return CZ_RESULT_SUCCESS;
-	}
-
 #if HAVE_czRealloc_win32
 	return czRealloc_win32(memory, oldSize, newSize, flags);
 #else
@@ -325,15 +660,6 @@ static enum CzResult czAllocAlign_stdc(
 enum CzResult czAllocAlign(
 	void* restrict* memory, size_t size, size_t alignment, size_t offset, struct CzAllocFlags flags)
 {
-	if CZ_NOEXPECT (!size)
-		return CZ_RESULT_BAD_SIZE;
-	if CZ_NOEXPECT (!alignment || alignment & (alignment - 1))
-		return CZ_RESULT_BAD_ALIGNMENT;
-	if CZ_NOEXPECT (offset >= size)
-		return CZ_RESULT_BAD_OFFSET;
-
-	offset &= alignment - 1; // Ensure offset < alignment
-
 #if HAVE_czAllocAlign_win32
 	return czAllocAlign_win32(memory, size, alignment, offset, flags);
 #else
@@ -359,9 +685,6 @@ static enum CzResult czFreeAlign_stdc(void* memory)
 
 enum CzResult czFreeAlign(void* memory)
 {
-	if CZ_NOEXPECT (!memory)
-		return CZ_RESULT_BAD_ADDRESS;
-
 #if HAVE_czFreeAlign_win32
 	return czFreeAlign_win32(memory);
 #else
@@ -379,13 +702,11 @@ CZ_COPY_ATTR(czReallocAlign)
 static enum CzResult czReallocAlign_win32(
 	void* restrict* memory, size_t oldSize, size_t newSize, size_t alignment, size_t offset, struct CzAllocFlags flags)
 {
-	(void) oldSize;
-
 	enum CzResult ret;
 	if (flags.zeroInitialise)
-		ret = realloc_align_zero_win32(memory, newSize, alignment, offset);
+		ret = realloc_align_zero_win32(memory, oldSize, newSize, alignment, offset);
 	else
-		ret = realloc_align_win32(memory, newSize, alignment, offset);
+		ret = realloc_align_win32(memory, oldSize, newSize, alignment, offset);
 
 	if CZ_NOEXPECT (ret && flags.freeOnFail)
 		free_align_win32(*memory);
@@ -398,7 +719,7 @@ static enum CzResult czReallocAlign_stdc(
 	void* restrict* memory, size_t oldSize, size_t newSize, size_t alignment, size_t offset, struct CzAllocFlags flags)
 {
 	enum CzResult ret;
-	if (flags.zeroInitialise)
+	if (flags.zeroInitialise && newSize > oldSize)
 		ret = realloc_align_zero_stdc(memory, oldSize, newSize, alignment, offset);
 	else
 		ret = realloc_align_stdc(memory, oldSize, newSize, alignment, offset);
@@ -411,28 +732,6 @@ static enum CzResult czReallocAlign_stdc(
 enum CzResult czReallocAlign(
 	void* restrict* memory, size_t oldSize, size_t newSize, size_t alignment, size_t offset, struct CzAllocFlags flags)
 {
-	if CZ_NOEXPECT (!oldSize) {
-		if (flags.freeOnFail)
-			czFreeAlign(*memory);
-		return CZ_RESULT_BAD_SIZE;
-	}
-	if CZ_NOEXPECT (!newSize) {
-		czFreeAlign(*memory);
-		return CZ_RESULT_SUCCESS;
-	}
-	if CZ_NOEXPECT (!alignment || alignment & (alignment - 1)) {
-		if (flags.freeOnFail)
-			czFreeAlign(*memory);
-		return CZ_RESULT_BAD_ALIGNMENT;
-	}
-	if CZ_NOEXPECT (offset >= newSize) {
-		if (flags.freeOnFail)
-			czFreeAlign(*memory);
-		return CZ_RESULT_BAD_OFFSET;
-	}
-
-	offset &= alignment - 1; // Ensure offset < alignment
-
 #if HAVE_czReallocAlign_win32
 	return czReallocAlign_win32(memory, oldSize, newSize, alignment, offset, flags);
 #else

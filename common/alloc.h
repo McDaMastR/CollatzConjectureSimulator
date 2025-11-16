@@ -52,8 +52,8 @@ struct CzAllocFlags
  * 
  * Allocates @p size bytes of contiguous memory from the heap and synchronously writes the memory address of the first
  * byte of the allocation to @p memory. The allocation is aligned to the fundamental alignment of the implementation.
- * That is, the alignment of the @c max_align_t type (typically 8 or 16 bytes). If @p size is zero, failure occurs. On
- * failure, the contents of @p memory are unchanged.
+ * That is, the alignment of the @c max_align_t type (typically 8 or 16 bytes). If @p size is zero or greater than
+ * @c PTRDIFF_MAX, failure occurs. On failure, the contents of @p memory are unchanged.
  * 
  * The members of @p flags can optionally specify the following behaviour.
  * - If @p flags.zeroInitialise is set, the contents of the allocation are initialised to zero. Otherwise, the contents
@@ -71,7 +71,7 @@ struct CzAllocFlags
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
- * @retval CZ_RESULT_BAD_SIZE @p size was zero.
+ * @retval CZ_RESULT_BAD_SIZE @p size was zero or greater than @c PTRDIFF_MAX.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
  * @pre @p memory is nonnull.
@@ -92,8 +92,9 @@ enum CzResult czAlloc(void* restrict* memory, size_t size, struct CzAllocFlags f
  * 
  * Let @e minSize and @e difSize denote the minimum and positive difference, respectively, of @p oldSize and @p newSize.
  * The contents of the first @e minSize bytes of the original allocation are preserved in the first @e minSize bytes of
- * the new allocation. If @p newSize is zero, the original allocation is freed and @p memory is not written to. If
- * @p oldSize is zero, failure occurs. On failure, the contents of @p memory are unchanged.
+ * the new allocation. If @p newSize is zero, the original allocation is freed and @p memory is not written to;
+ * @p oldSize is ignored. If @p oldSize is zero, or @p oldSize or @p newSize is greater than @c PTRDIFF_MAX, failure
+ * occurs. On failure, the contents of @p memory are unchanged.
  * 
  * The members of @p flags can optionally specify the following behaviour.
  * - If @p flags.zeroInitialise is set and @p oldSize is less than @p newSize, the contents of the last @e difSize bytes
@@ -114,7 +115,7 @@ enum CzResult czAlloc(void* restrict* memory, size_t size, struct CzAllocFlags f
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
- * @retval CZ_RESULT_BAD_SIZE @p oldSize was zero.
+ * @retval CZ_RESULT_BAD_SIZE @p oldSize was zero, or @p oldSize or @p newSize was greater than @c PTRDIFF_MAX.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
  * @pre @p memory and @p *memory are nonnull.
@@ -137,7 +138,7 @@ enum CzResult czRealloc(void* restrict* memory, size_t oldSize, size_t newSize, 
  * 
  * Thread-safety is guaranteed for any set of concurrent invocations.
  * 
- * @param[in,out] memory The address of the allocation.
+ * @param[in] memory The address of the allocation.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_BAD_ADDRESS @p memory was null.
@@ -154,8 +155,8 @@ enum CzResult czFree(void* memory);
  * 
  * Allocates @p size bytes of contiguous memory from the heap and synchronously writes the memory address of the first
  * byte of the allocation to @p memory. The byte at the zero-based position @p offset in the allocation is aligned to
- * @p alignment bytes. If @p size is zero, @p alignment is not a power of two, or @p offset is not less than @p size,
- * failure occurs. On failure, the contents of @p memory are unchanged.
+ * @p alignment bytes. If @p size is zero or greater than @c PTRDIFF_MAX, @p alignment is not a power of two, or
+ * @p offset is not less than @p size, failure occurs. On failure, the contents of @p memory are unchanged.
  * 
  * The members of @p flags can optionally specify the following behaviour.
  * - If @p flags.zeroInitialise is set, the contents of the allocation are initialised to zero. Otherwise, the contents
@@ -177,7 +178,7 @@ enum CzResult czFree(void* memory);
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ALIGNMENT @p alignment was not a power of two.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was greater than or equal to @p size.
- * @retval CZ_RESULT_BAD_SIZE @p size was zero.
+ * @retval CZ_RESULT_BAD_SIZE @p size was zero or greater than @c PTRDIFF_MAX.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
  * @pre @p memory is nonnull.
@@ -199,8 +200,9 @@ enum CzResult czAllocAlign(
  * 
  * Let @e minSize and @e difSize denote the minimum and positive difference, respectively, of @p oldSize and @p newSize.
  * The contents of the first @e minSize bytes of the original allocation are preserved in the first @e minSize bytes of
- * the new allocation. If @p newSize is zero, the original allocation is freed and @p memory is not written to. If
- * @p oldSize is zero, failure occurs. If @p alignment is not a power of two or @p offset is not less than @p newSize,
+ * the new allocation. If @p newSize is zero, the original allocation is freed and @p memory is not written to;
+ * @p oldSize, @p alignment, and @p offset are ignored. If @p oldSize is zero, or @p oldSize or @p newSize is greater
+ * than @c PTRDIFF_MAX, failure occurs. If @p alignment is not a power of two or @p offset is not less than @p newSize,
  * failure occurs if @p newSize is nonzero. On failure, the contents of @p memory are unchanged.
  * 
  * The members of @p flags can optionally specify the following behaviour.
@@ -226,7 +228,7 @@ enum CzResult czAllocAlign(
  * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ALIGNMENT @p alignment was not a power of two.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was greater than or equal to @p newSize.
- * @retval CZ_RESULT_BAD_SIZE @p oldSize was zero.
+ * @retval CZ_RESULT_BAD_SIZE @p oldSize was zero, or @p oldSize or @p newSize was greater than @c PTRDIFF_MAX.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
  * @pre @p memory and @p *memory are nonnull.
@@ -250,7 +252,7 @@ enum CzResult czReallocAlign(
  * 
  * Thread-safety is guaranteed for any set of concurrent invocations.
  * 
- * @param[in,out] memory The address of the allocation.
+ * @param[in] memory The address of the allocation.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
  * @retval CZ_RESULT_BAD_ADDRESS @p memory was null.
