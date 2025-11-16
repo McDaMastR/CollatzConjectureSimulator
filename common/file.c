@@ -125,15 +125,9 @@ static enum CzResult alloc_resolve_path(char* restrict* restrict resolvedPath, c
  * - 'access' is the access mode of the file.
  *   - Nonzero if open; undefined if closed.
  *   - Must include at least one of GENERIC_READ or GENERIC_WRITE.
- * - 'disposition' is the creation disposition of the file.
+ * - 'attributes' are the attributes of the file.
  *   - Nonzero if open; undefined if closed.
- *   - One of CREATE_NEW, CREATE_ALWAYS, OPEN_EXISTING, OPEN_ALWAYS, or TRUNCATE_EXISTING.
- *     - CREATE_NEW (fail if exists, create if not exists),
- *     - CREATE_ALWAYS (truncate if exists, create if not exists),
- *     - OPEN_EXISTING (open if exists, fail if not exists),
- *     - OPEN_ALWAYS (open if exists, create if not exists), or
- *     - TRUNCATE_EXISTING (truncate if exists, fail if not exists).
- * - 'flags' are the flags and attributes of the file.
+ * - 'type' is the file type of the file.
  *   - Undefined if closed.
  * - 'fileSize' is the current size of the file in bytes.
  *   - At most MAX_FILE_SIZE (maximum value of LARGE_INTEGER) if open; undefined if closed.
@@ -168,7 +162,6 @@ struct FileInfoWin32
 	HANDLE file;
 	PWSTR path;
 	DWORD access;
-	DWORD disposition;
 	DWORD attributes;
 	DWORD type;
 	SIZE_T fileSize;
@@ -236,26 +229,33 @@ static enum CzResult widen_path_win32(PWSTR* restrict widePath, PCSTR path)
 
 #if HAVE_open_file_win32
 /* 
- * Opens a file and initialises a corresponding FileInfoWin32 instance. The file should not already be open. The
- * 'access' and 'disposition'  members of 'info' should already be set correctly. The 'path' argument need not remain
- * valid after the function returns.
+ * Opens a file and initialises a corresponding FileInfoWin32 instance. The file must not already be open. The 'access'
+ * member of 'info' must already be set correctly. If 'path' is nonnull, it must be a (multi)byte string and need not
+ * remain valid after the function returns. Otherwise, the 'path' member of 'info' must already be set correctly and
+ * must remain valid until it is freed with close_file_win32().
  */
-CZ_NONNULL_ARGS() CZ_NULTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RD_ACCESS(2)
-static enum CzResult open_file_win32(struct FileInfoWin32* restrict info, PCSTR path, DWORD flags)
+CZ_NONNULL_ARGS(1) CZ_NULTERM_ARG(2) CZ_RW_ACCESS(1) CZ_RD_ACCESS(2)
+static enum CzResult open_file_win32(struct FileInfoWin32* restrict info, PCSTR path, DWORD disposition, DWORD flags)
 {
 	CZ_ASSUME(info->file == NULL);
 
+	enum CzResult ret;
 	PWSTR widePath;
-	enum CzResult ret = widen_path_win32(&widePath, path);
-	if CZ_NOEXPECT (ret)
-		return ret;
+	if (path) {
+		ret = widen_path_win32(&widePath, path);
+		if CZ_NOEXPECT (ret)
+			return ret;
+	}
+	else {
+		widePath = info->path;
+	}
 
 	HANDLE file;
 	DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
 	PSECURITY_ATTRIBUTES security = NULL;
 	HANDLE template = NULL;
 
-	ret = czWrap_CreateFileW(&file, widePath, info->access, shareMode, security, info->disposition, flags, template);
+	ret = czWrap_CreateFileW(&file, widePath, info->access, shareMode, security, disposition, flags, template);
 	if CZ_NOEXPECT (ret)
 		goto err_free_path;
 
@@ -291,7 +291,8 @@ static enum CzResult open_file_win32(struct FileInfoWin32* restrict info, PCSTR 
 err_close_file:
 	CloseHandle(file);
 err_free_path:
-	czFree(widePath);
+	if (path)
+		czFree(widePath);
 	return ret;
 }
 #endif
@@ -1801,26 +1802,46 @@ out_free_content:
  * API function definitions                                                                                           *
  **********************************************************************************************************************/
 
-#define HAVE_czFileSize_win32 ( \
-	HAVE_open_file_win32 &&     \
-	HAVE_close_file_win32 &&    \
+#define HAVE_czFileSize_win32 (         \
+	CZ_WRAP_GET_FILE_ATTRIBUTES_EX_W && \
+	HAVE_open_file_win32 &&             \
+	HAVE_close_file_win32 &&            \
+	HAVE_widen_path_win32 &&            \
 	HAVE_FileInfoWin32 )
 
 #if HAVE_czFileSize_win32
 CZ_COPY_ATTR(czFileSize)
 static enum CzResult czFileSize_win32(PCSTR path, PSIZE_T size, struct CzFileFlags flags)
 {
-	struct FileInfoWin32 info = {0};
-	info.access = GENERIC_READ;
-	info.disposition = OPEN_EXISTING;
-
-	DWORD openFlags = FILE_ATTRIBUTE_NORMAL;
-	if (flags.openSymLink)
-		openFlags |= FILE_FLAG_OPEN_REPARSE_POINT;
-
-	enum CzResult ret = open_file_win32(&info, path, openFlags);
+	PWSTR widePath;
+	enum CzResult ret = widen_path_win32(&widePath, path);
 	if CZ_NOEXPECT (ret)
 		return ret;
+
+	WIN32_FILE_ATTRIBUTE_DATA attrData;
+	ret = czWrap_GetFileAttributesExW(widePath, GetFileExInfoStandard, &attrData);
+	if CZ_NOEXPECT (ret)
+		goto out_free_widepath;
+
+	BOOL isSymLink = attrData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT;
+	if (flags.openSymLink || !isSymLink) {
+		ULARGE_INTEGER fileSize;
+		fileSize.LowPart = attrData.nFileSizeLow;
+		fileSize.HighPart = attrData.nFileSizeHigh;
+
+		*size = (SIZE_T) fileSize.QuadPart;
+		goto out_free_widepath;
+	}
+
+	struct FileInfoWin32 info = {0};
+	info.path = widePath;
+	info.access = GENERIC_READ;
+
+	DWORD disposition = OPEN_EXISTING;
+	DWORD openFlags = FILE_ATTRIBUTE_NORMAL;
+	ret = open_file_win32(&info, NULL, disposition, openFlags);
+	if CZ_NOEXPECT (ret)
+		goto out_free_widepath;
 
 	SIZE_T fileSize = info.fileSize;
 	ret = close_file_win32(&info);
@@ -1828,7 +1849,9 @@ static enum CzResult czFileSize_win32(PCSTR path, PSIZE_T size, struct CzFileFla
 		return ret;
 
 	*size = fileSize;
-	return CZ_RESULT_SUCCESS;
+out_free_widepath:
+	czFree(widePath);
+	return ret;
 }
 #endif
 
@@ -1915,10 +1938,10 @@ static enum CzResult czReadFile_win32(PCSTR path, PVOID buffer, SIZE_T size, SIZ
 {
 	struct FileInfoWin32 info = {0};
 	info.access = GENERIC_READ;
-	info.disposition = OPEN_EXISTING;
 
+	DWORD disposition = OPEN_EXISTING;
 	DWORD openFlags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
-	enum CzResult ret = open_file_win32(&info, path, openFlags);
+	enum CzResult ret = open_file_win32(&info, path, disposition, openFlags);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
@@ -2026,10 +2049,10 @@ static enum CzResult czWriteFile_win32(PCSTR path, LPCVOID buffer, SIZE_T size, 
 {
 	struct FileInfoWin32 info = {0};
 	info.access = GENERIC_WRITE;
-	info.disposition = (!offset || offset == CZ_EOF) ? OPEN_ALWAYS : OPEN_EXISTING;
 
+	DWORD disposition = (!offset || offset == CZ_EOF) ? OPEN_ALWAYS : OPEN_EXISTING;
 	DWORD openFlags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
-	enum CzResult ret = open_file_win32(&info, path, openFlags);
+	enum CzResult ret = open_file_win32(&info, path, disposition, openFlags);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
@@ -2151,7 +2174,6 @@ static enum CzResult czInsertFile_win32(PCSTR path, LPCVOID buffer, SIZE_T size,
 
 	struct FileInfoWin32 info = {0};
 	info.access = access;
-	info.disposition = (!offset || offset == CZ_EOF) ? OPEN_ALWAYS : OPEN_EXISTING;
 
 	DWORD openFlags = FILE_ATTRIBUTE_NORMAL;
 	if (offset == CZ_EOF)
@@ -2159,7 +2181,8 @@ static enum CzResult czInsertFile_win32(PCSTR path, LPCVOID buffer, SIZE_T size,
 	else
 		openFlags |= FILE_FLAG_RANDOM_ACCESS;
 
-	enum CzResult ret = open_file_win32(&info, path, openFlags);
+	DWORD disposition = (!offset || offset == CZ_EOF) ? OPEN_ALWAYS : OPEN_EXISTING;
+	enum CzResult ret = open_file_win32(&info, path, disposition, openFlags);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
@@ -2277,10 +2300,10 @@ static enum CzResult czRewriteFile_win32(PCSTR path, LPCVOID buffer, SIZE_T size
 {
 	struct FileInfoWin32 info = {0};
 	info.access = GENERIC_WRITE;
-	info.disposition = CREATE_ALWAYS;
 
+	DWORD disposition = CREATE_ALWAYS;
 	DWORD openFlags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
-	enum CzResult ret = open_file_win32(&info, path, openFlags);
+	enum CzResult ret = open_file_win32(&info, path, disposition, openFlags);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
@@ -2340,7 +2363,8 @@ static enum CzResult czRewriteFile_stdc(const char* restrict path, const void* r
 	return close_file_stdc(&info);
 }
 
-enum CzResult czRewriteFile(const char* path, const void* buffer, size_t size, struct CzFileFlags flags)
+enum CzResult czRewriteFile(
+	const char* restrict path, const void* restrict buffer, size_t size, struct CzFileFlags flags)
 {
 	enum CzResult ret;
 	const char* resolvedPath = path;
@@ -2377,10 +2401,10 @@ static enum CzResult czClearFile_win32(PCSTR path, SIZE_T size, SIZE_T offset)
 {
 	struct FileInfoWin32 info = {0};
 	info.access = GENERIC_WRITE;
-	info.disposition = OPEN_EXISTING;
 
+	DWORD disposition = OPEN_EXISTING;
 	DWORD openFlags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
-	enum CzResult ret = open_file_win32(&info, path, openFlags);
+	enum CzResult ret = open_file_win32(&info, path, disposition, openFlags);
 	if CZ_NOEXPECT (ret)
 		return ret;
 
@@ -2486,10 +2510,10 @@ static enum CzResult czTrimFile_win32(PCSTR path, SIZE_T size, SIZE_T offset)
 {
 	struct FileInfoWin32 info = {0};
 	info.access = GENERIC_READ | GENERIC_WRITE;
-	info.disposition = OPEN_EXISTING;
 
+	DWORD disposition = OPEN_EXISTING;
 	DWORD openFlags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_RANDOM_ACCESS;
-	enum CzResult ret = open_file_win32(&info, path, openFlags);
+	enum CzResult ret = open_file_win32(&info, path, disposition, openFlags);
 	if CZ_NOEXPECT (ret)
 		return ret;
 

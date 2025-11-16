@@ -231,7 +231,7 @@ enum CzResult czReadFile(const char* path, void* buffer, size_t size, size_t off
  * If @p offset is @e fileSize or @c CZ_EOF, the contents of @p buffer are appended to the file. If @p offset is less
  * than @e fileSize and @e maxSize is greater than @e fileSize, the file size is increased to @e maxSize to accommodate
  * the contents of @p buffer. If @p size is zero or @p offset is not @c CZ_EOF and greater than @e fileSize, failure
- * occurs. On failure, the contents of the file are undefined.
+ * occurs. On failure, the file contents in the interval [@p offset, @p size + @p offset) are undefined.
  * 
  * The members of @p flags can optionally specify the following behaviour.
  * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
@@ -297,7 +297,7 @@ enum CzResult czWriteFile(const char* path, const void* buffer, size_t size, siz
  * If @p offset is @e fileSize or @c CZ_EOF, the contents of @p buffer are appended to the file. If @p offset is less
  * than @e fileSize, any previous file contents in the interval [@p offset, @e fileSize) are moved to the memory in the
  * interval [@p size + @p offset, @e fileSize + @p size). If @p size is zero or @p offset is not @c CZ_EOF and greater
- * than @e fileSize, failure occurs. On failure, the contents of the file are undefined.
+ * than @e fileSize, failure occurs. On failure, the file contents from @p offset onward are undefined.
  * 
  * The members of @p flags can optionally specify the following behaviour.
  * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
@@ -422,8 +422,8 @@ enum CzResult czRewriteFile(const char* path, const void* buffer, size_t size, s
  *   zero-based index @p offset. That is, all bytes whose indices lie within the interval [@p offset,
  *   @e minSize + @p offset).
  * 
- * If @p size is zero or @p offset is not @c CZ_EOF and not less than @e fileSize, failure occurs. On failure, the
- * contents of the file are undefined.
+ * If @p size is zero or @p offset is not @c CZ_EOF and not less than @e fileSize, failure occurs. On failure, the file
+ * contents in the cleared block are undefined.
  * 
  * The members of @p flags can optionally specify the following behaviour.
  * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
@@ -488,8 +488,8 @@ enum CzResult czClearFile(const char* path, size_t size, size_t offset, struct C
  *   @e minSize + @p offset). Any previous file contents in the interval [@e minSize + @p offset, @e fileSize) are moved
  *   to the memory in the interval [@p offset, @e fileSize - @e minSize). The file size is decreased by @e minSize.
  * 
- * If @p size is zero or @p offset is not @c CZ_EOF and not less than @e fileSize, failure occurs. On failure, the
- * contents of the file are undefined.
+ * If @p size is zero or @p offset is not @c CZ_EOF and not less than @e fileSize, failure occurs. On failure, the file
+ * contents from @p offset onward are undefined.
  * 
  * The members of @p flags can optionally specify the following behaviour.
  * - If @p flags.relativeToExe is set and @p path is a relative filepath, @p path is interpreted as relative to the
