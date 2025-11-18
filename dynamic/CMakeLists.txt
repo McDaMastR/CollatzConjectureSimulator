@@ -1,11 +1,7 @@
 add_library(cltzDynamic OBJECT)
 add_library(cltz::dynamic ALIAS cltzDynamic)
 
-set_target_properties(cltzDynamic PROPERTIES
-	C_STANDARD 17
-	C_STANDARD_REQUIRED ON
-	C_EXTENSIONS ON
-)
+cltz_configure(cltzDynamic)
 
 target_link_libraries(cltzDynamic
 	PRIVATE

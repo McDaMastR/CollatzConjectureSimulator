@@ -6,13 +6,13 @@ set(VULKAN_UTILITY_LIBRARIES_INSTALL_DIR "" CACHE PATH "Path to the Vulkan Utili
 set(VOLK_INSTALL_DIR                     "" CACHE PATH "Path to the volk installation directory")
 
 if(VULKAN_HEADERS_INSTALL_DIR)
-	list(PREPEND VulkanHeaders_ROOT ${VULKAN_HEADERS_INSTALL_DIR})
+	list(PREPEND VulkanHeaders_ROOT "${VULKAN_HEADERS_INSTALL_DIR}")
 else()
-	FetchContent_Declare(VulkanHeaders SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Vulkan-Headers OVERRIDE_FIND_PACKAGE)
+	FetchContent_Declare(VulkanHeaders SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vulkan-Headers" OVERRIDE_FIND_PACKAGE)
 endif()
 
 if(VULKAN_UTILITY_LIBRARIES_INSTALL_DIR)
-	list(PREPEND VulkanUtilityLibraries_ROOT ${VULKAN_UTILITY_LIBRARIES_INSTALL_DIR})
+	list(PREPEND VulkanUtilityLibraries_ROOT "${VULKAN_UTILITY_LIBRARIES_INSTALL_DIR}")
 	find_package(VulkanHeaders 1.4.317 REQUIRED)
 	find_package(VulkanUtilityLibraries 1.4.317 REQUIRED)
 else()
@@ -20,11 +20,11 @@ else()
 endif()
 
 if(VOLK_INSTALL_DIR)
-	list(PREPEND volk_ROOT ${VOLK_INSTALL_DIR})
+	list(PREPEND volk_ROOT "${VOLK_INSTALL_DIR}")
 	find_package(volk 317 REQUIRED) # Must be compiled with VOLK_STATIC_DEFINES set to VK_ENABLE_BETA_EXTENSIONS
 else()
 	if(NOT VULKAN_HEADERS_INSTALL_DIR)
-		set(VULKAN_HEADERS_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Vulkan-Headers)
+		set(VULKAN_HEADERS_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vulkan-Headers")
 	endif()
 	set(VOLK_STATIC_DEFINES VK_ENABLE_BETA_EXTENSIONS)
 	add_subdirectory(volk)
@@ -43,14 +43,14 @@ set_target_properties(whereami PROPERTIES
 	C_STANDARD_REQUIRED OFF
 	C_EXTENSIONS ON
 
-	ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/whereami
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/whereami"
 )
 
 target_compile_options(whereami PRIVATE
-	$<$<C_COMPILER_ID:AppleClang,Clang,GNU>:-O3>
-	$<$<C_COMPILER_ID:MSVC>:/O2>
+	"$<$<C_COMPILER_ID:AppleClang,Clang,GNU>:-O3>"
+	"$<$<C_COMPILER_ID:MSVC>:/O2>"
 )
 
-set(WAI_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/whereami/src)
-target_include_directories(whereami PUBLIC ${WAI_SOURCE_DIR})
-target_sources(whereami PRIVATE ${WAI_SOURCE_DIR}/whereami.c)
+set(WAI_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/whereami/src")
+target_include_directories(whereami PUBLIC "${WAI_SOURCE_DIR}")
+target_sources(whereami PRIVATE "${WAI_SOURCE_DIR}/whereami.c")
