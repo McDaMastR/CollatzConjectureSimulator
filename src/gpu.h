@@ -20,9 +20,6 @@
 #include "common.h"
 #include "dynamic.h"
 
-typedef unsigned __int128 StartValue;
-typedef uint16_t StopTime;
-
 struct Gpu
 {
 	DyRecord allocRecord;
@@ -63,8 +60,8 @@ struct Gpu
 
 	VkSemaphore* restrict semaphores; // Count = inoutsPerHeap
 
-	StartValue** restrict mappedInBuffers; // Count = inoutsPerHeap, valuesPerInout
-	StopTime** restrict mappedOutBuffers; // Count = inoutsPerHeap, valuesPerInout
+	CzU128** restrict mappedInBuffers; // Count = inoutsPerHeap, valuesPerInout
+	CzU16** restrict mappedOutBuffers; // Count = inoutsPerHeap, valuesPerInout
 
 	VkDeviceSize bytesPerIn;
 	VkDeviceSize bytesPerOut;
@@ -73,32 +70,32 @@ struct Gpu
 	VkDeviceSize bytesPerHostVisibleMemory;
 	VkDeviceSize bytesPerDeviceLocalMemory;
 
-	uint32_t valuesPerInout;
-	uint32_t valuesPerBuffer;
-	uint32_t valuesPerHeap;
-	uint32_t inoutsPerBuffer;
-	uint32_t inoutsPerHeap;
-	uint32_t buffersPerHeap;
+	CzU32 valuesPerInout;
+	CzU32 valuesPerBuffer;
+	CzU32 valuesPerHeap;
+	CzU32 inoutsPerBuffer;
+	CzU32 inoutsPerHeap;
+	CzU32 buffersPerHeap;
 
-	uint32_t workgroupSize;
-	uint32_t workgroupCount;
+	CzU32 workgroupSize;
+	CzU32 workgroupCount;
 
-	uint32_t hostVisibleHeapIndex;
-	uint32_t deviceLocalHeapIndex;
-	uint32_t hostVisibleTypeIndex;
-	uint32_t deviceLocalTypeIndex;
+	CzU32 hostVisibleHeapIndex;
+	CzU32 deviceLocalHeapIndex;
+	CzU32 hostVisibleTypeIndex;
+	CzU32 deviceLocalTypeIndex;
 
-	uint32_t computeFamilyIndex;
-	uint32_t transferFamilyIndex;
-	uint32_t computeQueueIndex;
-	uint32_t transferQueueIndex;
-	uint32_t computeFamilyTimestampValidBits;
-	uint32_t transferFamilyTimestampValidBits;
+	CzU32 computeFamilyIndex;
+	CzU32 transferFamilyIndex;
+	CzU32 computeQueueIndex;
+	CzU32 transferQueueIndex;
+	CzU32 computeFamilyTimestampValidBits;
+	CzU32 transferFamilyTimestampValidBits;
 
-	uint32_t vkVerMajor;
-	uint32_t vkVerMinor;
-	uint32_t spvVerMajor;
-	uint32_t spvVerMinor;
+	CzU32 vkVerMajor;
+	CzU32 vkVerMinor;
+	CzU32 spvVerMajor;
+	CzU32 spvVerMinor;
 
 	float timestampPeriod;
 
@@ -125,35 +122,35 @@ struct Position
 	 * Suppose the current longest total stopping time is T. Then val-a-mod-m-off[k] gives the least starting value x
 	 * with total stopping time t such that (1) x ≡ a (mod m) and (2) t + k = T.
 	 */
-	StartValue val0mod1off[3];
-	StartValue val1mod6off[3];
+	CzU128 val0mod1off[3];
+	CzU128 val1mod6off[3];
 
-	StartValue curStartValue; // First starting value being checked in the current dispatch.
-	StopTime bestStopTime; // Current longest total stopping time.
+	CzU128 curStartValue; // First starting value being checked in the current dispatch.
+	CzU16 bestStopTime; // Current longest total stopping time.
 };
 
 // If the return type is bool, then the function returns true on success and false elsewise
 
 CZ_NONNULL_ARGS()
-bool create_instance(struct Gpu* restrict gpu);
+bool create_instance(struct Gpu* gpu);
 CZ_NONNULL_ARGS()
-bool select_device(struct Gpu* restrict gpu);
+bool select_device(struct Gpu* gpu);
 CZ_NONNULL_ARGS()
-bool create_device(struct Gpu* restrict gpu);
+bool create_device(struct Gpu* gpu);
 CZ_NONNULL_ARGS()
-bool manage_memory(struct Gpu* restrict gpu);
+bool manage_memory(struct Gpu* gpu);
 CZ_NONNULL_ARGS()
-bool create_buffers(struct Gpu* restrict gpu);
+bool create_buffers(struct Gpu* gpu);
 CZ_NONNULL_ARGS()
-bool create_descriptors(struct Gpu* restrict gpu);
+bool create_descriptors(struct Gpu* gpu);
 CZ_NONNULL_ARGS()
-bool create_pipeline(struct Gpu* restrict gpu);
+bool create_pipeline(struct Gpu* gpu);
 CZ_NONNULL_ARGS()
-bool create_commands(struct Gpu* restrict gpu);
+bool create_commands(struct Gpu* gpu);
 CZ_NONNULL_ARGS()
-bool submit_commands(struct Gpu* restrict gpu);
+bool submit_commands(struct Gpu* gpu);
 CZ_NONNULL_ARGS()
-bool destroy_gpu(struct Gpu* restrict gpu);
+bool destroy_gpu(struct Gpu* gpu);
 
 CZ_NONNULL_ARGS()
 bool capture_pipeline(VkDevice device, VkPipeline pipeline);
@@ -162,26 +159,22 @@ CZ_NONNULL_ARGS()
 void* wait_for_input(void* ptr);
 
 CZ_NONNULL_ARGS()
-void write_inbuffer(
-	StartValue* restrict mappedInBuffer,
-	StartValue* restrict firstStartValue,
-	uint32_t valuesPerInout,
-	uint32_t valuesPerHeap);
+void write_inbuffer(CzU128* mappedInBuffer, CzU128* firstStartValue, CzU32 valuesPerInout, CzU32 valuesPerHeap);
 
 CZ_NONNULL_ARGS()
 void read_outbuffer(
-	const StopTime* restrict mappedOutBuffer,
-	struct Position* restrict position,
+	const CzU16* mappedOutBuffer,
+	struct Position* position,
 	DyArray bestStartValues,
 	DyArray bestStopTimes,
-	uint32_t valuesPerInout);
+	CzU32 valuesPerInout);
 
 CZ_NONNULL_ARGS()
 void new_high(
-	const StartValue* restrict startValue,
-	StopTime* restrict curBestTime,
-	StopTime newBestTime,
-	StartValue* restrict val0mod1off,
-	StartValue* restrict val1mod6off,
+	const CzU128* startValue,
+	CzU16* curBestTime,
+	CzU16 newBestTime,
+	CzU128* val0mod1off,
+	CzU128* val1mod6off,
 	DyArray bestStartValues,
 	DyArray bestStopTimes);

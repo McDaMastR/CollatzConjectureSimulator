@@ -23,7 +23,7 @@ struct CzVulkanCallbackData
 {
 	const char* func;
 	const char* file;
-	uint64_t line;
+	CzU32 line;
 };
 
 extern struct CzVulkanCallbackData czgCallbackData;
@@ -51,26 +51,26 @@ bool log_critical(FILE* stream, const char* format, ...);
 // Failure functions
 
 CZ_COLD CZ_NONNULL_ARGS(3, 4) CZ_NULTERM_ARG(3) CZ_NULTERM_ARG(4) CZ_NO_ACCESS(2)
-void log_fopen_failure(int line, FILE* res, const char* name, const char* mode);
+void log_fopen_failure(CzU32 line, FILE* res, const char* name, const char* mode);
 
 CZ_COLD CZ_NONNULL_ARGS(4) CZ_NULTERM_ARG(4) CZ_NO_ACCESS(3)
-void log_fscanf_failure(int line, int res, FILE* file, const char* fmt);
+void log_fscanf_failure(CzU32 line, int res, FILE* file, const char* fmt);
 
 CZ_COLD CZ_NONNULL_ARGS(4) CZ_NULTERM_ARG(4) CZ_NO_ACCESS(3)
-void log_fprintf_failure(int line, int res, FILE* file, const char* fmt);
+void log_fprintf_failure(CzU32 line, int res, FILE* file, const char* fmt);
 
 CZ_COLD
-void log_pcreate_failure(int line, int res);
+void log_pcreate_failure(CzU32 line, int res);
 CZ_COLD
-void log_pcancel_failure(int line, int res);
+void log_pcancel_failure(CzU32 line, int res);
 CZ_COLD
-void log_pjoin_failure(int line, int res);
+void log_pjoin_failure(CzU32 line, int res);
 
 CZ_COLD
-void log_vkinit_failure(int line, VkResult res);
+void log_vkinit_failure(CzU32 line, VkResult res);
 
 CZ_COLD CZ_NONNULL_ARGS() CZ_NULTERM_ARG(3)
-void log_vulkan_failure(int line, VkResult res, const char* func);
+void log_vulkan_failure(CzU32 line, VkResult res, const char* func);
 
 // Callback functions
 

@@ -1606,10 +1606,10 @@
 
 #define CZ_NEWLINE() putchar('\n')
 
-#define CZ_UINT128_UPPER(x) ( (uint64_t) ((x) >> 64) )
-#define CZ_UINT128_LOWER(x) ( (uint64_t) ((x) & ~UINT64_C(0)) )
+#define CZ_U128_UPPER(x) ( (CzU64) ((x) >> 64) )
+#define CZ_U128_LOWER(x) ( (CzU64) ((x) & ~UINT64_C(0)) )
 
-#define CZ_UINT128(upper, lower) ( (unsigned __int128) (upper) << 64 | (unsigned __int128) (lower) )
+#define CZ_U128(upper, lower) ( ((CzU128) (upper) << 64) | ((CzU128) (lower)) )
 
 #define CZ_PNEXT_ADD(p, s) \
 	do {                   \
@@ -1617,6 +1617,20 @@
 		(p) = &(s).pNext;  \
 	}                      \
 	while (0)
+
+// Typedefs
+
+typedef int8_t Cz8;
+typedef int16_t Cz16;
+typedef int32_t Cz32;
+typedef int64_t Cz64;
+typedef __int128 Cz128;
+
+typedef uint8_t CzU8;
+typedef uint16_t CzU16;
+typedef uint32_t CzU32;
+typedef uint64_t CzU64;
+typedef unsigned __int128 CzU128;
 
 // Enumerations
 

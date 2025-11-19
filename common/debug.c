@@ -26,12 +26,12 @@ static const char* gAllocLogPath = NULL;
 static const char* gDebugLogPath = NULL;
 static enum CzColourLevel gColourLevel = CZ_COLOUR_LEVEL_NONE;
 
-static uint64_t gDebugCallbackCount = 0;
-static uint64_t gAllocCount = 0;
-static uint64_t gReallocCount = 0;
-static uint64_t gFreeCount = 0;
-static uint64_t gInternalAllocCount = 0;
-static uint64_t gInternalFreeCount = 0;
+static CzU64 gDebugCallbackCount = 0;
+static CzU64 gAllocCount = 0;
+static CzU64 gReallocCount = 0;
+static CzU64 gFreeCount = 0;
+static CzU64 gInternalAllocCount = 0;
+static CzU64 gInternalFreeCount = 0;
 static size_t gTotalAllocSize = 0;
 
 bool init_debug_logfile(const char* filename)
@@ -214,30 +214,30 @@ static void log_debug_callback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT messageTypes,
 	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-	uint64_t callbackCount,
+	CzU64 callbackCount,
 	const char* func,
 	const char* file,
-	uint64_t line)
+	CzU32 line)
 {
 	const char* message = pCallbackData->pMessage;
 	const char* messageIdName = pCallbackData->pMessageIdName ?: "";
-	int32_t messageIdNumber = pCallbackData->messageIdNumber;
+	Cz32 messageIdNumber = pCallbackData->messageIdNumber;
 
-	uint32_t queueLabelCount = pCallbackData->queueLabelCount;
-	uint32_t cmdBufLabelCount = pCallbackData->cmdBufLabelCount;
-	uint32_t objectCount = pCallbackData->objectCount;
+	CzU32 queueLabelCount = pCallbackData->queueLabelCount;
+	CzU32 cmdBufLabelCount = pCallbackData->cmdBufLabelCount;
+	CzU32 objectCount = pCallbackData->objectCount;
 
 	const char* sMessageSeverity = string_VkDebugUtilsMessageSeverityFlagBitsEXT(messageSeverity);
 
 	fprintf(stream, "Debug callback %" PRIu64 " (%.3fms)\n", callbackCount, time);
 
 	if (line) {
-		fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line);
+		fprintf(stream, "%s (%s, %" PRIu32 ")\n", func, file, line);
 	}
 
 	fprintf(stream, "Severity: %s\nTypes:   ", sMessageSeverity);
 
-	for (uint32_t i = 0; i < sizeof(messageTypes) * CHAR_BIT; i++) {
+	for (size_t i = 0; i < sizeof(messageTypes) * CHAR_BIT; i++) {
 		VkDebugUtilsMessageTypeFlagBitsEXT messageType = messageTypes & (UINT32_C(1) << i);
 
 		if (messageType) {
@@ -252,7 +252,7 @@ static void log_debug_callback(
 	if (queueLabelCount) {
 		fprintf(stream, "Queue labels (%" PRIu32 "):\n", queueLabelCount);
 
-		for (uint32_t i = 0; i < queueLabelCount; i++) {
+		for (CzU32 i = 0; i < queueLabelCount; i++) {
 			const char* labelName = pCallbackData->pQueueLabels[i].pLabelName;
 
 			double r = (double) pCallbackData->pQueueLabels[i].color[0];
@@ -268,7 +268,7 @@ static void log_debug_callback(
 	if (cmdBufLabelCount) {
 		fprintf(stream, "Command buffer labels (%" PRIu32 "):\n", cmdBufLabelCount);
 
-		for (uint32_t i = 0; i < cmdBufLabelCount; i++) {
+		for (CzU32 i = 0; i < cmdBufLabelCount; i++) {
 			const char* labelName = pCallbackData->pCmdBufLabels[i].pLabelName;
 
 			double r = (double) pCallbackData->pCmdBufLabels[i].color[0];
@@ -284,10 +284,10 @@ static void log_debug_callback(
 	if (objectCount) {
 		fprintf(stream, "Objects (%" PRIu32 "):\n", objectCount);
 
-		for (uint32_t i = 0; i < objectCount; i++) {
+		for (CzU32 i = 0; i < objectCount; i++) {
 			const char* objectName = pCallbackData->pObjects[i].pObjectName ?: "";
 			VkObjectType objectType = pCallbackData->pObjects[i].objectType;
-			uint64_t objectHandle = pCallbackData->pObjects[i].objectHandle;
+			CzU64 objectHandle = pCallbackData->pObjects[i].objectHandle;
 
 			const char* sObjectType = string_VkObjectType(objectType);
 
@@ -372,17 +372,16 @@ static void aligned_free(void* memory)
 
 static size_t aligned_size(const void* memory)
 {
-	memory = (const size_t*) memory - 1;
-	return *(const size_t*) memory;
+	return *((const size_t*) memory - 1);
 }
 
 static void log_allocation_callback(
 	FILE* stream,
 	double time,
-	uint64_t allocationCount,
+	CzU64 allocationCount,
 	const char* func,
 	const char* file,
-	uint64_t line,
+	CzU32 line,
 	size_t totalSize,
 	size_t size,
 	size_t alignment,
@@ -396,7 +395,7 @@ static void log_allocation_callback(
 	fprintf(stream, "Allocation callback %" PRIu64 " (%.3fms)\n", allocationCount, time);
 
 	if (line) {
-		fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line);
+		fprintf(stream, "%s (%s, %" PRIu32 ")\n", func, file, line);
 	}
 
 	fprintf(
@@ -437,10 +436,10 @@ void* allocation_callback(void* pUserData, size_t size, size_t alignment, VkSyst
 static void log_reallocation_callback(
 	FILE* stream,
 	double time,
-	uint64_t reallocationCount,
+	CzU64 reallocationCount,
 	const char* func,
 	const char* file,
-	uint64_t line,
+	CzU32 line,
 	size_t totalSize,
 	size_t originalSize,
 	size_t size,
@@ -456,7 +455,7 @@ static void log_reallocation_callback(
 	fprintf(stream, "Reallocation callback %" PRIu64 " (%.3fms)\n", reallocationCount, time);
 
 	if (line) {
-		fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line);
+		fprintf(stream, "%s (%s, %" PRIu32 ")\n", func, file, line);
 	}
 
 	fprintf(
@@ -515,10 +514,10 @@ void* reallocation_callback(
 static void log_free_callback(
 	FILE* stream,
 	double time,
-	uint64_t freeCount,
+	CzU64 freeCount,
 	const char* func,
 	const char* file,
-	uint64_t line,
+	CzU32 line,
 	size_t totalSize,
 	size_t size,
 	const void* memory)
@@ -529,7 +528,7 @@ static void log_free_callback(
 	fprintf(stream, "Free callback %" PRIu64 " (%.3fms)\n", freeCount, time);
 
 	if (line) {
-		fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line);
+		fprintf(stream, "%s (%s, %" PRIu32 ")\n", func, file, line);
 	}
 
 	fprintf(
@@ -569,10 +568,10 @@ void free_callback(void* pUserData, void* pMemory)
 static void log_internal_allocation_callback(
 	FILE* stream,
 	double time,
-	uint64_t internalAllocationCount,
+	CzU64 internalAllocationCount,
 	const char* func,
 	const char* file,
-	uint64_t line,
+	CzU32 line,
 	size_t size,
 	VkInternalAllocationType allocationType,
 	VkSystemAllocationScope allocationScope)
@@ -583,7 +582,7 @@ static void log_internal_allocation_callback(
 	fprintf(stream, "Internal allocation callback %" PRIu64 " (%.3fms)\n", internalAllocationCount, time);
 
 	if (line) {
-		fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line);
+		fprintf(stream, "%s (%s, %" PRIu32 ")\n", func, file, line);
 	}
 
 	fprintf(
@@ -617,10 +616,10 @@ void internal_allocation_callback(
 static void log_internal_free_callback(
 	FILE* stream,
 	double time,
-	uint64_t internalFreeCount,
+	CzU64 internalFreeCount,
 	const char* func,
 	const char* file,
-	uint64_t line,
+	CzU32 line,
 	size_t size,
 	VkInternalAllocationType allocationType,
 	VkSystemAllocationScope allocationScope)
@@ -631,7 +630,7 @@ static void log_internal_free_callback(
 	fprintf(stream, "Internal free callback %" PRIu64 " (%.3fms)\n", internalFreeCount, time);
 
 	if (line) {
-		fprintf(stream, "%s (%s, %" PRIu64 ")\n", func, file, line);
+		fprintf(stream, "%s (%s, %" PRIu32 ")\n", func, file, line);
 	}
 
 	fprintf(
@@ -662,13 +661,13 @@ void internal_free_callback(
 	fclose(file);
 }
 
-void log_fopen_failure(int line, FILE* res, const char* name, const char* mode)
+void log_fopen_failure(CzU32 line, FILE* res, const char* name, const char* mode)
 {
 	double time = program_time();
 
 	log_error(
 		stderr,
-		"IO error at line %d (%.3fms)\n"
+		"IO error at line %" PRIu32 " (%.3fms)\n"
 		"Failed function call 'fopen' with 0x%016" PRIxPTR "\n"
 		"Arguments:\n"
 		"\tname = %s\n"
@@ -676,13 +675,13 @@ void log_fopen_failure(int line, FILE* res, const char* name, const char* mode)
 		line, time, (uintptr_t) res, name, mode);
 }
 
-void log_fscanf_failure(int line, int res, FILE* file, const char* fmt)
+void log_fscanf_failure(CzU32 line, int res, FILE* file, const char* fmt)
 {
 	double time = program_time();
 
 	log_error(
 		stderr,
-		"IO error at line %d (%.3fms)\n"
+		"IO error at line %" PRIu32 " (%.3fms)\n"
 		"Failed function call 'fscanf' with %d\n"
 		"Arguments:\n"
 		"\tfile   = 0x%016" PRIxPTR "\n"
@@ -690,13 +689,13 @@ void log_fscanf_failure(int line, int res, FILE* file, const char* fmt)
 		line, time, res, (uintptr_t) file, fmt);
 }
 
-void log_fprintf_failure(int line, int res, FILE* file, const char* fmt)
+void log_fprintf_failure(CzU32 line, int res, FILE* file, const char* fmt)
 {
 	double time = program_time();
 
 	log_error(
 		stderr,
-		"IO error at line %d (%.3fms)\n"
+		"IO error at line %" PRIu32 " (%.3fms)\n"
 		"Failed function call 'fprintf' with %d\n"
 		"Arguments:\n"
 		"\tfile   = 0x%016" PRIxPTR "\n"
@@ -704,59 +703,59 @@ void log_fprintf_failure(int line, int res, FILE* file, const char* fmt)
 		line, time, res, (uintptr_t) file, fmt);
 }
 
-void log_pcreate_failure(int line, int res)
+void log_pcreate_failure(CzU32 line, int res)
 {
 	double time = program_time();
 
 	log_error(
 		stderr,
-		"Thread failure at line %d (%.3fms)\n"
+		"Thread failure at line %" PRIu32 " (%.3fms)\n"
 		"Failed function call 'pthread_create' with %d\n",
 		line, time, res);
 }
 
-void log_pcancel_failure(int line, int res)
+void log_pcancel_failure(CzU32 line, int res)
 {
 	double time = program_time();
 
 	log_error(
 		stderr,
-		"Thread failure at line %d (%.3fms)\n"
+		"Thread failure at line %" PRIu32 " (%.3fms)\n"
 		"Failed function call 'pthread_cancel' with %d\n",
 		line, time, res);
 }
 
-void log_pjoin_failure(int line, int res)
+void log_pjoin_failure(CzU32 line, int res)
 {
 	double time = program_time();
 
 	log_error(
 		stderr,
-		"Thread failure at line %d (%.3fms)\n"
+		"Thread failure at line %" PRIu32 " (%.3fms)\n"
 		"Failed function call 'pthread_join' with %d\n",
 		line, time, res);
 }
 
-void log_vkinit_failure(int line, VkResult res)
+void log_vkinit_failure(CzU32 line, VkResult res)
 {
 	double time = program_time();
 	const char* sRes = string_VkResult(res);
 
 	log_error(
 		stderr,
-		"Vulkan failure at line %d (%.3fms)\n"
+		"Vulkan failure at line %" PRIu32 " (%.3fms)\n"
 		"Failed function call 'volkInitialize' with %s\n",
 		line, time, sRes);
 }
 
-void log_vulkan_failure(int line, VkResult res, const char* func)
+void log_vulkan_failure(CzU32 line, VkResult res, const char* func)
 {
 	double time = program_time();
 	const char* sRes = string_VkResult(res);
 
 	log_error(
 		stderr,
-		"Vulkan failure at line %d (%.3fms)\n"
+		"Vulkan failure at line %" PRIu32 " (%.3fms)\n"
 		"Failed function call '%s' with %s\n",
 		line, time, func, sRes);
 }

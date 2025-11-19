@@ -39,27 +39,29 @@ enum CzEndianness get_endianness(void)
 	return c ? CZ_ENDIANNESS_LITTLE : CZ_ENDIANNESS_BIG;
 }
 
-uint32_t ceil_pow2(uint32_t x)
+CzU32 ceil_pow2(CzU32 x)
 {
 	CZ_ASSUME(x != 0);
 #if CZ_HAS_BUILTIN(stdc_bit_ceil)
 	return __builtin_stdc_bit_ceil(x);
 #elif CZ_HAS_BUILTIN(clz) && UINT32_MAX == UINT_MAX
-	return x == 1 ? UINT32_C(1) : UINT32_C(2) << (31 - __builtin_clz(x - 1));
+	return (x == 1) ? UINT32_C(1) : UINT32_C(2) << (31 - __builtin_clz(x - 1));
 #elif CZ_HAS_BUILTIN(clzl) && UINT32_MAX == ULONG_MAX
-	return x == 1 ? UINT32_C(1) : UINT32_C(2) << (31 - __builtin_clzl(x - 1));
+	return (x == 1) ? UINT32_C(1) : UINT32_C(2) << (31 - __builtin_clzl(x - 1));
 #elif CZ_WIN32
 	unsigned long i;
 	_BitScanReverse(&i, x - 1);
 	return UINT32_C(1) << (i + 1);
 #else
-	uint32_t y = UINT32_C(1) << 31;
-	while (!(x & y)) { y >>= 1; }
+	CzU32 y = UINT32_C(1) << 31;
+	while (!(x & y)) {
+		y >>= 1;
+	}
 	return y << 1;
 #endif
 }
 
-uint32_t floor_pow2(uint32_t x)
+CzU32 floor_pow2(CzU32 x)
 {
 	CZ_ASSUME(x != 0);
 #if CZ_HAS_BUILTIN(stdc_bit_floor)
@@ -73,8 +75,10 @@ uint32_t floor_pow2(uint32_t x)
 	_BitScanReverse(&i, x);
 	return UINT32_C(1) << i;
 #else
-	uint32_t y = UINT32_C(1) << 31;
-	while (!(x & y)) { y >>= 1; }
+	CzU32 y = UINT32_C(1) << 31;
+	while (!(x & y)) {
+		y >>= 1;
+	}
 	return y;
 #endif
 }
@@ -84,7 +88,7 @@ double get_benchmark(clock_t start, clock_t end)
 	return (double) (end - start) * CZ_MS_PER_CLOCK;
 }
 
-bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const char* name)
+bool set_debug_name(VkDevice device, VkObjectType type, CzU64 handle, const char* name)
 {
 	VkResult vkres;
 
@@ -237,15 +241,9 @@ err_end_args:
 	return false;
 }
 
-#define UINT(sz) uint##sz##_t
+#define UINT(sz) CzU##sz
 #define UMAX_DEF(sz) UINT(sz) maxu##sz(UINT(sz) x, UINT(sz) y) { return x > y ? x : y; }
 #define UMIN_DEF(sz) UINT(sz) minu##sz(UINT(sz) x, UINT(sz) y) { return x < y ? x : y; }
-
-UMAX_DEF(8)
-UMIN_DEF(8)
-
-UMAX_DEF(16)
-UMIN_DEF(16)
 
 UMAX_DEF(32)
 UMIN_DEF(32)
@@ -253,101 +251,17 @@ UMIN_DEF(32)
 UMAX_DEF(64)
 UMIN_DEF(64)
 
-uint8_t maxu8v(size_t count, ...)
+CzU32 maxu32v(CzU32 count, ...)
 {
-	CZ_ASSUME(count != 0);
-
-	va_list args;
-	va_start(args, count);
-
-	uint_fast8_t max = 0;
-
-	for (size_t i = 0; i < count; i++) {
-		uint_fast8_t arg = (uint_fast8_t) va_arg(args, unsigned int);
-
-		if (max < arg) {
-			max = arg;
-		}
-	}
-
-	va_end(args);
-	return (uint8_t) max;
-}
-
-uint8_t minu8v(size_t count, ...)
-{
-	CZ_ASSUME(count != 0);
-
-	va_list args;
-	va_start(args, count);
-
-	uint_fast8_t min = UINT8_MAX;
-
-	for (size_t i = 0; i < count; i++) {
-		uint_fast8_t arg = (uint_fast8_t) va_arg(args, unsigned int);
-
-		if (min > arg) {
-			min = arg;
-		}
-	}
-
-	va_end(args);
-	return (uint8_t) min;
-}
-
-uint16_t maxu16v(size_t count, ...)
-{
-	CZ_ASSUME(count != 0);
-
-	va_list args;
-	va_start(args, count);
-
-	uint_fast16_t max = 0;
-
-	for (size_t i = 0; i < count; i++) {
-		uint_fast16_t arg = (uint_fast16_t) va_arg(args, unsigned int);
-
-		if (max < arg) {
-			max = arg;
-		}
-	}
-
-	va_end(args);
-	return (uint16_t) max;
-}
-
-uint16_t minu16v(size_t count, ...)
-{
-	CZ_ASSUME(count != 0);
-
-	va_list args;
-	va_start(args, count);
-
-	uint_fast16_t min = UINT16_MAX;
-
-	for (size_t i = 0; i < count; i++) {
-		uint_fast16_t arg = (uint_fast16_t) va_arg(args, unsigned int);
-
-		if (min > arg) {
-			min = arg;
-		}
-	}
-
-	va_end(args);
-	return (uint16_t) min;
-}
-
-uint32_t maxu32v(size_t count, ...)
-{
-	CZ_ASSUME(count != 0);
+	CZ_ASSUME(count > 0);
 
 	va_list args;
 	va_start(args, count);
 
 	uint_fast32_t max = 0;
 
-	for (size_t i = 0; i < count; i++) {
-		uint_fast32_t arg = (uint_fast32_t) va_arg(args, uint32_t);
+	for (CzU32 i = 0; i < count; i++) {
+		uint_fast32_t arg = (uint_fast32_t) va_arg(args, CzU32);
 
 		if (max < arg) {
 			max = arg;
@@ -355,20 +269,20 @@ uint32_t maxu32v(size_t count, ...)
 	}
 
 	va_end(args);
-	return (uint32_t) max;
+	return (CzU32) max;
 }
 
-uint32_t minu32v(size_t count, ...)
+CzU32 minu32v(CzU32 count, ...)
 {
-	CZ_ASSUME(count != 0);
+	CZ_ASSUME(count > 0);
 
 	va_list args;
 	va_start(args, count);
 
 	uint_fast32_t min = UINT32_MAX;
 
-	for (size_t i = 0; i < count; i++) {
-		uint_fast32_t arg = (uint_fast32_t) va_arg(args, uint32_t);
+	for (CzU32 i = 0; i < count; i++) {
+		uint_fast32_t arg = (uint_fast32_t) va_arg(args, CzU32);
 
 		if (min > arg) {
 			min = arg;
@@ -376,20 +290,20 @@ uint32_t minu32v(size_t count, ...)
 	}
 
 	va_end(args);
-	return (uint32_t) min;
+	return (CzU32) min;
 }
 
-uint64_t maxu64v(size_t count, ...)
+CzU64 maxu64v(CzU32 count, ...)
 {
-	CZ_ASSUME(count != 0);
+	CZ_ASSUME(count > 0);
 
 	va_list args;
 	va_start(args, count);
 
 	uint_fast64_t max = 0;
 
-	for (size_t i = 0; i < count; i++) {
-		uint_fast64_t arg = (uint_fast64_t) va_arg(args, uint64_t);
+	for (CzU32 i = 0; i < count; i++) {
+		uint_fast64_t arg = (uint_fast64_t) va_arg(args, CzU64);
 
 		if (max < arg) {
 			max = arg;
@@ -397,20 +311,20 @@ uint64_t maxu64v(size_t count, ...)
 	}
 
 	va_end(args);
-	return (uint64_t) max;
+	return (CzU64) max;
 }
 
-uint64_t minu64v(size_t count, ...)
+CzU64 minu64v(CzU32 count, ...)
 {
-	CZ_ASSUME(count != 0);
+	CZ_ASSUME(count > 0);
 
 	va_list args;
 	va_start(args, count);
 
 	uint_fast64_t min = UINT64_MAX;
 
-	for (size_t i = 0; i < count; i++) {
-		uint_fast64_t arg = (uint_fast64_t) va_arg(args, uint64_t);
+	for (CzU32 i = 0; i < count; i++) {
+		uint_fast64_t arg = (uint_fast64_t) va_arg(args, CzU64);
 
 		if (min > arg) {
 			min = arg;
@@ -418,5 +332,5 @@ uint64_t minu64v(size_t count, ...)
 	}
 
 	va_end(args);
-	return (uint64_t) min;
+	return (CzU64) min;
 }

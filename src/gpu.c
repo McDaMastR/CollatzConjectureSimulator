@@ -34,7 +34,7 @@ bool create_instance(struct Gpu* restrict gpu)
 	vkres = volkInitialize();
 	if CZ_NOEXPECT (vkres) { VKINIT_FAILURE(vkres); dyrecord_destroy(localRecord); return false; }
 
-	uint32_t instanceApiVersion = volkGetInstanceVersion();
+	CzU32 instanceApiVersion = volkGetInstanceVersion();
 	if CZ_NOEXPECT (instanceApiVersion == VK_API_VERSION_1_0) {
 		log_error(stderr, "Vulkan instance version (1.0) does not satisfy minimum version requirement (1.1)");
 		dyrecord_destroy(localRecord);
@@ -85,7 +85,7 @@ bool create_instance(struct Gpu* restrict gpu)
 	debugMessengerInfo.pUserData = &czgCallbackData;
 
 	// Get instance layers
-	uint32_t layerCount;
+	CzU32 layerCount;
 	VK_CALLR(vkEnumerateInstanceLayerProperties, &layerCount, NULL);
 	if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
@@ -101,7 +101,7 @@ bool create_instance(struct Gpu* restrict gpu)
 	}
 
 	// Get instance extensions
-	uint32_t extensionCount;
+	CzU32 extensionCount;
 	VK_CALLR(vkEnumerateInstanceExtensionProperties, NULL, &extensionCount, NULL);
 	if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
@@ -126,7 +126,7 @@ bool create_instance(struct Gpu* restrict gpu)
 	bres = dyrecord_add(localRecord, enabledLayers, dyarray_destroy_stub);
 	if CZ_NOEXPECT (!bres) { dyarray_destroy(enabledLayers); dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < layerCount; i++) {
+	for (CzU32 i = 0; i < layerCount; i++) {
 		const char* layerName = layersProps[i].layerName;
 
 		if (
@@ -156,7 +156,7 @@ bool create_instance(struct Gpu* restrict gpu)
 	bres = dyrecord_add(localRecord, enabledExtensions, dyarray_destroy_stub);
 	if CZ_NOEXPECT (!bres) { dyarray_destroy(enabledExtensions); dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < extensionCount; i++) {
+	for (CzU32 i = 0; i < extensionCount; i++) {
 		const char* extensionName = extensionsProps[i].extensionName;
 
 		if (!strcmp(extensionName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
@@ -181,10 +181,10 @@ bool create_instance(struct Gpu* restrict gpu)
 	appInfo.applicationVersion = VK_MAKE_API_VERSION(0, CZ_VERSION_MAJOR, CZ_VERSION_MINOR, CZ_VERSION_PATCH);
 	appInfo.apiVersion = VK_API_VERSION_1_4;
 
-	uint32_t enabledLayerCount = (uint32_t) dyarray_size(enabledLayers);
+	CzU32 enabledLayerCount = (CzU32) dyarray_size(enabledLayers);
 	const char** enabledLayerNames = dyarray_raw(enabledLayers);
 
-	uint32_t enabledExtensionCount = (uint32_t) dyarray_size(enabledExtensions);
+	CzU32 enabledExtensionCount = (CzU32) dyarray_size(enabledExtensions);
 	const char** enabledExtensionNames = dyarray_raw(enabledExtensions);
 
 	VkInstanceCreateFlags instanceFlags = 0;
@@ -204,13 +204,13 @@ bool create_instance(struct Gpu* restrict gpu)
 
 	if (czgConfig.outputLevel > CZ_OUTPUT_LEVEL_DEFAULT) {
 		printf("Enabled instance layers (%" PRIu32 "):\n", enabledLayerCount);
-		for (uint32_t i = 0; i < enabledLayerCount; i++) {
+		for (CzU32 i = 0; i < enabledLayerCount; i++) {
 			printf("\t%" PRIu32 ") %s\n", i + 1, enabledLayerNames[i]);
 		}
 		CZ_NEWLINE();
 
 		printf("Enabled instance extensions (%" PRIu32 "):\n", enabledExtensionCount);
-		for (uint32_t i = 0; i < enabledExtensionCount; i++) {
+		for (CzU32 i = 0; i < enabledExtensionCount; i++) {
 			printf("\t%" PRIu32 ") %s\n", i + 1, enabledExtensionNames[i]);
 		}
 		CZ_NEWLINE();
@@ -248,7 +248,7 @@ bool select_device(struct Gpu* restrict gpu)
 	if CZ_NOEXPECT (!localRecord) { return false; }
 
 	// Get physical devices
-	uint32_t deviceCount;
+	CzU32 deviceCount;
 	VK_CALLR(vkEnumeratePhysicalDevices, instance, &deviceCount, NULL);
 	if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
@@ -266,15 +266,15 @@ bool select_device(struct Gpu* restrict gpu)
 	if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	// Get extensions of each device
-	allocSize = deviceCount * sizeof(uint32_t);
-	uint32_t* extensionCounts = dyrecord_malloc(localRecord, allocSize);
+	allocSize = deviceCount * sizeof(CzU32);
+	CzU32* extensionCounts = dyrecord_malloc(localRecord, allocSize);
 	if CZ_NOEXPECT (!extensionCounts) { dyrecord_destroy(localRecord); return false; }
 
 	allocSize = deviceCount * sizeof(VkExtensionProperties*);
 	VkExtensionProperties** devicesExtensionsProperties = dyrecord_malloc(localRecord, allocSize);
 	if CZ_NOEXPECT (!devicesExtensionsProperties) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < deviceCount; i++) {
+	for (CzU32 i = 0; i < deviceCount; i++) {
 		VkPhysicalDevice device = devices[i];
 		VK_CALLR(vkEnumerateDeviceExtensionProperties, device, NULL, &extensionCounts[i], NULL);
 		if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
@@ -292,15 +292,15 @@ bool select_device(struct Gpu* restrict gpu)
 	}
 
 	// Get queue familes of each device
-	allocSize = deviceCount * sizeof(uint32_t);
-	uint32_t* familyCounts = dyrecord_malloc(localRecord, allocSize);
+	allocSize = deviceCount * sizeof(CzU32);
+	CzU32* familyCounts = dyrecord_malloc(localRecord, allocSize);
 	if CZ_NOEXPECT (!familyCounts) { dyrecord_destroy(localRecord); return false; }
 
 	allocSize = deviceCount * sizeof(VkQueueFamilyProperties2*);
 	VkQueueFamilyProperties2** devicesFamiliesProperties = dyrecord_malloc(localRecord, allocSize);
 	if CZ_NOEXPECT (!devicesFamiliesProperties) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < deviceCount; i++) {
+	for (CzU32 i = 0; i < deviceCount; i++) {
 		VkPhysicalDevice device = devices[i];
 		VK_CALL(vkGetPhysicalDeviceQueueFamilyProperties2, device, &familyCounts[i], NULL);
 
@@ -310,7 +310,7 @@ bool select_device(struct Gpu* restrict gpu)
 		devicesFamiliesProperties[i] = dyrecord_calloc(localRecord, allocCount, allocSize);
 		if CZ_NOEXPECT (!devicesFamiliesProperties[i]) { dyrecord_destroy(localRecord); return false; }
 
-		for (uint32_t j = 0; j < familyCounts[i]; j++) {
+		for (CzU32 j = 0; j < familyCounts[i]; j++) {
 			devicesFamiliesProperties[i][j].sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2;
 		}
 
@@ -324,7 +324,7 @@ bool select_device(struct Gpu* restrict gpu)
 	VkPhysicalDeviceMemoryProperties2* devicesMemoryProperties = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!devicesMemoryProperties) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < deviceCount; i++) {
+	for (CzU32 i = 0; i < deviceCount; i++) {
 		devicesMemoryProperties[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
 		VK_CALL(vkGetPhysicalDeviceMemoryProperties2, devices[i], &devicesMemoryProperties[i]);
 	}
@@ -336,7 +336,7 @@ bool select_device(struct Gpu* restrict gpu)
 	VkPhysicalDeviceProperties2* devicesProperties = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!devicesProperties) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < deviceCount; i++) {
+	for (CzU32 i = 0; i < deviceCount; i++) {
 		devicesProperties[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 		VK_CALL(vkGetPhysicalDeviceProperties2, devices[i], &devicesProperties[i]);
 	}
@@ -356,7 +356,7 @@ bool select_device(struct Gpu* restrict gpu)
 
 	if CZ_NOEXPECT (!devices16BitStorageFeatures) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < deviceCount; i++) {
+	for (CzU32 i = 0; i < deviceCount; i++) {
 		devices16BitStorageFeatures[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES;
 
 		devicesFeatures[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
@@ -365,8 +365,8 @@ bool select_device(struct Gpu* restrict gpu)
 		VK_CALL(vkGetPhysicalDeviceFeatures2, devices[i], &devicesFeatures[i]);
 	}
 
-	uint32_t deviceIndex = UINT32_MAX;
-	uint32_t bestScore = 0;
+	CzU32 deviceIndex = UINT32_MAX;
+	CzU32 bestScore = 0;
 
 	bool using16BitStorage = false;
 	bool usingMaintenance4 = false;
@@ -392,10 +392,10 @@ bool select_device(struct Gpu* restrict gpu)
 	 * A greater score means a better physical device (for our purposes).
 	 * Find the physical device with the highest score and use that as the sole logical device.
 	 */
-	for (uint32_t i = 0; i < deviceCount; i++) {
-		uint32_t extensionCount = extensionCounts[i];
-		uint32_t familyCount = familyCounts[i];
-		uint32_t memoryTypeCount = devicesMemoryProperties[i].memoryProperties.memoryTypeCount;
+	for (CzU32 i = 0; i < deviceCount; i++) {
+		CzU32 extensionCount = extensionCounts[i];
+		CzU32 familyCount = familyCounts[i];
+		CzU32 memoryTypeCount = devicesMemoryProperties[i].memoryProperties.memoryTypeCount;
 
 		// Check properties
 		bool hasVulkan11 = devicesProperties[i].properties.apiVersion >= VK_API_VERSION_1_1;
@@ -414,7 +414,7 @@ bool select_device(struct Gpu* restrict gpu)
 		bool hasDedicatedCompute = false;
 		bool hasDedicatedTransfer = false;
 
-		for (uint32_t j = 0; j < familyCount; j++) {
+		for (CzU32 j = 0; j < familyCount; j++) {
 			VkQueueFlags queueFlags = devicesFamiliesProperties[i][j].queueFamilyProperties.queueFlags;
 
 			bool isCompute = queueFlags & VK_QUEUE_COMPUTE_BIT;
@@ -437,7 +437,7 @@ bool select_device(struct Gpu* restrict gpu)
 		bool hasHostNonCoherent = false;
 		bool hasHostVisible = false;
 
-		for (uint32_t j = 0; j < memoryTypeCount; j++) {
+		for (CzU32 j = 0; j < memoryTypeCount; j++) {
 			VkMemoryPropertyFlags propFlags = devicesMemoryProperties[i].memoryProperties.memoryTypes[j].propertyFlags;
 
 			bool isDeviceLocal = propFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -484,7 +484,7 @@ bool select_device(struct Gpu* restrict gpu)
 		bool hasPipelineCreationCacheControl = false;
 		bool hasSubgroupSizeControl = false;
 
-		for (uint32_t j = 0; j < extensionCount; j++) {
+		for (CzU32 j = 0; j < extensionCount; j++) {
 			const char* extensionName = devicesExtensionsProperties[i][j].extensionName;
 
 			if (!strcmp(extensionName, VK_KHR_COPY_COMMANDS_2_EXTENSION_NAME))    { hasCopyCommands2 = true; }
@@ -510,7 +510,7 @@ bool select_device(struct Gpu* restrict gpu)
 		}
 
 		// Score device
-		uint32_t currentScore = 1;
+		CzU32 currentScore = 1;
 
 		if (!hasVulkan11) { continue; }
 
@@ -591,13 +591,13 @@ bool select_device(struct Gpu* restrict gpu)
 	}
 
 	const char* deviceName = devicesProperties[deviceIndex].properties.deviceName;
-	uint32_t familyCount = familyCounts[deviceIndex];
+	CzU32 familyCount = familyCounts[deviceIndex];
 
 	// Determine Vulkan & SPIR-V versions
-	uint32_t vkVerMajor = 1;
-	uint32_t vkVerMinor = 1;
-	uint32_t spvVerMajor = 1;
-	uint32_t spvVerMinor = 3;
+	CzU32 vkVerMajor = 1;
+	CzU32 vkVerMinor = 1;
+	CzU32 spvVerMajor = 1;
+	CzU32 spvVerMinor = 3;
 
 	if (usingVulkan14) {
 		vkVerMinor = 4;
@@ -616,10 +616,10 @@ bool select_device(struct Gpu* restrict gpu)
 	}
 
 	// Select queue families
-	uint32_t computeFamilyIndex = 0;
-	uint32_t transferFamilyIndex = 0;
-	uint32_t computeQueueIndex = 0;
-	uint32_t transferQueueIndex = 0;
+	CzU32 computeFamilyIndex = 0;
+	CzU32 transferFamilyIndex = 0;
+	CzU32 computeQueueIndex = 0;
+	CzU32 transferQueueIndex = 0;
 
 	bool hasCompute = false;
 	bool hasTransfer = false;
@@ -627,7 +627,7 @@ bool select_device(struct Gpu* restrict gpu)
 	bool hasDedicatedTransfer = false;
 
 	// TODO implement algorithm to choose queue indices too
-	for (uint32_t i = 0; i < familyCount; i++) {
+	for (CzU32 i = 0; i < familyCount; i++) {
 		VkQueueFlags queueFlags = devicesFamiliesProperties[deviceIndex][i].queueFamilyProperties.queueFlags;
 
 		bool isCompute = queueFlags & VK_QUEUE_COMPUTE_BIT;
@@ -667,8 +667,8 @@ bool select_device(struct Gpu* restrict gpu)
 
 	// TEMP remove when implemented algorithm for selecting queue indices
 	if (computeFamilyIndex == transferFamilyIndex) {
-		uint32_t familyIndex = computeFamilyIndex;
-		uint32_t queueCount = devicesFamiliesProperties[deviceIndex][familyIndex].queueFamilyProperties.queueCount;
+		CzU32 familyIndex = computeFamilyIndex;
+		CzU32 queueCount = devicesFamiliesProperties[deviceIndex][familyIndex].queueFamilyProperties.queueCount;
 
 		if (queueCount > 1) {
 			computeQueueIndex = 0;
@@ -782,12 +782,12 @@ bool create_device(struct Gpu* restrict gpu)
 
 	VkPhysicalDevice physicalDevice = gpu->physicalDevice;
 
-	uint32_t computeFamilyIndex = gpu->computeFamilyIndex;
-	uint32_t transferFamilyIndex = gpu->transferFamilyIndex;
-	uint32_t computeQueueIndex = gpu->computeQueueIndex;
-	uint32_t transferQueueIndex = gpu->transferQueueIndex;
+	CzU32 computeFamilyIndex = gpu->computeFamilyIndex;
+	CzU32 transferFamilyIndex = gpu->transferFamilyIndex;
+	CzU32 computeQueueIndex = gpu->computeQueueIndex;
+	CzU32 transferQueueIndex = gpu->transferQueueIndex;
 
-	uint32_t spvVerMinor = gpu->spvVerMinor;
+	CzU32 spvVerMinor = gpu->spvVerMinor;
 	
 	VkResult vkres;
 
@@ -1003,7 +1003,7 @@ bool create_device(struct Gpu* restrict gpu)
 	queueCreateInfos[1].queueCount = 1;
 	queueCreateInfos[1].pQueuePriorities = transferQueuePriorities;
 
-	uint32_t enabledExtensionCount = (uint32_t) dyarray_size(enabledExtensions);
+	CzU32 enabledExtensionCount = (CzU32) dyarray_size(enabledExtensions);
 	const char** enabledExtensionNames = dyarray_raw(enabledExtensions);
 
 	VkDeviceCreateInfo deviceInfo = {0};
@@ -1016,7 +1016,7 @@ bool create_device(struct Gpu* restrict gpu)
 
 	if (czgConfig.outputLevel > CZ_OUTPUT_LEVEL_DEFAULT) {
 		printf("Enabled device extensions (%" PRIu32 "):\n", enabledExtensionCount);
-		for (uint32_t i = 0; i < enabledExtensionCount; i++) {
+		for (CzU32 i = 0; i < enabledExtensionCount; i++) {
 			printf("\t%" PRIu32 ") %s\n", i + 1, enabledExtensionNames[i]);
 		}
 		CZ_NEWLINE();
@@ -1083,11 +1083,11 @@ bool manage_memory(struct Gpu* restrict gpu)
 	VkDeviceSize maxMemorySize = deviceMaintenance3Properties.maxMemoryAllocationSize;
 	VkDeviceSize maxBufferSize = gpu->usingMaintenance4 ? deviceMaintenance4Properties.maxBufferSize : maxMemorySize;
 
-	uint32_t maxStorageBufferRange = deviceProperties.properties.limits.maxStorageBufferRange;
-	uint32_t maxMemoryCount = deviceProperties.properties.limits.maxMemoryAllocationCount;
-	uint32_t maxWorkgroupCount = deviceProperties.properties.limits.maxComputeWorkGroupCount[0];
-	uint32_t maxWorkgroupSize = deviceProperties.properties.limits.maxComputeWorkGroupSize[0];
-	uint32_t memoryTypeCount = deviceMemoryProperties.memoryProperties.memoryTypeCount;
+	CzU32 maxStorageBufferRange = deviceProperties.properties.limits.maxStorageBufferRange;
+	CzU32 maxMemoryCount = deviceProperties.properties.limits.maxMemoryAllocationCount;
+	CzU32 maxWorkgroupCount = deviceProperties.properties.limits.maxComputeWorkGroupCount[0];
+	CzU32 maxWorkgroupSize = deviceProperties.properties.limits.maxComputeWorkGroupSize[0];
+	CzU32 memoryTypeCount = deviceMemoryProperties.memoryProperties.memoryTypeCount;
 
 	// Get memoryTypeBits for wanted host visible & device local buffers
 	VkBufferUsageFlags hostVisibleBufferUsage = 0;
@@ -1107,14 +1107,14 @@ bool manage_memory(struct Gpu* restrict gpu)
 	bres = get_buffer_requirements(device, sizeof(char), deviceLocalBufferUsage, &deviceLocalMemoryRequirements);
 	if CZ_NOEXPECT (!bres) { return false; }
 
-	uint32_t deviceLocalMemoryTypeBits = deviceLocalMemoryRequirements.memoryTypeBits;
-	uint32_t hostVisibleMemoryTypeBits = hostVisibleMemoryRequirements.memoryTypeBits;
+	CzU32 deviceLocalMemoryTypeBits = deviceLocalMemoryRequirements.memoryTypeBits;
+	CzU32 hostVisibleMemoryTypeBits = hostVisibleMemoryRequirements.memoryTypeBits;
 
 	// Select memory heaps & types
-	uint32_t deviceLocalHeapIndex = 0;
-	uint32_t hostVisibleHeapIndex = 0;
-	uint32_t deviceLocalTypeIndex = 0;
-	uint32_t hostVisibleTypeIndex = 0;
+	CzU32 deviceLocalHeapIndex = 0;
+	CzU32 hostVisibleHeapIndex = 0;
+	CzU32 deviceLocalTypeIndex = 0;
+	CzU32 hostVisibleTypeIndex = 0;
 
 	bool hasDeviceNonHost = false;
 	bool hasDeviceLocal = false;
@@ -1124,9 +1124,9 @@ bool manage_memory(struct Gpu* restrict gpu)
 	bool hasHostNonCoherent = false;
 	bool hasHostVisible = false;
 
-	for (uint32_t i = 0; i < memoryTypeCount; i++) {
-		uint32_t memoryTypeBit = UINT32_C(1) << i;
-		uint32_t heapIndex = deviceMemoryProperties.memoryProperties.memoryTypes[i].heapIndex;
+	for (CzU32 i = 0; i < memoryTypeCount; i++) {
+		CzU32 memoryTypeBit = UINT32_C(1) << i;
+		CzU32 heapIndex = deviceMemoryProperties.memoryProperties.memoryTypes[i].heapIndex;
 		VkMemoryPropertyFlags propFlags = deviceMemoryProperties.memoryProperties.memoryTypes[i].propertyFlags;
 
 		bool isDeviceLocal = propFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -1202,7 +1202,7 @@ bool manage_memory(struct Gpu* restrict gpu)
 	}
 
 	VkDeviceSize bytesPerBuffer = minu64v(3, maxMemorySize, maxBufferSize, bytesPerHeap);
-	uint32_t buffersPerHeap = (uint32_t) (bytesPerHeap / bytesPerBuffer);
+	CzU32 buffersPerHeap = (CzU32) (bytesPerHeap / bytesPerBuffer);
 
 	// Can we squeeze in another buffer?
 	if (buffersPerHeap < maxMemoryCount && bytesPerHeap % bytesPerBuffer) {
@@ -1219,18 +1219,18 @@ bool manage_memory(struct Gpu* restrict gpu)
 		buffersPerHeap = maxMemoryCount; // Don't use too many allocations
 	}
 
-	uint32_t workgroupSize = floor_pow2(maxWorkgroupSize);
-	uint32_t workgroupCount = minu32(
-		maxWorkgroupCount, (uint32_t) (maxStorageBufferRange / (workgroupSize * sizeof(StartValue))));
+	CzU32 workgroupSize = floor_pow2(maxWorkgroupSize);
+	CzU32 workgroupCount = minu32(
+		maxWorkgroupCount, (CzU32) (maxStorageBufferRange / (workgroupSize * sizeof(CzU128))));
 
-	uint32_t valuesPerInout = workgroupSize * workgroupCount;
-	VkDeviceSize bytesPerInout = valuesPerInout * (sizeof(StartValue) + sizeof(StopTime));
-	uint32_t inoutsPerBuffer = (uint32_t) (bytesPerBuffer / bytesPerInout);
+	CzU32 valuesPerInout = workgroupSize * workgroupCount;
+	VkDeviceSize bytesPerInout = valuesPerInout * (sizeof(CzU128) + sizeof(CzU16));
+	CzU32 inoutsPerBuffer = (CzU32) (bytesPerBuffer / bytesPerInout);
 
 	// Can we squeeze in another inout-buffer?
-	if (bytesPerBuffer % bytesPerInout > inoutsPerBuffer * workgroupSize * (sizeof(StartValue) + sizeof(StopTime))) {
-		uint32_t excessValues =
-			valuesPerInout - (uint32_t) (bytesPerBuffer % bytesPerInout / (sizeof(StartValue) + sizeof(StopTime)));
+	if (bytesPerBuffer % bytesPerInout > inoutsPerBuffer * workgroupSize * (sizeof(CzU128) + sizeof(CzU16))) {
+		CzU32 excessValues =
+			valuesPerInout - (CzU32) (bytesPerBuffer % bytesPerInout / (sizeof(CzU128) + sizeof(CzU16)));
 
 		inoutsPerBuffer++;
 		valuesPerInout -= excessValues / inoutsPerBuffer;
@@ -1252,15 +1252,15 @@ bool manage_memory(struct Gpu* restrict gpu)
 		}
 	}
 
-	VkDeviceSize bytesPerIn = valuesPerInout * sizeof(StartValue);
-	VkDeviceSize bytesPerOut = valuesPerInout * sizeof(StopTime);
+	VkDeviceSize bytesPerIn = valuesPerInout * sizeof(CzU128);
+	VkDeviceSize bytesPerOut = valuesPerInout * sizeof(CzU16);
 
 	bytesPerInout = bytesPerIn + bytesPerOut;
 	bytesPerBuffer = bytesPerInout * inoutsPerBuffer;
 
-	uint32_t valuesPerBuffer = valuesPerInout * inoutsPerBuffer;
-	uint32_t valuesPerHeap = valuesPerBuffer * buffersPerHeap;
-	uint32_t inoutsPerHeap = inoutsPerBuffer * buffersPerHeap;
+	CzU32 valuesPerBuffer = valuesPerInout * inoutsPerBuffer;
+	CzU32 valuesPerHeap = valuesPerBuffer * buffersPerHeap;
+	CzU32 inoutsPerHeap = inoutsPerBuffer * buffersPerHeap;
 
 	bres = get_buffer_requirements(device, bytesPerBuffer, hostVisibleBufferUsage, &hostVisibleMemoryRequirements);
 	if CZ_NOEXPECT (!bres) { return false; }
@@ -1369,12 +1369,12 @@ bool create_buffers(struct Gpu* restrict gpu)
 	VkDeviceSize bytesPerHostVisibleMemory = gpu->bytesPerHostVisibleMemory;
 	VkDeviceSize bytesPerDeviceLocalMemory = gpu->bytesPerDeviceLocalMemory;
 
-	uint32_t valuesPerInout = gpu->valuesPerInout;
-	uint32_t inoutsPerBuffer = gpu->inoutsPerBuffer;
-	uint32_t inoutsPerHeap = gpu->inoutsPerHeap;
-	uint32_t buffersPerHeap = gpu->buffersPerHeap;
-	uint32_t hostVisibleTypeIndex = gpu->hostVisibleTypeIndex;
-	uint32_t deviceLocalTypeIndex = gpu->deviceLocalTypeIndex;
+	CzU32 valuesPerInout = gpu->valuesPerInout;
+	CzU32 inoutsPerBuffer = gpu->inoutsPerBuffer;
+	CzU32 inoutsPerHeap = gpu->inoutsPerHeap;
+	CzU32 buffersPerHeap = gpu->buffersPerHeap;
+	CzU32 hostVisibleTypeIndex = gpu->hostVisibleTypeIndex;
+	CzU32 deviceLocalTypeIndex = gpu->deviceLocalTypeIndex;
 
 	VkResult vkres;
 
@@ -1399,7 +1399,7 @@ bool create_buffers(struct Gpu* restrict gpu)
 	hostVisibleBufferInfo.usage = hostVisibleBufferUsage;
 	hostVisibleBufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	for (uint32_t i = 0; i < buffersPerHeap; i++) {
+	for (CzU32 i = 0; i < buffersPerHeap; i++) {
 		VkBuffer hostVisibleBuffer;
 		VK_CALLR(vkCreateBuffer, device, &hostVisibleBufferInfo, allocator, &hostVisibleBuffer);
 		if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
@@ -1425,7 +1425,7 @@ bool create_buffers(struct Gpu* restrict gpu)
 	deviceLocalBufferInfo.usage = deviceLocalBufferUsage;
 	deviceLocalBufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	for (uint32_t i = 0; i < buffersPerHeap; i++) {
+	for (CzU32 i = 0; i < buffersPerHeap; i++) {
 		VkBuffer deviceLocalBuffer;
 		VK_CALLR(vkCreateBuffer, device, &deviceLocalBufferInfo, allocator, &deviceLocalBuffer);
 		if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
@@ -1444,7 +1444,7 @@ bool create_buffers(struct Gpu* restrict gpu)
 	hostVisiblePriorityInfo.sType = VK_STRUCTURE_TYPE_MEMORY_PRIORITY_ALLOCATE_INFO_EXT;
 	hostVisiblePriorityInfo.priority = 0;
 
-	for (uint32_t i = 0; i < buffersPerHeap; i++) {
+	for (CzU32 i = 0; i < buffersPerHeap; i++) {
 		VkMemoryDedicatedAllocateInfo hostVisibleDedicatedInfo = {0};
 		hostVisibleDedicatedInfo.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO;
 		hostVisibleDedicatedInfo.pNext = gpu->usingMemoryPriority ? &hostVisiblePriorityInfo : NULL;
@@ -1474,7 +1474,7 @@ bool create_buffers(struct Gpu* restrict gpu)
 	deviceLocalPriorityInfo.sType = VK_STRUCTURE_TYPE_MEMORY_PRIORITY_ALLOCATE_INFO_EXT;
 	deviceLocalPriorityInfo.priority = 1;
 
-	for (uint32_t i = 0; i < buffersPerHeap; i++) {
+	for (CzU32 i = 0; i < buffersPerHeap; i++) {
 		VkMemoryDedicatedAllocateInfo deviceLocalDedicatedInfo = {0};
 		deviceLocalDedicatedInfo.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO;
 		deviceLocalDedicatedInfo.pNext = gpu->usingMemoryPriority ? &deviceLocalPriorityInfo : NULL;
@@ -1499,7 +1499,7 @@ bool create_buffers(struct Gpu* restrict gpu)
 	VkBindBufferMemoryInfo (*bindBufferMemoryInfos)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!bindBufferMemoryInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < buffersPerHeap; i++) {
+	for (CzU32 i = 0; i < buffersPerHeap; i++) {
 		bindBufferMemoryInfos[i][0].sType = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO;
 		bindBufferMemoryInfos[i][0].buffer = hostVisibleBuffers[i];
 		bindBufferMemoryInfos[i][0].memory = hostVisibleMemories[i];
@@ -1511,24 +1511,24 @@ bool create_buffers(struct Gpu* restrict gpu)
 		bindBufferMemoryInfos[i][1].memoryOffset = 0;
 	}
 
-	uint32_t bindInfoCount = buffersPerHeap * CZ_COUNTOF(bindBufferMemoryInfos[0]);
+	CzU32 bindInfoCount = buffersPerHeap * CZ_COUNTOF(bindBufferMemoryInfos[0]);
 	VkBindBufferMemoryInfo* bindInfos = (VkBindBufferMemoryInfo*) bindBufferMemoryInfos;
 
 	VK_CALLR(vkBindBufferMemory2, device, bindInfoCount, bindInfos);
 	if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 	// Map host visible device memories
-	allocSize = inoutsPerHeap * sizeof(StartValue*);
-	StartValue** mappedInBuffers = dyrecord_malloc(gpuRecord, allocSize);
+	allocSize = inoutsPerHeap * sizeof(CzU128*);
+	CzU128** mappedInBuffers = dyrecord_malloc(gpuRecord, allocSize);
 	if CZ_NOEXPECT (!mappedInBuffers) { dyrecord_destroy(localRecord); return false; }
 	gpu->mappedInBuffers = mappedInBuffers;
 
-	allocSize = inoutsPerHeap * sizeof(StopTime*);
-	StopTime** mappedOutBuffers = dyrecord_malloc(gpuRecord, allocSize);
+	allocSize = inoutsPerHeap * sizeof(CzU16*);
+	CzU16** mappedOutBuffers = dyrecord_malloc(gpuRecord, allocSize);
 	if CZ_NOEXPECT (!mappedOutBuffers) { dyrecord_destroy(localRecord); return false; }
 	gpu->mappedOutBuffers = mappedOutBuffers;
 
-	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
+	for (CzU32 i = 0, j = 0; i < buffersPerHeap; i++) {
 		VkMemoryMapInfo mapInfo = {0};
 		mapInfo.sType = VK_STRUCTURE_TYPE_MEMORY_MAP_INFO;
 		mapInfo.memory = hostVisibleMemories[i];
@@ -1539,28 +1539,28 @@ bool create_buffers(struct Gpu* restrict gpu)
 		if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
 		mappedInBuffers[j] = mappedMemory;
-		mappedOutBuffers[j] = (StopTime*) (mappedInBuffers[j] + valuesPerInout);
+		mappedOutBuffers[j] = (CzU16*) (mappedInBuffers[j] + valuesPerInout);
 		j++;
 
-		for (uint32_t k = 1; k < inoutsPerBuffer; j++, k++) {
-			mappedInBuffers[j] = mappedInBuffers[j - 1] + bytesPerInout / sizeof(StartValue);
-			mappedOutBuffers[j] = mappedOutBuffers[j - 1] + bytesPerInout / sizeof(StopTime);
+		for (CzU32 k = 1; k < inoutsPerBuffer; j++, k++) {
+			mappedInBuffers[j] = mappedInBuffers[j - 1] + bytesPerInout / sizeof(CzU128);
+			mappedOutBuffers[j] = mappedOutBuffers[j - 1] + bytesPerInout / sizeof(CzU16);
 		}
 	}
 
 #if !defined(NDEBUG)
-	for (uint32_t i = 0; i < buffersPerHeap; i++) {
+	for (CzU32 i = 0; i < buffersPerHeap; i++) {
 		char objectName[37];
 		sprintf(objectName, "Host visible (%" PRIu32 "/%" PRIu32 ")", i + 1, buffersPerHeap);
 
-		set_debug_name(device, VK_OBJECT_TYPE_BUFFER, (uint64_t) hostVisibleBuffers[i], objectName);
-		set_debug_name(device, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) hostVisibleMemories[i], objectName);
+		set_debug_name(device, VK_OBJECT_TYPE_BUFFER, (CzU64) hostVisibleBuffers[i], objectName);
+		set_debug_name(device, VK_OBJECT_TYPE_DEVICE_MEMORY, (CzU64) hostVisibleMemories[i], objectName);
 
 		strcpy(objectName, "Device local");
 		objectName[12] = ' '; // Remove '\0' from strcpy
 
-		set_debug_name(device, VK_OBJECT_TYPE_BUFFER, (uint64_t) deviceLocalBuffers[i], objectName);
-		set_debug_name(device, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) deviceLocalMemories[i], objectName);
+		set_debug_name(device, VK_OBJECT_TYPE_BUFFER, (CzU64) deviceLocalBuffers[i], objectName);
+		set_debug_name(device, VK_OBJECT_TYPE_DEVICE_MEMORY, (CzU64) deviceLocalMemories[i], objectName);
 	}
 #endif
 
@@ -1581,9 +1581,9 @@ bool create_descriptors(struct Gpu* restrict gpu)
 	VkDeviceSize bytesPerOut = gpu->bytesPerOut;
 	VkDeviceSize bytesPerInout = gpu->bytesPerInout;
 
-	uint32_t inoutsPerBuffer = gpu->inoutsPerBuffer;
-	uint32_t inoutsPerHeap = gpu->inoutsPerHeap;
-	uint32_t buffersPerHeap = gpu->buffersPerHeap;
+	CzU32 inoutsPerBuffer = gpu->inoutsPerBuffer;
+	CzU32 inoutsPerHeap = gpu->inoutsPerHeap;
+	CzU32 buffersPerHeap = gpu->buffersPerHeap;
 
 	VkResult vkres;
 	size_t allocCount;
@@ -1640,7 +1640,7 @@ bool create_descriptors(struct Gpu* restrict gpu)
 	VkDescriptorSetLayout* descriptorSetLayouts = dyrecord_malloc(localRecord, allocSize);
 	if CZ_NOEXPECT (!descriptorSetLayouts) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 		descriptorSetLayouts[i] = descriptorSetLayout;
 	}
 
@@ -1666,8 +1666,8 @@ bool create_descriptors(struct Gpu* restrict gpu)
 	VkDescriptorBufferInfo (*descriptorBufferInfos)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!descriptorBufferInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
-		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+	for (CzU32 i = 0, j = 0; i < buffersPerHeap; i++) {
+		for (CzU32 k = 0; k < inoutsPerBuffer; j++, k++) {
 			// Binding 0
 			descriptorBufferInfos[j][0].buffer = deviceLocalBuffers[i];
 			descriptorBufferInfos[j][0].offset = bytesPerInout * k;
@@ -1688,22 +1688,22 @@ bool create_descriptors(struct Gpu* restrict gpu)
 		}
 	}
 
-	uint32_t writeCount = inoutsPerHeap;
-	uint32_t copyCount = 0;
+	CzU32 writeCount = inoutsPerHeap;
+	CzU32 copyCount = 0;
 	VkCopyDescriptorSet* copyDescriptorSets = NULL;
 
 	VK_CALL(vkUpdateDescriptorSets, device, writeCount, writeDescriptorSets, copyCount, copyDescriptorSets);
 
 #if !defined(NDEBUG)
-	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
-		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+	for (CzU32 i = 0, j = 0; i < buffersPerHeap; i++) {
+		for (CzU32 k = 0; k < inoutsPerBuffer; j++, k++) {
 			char objectName[58];
 			sprintf(
 				objectName,
 				"Inout %" PRIu32 "/%" PRIu32 ", Buffer %" PRIu32 "/%" PRIu32,
 				k + 1, inoutsPerBuffer, i + 1, buffersPerHeap);
 
-			set_debug_name(device, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) descriptorSets[j], objectName);
+			set_debug_name(device, VK_OBJECT_TYPE_DESCRIPTOR_SET, (CzU64) descriptorSets[j], objectName);
 		}
 	}
 #endif
@@ -1719,14 +1719,14 @@ bool create_pipeline(struct Gpu* restrict gpu)
 	VkDevice device = gpu->device;
 	VkDescriptorSetLayout descriptorSetLayout = gpu->descriptorSetLayout;
 
-	uint32_t inoutsPerHeap = gpu->inoutsPerHeap;
-	uint32_t workgroupSize = gpu->workgroupSize;
+	CzU32 inoutsPerHeap = gpu->inoutsPerHeap;
+	CzU32 workgroupSize = gpu->workgroupSize;
 
-	uint32_t computeFamilyTimestampValidBits = gpu->computeFamilyTimestampValidBits;
-	uint32_t transferFamilyTimestampValidBits = gpu->transferFamilyTimestampValidBits;
+	CzU32 computeFamilyTimestampValidBits = gpu->computeFamilyTimestampValidBits;
+	CzU32 transferFamilyTimestampValidBits = gpu->transferFamilyTimestampValidBits;
 
-	uint32_t spvVerMajor = gpu->spvVerMajor;
-	uint32_t spvVerMinor = gpu->spvVerMinor;
+	CzU32 spvVerMajor = gpu->spvVerMajor;
+	CzU32 spvVerMinor = gpu->spvVerMinor;
 
 	VkResult vkres;
 
@@ -1770,7 +1770,7 @@ bool create_pipeline(struct Gpu* restrict gpu)
 		return false;
 	}
 
-	uint32_t* shaderCode = dyrecord_malloc(localRecord, shaderSize);
+	CzU32* shaderCode = dyrecord_malloc(localRecord, shaderSize);
 	if CZ_NOEXPECT (!shaderCode) { dyrecord_destroy(localRecord); return false; }
 
 	size_t shaderOffset = 0;
@@ -1835,7 +1835,7 @@ bool create_pipeline(struct Gpu* restrict gpu)
 	if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 	gpu->pipelineLayout = pipelineLayout;
 
-	uint32_t specialisationData[1];
+	CzU32 specialisationData[1];
 	specialisationData[0] = workgroupSize;
 
 	VkSpecializationMapEntry specialisationMapEntries[1];
@@ -1919,7 +1919,7 @@ static bool record_initial_cmdbuffer(
 	VkCommandBuffer cmdBuffer,
 	const VkCopyBufferInfo2* inBufferCopyInfos,
 	const VkDependencyInfo* dependencyInfo,
-	uint32_t buffersPerHeap)
+	CzU32 buffersPerHeap)
 {
 	VkResult vkres;
 
@@ -1930,7 +1930,7 @@ static bool record_initial_cmdbuffer(
 	VK_CALLR(vkBeginCommandBuffer, cmdBuffer, &beginInfo);
 	if CZ_NOEXPECT (vkres) { return false; }
 
-	for (uint32_t i = 0; i < buffersPerHeap; i++) {
+	for (CzU32 i = 0; i < buffersPerHeap; i++) {
 		VK_CALL(vkCmdCopyBuffer2KHR, cmdBuffer, &inBufferCopyInfos[i]);
 	}
 
@@ -1948,8 +1948,8 @@ static bool record_transfer_cmdbuffer(
 	const VkCopyBufferInfo2* outBufferCopyInfo,
 	const VkDependencyInfo* dependencyInfos,
 	VkQueryPool queryPool,
-	uint32_t firstQuery,
-	uint32_t timestampValidBits)
+	CzU32 firstQuery,
+	CzU32 timestampValidBits)
 {
 	VkResult vkres;
 
@@ -1961,11 +1961,11 @@ static bool record_transfer_cmdbuffer(
 
 	if (timestampValidBits) {
 		// TODO Remove (vkCmdResetQueryPool not guaranteed to work on dedicated transfer queue families)
-		uint32_t queryCount = 2;
+		CzU32 queryCount = 2;
 		VK_CALL(vkCmdResetQueryPool, cmdBuffer, queryPool, firstQuery, queryCount);
 
 		VkPipelineStageFlags2 stage = VK_PIPELINE_STAGE_2_NONE;
-		uint32_t query = firstQuery;
+		CzU32 query = firstQuery;
 
 		VK_CALL(vkCmdWriteTimestamp2KHR, cmdBuffer, stage, queryPool, query);
 	}
@@ -1978,7 +1978,7 @@ static bool record_transfer_cmdbuffer(
 
 	if (timestampValidBits) {
 		VkPipelineStageFlags2 stage = VK_PIPELINE_STAGE_2_COPY_BIT;
-		uint32_t query = firstQuery + 1;
+		CzU32 query = firstQuery + 1;
 
 		VK_CALL(vkCmdWriteTimestamp2KHR, cmdBuffer, stage, queryPool, query);
 	}
@@ -1995,9 +1995,9 @@ static bool record_compute_cmdbuffer(
 	const VkBindDescriptorSetsInfo* bindDescriptorSetsInfo,
 	const VkDependencyInfo* dependencyInfos,
 	VkQueryPool queryPool,
-	uint32_t firstQuery,
-	uint32_t timestampValidBits,
-	uint32_t workgroupCount)
+	CzU32 firstQuery,
+	CzU32 timestampValidBits,
+	CzU32 workgroupCount)
 {
 	VkResult vkres;
 
@@ -2008,11 +2008,11 @@ static bool record_compute_cmdbuffer(
 	if CZ_NOEXPECT (vkres) { return false; }
 
 	if (timestampValidBits) {
-		uint32_t queryCount = 2;
+		CzU32 queryCount = 2;
 		VK_CALL(vkCmdResetQueryPool, cmdBuffer, queryPool, firstQuery, queryCount);
 
 		VkPipelineStageFlags2 stage = VK_PIPELINE_STAGE_2_NONE;
-		uint32_t query = firstQuery;
+		CzU32 query = firstQuery;
 
 		VK_CALL(vkCmdWriteTimestamp2KHR, cmdBuffer, stage, queryPool, query);
 	}
@@ -2023,9 +2023,9 @@ static bool record_compute_cmdbuffer(
 	VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
 	VK_CALL(vkCmdBindPipeline, cmdBuffer, bindPoint, pipeline);
 
-	uint32_t workgroupCountX = workgroupCount;
-	uint32_t workgroupCountY = 1;
-	uint32_t workgroupCountZ = 1;
+	CzU32 workgroupCountX = workgroupCount;
+	CzU32 workgroupCountY = 1;
+	CzU32 workgroupCountZ = 1;
 
 	// Use vkCmdDispatchBase if want to alter base value of workgroup index (first value of WorkgroupId)
 	VK_CALL(vkCmdDispatch, cmdBuffer, workgroupCountX, workgroupCountY, workgroupCountZ);
@@ -2033,7 +2033,7 @@ static bool record_compute_cmdbuffer(
 
 	if (timestampValidBits) {
 		VkPipelineStageFlags2 stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
-		uint32_t query = firstQuery + 1;
+		CzU32 query = firstQuery + 1;
 
 		VK_CALL(vkCmdWriteTimestamp2KHR, cmdBuffer, stage, queryPool, query);
 	}
@@ -2062,15 +2062,15 @@ bool create_commands(struct Gpu* restrict gpu)
 	VkDeviceSize bytesPerOut = gpu->bytesPerOut;
 	VkDeviceSize bytesPerInout = gpu->bytesPerInout;
 
-	uint32_t inoutsPerBuffer = gpu->inoutsPerBuffer;
-	uint32_t inoutsPerHeap = gpu->inoutsPerHeap;
-	uint32_t buffersPerHeap = gpu->buffersPerHeap;
-	uint32_t workgroupCount = gpu->workgroupCount;
+	CzU32 inoutsPerBuffer = gpu->inoutsPerBuffer;
+	CzU32 inoutsPerHeap = gpu->inoutsPerHeap;
+	CzU32 buffersPerHeap = gpu->buffersPerHeap;
+	CzU32 workgroupCount = gpu->workgroupCount;
 
-	uint32_t computeFamilyIndex = gpu->computeFamilyIndex;
-	uint32_t transferFamilyIndex = gpu->transferFamilyIndex;
-	uint32_t computeFamilyTimestampValidBits = gpu->computeFamilyTimestampValidBits;
-	uint32_t transferFamilyTimestampValidBits = gpu->transferFamilyTimestampValidBits;
+	CzU32 computeFamilyIndex = gpu->computeFamilyIndex;
+	CzU32 transferFamilyIndex = gpu->transferFamilyIndex;
+	CzU32 computeFamilyTimestampValidBits = gpu->computeFamilyTimestampValidBits;
+	CzU32 transferFamilyTimestampValidBits = gpu->transferFamilyTimestampValidBits;
 
 	VkResult vkres;
 	size_t allocCount;
@@ -2163,7 +2163,7 @@ bool create_commands(struct Gpu* restrict gpu)
 	VkBufferCopy2* inBufferRegions = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!inBufferRegions) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerBuffer; i++) {
+	for (CzU32 i = 0; i < inoutsPerBuffer; i++) {
 		inBufferRegions[i].sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
 		inBufferRegions[i].srcOffset = bytesPerInout * i;
 		inBufferRegions[i].dstOffset = bytesPerInout * i;
@@ -2177,7 +2177,7 @@ bool create_commands(struct Gpu* restrict gpu)
 	VkBufferCopy2* outBufferRegions = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!outBufferRegions) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerBuffer; i++) {
+	for (CzU32 i = 0; i < inoutsPerBuffer; i++) {
 		outBufferRegions[i].sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
 		outBufferRegions[i].srcOffset = bytesPerInout * i + bytesPerIn;
 		outBufferRegions[i].dstOffset = bytesPerInout * i + bytesPerIn;
@@ -2191,7 +2191,7 @@ bool create_commands(struct Gpu* restrict gpu)
 	VkCopyBufferInfo2* initialBufferCopyInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!initialBufferCopyInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < buffersPerHeap; i++) {
+	for (CzU32 i = 0; i < buffersPerHeap; i++) {
 		initialBufferCopyInfos[i].sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
 		initialBufferCopyInfos[i].srcBuffer = hostVisibleBuffers[i];
 		initialBufferCopyInfos[i].dstBuffer = deviceLocalBuffers[i];
@@ -2206,11 +2206,11 @@ bool create_commands(struct Gpu* restrict gpu)
 	VkCopyBufferInfo2* inBufferCopyInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!inBufferCopyInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
+	for (CzU32 i = 0, j = 0; i < buffersPerHeap; i++) {
 		VkBuffer hostVisibleBuffer = hostVisibleBuffers[i];
 		VkBuffer deviceLocalBuffer = deviceLocalBuffers[i];
 
-		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+		for (CzU32 k = 0; k < inoutsPerBuffer; j++, k++) {
 			inBufferCopyInfos[j].sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
 			inBufferCopyInfos[j].srcBuffer = hostVisibleBuffer;
 			inBufferCopyInfos[j].dstBuffer = deviceLocalBuffer;
@@ -2226,11 +2226,11 @@ bool create_commands(struct Gpu* restrict gpu)
 	VkCopyBufferInfo2* outBufferCopyInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!outBufferCopyInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
+	for (CzU32 i = 0, j = 0; i < buffersPerHeap; i++) {
 		VkBuffer hostVisibleBuffer = hostVisibleBuffers[i];
 		VkBuffer deviceLocalBuffer = deviceLocalBuffers[i];
 
-		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+		for (CzU32 k = 0; k < inoutsPerBuffer; j++, k++) {
 			outBufferCopyInfos[j].sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
 			outBufferCopyInfos[j].srcBuffer = deviceLocalBuffer;
 			outBufferCopyInfos[j].dstBuffer = hostVisibleBuffer;
@@ -2246,7 +2246,7 @@ bool create_commands(struct Gpu* restrict gpu)
 	VkBindDescriptorSetsInfo* bindDescriptorSetsInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!bindDescriptorSetsInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 		bindDescriptorSetsInfos[i].sType = VK_STRUCTURE_TYPE_BIND_DESCRIPTOR_SETS_INFO;
 		bindDescriptorSetsInfos[i].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 		bindDescriptorSetsInfos[i].layout = pipelineLayout;
@@ -2262,10 +2262,10 @@ bool create_commands(struct Gpu* restrict gpu)
 	VkBufferMemoryBarrier2* initialBufferMemoryBarriers = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!initialBufferMemoryBarriers) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
+	for (CzU32 i = 0, j = 0; i < buffersPerHeap; i++) {
 		VkBuffer deviceLocalBuffer = deviceLocalBuffers[i];
 
-		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+		for (CzU32 k = 0; k < inoutsPerBuffer; j++, k++) {
 			initialBufferMemoryBarriers[j].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
 			initialBufferMemoryBarriers[j].srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
 			initialBufferMemoryBarriers[j].srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
@@ -2284,10 +2284,10 @@ bool create_commands(struct Gpu* restrict gpu)
 	VkBufferMemoryBarrier2 (*computeBufferMemoryBarriers)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!computeBufferMemoryBarriers) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
+	for (CzU32 i = 0, j = 0; i < buffersPerHeap; i++) {
 		VkBuffer deviceLocalBuffer = deviceLocalBuffers[i];
 
-		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+		for (CzU32 k = 0; k < inoutsPerBuffer; j++, k++) {
 			computeBufferMemoryBarriers[j][0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
 			computeBufferMemoryBarriers[j][0].dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
 			computeBufferMemoryBarriers[j][0].dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT;
@@ -2315,11 +2315,11 @@ bool create_commands(struct Gpu* restrict gpu)
 	VkBufferMemoryBarrier2 (*transferBufferMemoryBarriers)[3] = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!transferBufferMemoryBarriers) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
+	for (CzU32 i = 0, j = 0; i < buffersPerHeap; i++) {
 		VkBuffer hostVisibleBuffer = hostVisibleBuffers[i];
 		VkBuffer deviceLocalBuffer = deviceLocalBuffers[i];
 
-		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+		for (CzU32 k = 0; k < inoutsPerBuffer; j++, k++) {
 			transferBufferMemoryBarriers[j][0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
 			transferBufferMemoryBarriers[j][0].srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
 			transferBufferMemoryBarriers[j][0].srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
@@ -2362,7 +2362,7 @@ bool create_commands(struct Gpu* restrict gpu)
 	VkDependencyInfo (*computeDependencyInfos)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!computeDependencyInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 		computeDependencyInfos[i][0].sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
 		computeDependencyInfos[i][0].bufferMemoryBarrierCount = 1;
 		computeDependencyInfos[i][0].pBufferMemoryBarriers = &computeBufferMemoryBarriers[i][0];
@@ -2379,7 +2379,7 @@ bool create_commands(struct Gpu* restrict gpu)
 	VkDependencyInfo (*transferDependencyInfos)[2] = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!transferDependencyInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 		transferDependencyInfos[i][0].sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
 		transferDependencyInfos[i][0].bufferMemoryBarrierCount = 2;
 		transferDependencyInfos[i][0].pBufferMemoryBarriers = &transferBufferMemoryBarriers[i][0];
@@ -2396,8 +2396,8 @@ bool create_commands(struct Gpu* restrict gpu)
 	if CZ_NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 
 	// Record compute command buffers
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
-		uint32_t firstQuery = i * 4;
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
+		CzU32 firstQuery = i * 4;
 		bres = record_compute_cmdbuffer(
 			computeCmdBuffers[i], pipeline, &bindDescriptorSetsInfos[i], computeDependencyInfos[i], queryPool,
 			firstQuery, computeFamilyTimestampValidBits, workgroupCount);
@@ -2406,8 +2406,8 @@ bool create_commands(struct Gpu* restrict gpu)
 	}
 
 	// Record transfer command buffers
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
-		uint32_t firstQuery = i * 4 + 2;
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
+		CzU32 firstQuery = i * 4 + 2;
 		bres = record_transfer_cmdbuffer(
 			transferCmdBuffers[i], &inBufferCopyInfos[i], &outBufferCopyInfos[i], transferDependencyInfos[i], queryPool,
 			firstQuery, transferFamilyTimestampValidBits);
@@ -2432,7 +2432,7 @@ bool create_commands(struct Gpu* restrict gpu)
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 	semaphoreInfo.pNext = &semaphoreTypeInfo;
 
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 		VkSemaphore semaphore;
 		VK_CALLR(vkCreateSemaphore, device, &semaphoreInfo, allocator, &semaphore);
 		if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
@@ -2440,11 +2440,11 @@ bool create_commands(struct Gpu* restrict gpu)
 	}
 
 #if !defined(NDEBUG)
-	set_debug_name(device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t) transferCmdPool, "Transfer");
-	set_debug_name(device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t) computeCmdPool, "Compute");
+	set_debug_name(device, VK_OBJECT_TYPE_COMMAND_POOL, (CzU64) transferCmdPool, "Transfer");
+	set_debug_name(device, VK_OBJECT_TYPE_COMMAND_POOL, (CzU64) computeCmdPool, "Compute");
 
-	for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
-		for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+	for (CzU32 i = 0, j = 0; i < buffersPerHeap; i++) {
+		for (CzU32 k = 0; k < inoutsPerBuffer; j++, k++) {
 			char objectName[68];
 			char specs[60];
 
@@ -2456,12 +2456,12 @@ bool create_commands(struct Gpu* restrict gpu)
 			strcpy(objectName, "Compute");
 			strcat(objectName, specs);
 
-			set_debug_name(device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t) computeCmdBuffers[j], objectName);
+			set_debug_name(device, VK_OBJECT_TYPE_COMMAND_BUFFER, (CzU64) computeCmdBuffers[j], objectName);
 
 			strcpy(objectName, "Transfer");
 			strcat(objectName, specs);
 
-			set_debug_name(device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t) transferCmdBuffers[j], objectName);
+			set_debug_name(device, VK_OBJECT_TYPE_COMMAND_BUFFER, (CzU64) transferCmdBuffers[j], objectName);
 		}
 	}
 #endif
@@ -2481,8 +2481,8 @@ bool submit_commands(struct Gpu* restrict gpu)
 	const VkCommandBuffer* transferCmdBuffers = gpu->transferCmdBuffers;
 	const VkSemaphore* semaphores = gpu->semaphores;
 
-	StartValue* const* mappedInBuffers = gpu->mappedInBuffers;
-	StopTime* const* mappedOutBuffers = gpu->mappedOutBuffers;
+	CzU128* const* mappedInBuffers = gpu->mappedInBuffers;
+	CzU16* const* mappedOutBuffers = gpu->mappedOutBuffers;
 
 	VkDevice device = gpu->device;
 
@@ -2498,14 +2498,14 @@ bool submit_commands(struct Gpu* restrict gpu)
 	VkDeviceSize bytesPerOut = gpu->bytesPerOut;
 	VkDeviceSize bytesPerInout = gpu->bytesPerInout;
 
-	uint32_t valuesPerInout = gpu->valuesPerInout;
-	uint32_t valuesPerHeap = gpu->valuesPerHeap;
-	uint32_t inoutsPerBuffer = gpu->inoutsPerBuffer;
-	uint32_t inoutsPerHeap = gpu->inoutsPerHeap;
-	uint32_t buffersPerHeap = gpu->buffersPerHeap;
+	CzU32 valuesPerInout = gpu->valuesPerInout;
+	CzU32 valuesPerHeap = gpu->valuesPerHeap;
+	CzU32 inoutsPerBuffer = gpu->inoutsPerBuffer;
+	CzU32 inoutsPerHeap = gpu->inoutsPerHeap;
+	CzU32 buffersPerHeap = gpu->buffersPerHeap;
 
-	uint32_t computeFamilyTimestampValidBits = gpu->computeFamilyTimestampValidBits;
-	uint32_t transferFamilyTimestampValidBits = gpu->transferFamilyTimestampValidBits;
+	CzU32 computeFamilyTimestampValidBits = gpu->computeFamilyTimestampValidBits;
+	CzU32 transferFamilyTimestampValidBits = gpu->transferFamilyTimestampValidBits;
 
 	double timestampPeriod = (double) gpu->timestampPeriod;
 	bool hostNonCoherent = gpu->hostNonCoherent;
@@ -2518,7 +2518,7 @@ bool submit_commands(struct Gpu* restrict gpu)
 	if CZ_NOEXPECT (!localRecord) { return false; }
 	
 	// Create array of starting values with longest total stopping times
-	size_t elmSize = sizeof(StartValue);
+	size_t elmSize = sizeof(CzU128);
 	size_t elmCount = 32;
 
 	DyArray bestStartValues = dyarray_create(elmSize, elmCount);
@@ -2528,7 +2528,7 @@ bool submit_commands(struct Gpu* restrict gpu)
 	if CZ_NOEXPECT (!bres) { dyarray_destroy(bestStartValues); dyrecord_destroy(localRecord); return false; }
 
 	// Create array of longest total stopping times found
-	elmSize = sizeof(StopTime);
+	elmSize = sizeof(CzU16);
 	elmCount = 32;
 
 	DyArray bestStopTimes = dyarray_create(elmSize, elmCount);
@@ -2550,14 +2550,14 @@ bool submit_commands(struct Gpu* restrict gpu)
 	if CZ_NOEXPECT (czres && czres != CZ_RESULT_NO_FILE) { dyrecord_destroy(localRecord); return false; }
 
 	if (!czgConfig.restart && fileSize) {
-		uint64_t val0mod1off0Upper, val0mod1off0Lower;
-		uint64_t val0mod1off1Upper, val0mod1off1Lower;
-		uint64_t val0mod1off2Upper, val0mod1off2Lower;
-		uint64_t val1mod6off0Upper, val1mod6off0Lower;
-		uint64_t val1mod6off1Upper, val1mod6off1Lower;
-		uint64_t val1mod6off2Upper, val1mod6off2Lower;
-		uint64_t curValueUpper, curValueLower;
-		uint16_t bestTime;
+		CzU64 val0mod1off0Upper, val0mod1off0Lower;
+		CzU64 val0mod1off1Upper, val0mod1off1Lower;
+		CzU64 val0mod1off2Upper, val0mod1off2Lower;
+		CzU64 val1mod6off0Upper, val1mod6off0Lower;
+		CzU64 val1mod6off1Upper, val1mod6off1Lower;
+		CzU64 val1mod6off2Upper, val1mod6off2Lower;
+		CzU64 curValueUpper, curValueLower;
+		CzU16 bestTime;
 
 		bres = read_text(
 			CZ_PROGRESS_FILE_NAME,
@@ -2579,15 +2579,15 @@ bool submit_commands(struct Gpu* restrict gpu)
 
 		if CZ_NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
 
-		position.val0mod1off[0] = CZ_UINT128(val0mod1off0Upper, val0mod1off0Lower);
-		position.val0mod1off[1] = CZ_UINT128(val0mod1off1Upper, val0mod1off1Lower);
-		position.val0mod1off[2] = CZ_UINT128(val0mod1off2Upper, val0mod1off2Lower);
+		position.val0mod1off[0] = CZ_U128(val0mod1off0Upper, val0mod1off0Lower);
+		position.val0mod1off[1] = CZ_U128(val0mod1off1Upper, val0mod1off1Lower);
+		position.val0mod1off[2] = CZ_U128(val0mod1off2Upper, val0mod1off2Lower);
 
-		position.val1mod6off[0] = CZ_UINT128(val1mod6off0Upper, val1mod6off0Lower);
-		position.val1mod6off[1] = CZ_UINT128(val1mod6off1Upper, val1mod6off1Lower);
-		position.val1mod6off[2] = CZ_UINT128(val1mod6off2Upper, val1mod6off2Lower);
+		position.val1mod6off[0] = CZ_U128(val1mod6off0Upper, val1mod6off0Lower);
+		position.val1mod6off[1] = CZ_U128(val1mod6off1Upper, val1mod6off1Lower);
+		position.val1mod6off[2] = CZ_U128(val1mod6off2Upper, val1mod6off2Lower);
 
-		position.curStartValue = CZ_UINT128(curValueUpper, curValueLower);
+		position.curStartValue = CZ_U128(curValueUpper, curValueLower);
 		position.bestStopTime = bestTime;
 	}
 
@@ -2601,8 +2601,8 @@ bool submit_commands(struct Gpu* restrict gpu)
 		inBuffersMappedRanges = dyrecord_calloc(localRecord, allocCount, allocSize);
 		if CZ_NOEXPECT (!inBuffersMappedRanges) { dyrecord_destroy(localRecord); return false; }
 
-		for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
-			for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+		for (CzU32 i = 0, j = 0; i < buffersPerHeap; i++) {
+			for (CzU32 k = 0; k < inoutsPerBuffer; j++, k++) {
 				inBuffersMappedRanges[j].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
 				inBuffersMappedRanges[j].memory = hostVisibleMemories[i];
 				inBuffersMappedRanges[j].offset = bytesPerInout * k;
@@ -2621,8 +2621,8 @@ bool submit_commands(struct Gpu* restrict gpu)
 		outBuffersMappedRanges = dyrecord_calloc(localRecord, allocCount, allocSize);
 		if CZ_NOEXPECT (!outBuffersMappedRanges) { dyrecord_destroy(localRecord); return false; }
 
-		for (uint32_t i = 0, j = 0; i < buffersPerHeap; i++) {
-			for (uint32_t k = 0; k < inoutsPerBuffer; j++, k++) {
+		for (CzU32 i = 0, j = 0; i < buffersPerHeap; i++) {
+			for (CzU32 k = 0; k < inoutsPerBuffer; j++, k++) {
 				outBuffersMappedRanges[j].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
 				outBuffersMappedRanges[j].memory = hostVisibleMemories[i];
 				outBuffersMappedRanges[j].offset = bytesPerInout * k + bytesPerIn;
@@ -2643,7 +2643,7 @@ bool submit_commands(struct Gpu* restrict gpu)
 	VkCommandBufferSubmitInfo* transferCmdBufferSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!transferCmdBufferSubmitInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 		transferCmdBufferSubmitInfos[i].sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
 		transferCmdBufferSubmitInfos[i].commandBuffer = transferCmdBuffers[i];
 	}
@@ -2655,7 +2655,7 @@ bool submit_commands(struct Gpu* restrict gpu)
 	VkCommandBufferSubmitInfo* computeCmdBufferSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!computeCmdBufferSubmitInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 		computeCmdBufferSubmitInfos[i].sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
 		computeCmdBufferSubmitInfos[i].commandBuffer = computeCmdBuffers[i];
 	}
@@ -2667,7 +2667,7 @@ bool submit_commands(struct Gpu* restrict gpu)
 	VkSemaphoreSubmitInfo* transferWaitSemaphoreSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!transferWaitSemaphoreSubmitInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 		transferWaitSemaphoreSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 		transferWaitSemaphoreSubmitInfos[i].semaphore = semaphores[i];
 		transferWaitSemaphoreSubmitInfos[i].value = 0;
@@ -2681,7 +2681,7 @@ bool submit_commands(struct Gpu* restrict gpu)
 	VkSemaphoreSubmitInfo* transferSignalSemaphoreSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!transferSignalSemaphoreSubmitInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 		transferSignalSemaphoreSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 		transferSignalSemaphoreSubmitInfos[i].semaphore = semaphores[i];
 		transferSignalSemaphoreSubmitInfos[i].value = 1;
@@ -2695,7 +2695,7 @@ bool submit_commands(struct Gpu* restrict gpu)
 	VkSemaphoreSubmitInfo* computeWaitSemaphoreSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!computeWaitSemaphoreSubmitInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 		computeWaitSemaphoreSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 		computeWaitSemaphoreSubmitInfos[i].semaphore = semaphores[i];
 		computeWaitSemaphoreSubmitInfos[i].value = 1;
@@ -2709,7 +2709,7 @@ bool submit_commands(struct Gpu* restrict gpu)
 	VkSemaphoreSubmitInfo* computeSignalSemaphoreSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!computeSignalSemaphoreSubmitInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 		computeSignalSemaphoreSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 		computeSignalSemaphoreSubmitInfos[i].semaphore = semaphores[i];
 		computeSignalSemaphoreSubmitInfos[i].value = 2;
@@ -2731,7 +2731,7 @@ bool submit_commands(struct Gpu* restrict gpu)
 	VkSubmitInfo2* transferSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!transferSubmitInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 		transferSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
 		transferSubmitInfos[i].waitSemaphoreInfoCount = 1;
 		transferSubmitInfos[i].pWaitSemaphoreInfos = &transferWaitSemaphoreSubmitInfos[i];
@@ -2748,7 +2748,7 @@ bool submit_commands(struct Gpu* restrict gpu)
 	VkSubmitInfo2* computeSubmitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!computeSubmitInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 		computeSubmitInfos[i].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
 		computeSubmitInfos[i].waitSemaphoreInfoCount = 1;
 		computeSubmitInfos[i].pWaitSemaphoreInfos = &computeWaitSemaphoreSubmitInfos[i];
@@ -2765,7 +2765,7 @@ bool submit_commands(struct Gpu* restrict gpu)
 	VkSemaphoreWaitInfo* transferSemaphoreWaitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!transferSemaphoreWaitInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 		transferSemaphoreWaitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
 		transferSemaphoreWaitInfos[i].semaphoreCount = 1;
 		transferSemaphoreWaitInfos[i].pSemaphores = &semaphores[i];
@@ -2779,7 +2779,7 @@ bool submit_commands(struct Gpu* restrict gpu)
 	VkSemaphoreWaitInfo* computeSemaphoreWaitInfos = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!computeSemaphoreWaitInfos) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 		computeSemaphoreWaitInfos[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
 		computeSemaphoreWaitInfos[i].semaphoreCount = 1;
 		computeSemaphoreWaitInfos[i].pSemaphores = &semaphores[i];
@@ -2788,9 +2788,9 @@ bool submit_commands(struct Gpu* restrict gpu)
 
 	// Create array keeping track of initial tested starting value for each inout-buffer
 	allocCount = inoutsPerHeap;
-	allocSize = sizeof(StartValue);
+	allocSize = sizeof(CzU128);
 
-	StartValue* testedValues = dyrecord_calloc(localRecord, allocCount, allocSize);
+	CzU128* testedValues = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!testedValues) { dyrecord_destroy(localRecord); return false; }
 
 	// Create thread to wait for user input
@@ -2802,10 +2802,10 @@ bool submit_commands(struct Gpu* restrict gpu)
 	if CZ_NOEXPECT (ires) { PCREATE_FAILURE(ires); dyrecord_destroy(localRecord); return false; }
 
 	clock_t totalBmStart = clock();
-	StartValue tested = position.curStartValue;
+	CzU128 tested = position.curStartValue;
 
 	// Write starting values to mapped in-buffers
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 		testedValues[i] = tested;
 		write_inbuffer(mappedInBuffers[i], &testedValues[i], valuesPerInout, valuesPerHeap);
 		tested += valuesPerInout * 4;
@@ -2817,7 +2817,7 @@ bool submit_commands(struct Gpu* restrict gpu)
 	}
 
 	// Initiate the first cycle
-	uint32_t submitInfoCount = 1;
+	CzU32 submitInfoCount = 1;
 	VK_CALLR(vkQueueSubmit2KHR, transferQueue, submitInfoCount, &initialSubmitInfo, VK_NULL_HANDLE);
 	if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
@@ -2825,9 +2825,9 @@ bool submit_commands(struct Gpu* restrict gpu)
 	VK_CALLR(vkQueueSubmit2KHR, computeQueue, submitInfoCount, computeSubmitInfos, VK_NULL_HANDLE);
 	if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+	for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 		// Wait for transfers to complete execution
-		uint64_t transferTimeout = UINT64_MAX;
+		CzU64 transferTimeout = UINT64_MAX;
 		VK_CALLR(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[i], transferTimeout);
 		if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
@@ -2853,13 +2853,13 @@ bool submit_commands(struct Gpu* restrict gpu)
 	VK_CALL(vkDestroyCommandPool, device, initialCmdPool, allocator);
 	gpu->initialCmdPool = VK_NULL_HANDLE;
 
-	StartValue total = 0;
-	StartValue initialStartValue = position.curStartValue;
+	CzU128 total = 0;
+	CzU128 initialStartValue = position.curStartValue;
 
 	// ===== Enter main loop =====
-	for (uint64_t i = 0; i < czgConfig.maxLoops && !atomic_load(&input); i++) {
+	for (CzU64 i = 0; i < czgConfig.maxLoops && !atomic_load(&input); i++) {
 		clock_t mainLoopBmStart = clock();
-		StartValue initialValue = position.curStartValue;
+		CzU128 initialValue = position.curStartValue;
 
 		double readBmTotal = 0;
 		double writeBmTotal = 0;
@@ -2878,14 +2878,14 @@ bool submit_commands(struct Gpu* restrict gpu)
 		 * a consistent pattern regarding when these failures occur, nor have I found a way to reliably replicate them.
 		 * TODO Figure out what on Earth is going on here???
 		 */
-		for (uint32_t j = 0; j < inoutsPerHeap; j++) {
+		for (CzU32 j = 0; j < inoutsPerHeap; j++) {
 			double computeBmark = 0;
 			double transferBmark = 0;
 
 			// Wait for dispatch to complete execution
 			clock_t waitComputeBmStart = clock();
 
-			uint64_t computeTimeout = UINT64_MAX;
+			CzU64 computeTimeout = UINT64_MAX;
 			VK_CALLR(vkWaitSemaphoresKHR, device, &computeSemaphoreWaitInfos[j], computeTimeout);
 			if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
@@ -2893,11 +2893,11 @@ bool submit_commands(struct Gpu* restrict gpu)
 
 			// Calculate approx time taken for dispatch to execute
 			if (computeFamilyTimestampValidBits) {
-				uint32_t firstQuery = j * 4;
-				uint32_t queryCount = 2;
+				CzU32 firstQuery = j * 4;
+				CzU32 queryCount = 2;
 				VkQueryResultFlags queryFlags = VK_QUERY_RESULT_64_BIT;
 
-				uint64_t timestamps[2];
+				CzU64 timestamps[2];
 				VK_CALLR(vkGetQueryPoolResults,
 					device, queryPool, firstQuery, queryCount, sizeof(timestamps), timestamps, sizeof(timestamps[0]),
 					queryFlags);
@@ -2918,7 +2918,7 @@ bool submit_commands(struct Gpu* restrict gpu)
 			// Wait for transfers to complete execution
 			clock_t waitTransferBmStart = clock();
 
-			uint64_t transferTimeout = UINT64_MAX;
+			CzU64 transferTimeout = UINT64_MAX;
 			VK_CALLR(vkWaitSemaphoresKHR, device, &transferSemaphoreWaitInfos[j], transferTimeout);
 			if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
@@ -2926,11 +2926,11 @@ bool submit_commands(struct Gpu* restrict gpu)
 
 			// Calculate approx time taken for transfers to execute
 			if (transferFamilyTimestampValidBits) {
-				uint32_t firstQuery = j * 4 + 2;
-				uint32_t queryCount = 2;
+				CzU32 firstQuery = j * 4 + 2;
+				CzU32 queryCount = 2;
 				VkQueryResultFlags queryFlags = VK_QUERY_RESULT_64_BIT;
 
-				uint64_t timestamps[2];
+				CzU64 timestamps[2];
 				VK_CALLR(vkGetQueryPoolResults,
 					device, queryPool, firstQuery, queryCount, sizeof(timestamps), timestamps, sizeof(timestamps[0]),
 					queryFlags);
@@ -2940,7 +2940,7 @@ bool submit_commands(struct Gpu* restrict gpu)
 			}
 
 			if (hostNonCoherent) {
-				uint32_t rangeCount = 1;
+				CzU32 rangeCount = 1;
 				VK_CALLR(vkInvalidateMappedMemoryRanges, device, rangeCount, &outBuffersMappedRanges[j]);
 				if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 			}
@@ -2956,7 +2956,7 @@ bool submit_commands(struct Gpu* restrict gpu)
 			clock_t writeBmEnd = clock();
 
 			if (hostNonCoherent) {
-				uint32_t rangeCount = 1;
+				CzU32 rangeCount = 1;
 				VK_CALLR(vkFlushMappedMemoryRanges, device, rangeCount, &inBuffersMappedRanges[j]);
 				if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 			}
@@ -3018,7 +3018,7 @@ bool submit_commands(struct Gpu* restrict gpu)
 				"Main loop: %.0fms\n"
 				"Current value: 0x %016" PRIx64 " %016" PRIx64 "\n\n",
 				mainLoopBmark,
-				CZ_UINT128_UPPER(position.curStartValue - 3), CZ_UINT128_LOWER(position.curStartValue - 3));
+				CZ_U128_UPPER(position.curStartValue - 3), CZ_U128_LOWER(position.curStartValue - 3));
 
 			break;
 
@@ -3037,8 +3037,8 @@ bool submit_commands(struct Gpu* restrict gpu)
 				readBmAvg,        writeBmAvg,
 				computeBmAvg,     transferBmAvg,
 				waitComputeBmAvg, waitTransferBmAvg,
-				CZ_UINT128_UPPER(initialValue - 2),           CZ_UINT128_LOWER(initialValue - 2),
-				CZ_UINT128_UPPER(position.curStartValue - 3), CZ_UINT128_LOWER(position.curStartValue - 3));
+				CZ_U128_UPPER(initialValue - 2),           CZ_U128_LOWER(initialValue - 2),
+				CZ_U128_UPPER(position.curStartValue - 3), CZ_U128_LOWER(position.curStartValue - 3));
 
 			break;
 
@@ -3058,8 +3058,8 @@ bool submit_commands(struct Gpu* restrict gpu)
 				readBmTotal,        readBmAvg,        writeBmTotal,        writeBmAvg,
 				computeBmTotal,     computeBmAvg,     transferBmTotal,     transferBmAvg,
 				waitComputeBmTotal, waitComputeBmAvg, waitTransferBmTotal, waitTransferBmAvg,
-				CZ_UINT128_UPPER(initialValue - 2),           CZ_UINT128_LOWER(initialValue - 2),
-				CZ_UINT128_UPPER(position.curStartValue - 3), CZ_UINT128_LOWER(position.curStartValue - 3));
+				CZ_U128_UPPER(initialValue - 2),           CZ_U128_LOWER(initialValue - 2),
+				CZ_U128_UPPER(position.curStartValue - 3), CZ_U128_LOWER(position.curStartValue - 3));
 
 			break;
 
@@ -3087,8 +3087,8 @@ bool submit_commands(struct Gpu* restrict gpu)
 	if (czgConfig.outputLevel > CZ_OUTPUT_LEVEL_SILENT) {
 		printf(
 			"Set of starting values tested: [0x %016" PRIx64 " %016" PRIx64 ", 0x %016" PRIx64 " %016" PRIx64 "]\n",
-			CZ_UINT128_UPPER(initialStartValue - 2),      CZ_UINT128_LOWER(initialStartValue - 2),
-			CZ_UINT128_UPPER(position.curStartValue - 3), CZ_UINT128_LOWER(position.curStartValue - 3));
+			CZ_U128_UPPER(initialStartValue - 2),      CZ_U128_LOWER(initialStartValue - 2),
+			CZ_U128_UPPER(position.curStartValue - 3), CZ_U128_LOWER(position.curStartValue - 3));
 	}
 
 	size_t bestCount = dyarray_size(bestStartValues);
@@ -3100,16 +3100,16 @@ bool submit_commands(struct Gpu* restrict gpu)
 			bestCount);
 	}
 
-	for (uint32_t i = 0; i < bestCount; i++) {
-		StartValue startValue;
-		StopTime stopTime;
+	for (CzU32 i = 0; i < bestCount; i++) {
+		CzU128 startValue;
+		CzU16 stopTime;
 
 		dyarray_get(bestStartValues, &startValue, i);
 		dyarray_get(bestStopTimes, &stopTime, i);
 
 		printf(
 			"| %5" PRIu32 " | %016" PRIx64 " %016" PRIx64 " | %19" PRIu16 " |\n",
-			i + 1, CZ_UINT128_UPPER(startValue), CZ_UINT128_LOWER(startValue), stopTime);
+			i + 1, CZ_U128_UPPER(startValue), CZ_U128_LOWER(startValue), stopTime);
 	}
 
 	if (czgConfig.outputLevel > CZ_OUTPUT_LEVEL_SILENT) {
@@ -3134,13 +3134,13 @@ bool submit_commands(struct Gpu* restrict gpu)
 			"%016" PRIx64 " %016" PRIx64 "\n"
 			"%016" PRIx64 " %016" PRIx64 "\n"
 			"%04"  PRIx16,
-			CZ_UINT128_UPPER(position.val0mod1off[0]), CZ_UINT128_LOWER(position.val0mod1off[0]),
-			CZ_UINT128_UPPER(position.val0mod1off[1]), CZ_UINT128_LOWER(position.val0mod1off[1]),
-			CZ_UINT128_UPPER(position.val0mod1off[2]), CZ_UINT128_LOWER(position.val0mod1off[2]),
-			CZ_UINT128_UPPER(position.val1mod6off[0]), CZ_UINT128_LOWER(position.val1mod6off[0]),
-			CZ_UINT128_UPPER(position.val1mod6off[1]), CZ_UINT128_LOWER(position.val1mod6off[1]),
-			CZ_UINT128_UPPER(position.val1mod6off[2]), CZ_UINT128_LOWER(position.val1mod6off[2]),
-			CZ_UINT128_UPPER(position.curStartValue),  CZ_UINT128_LOWER(position.curStartValue),
+			CZ_U128_UPPER(position.val0mod1off[0]), CZ_U128_LOWER(position.val0mod1off[0]),
+			CZ_U128_UPPER(position.val0mod1off[1]), CZ_U128_LOWER(position.val0mod1off[1]),
+			CZ_U128_UPPER(position.val0mod1off[2]), CZ_U128_LOWER(position.val0mod1off[2]),
+			CZ_U128_UPPER(position.val1mod6off[0]), CZ_U128_LOWER(position.val1mod6off[0]),
+			CZ_U128_UPPER(position.val1mod6off[1]), CZ_U128_LOWER(position.val1mod6off[1]),
+			CZ_U128_UPPER(position.val1mod6off[2]), CZ_U128_LOWER(position.val1mod6off[2]),
+			CZ_U128_UPPER(position.curStartValue),  CZ_U128_LOWER(position.curStartValue),
 			position.bestStopTime);
 
 		if CZ_NOEXPECT (!bres) { dyrecord_destroy(localRecord); return false; }
@@ -3163,8 +3163,8 @@ bool destroy_gpu(struct Gpu* restrict gpu)
 
 	VkDevice device = gpu->device;
 
-	uint32_t inoutsPerHeap = gpu->inoutsPerHeap;
-	uint32_t buffersPerHeap = gpu->buffersPerHeap;
+	CzU32 inoutsPerHeap = gpu->inoutsPerHeap;
+	CzU32 buffersPerHeap = gpu->buffersPerHeap;
 
 	VkResult vkres;
 
@@ -3178,7 +3178,7 @@ bool destroy_gpu(struct Gpu* restrict gpu)
 		VK_CALLR(vkDeviceWaitIdle, device);
 
 		if (semaphores) {
-			for (uint32_t i = 0; i < inoutsPerHeap; i++) {
+			for (CzU32 i = 0; i < inoutsPerHeap; i++) {
 				VK_CALL(vkDestroySemaphore, device, semaphores[i], allocator);
 			}
 		}
@@ -3192,22 +3192,22 @@ bool destroy_gpu(struct Gpu* restrict gpu)
 		VK_CALL(vkDestroyDescriptorPool, device, gpu->descriptorPool, allocator);
 
 		if (hostVisibleBuffers) {
-			for (uint32_t i = 0; i < buffersPerHeap; i++) {
+			for (CzU32 i = 0; i < buffersPerHeap; i++) {
 				VK_CALL(vkDestroyBuffer, device, hostVisibleBuffers[i], allocator);
 			}
 		}
 		if (deviceLocalBuffers) {
-			for (uint32_t i = 0; i < buffersPerHeap; i++) {
+			for (CzU32 i = 0; i < buffersPerHeap; i++) {
 				VK_CALL(vkDestroyBuffer, device, deviceLocalBuffers[i], allocator);
 			}
 		}
 		if (hostVisibleMemories) {
-			for (uint32_t i = 0; i < buffersPerHeap; i++) {
+			for (CzU32 i = 0; i < buffersPerHeap; i++) {
 				VK_CALL(vkFreeMemory, device, hostVisibleMemories[i], allocator);
 			}
 		}
 		if (deviceLocalMemories) {
-			for (uint32_t i = 0; i < buffersPerHeap; i++) {
+			for (CzU32 i = 0; i < buffersPerHeap; i++) {
 				VK_CALL(vkFreeMemory, device, deviceLocalMemories[i], allocator);
 			}
 		}
@@ -3240,7 +3240,7 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 	pipelineInfo.pipeline = pipeline;
 
 	// Get pipeline executable properties
-	uint32_t executableCount;
+	CzU32 executableCount;
 	VK_CALLR(vkGetPipelineExecutablePropertiesKHR, device, &pipelineInfo, &executableCount, NULL);
 	if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
@@ -3266,22 +3266,22 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 	VkPipelineExecutableInfoKHR* executablesInfo = dyrecord_calloc(localRecord, allocCount, allocSize);
 	if CZ_NOEXPECT (!executablesInfo) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < executableCount; i++) {
+	for (CzU32 i = 0; i < executableCount; i++) {
 		executablesInfo[i].sType = VK_STRUCTURE_TYPE_PIPELINE_EXECUTABLE_INFO_KHR;
 		executablesInfo[i].pipeline = pipeline;
 		executablesInfo[i].executableIndex = i;
 	}
 
 	// Get statistics for each pipeline executable
-	allocSize = executableCount * sizeof(uint32_t);
-	uint32_t* statisticCounts = dyrecord_malloc(localRecord, allocSize);
+	allocSize = executableCount * sizeof(CzU32);
+	CzU32* statisticCounts = dyrecord_malloc(localRecord, allocSize);
 	if CZ_NOEXPECT (!statisticCounts) { dyrecord_destroy(localRecord); return false; }
 
 	allocSize = executableCount * sizeof(VkPipelineExecutableStatisticKHR*);
 	VkPipelineExecutableStatisticKHR** executablesStatistics = dyrecord_malloc(localRecord, allocSize);
 	if CZ_NOEXPECT (!executablesStatistics) { dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < executableCount; i++) {
+	for (CzU32 i = 0; i < executableCount; i++) {
 		VK_CALLR(vkGetPipelineExecutableStatisticsKHR, device, &executablesInfo[i], &statisticCounts[i], NULL);
 		if CZ_NOEXPECT (vkres) { dyrecord_destroy(localRecord); return false; }
 
@@ -3291,7 +3291,7 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 		executablesStatistics[i] = dyrecord_calloc(localRecord, allocCount, allocSize);
 		if CZ_NOEXPECT (!executablesStatistics[i]) { dyrecord_destroy(localRecord); return false; }
 
-		for (uint32_t j = 0; j < statisticCounts[i]; j++) {
+		for (CzU32 j = 0; j < statisticCounts[i]; j++) {
 			executablesStatistics[i][j].sType = VK_STRUCTURE_TYPE_PIPELINE_EXECUTABLE_STATISTIC_KHR;
 		}
 
@@ -3308,16 +3308,16 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 	bool bres = dyrecord_add(localRecord, message, dystring_destroy_stub);
 	if CZ_NOEXPECT (!bres) { dystring_destroy(message); dyrecord_destroy(localRecord); return false; }
 
-	for (uint32_t i = 0; i < executableCount; i++) {
+	for (CzU32 i = 0; i < executableCount; i++) {
 		VkShaderStageFlags stages = executablesProperties[i].stages;
-		uint32_t statisticCount = statisticCounts[i];
+		CzU32 statisticCount = statisticCounts[i];
 		char str[21];
 
 		dystring_append(message, "\n");
 		dystring_append(message, executablesProperties[i].name);
 		dystring_append(message, "\n");
 
-		for (uint32_t j = 0; j < sizeof(stages) * CHAR_BIT; j++) {
+		for (CzU32 j = 0; j < sizeof(stages) * CHAR_BIT; j++) {
 			VkShaderStageFlagBits stage = stages & (UINT32_C(1) << j);
 
 			if (stage) {
@@ -3333,7 +3333,7 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 		dystring_append(message, executablesProperties[i].description);
 		dystring_append(message, "\n");
 
-		for (uint32_t j = 0; j < statisticCount; j++) {
+		for (CzU32 j = 0; j < statisticCount; j++) {
 			dystring_append(message, "\n\t");
 			dystring_append(message, executablesStatistics[i][j].name);
 			dystring_append(message, ": ");
@@ -3366,9 +3366,9 @@ bool capture_pipeline(VkDevice device, VkPipeline pipeline)
 		}
 	}
 
-	uint32_t statisticTotal = 0;
+	CzU32 statisticTotal = 0;
 
-	for (uint32_t i = 0; i < executableCount; i++) {
+	for (CzU32 i = 0; i < executableCount; i++) {
 		statisticTotal += statisticCounts[i];
 	}
 
@@ -3406,18 +3406,15 @@ void* wait_for_input(void* ptr)
 }
 
 void write_inbuffer(
-	StartValue* restrict mappedInBuffer,
-	StartValue* restrict firstStartValue,
-	uint32_t valuesPerInout,
-	uint32_t valuesPerHeap)
+	CzU128* restrict mappedInBuffer, CzU128* restrict firstStartValue, CzU32 valuesPerInout, CzU32 valuesPerHeap)
 {
 	CZ_ASSUME(*firstStartValue % 8 == 3);
 	CZ_ASSUME(valuesPerInout % 128 == 0);
 	CZ_ASSUME(valuesPerInout != 0);
 
-	StartValue startValue = *firstStartValue;
+	CzU128 startValue = *firstStartValue;
 
-	for (uint32_t i = 0; i < valuesPerInout; i++) {
+	for (CzU32 i = 0; i < valuesPerInout; i++) {
 		mappedInBuffer[i] = startValue;
 		startValue += 4;
 	}
@@ -3426,34 +3423,34 @@ void write_inbuffer(
 }
 
 void read_outbuffer(
-	const StopTime* restrict mappedOutBuffer,
+	const CzU16* restrict mappedOutBuffer,
 	struct Position* restrict position,
 	DyArray bestStartValues,
 	DyArray bestStopTimes,
-	uint32_t valuesPerInout)
+	CzU32 valuesPerInout)
 {
 	CZ_ASSUME(position->curStartValue % 8 == 3);
 	CZ_ASSUME(valuesPerInout % 128 == 0);
 	CZ_ASSUME(valuesPerInout != 0);
 
-	StartValue val0mod1off[3];
-	StartValue val1mod6off[3];
+	CzU128 val0mod1off[3];
+	CzU128 val1mod6off[3];
 
 	memcpy(val0mod1off, position->val0mod1off, sizeof(val0mod1off));
 	memcpy(val1mod6off, position->val1mod6off, sizeof(val1mod6off));
 
-	StartValue curValue = position->curStartValue - 2;
-	StopTime bestTime = position->bestStopTime;
+	CzU128 curValue = position->curStartValue - 2;
+	CzU16 bestTime = position->bestStopTime;
 
-	for (uint32_t i = 0; i < valuesPerInout; i++) {
+	for (CzU32 i = 0; i < valuesPerInout; i++) {
 		curValue++; // curValue % 8 == 2
 
 		if (curValue == val0mod1off[0] * 2) {
-			StopTime newBestTime = bestTime + 1;
+			CzU16 newBestTime = bestTime + 1;
 			new_high(&curValue, &bestTime, newBestTime, val0mod1off, val1mod6off, bestStartValues, bestStopTimes);
 		}
 		else {
-			for (uint32_t j = 2; j < CZ_COUNTOF(val0mod1off); j++) {
+			for (CzU32 j = 2; j < CZ_COUNTOF(val0mod1off); j++) {
 				if (val0mod1off[j - 1] || val0mod1off[j] * 2 != curValue) { continue; }
 
 				val0mod1off[j - 1] = curValue;
@@ -3464,14 +3461,14 @@ void read_outbuffer(
 		curValue++; // curValue % 8 == 3
 
 		if (mappedOutBuffer[i] > bestTime) {
-			StopTime newBestTime = mappedOutBuffer[i];
+			CzU16 newBestTime = mappedOutBuffer[i];
 			new_high(&curValue, &bestTime, newBestTime, val0mod1off, val1mod6off, bestStartValues, bestStopTimes);
 		}
 		else if (mappedOutBuffer[i] == bestTime && !val1mod6off[0] && curValue % 6 == 1) {
 			val1mod6off[0] = curValue;
 		}
 		else {
-			for (uint32_t j = 1; j < CZ_COUNTOF(val0mod1off); j++) {
+			for (CzU32 j = 1; j < CZ_COUNTOF(val0mod1off); j++) {
 				if (mappedOutBuffer[i] + j != bestTime) { continue; }
 
 				if (!val0mod1off[j])                      { val0mod1off[j] = curValue; }
@@ -3484,11 +3481,11 @@ void read_outbuffer(
 		curValue++; // curValue % 8 == 4
 
 		if (curValue == val0mod1off[1] * 4) {
-			StopTime newBestTime = bestTime + 1;
+			CzU16 newBestTime = bestTime + 1;
 			new_high(&curValue, &bestTime, newBestTime, val0mod1off, val1mod6off, bestStartValues, bestStopTimes);
 		}
 		else {
-			for (uint32_t j = 3; j < CZ_COUNTOF(val0mod1off); j++) {
+			for (CzU32 j = 3; j < CZ_COUNTOF(val0mod1off); j++) {
 				if (val0mod1off[j - 2] || val0mod1off[j] * 4 != curValue) { continue; }
 
 				val0mod1off[j - 2] = curValue;
@@ -3499,7 +3496,7 @@ void read_outbuffer(
 		curValue++; // curValue % 8 == 5
 
 		if (curValue % 6 == 1) {
-			for (uint32_t j = 0; j < CZ_COUNTOF(val0mod1off); j++) {
+			for (CzU32 j = 0; j < CZ_COUNTOF(val0mod1off); j++) {
 				if (val1mod6off[j] || val0mod1off[j] + 1 != curValue) { continue; }
 
 				val1mod6off[j] = curValue;
@@ -3511,11 +3508,11 @@ void read_outbuffer(
 		curValue++; // curValue % 8 == 6
 
 		if (curValue == val0mod1off[0] * 2) {
-			StopTime newBestTime = bestTime + 1;
+			CzU16 newBestTime = bestTime + 1;
 			new_high(&curValue, &bestTime, newBestTime, val0mod1off, val1mod6off, bestStartValues, bestStopTimes);
 		}
 		else {
-			for (uint32_t j = 2; j < CZ_COUNTOF(val0mod1off); j++) {
+			for (CzU32 j = 2; j < CZ_COUNTOF(val0mod1off); j++) {
 				if (val0mod1off[j - 1] || val0mod1off[j] * 2 != curValue) { continue; }
 
 				val0mod1off[j - 1] = curValue;
@@ -3526,19 +3523,19 @@ void read_outbuffer(
 		curValue++; // curValue % 8 == 7
 
 		if (mappedOutBuffer[i] > bestTime) {
-			StopTime newBestTime = mappedOutBuffer[i];
+			CzU16 newBestTime = mappedOutBuffer[i];
 			new_high(&curValue, &bestTime, newBestTime, val0mod1off, val1mod6off, bestStartValues, bestStopTimes);
 		}
 		else if (mappedOutBuffer[i] == bestTime && !val1mod6off[0] && curValue % 6 == 1) {
 			val1mod6off[0] = curValue;
 		}
 		else {
-			for (uint32_t j = 1; j < CZ_COUNTOF(val0mod1off); j++) {
+			for (CzU32 j = 1; j < CZ_COUNTOF(val0mod1off); j++) {
 				if (mappedOutBuffer[i] + j != bestTime) { continue; }
 
 				if (!val0mod1off[j])                      { val0mod1off[j] = curValue; }
 				if (!val1mod6off[j] && curValue % 6 == 1) { val1mod6off[j] = curValue; }
-			
+
 				break;
 			}
 		}
@@ -3546,11 +3543,11 @@ void read_outbuffer(
 		curValue++; // curValue % 8 == 0
 
 		if (curValue == val0mod1off[2] * 8) {
-			StopTime newBestTime = bestTime + 1;
+			CzU16 newBestTime = bestTime + 1;
 			new_high(&curValue, &bestTime, newBestTime, val0mod1off, val1mod6off, bestStartValues, bestStopTimes);
 		}
 		else {
-			for (uint32_t j = 4; j < CZ_COUNTOF(val0mod1off); j++) {
+			for (CzU32 j = 4; j < CZ_COUNTOF(val0mod1off); j++) {
 				if (val0mod1off[j - 3] || val0mod1off[j] * 8 != curValue) { continue; }
 
 				val0mod1off[j - 3] = curValue;
@@ -3560,10 +3557,10 @@ void read_outbuffer(
 
 		curValue++; // curValue % 8 == 1
 
-		for (uint32_t j = 0; j < CZ_COUNTOF(val0mod1off); j++) {
+		for (CzU32 j = 0; j < CZ_COUNTOF(val0mod1off); j++) {
 			if (!val1mod6off[j] || val1mod6off[j] * 4 != curValue * 3 + 1) { continue; }
 
-			StopTime newBestTime = (StopTime) (bestTime + 3 - j);
+			CzU16 newBestTime = (CzU16) (bestTime + 3 - j);
 			new_high(&curValue, &bestTime, newBestTime, val0mod1off, val1mod6off, bestStartValues, bestStopTimes);
 
 			break;
@@ -3578,22 +3575,22 @@ void read_outbuffer(
 }
 
 void new_high(
-	const StartValue* restrict startValue,
-	StopTime* restrict curBestTime,
-	StopTime newBestTime,
-	StartValue* restrict val0mod1off,
-	StartValue* restrict val1mod6off,
+	const CzU128* restrict startValue,
+	CzU16* restrict curBestTime,
+	CzU16 newBestTime,
+	CzU128* restrict val0mod1off,
+	CzU128* restrict val1mod6off,
 	DyArray bestStartValues,
 	DyArray bestStopTimes)
 {
-	uint32_t difTime = minu32((uint32_t) (newBestTime - *curBestTime), 3);
+	CzU32 difTime = minu32((CzU32) (newBestTime - *curBestTime), 3);
 	*curBestTime = newBestTime;
 
-	memmove(val0mod1off + difTime, val0mod1off, sizeof(StartValue) * (3 - difTime));
-	memmove(val1mod6off + difTime, val1mod6off, sizeof(StartValue) * (3 - difTime));
+	memmove(val0mod1off + difTime, val0mod1off, sizeof(CzU128) * (3 - difTime));
+	memmove(val1mod6off + difTime, val1mod6off, sizeof(CzU128) * (3 - difTime));
 
-	memset(val0mod1off + 1, 0, sizeof(StartValue) * (difTime - 1));
-	memset(val1mod6off + 1, 0, sizeof(StartValue) * (difTime - 1));
+	memset(val0mod1off + 1, 0, sizeof(CzU128) * (difTime - 1));
+	memset(val1mod6off + 1, 0, sizeof(CzU128) * (difTime - 1));
 
 	val0mod1off[0] = *startValue;
 	val1mod6off[0] = *startValue % 6 == 1 ? *startValue : 0;

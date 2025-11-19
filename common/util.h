@@ -28,15 +28,15 @@ CZ_CONST CZ_USE_RET
 enum CzEndianness get_endianness(void);
 
 CZ_CONST CZ_USE_RET
-uint32_t ceil_pow2(uint32_t x);
+CzU32 ceil_pow2(CzU32 x);
 CZ_CONST CZ_USE_RET
-uint32_t floor_pow2(uint32_t x);
+CzU32 floor_pow2(CzU32 x);
 
 CZ_CONST CZ_USE_RET
 double get_benchmark(clock_t start, clock_t end);
 
 CZ_NONNULL_ARGS(1) CZ_NULTERM_ARG(4) CZ_RD_ACCESS(4)
-bool set_debug_name(VkDevice device, VkObjectType type, uint64_t handle, const char* name);
+bool set_debug_name(VkDevice device, VkObjectType type, CzU64 handle, const char* name);
 
 CZ_NONNULL_ARGS() CZ_WR_ACCESS(4)
 bool get_buffer_requirements_noext(
@@ -58,56 +58,26 @@ bool write_text(const char* filename, const char* format, ...);
 // Unsigned integer maximum and minimum functions
 
 CZ_CONST CZ_USE_RET
-uint8_t maxu8(uint8_t x, uint8_t y);
+CzU32 maxu32(CzU32 x, CzU32 y);
 CZ_CONST CZ_USE_RET
-uint8_t minu8(uint8_t x, uint8_t y);
+CzU32 minu32(CzU32 x, CzU32 y);
 
 CZ_CONST CZ_USE_RET
-uint16_t maxu16(uint16_t x, uint16_t y);
+CzU64 maxu64(CzU64 x, CzU64 y);
 CZ_CONST CZ_USE_RET
-uint16_t minu16(uint16_t x, uint16_t y);
+CzU64 minu64(CzU64 x, CzU64 y);
 
 CZ_CONST CZ_USE_RET
-uint32_t maxu32(uint32_t x, uint32_t y);
+CzU32 maxu32v(CzU32 count, ...);
 CZ_CONST CZ_USE_RET
-uint32_t minu32(uint32_t x, uint32_t y);
+CzU32 minu32v(CzU32 count, ...);
 
 CZ_CONST CZ_USE_RET
-uint64_t maxu64(uint64_t x, uint64_t y);
+CzU64 maxu64v(CzU32 count, ...);
 CZ_CONST CZ_USE_RET
-uint64_t minu64(uint64_t x, uint64_t y);
+CzU64 minu64v(CzU32 count, ...);
 
-CZ_CONST CZ_USE_RET
-uint8_t maxu8v(size_t count, ...);
-CZ_CONST CZ_USE_RET
-uint8_t minu8v(size_t count, ...);
-
-CZ_CONST CZ_USE_RET
-uint16_t maxu16v(size_t count, ...);
-CZ_CONST CZ_USE_RET
-uint16_t minu16v(size_t count, ...);
-
-CZ_CONST CZ_USE_RET
-uint32_t maxu32v(size_t count, ...);
-CZ_CONST CZ_USE_RET
-uint32_t minu32v(size_t count, ...);
-
-CZ_CONST CZ_USE_RET
-uint64_t maxu64v(size_t count, ...);
-CZ_CONST CZ_USE_RET
-uint64_t minu64v(size_t count, ...);
-
-#if SIZE_MAX == UINT8_MAX
-#define maxz(x, y)    maxu8(x, y)
-#define minz(x, y)    minu8(x, y)
-#define maxzv(c, ...) maxu8v(c, __VA_ARGS__)
-#define minzv(c, ...) minu8v(c, __VA_ARGS__)
-#elif SIZE_MAX == UINT16_MAX
-#define maxz(x, y)    maxu16(x, y)
-#define minz(x, y)    minu16(x, y)
-#define maxzv(c, ...) maxu16v(c, __VA_ARGS__)
-#define minzv(c, ...) minu16v(c, __VA_ARGS__)
-#elif SIZE_MAX == UINT32_MAX
+#if SIZE_MAX == UINT32_MAX
 #define maxz(x, y)    maxu32(x, y)
 #define minz(x, y)    minu32(x, y)
 #define maxzv(c, ...) maxu32v(c, __VA_ARGS__)
@@ -117,4 +87,6 @@ uint64_t minu64v(size_t count, ...);
 #define minz(x, y)    minu64(x, y)
 #define maxzv(c, ...) maxu64v(c, __VA_ARGS__)
 #define minzv(c, ...) minu64v(c, __VA_ARGS__)
+#else
+#error "Unsupported size_t width"
 #endif
