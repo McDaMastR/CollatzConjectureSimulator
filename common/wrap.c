@@ -3699,6 +3699,144 @@ enum CzResult czWrap_flock(int fd, int op)
 }
 #endif
 
+#if CZ_WRAP_LOCKF
+enum CzResult czWrap_lockf(int fd, int func, off_t size)
+{
+	int r = lockf(fd, func, size);
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+#if CZ_DARWIN
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EOPNOTSUPP:
+		return CZ_RESULT_BAD_FILE;
+	case EINVAL:
+		if (func == F_LOCK)
+			return CZ_RESULT_BAD_FILE;
+		if (func == F_TEST)
+			return CZ_RESULT_BAD_FILE;
+		if (func == F_TLOCK)
+			return CZ_RESULT_BAD_FILE;
+		if (func == F_ULOCK)
+			return CZ_RESULT_BAD_FILE;
+		return CZ_RESULT_NO_SUPPORT;
+	case EDEADLK:
+		return CZ_RESULT_DEADLOCK;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOLCK:
+		return CZ_RESULT_NO_LOCK;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_GNU_LINUX
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EDEADLK:
+		return CZ_RESULT_DEADLOCK;
+	case EACCES:
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOLCK:
+		return CZ_RESULT_NO_LOCK;
+	case EINVAL:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_FREE_BSD
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EINVAL:
+		if (func == F_LOCK)
+			return CZ_RESULT_BAD_FILE;
+		if (func == F_TEST)
+			return CZ_RESULT_BAD_FILE;
+		if (func == F_TLOCK)
+			return CZ_RESULT_BAD_FILE;
+		if (func == F_ULOCK)
+			return CZ_RESULT_BAD_FILE;
+		return CZ_RESULT_NO_SUPPORT;
+	case EDEADLK:
+		return CZ_RESULT_DEADLOCK;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOLCK:
+		return CZ_RESULT_NO_LOCK;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif (                                    \
+		CZ_XOPEN_VERSION >= CZ_SUS_1994 && \
+		CZ_XOPEN_UNIX > 0) ||              \
+	CZ_XOPEN_VERSION >= CZ_SUS_1997 ||     \
+	CZ_POSIX_VERSION >= CZ_POSIX_2001
+
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EOPNOTSUPP:
+		return CZ_RESULT_BAD_FILE;
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_RANGE;
+	case EINVAL:
+		off_t pos = lseek(fd, 0, SEEK_CUR);
+		if (pos != -1 && size < 0 && pos + size < 0)
+			return CZ_RESULT_BAD_SIZE;
+		if (func == F_LOCK)
+			return CZ_RESULT_BAD_FILE;
+		if (func == F_TEST)
+			return CZ_RESULT_BAD_FILE;
+		if (func == F_TLOCK)
+			return CZ_RESULT_BAD_FILE;
+		if (func == F_ULOCK)
+			return CZ_RESULT_BAD_FILE;
+		return CZ_RESULT_NO_SUPPORT;
+	case EDEADLK:
+		if (func == F_LOCK)
+			return CZ_RESULT_DEADLOCK;
+		return CZ_RESULT_NO_LOCK;
+	case EACCES:
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOLCK:
+		return CZ_RESULT_NO_LOCK;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	off_t pos = lseek(fd, 0, SEEK_CUR);
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (pos == -1)
+		return CZ_RESULT_BAD_FILE;
+	if (size < 0 && pos + size < 0)
+		return CZ_RESULT_BAD_SIZE;
+	if (func == F_LOCK)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (func == F_TEST)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (func == F_TLOCK)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (func == F_ULOCK)
+		return CZ_RESULT_INTERNAL_ERROR;
+	return CZ_RESULT_NO_SUPPORT;
+#endif
+}
+#endif
+
 #if CZ_WRAP_TRUNCATE
 enum CzResult czWrap_truncate(const char* path, off_t size)
 {

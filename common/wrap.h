@@ -1562,6 +1562,74 @@ enum CzResult czWrap_flock(int fd, int op);
 #endif
 
 /**
+ * @def CZ_WRAP_LOCKF
+ * 
+ * @brief Specifies whether @c lockf is defined.
+ */
+#if !defined(CZ_WRAP_LOCKF)
+#if (                                                  \
+		CZ_DARWIN &&                                   \
+		(                                              \
+			CZ_DARWIN_C_SOURCE ||                      \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996)) ||    \
+	(                                                  \
+		CZ_GNU_LINUX &&                                \
+		CZ_XOPEN_SOURCE >= CZ_SUS_1997 &&              \
+		CZ_GLIBC) ||                                   \
+	(                                                  \
+		CZ_GNU_LINUX &&                                \
+		(                                              \
+			CZ_BSD_SOURCE ||                           \
+			CZ_SVID_SOURCE) &&                         \
+		CZ_GLIBC &&                                    \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 20)) ||  \
+	(                                                  \
+		CZ_GNU_LINUX &&                                \
+		CZ_DEFAULT_SOURCE &&                           \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 19)) || \
+	CZ_FREE_BSD ||                                     \
+	(                                                  \
+		CZ_XOPEN_VERSION >= CZ_SUS_1994 &&             \
+		CZ_XOPEN_UNIX > 0) ||                          \
+	CZ_XOPEN_VERSION >= CZ_SUS_1997 ||                 \
+	CZ_POSIX_VERSION >= CZ_POSIX_2001
+#define CZ_WRAP_LOCKF 1
+#else
+#define CZ_WRAP_LOCKF 0
+#endif
+#endif
+
+#if CZ_WRAP_LOCKF
+/**
+ * @brief Wraps @c lockf.
+ * 
+ * Calls @c lockf with @p fd and @p op.
+ * 
+ * @param[in] fd The first argument to pass to @c lockf.
+ * @param[in] func The second argument to pass to @c lockf.
+ * @param[in] size The third argument to pass to @c lockf.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
+ * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_RANGE The file section extended past the maximum file size.
+ * @retval CZ_RESULT_BAD_SIZE The sum of @p size and the current file offset was negative.
+ * @retval CZ_RESULT_DEADLOCK The file lock would have caused a deadlock.
+ * @retval CZ_RESULT_IN_USE The file section was already locked.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_LOCK No file locks were available.
+ * @retval CZ_RESULT_NO_SUPPORT @p func was invalid or unsupported by the platform.
+ * 
+ * @pre @p fd is an open file descriptor with write access.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_LOCKF is defined as a nonzero value.
+ */
+CZ_WR_FILDES(1)
+enum CzResult czWrap_lockf(int fd, int func, off_t size);
+#endif
+
+/**
  * @def CZ_WRAP_TRUNCATE
  * 
  * @brief Specifies whether @c truncate is defined.
