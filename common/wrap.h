@@ -103,7 +103,7 @@ enum CzResult czWrap_realloc(void* restrict* res, void* ptr, size_t size);
 		CZ_GNU_LINUX &&                                \
 		CZ_GNU_SOURCE &&                               \
 		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 26) &&  \
-		CZ_GLIBC_VERSION <= CZ_MAKE_VERSION(2, 28)) || \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 29)) ||  \
 	(                                                  \
 		CZ_GNU_LINUX &&                                \
 		CZ_DEFAULT_SOURCE &&                           \
@@ -441,12 +441,13 @@ enum CzResult czWrap_aligned_offset_recalloc(
 		CZ_DARWIN_C_SOURCE) ||                         \
 	(                                                  \
 		CZ_GNU_LINUX &&                                \
-		CZ_BSD_SOURCE &&                               \
-		CZ_GLIBC_VERSION <= CZ_MAKE_VERSION(2, 19)) || \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
 		CZ_DEFAULT_SOURCE &&                           \
 		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 19)) || \
+	(                                                  \
+		CZ_GNU_LINUX &&                                \
+		CZ_BSD_SOURCE &&                               \
+		CZ_GLIBC &&                                    \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 20)) ||  \
 	CZ_FREE_BSD
 #define CZ_WRAP_MADVISE 1
 #else
@@ -581,7 +582,8 @@ enum CzResult czWrap_fopen(FILE* restrict* res, const char* path, const char* mo
 		CZ_GNU_LINUX &&                             \
 		(                                           \
 			CZ_POSIX_C_SOURCE ||                    \
-			CZ_XOPEN_SOURCE)) ||                    \
+			CZ_XOPEN_SOURCE) &&                     \
+		CZ_GLIBC) ||                                \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988
 #define CZ_WRAP_FDOPEN 1
 #else
@@ -667,7 +669,7 @@ enum CzResult czWrap_freopen(const char* path, const char* mode, FILE* stream);
 		CZ_GNU_LINUX &&                                    \
 		CZ_GNU_SOURCE &&                                   \
 		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(1, 1) &&       \
-		CZ_GLIBC_VERSION <= CZ_MAKE_VERSION(2, 9)) ||      \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 10)) ||      \
 	(                                                      \
 		CZ_GNU_LINUX &&                                    \
 		(                                                  \
@@ -1185,7 +1187,7 @@ enum CzResult czWrap_unlink(const char* path);
 		CZ_GNU_LINUX &&                                    \
 		CZ_ATFILE_SOURCE &&                                \
 		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 4) &&       \
-		CZ_GLIBC_VERSION <= CZ_MAKE_VERSION(2, 9)) ||      \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 10)) ||      \
 	(                                                      \
 		CZ_GNU_LINUX &&                                    \
 		(                                                  \
@@ -1244,7 +1246,8 @@ enum CzResult czWrap_unlinkat(int fd, const char* path, int flags);
 			CZ_POSIX_C_SOURCE >= CZ_POSIX_1988)) || \
 	(                                               \
 		CZ_GNU_LINUX &&                             \
-		CZ_POSIX_C_SOURCE) ||                       \
+		CZ_POSIX_C_SOURCE &&                        \
+		CZ_GLIBC) ||                                \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988
 #define CZ_WRAP_FILENO 1
 #else
@@ -1360,7 +1363,8 @@ enum CzResult czWrap_stat(const char* path, struct stat* st);
 #if !defined(CZ_WRAP_LSTAT)
 #if (                                                  \
 		CZ_GNU_LINUX &&                                \
-		CZ_XOPEN_SOURCE >= CZ_SUS_1997) ||             \
+		CZ_XOPEN_SOURCE >= CZ_SUS_1997 &&              \
+		CZ_GLIBC) ||                                   \
 	(                                                  \
 		CZ_GNU_LINUX &&                                \
 		CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 &&          \
@@ -1368,7 +1372,8 @@ enum CzResult czWrap_stat(const char* path, struct stat* st);
 	(                                                  \
 		CZ_GNU_LINUX &&                                \
 		CZ_BSD_SOURCE &&                               \
-		CZ_GLIBC_VERSION <= CZ_MAKE_VERSION(2, 19)) || \
+		CZ_GLIBC &&                                    \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 20)) ||  \
 	(                                                  \
 		CZ_GNU_LINUX &&                                \
 		CZ_DEFAULT_SOURCE &&                           \
@@ -1465,7 +1470,7 @@ enum CzResult czWrap_fstat(int fd, struct stat* st);
 		CZ_GNU_LINUX &&                                    \
 		CZ_ATFILE_SOURCE &&                                \
 		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 4) &&       \
-		CZ_GLIBC_VERSION <= CZ_MAKE_VERSION(2, 9)) ||      \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 10)) ||      \
 	(                                                      \
 		CZ_GNU_LINUX &&                                    \
 		(                                                  \
@@ -1524,7 +1529,8 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
 			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996)) ||    \
 	(                                                  \
 		CZ_GNU_LINUX &&                                \
-		CZ_XOPEN_SOURCE >= CZ_SUS_1997) ||             \
+		CZ_XOPEN_SOURCE >= CZ_SUS_1997 &&              \
+		CZ_GLIBC) ||                                   \
 	(                                                  \
 		CZ_GNU_LINUX &&                                \
 		(                                              \
@@ -1534,7 +1540,8 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
 	(                                                  \
 		CZ_GNU_LINUX &&                                \
 		CZ_BSD_SOURCE &&                               \
-		CZ_GLIBC_VERSION <= CZ_MAKE_VERSION(2, 19)) || \
+		CZ_GLIBC &&                                    \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 20)) ||  \
 	CZ_FREE_BSD ||                                     \
 	(                                                  \
 		CZ_XOPEN_VERSION >= CZ_SUS_1994 &&             \
@@ -1589,7 +1596,8 @@ enum CzResult czWrap_truncate(const char* path, off_t size);
 			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996)) ||      \
 	(                                                    \
 		CZ_GNU_LINUX &&                                  \
-		CZ_XOPEN_SOURCE >= CZ_SUS_1997) ||               \
+		CZ_XOPEN_SOURCE >= CZ_SUS_1997 &&                \
+		CZ_GLIBC) ||                                     \
 	(                                                    \
 		CZ_GNU_LINUX &&                                  \
 		(                                                \
@@ -1599,7 +1607,8 @@ enum CzResult czWrap_truncate(const char* path, off_t size);
 	(                                                    \
 		CZ_GNU_LINUX &&                                  \
 		CZ_BSD_SOURCE &&                                 \
-		CZ_GLIBC_VERSION <= CZ_MAKE_VERSION(2, 19)) ||   \
+		CZ_GLIBC &&                                      \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 20)) ||    \
 	CZ_FREE_BSD ||                                       \
 	(                                                    \
 		CZ_XOPEN_VERSION >= CZ_SUS_1994 &&               \
@@ -1801,13 +1810,14 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 		CZ_GNU_LINUX &&                                \
 		CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 &&          \
 		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 8) &&   \
-		CZ_GLIBC_VERSION <= CZ_MAKE_VERSION(2, 15)) || \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 16)) ||  \
 	(                                                  \
 		CZ_GNU_LINUX &&                                \
 		(                                              \
 			CZ_BSD_SOURCE ||                           \
 			CZ_XOPEN_SOURCE >= CZ_XPG_1985) &&         \
-		CZ_GLIBC_VERSION <= CZ_MAKE_VERSION(2, 15)) || \
+		CZ_GLIBC &&                                    \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 16)) ||  \
 	(                                                  \
 		CZ_GNU_LINUX &&                                \
 		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 16)) || \
@@ -1856,7 +1866,8 @@ enum CzResult czWrap_fsync(int fd);
 		CZ_GNU_LINUX &&                              \
 		(                                            \
 			CZ_POSIX_C_SOURCE >= CZ_POSIX_1993 ||    \
-			CZ_XOPEN_SOURCE >= CZ_SUS_1997)) ||      \
+			CZ_XOPEN_SOURCE >= CZ_SUS_1997) &&       \
+		CZ_GLIBC) ||                                 \
 	CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(11, 1) || \
 	CZ_XOPEN_REALTIME > 0
 #define CZ_WRAP_FDATASYNC 1
@@ -1959,7 +1970,7 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode);
 		CZ_GNU_LINUX &&                                    \
 		CZ_ATFILE_SOURCE &&                                \
 		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 4) &&       \
-		CZ_GLIBC_VERSION <= CZ_MAKE_VERSION(2, 9)) ||      \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 10)) ||      \
 	(                                                      \
 		CZ_GNU_LINUX &&                                    \
 		(                                                  \
