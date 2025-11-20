@@ -3669,7 +3669,7 @@ enum CzResult czWrap_flock(int fd, int op)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOLCK:
-		return CZ_RESULT_NO_OPEN;
+		return CZ_RESULT_NO_LOCK;
 	case EINVAL:
 		return CZ_RESULT_NO_SUPPORT;
 	default:
@@ -3687,7 +3687,7 @@ enum CzResult czWrap_flock(int fd, int op)
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOLCK:
-		return CZ_RESULT_NO_OPEN;
+		return CZ_RESULT_NO_LOCK;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -6410,7 +6410,7 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 	case ENODEV:
 		return CZ_RESULT_BAD_FILE;
 	case EAGAIN:
-		return CZ_RESULT_IN_USE;
+		return CZ_RESULT_NO_LOCK;
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EMFILE:
@@ -6450,7 +6450,7 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 	case ENODEV:
 		return CZ_RESULT_BAD_FILE;
 	case EAGAIN:
-		return CZ_RESULT_IN_USE;
+		return CZ_RESULT_NO_LOCK;
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case EMFILE:
@@ -6472,7 +6472,7 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 	case ENODEV:
 		return CZ_RESULT_BAD_FILE;
 	case EAGAIN:
-		return CZ_RESULT_IN_USE;
+		return CZ_RESULT_NO_LOCK;
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 	case ENOTSUP:

@@ -1550,7 +1550,7 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
  * @retval CZ_RESULT_IN_USE The file was already locked.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
- * @retval CZ_RESULT_NO_OPEN No file locks were available.
+ * @retval CZ_RESULT_NO_LOCK No file locks were available.
  * @retval CZ_RESULT_NO_SUPPORT @p op was invalid or unsupported by the platform.
  * 
  * @pre @p fd is an open file descriptor.
@@ -2492,6 +2492,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
  * @retval CZ_RESULT_BAD_OFFSET @p offset was an invalid file offset.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
+ * @retval CZ_RESULT_NO_LOCK No memory locks were available.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_OPEN The maximum number of mapped files was reached.
  * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the filesystem or platform.
