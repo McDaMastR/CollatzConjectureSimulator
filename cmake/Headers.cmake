@@ -1,6 +1,7 @@
 include(CheckIncludeFile)
 
 check_include_file(stdcountof.h HAVE_STDCOUNTOF_H)
+check_include_file(sys/file.h HAVE_SYS_FILE_H)
 check_include_file(sys/mman.h HAVE_SYS_MMAN_H)
 check_include_file(sys/param.h HAVE_SYS_PARAM_H)
 check_include_file(sys/select.h HAVE_SYS_SELECT_H)
@@ -82,6 +83,7 @@ set(INCLUDE_HEADERS
 
 	# Optional headers
 	"$<$<BOOL:${HAVE_STDCOUNTOF_H}>:<stdcountof.h$<ANGLE-R>>"
+	"$<$<BOOL:${HAVE_SYS_FILE_H}>:<sys/file.h$<ANGLE-R>>"
 	"$<$<BOOL:${HAVE_SYS_MMAN_H}>:<sys/mman.h$<ANGLE-R>>"
 	"$<$<BOOL:${HAVE_SYS_PARAM_H}>:<sys/param.h$<ANGLE-R>>"
 	"$<$<BOOL:${HAVE_SYS_SELECT_H}>:<sys/select.h$<ANGLE-R>>"

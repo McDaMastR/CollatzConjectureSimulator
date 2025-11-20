@@ -1517,6 +1517,51 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
 #endif
 
 /**
+ * @def CZ_WRAP_FLOCK
+ * 
+ * @brief Specifies whether @c flock is defined.
+ */
+#if !defined(CZ_WRAP_FLOCK)
+#if (                          \
+		CZ_DARWIN &&           \
+		CZ_DARWIN_C_SOURCE) || \
+	(                          \
+		CZ_GNU_LINUX &&        \
+		CZ_GLIBC) ||           \
+	CZ_FREE_BSD
+#define CZ_WRAP_FLOCK 1
+#else
+#define CZ_WRAP_FLOCK 0
+#endif
+#endif
+
+#if CZ_WRAP_FLOCK
+/**
+ * @brief Wraps @c flock.
+ * 
+ * Calls @c flock with @p fd and @p op.
+ * 
+ * @param[in] fd The first argument to pass to @c flock.
+ * @param[in] op The second argument to pass to @c flock.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS @p fd was an invalid file descriptor.
+ * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_IN_USE The file was already locked.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_OPEN No file locks were available.
+ * @retval CZ_RESULT_NO_SUPPORT @p op was invalid or unsupported by the platform.
+ * 
+ * @pre @p fd is an open file descriptor.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_FLOCK is defined as a nonzero value.
+ */
+CZ_FILDES(1)
+enum CzResult czWrap_flock(int fd, int op);
+#endif
+
+/**
  * @def CZ_WRAP_TRUNCATE
  * 
  * @brief Specifies whether @c truncate is defined.

@@ -3639,6 +3639,66 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
 }
 #endif
 
+#if CZ_WRAP_FLOCK
+enum CzResult czWrap_flock(int fd, int op)
+{
+	int r = flock(fd, op);
+	if CZ_EXPECT (!r)
+		return CZ_RESULT_SUCCESS;
+
+#if CZ_DARWIN
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EINVAL:
+	case ENOTSUP:
+		return CZ_RESULT_BAD_FILE;
+	case EWOULDBLOCK:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_GNU_LINUX
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EWOULDBLOCK:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOLCK:
+		return CZ_RESULT_NO_OPEN;
+	case EINVAL:
+		return CZ_RESULT_NO_SUPPORT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_FREE_BSD
+	switch (errno) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EINVAL:
+	case EOPNOTSUPP:
+		return CZ_RESULT_BAD_FILE;
+	case EWOULDBLOCK:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOLCK:
+		return CZ_RESULT_NO_OPEN;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	return CZ_RESULT_INTERNAL_ERROR;
+#endif
+}
+#endif
+
 #if CZ_WRAP_TRUNCATE
 enum CzResult czWrap_truncate(const char* path, off_t size)
 {
