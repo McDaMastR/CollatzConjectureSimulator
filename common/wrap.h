@@ -474,7 +474,7 @@ enum CzResult czWrap_aligned_offset_recalloc(
  * @retval CZ_RESULT_NO_FILE The address range does not map a file.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_OPEN The maximum number of cgroups was reached.
- * @retval CZ_RESULT_NO_SUPPORT @p advice was unsupported by the platform.
+ * @retval CZ_RESULT_NO_SUPPORT @p advice was invalid or unsupported by the platform.
  * 
  * @pre @p addr is nonnull.
  * 
@@ -525,7 +525,7 @@ enum CzResult czWrap_madvise(void* addr, size_t size, int advice);
  * @retval CZ_RESULT_BAD_ADDRESS The address range included invalid or unallocated memory.
  * @retval CZ_RESULT_BAD_ALIGNMENT @p addr was not page-aligned.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero.
- * @retval CZ_RESULT_NO_SUPPORT @p advice was unsupported by the platform.
+ * @retval CZ_RESULT_NO_SUPPORT @p advice was invalid or unsupported by the platform.
  * 
  * @pre @p addr is nonnull.
  * 

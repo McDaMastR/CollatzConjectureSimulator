@@ -30,7 +30,7 @@ enum CzResult czWrap_malloc(void* restrict* res, size_t size)
 	double t = program_time();
 	log_error(stderr, "malloc failed with size %zu (%.3fms)", size, t);
 
-#if CZ_DARWIN || CZ_GNU_LINUX
+#if CZ_DARWIN || CZ_GNU_LINUX || CZ_FREE_BSD
 	switch (errno) {
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
@@ -71,7 +71,7 @@ enum CzResult czWrap_calloc(void* restrict* res, size_t count, size_t size)
 	double t = program_time();
 	log_error(stderr, "calloc failed with count %zu, size %zu (%.3fms)", count, size, t);
 
-#if CZ_DARWIN || CZ_GNU_LINUX
+#if CZ_DARWIN || CZ_GNU_LINUX || CZ_FREE_BSD
 	switch (errno) {
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
@@ -312,6 +312,7 @@ enum CzResult czWrap_posix_memalign(int* res, void* restrict* ptr, size_t alignm
 		stderr, "posix_memalign failed with ptr 0x%016" PRIxPTR ", alignment %zu, size %zu (%.3fms)",
 		(uintptr_t) ptr, alignment, size, t);
 
+#if CZ_DARWIN || CZ_GNU_LINUX || CZ_FREE_BSD || CZ_POSIX_VERSION >= CZ_POSIX_2001
 	switch (r) {
 	case EINVAL:
 		return CZ_RESULT_BAD_ALIGNMENT;
@@ -320,6 +321,13 @@ enum CzResult czWrap_posix_memalign(int* res, void* restrict* ptr, size_t alignm
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
+#else
+	if (alignment < sizeof(void*))
+		return CZ_RESULT_BAD_ALIGNMENT;
+	if (alignment & (alignment - 1))
+		return CZ_RESULT_BAD_ALIGNMENT;
+	return CZ_RESULT_NO_MEMORY;
+#endif
 }
 #endif
 
@@ -422,8 +430,14 @@ enum CzResult czWrap_madvise(void* addr, size_t size, int advice)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
+	int err = errno;
+#if CZ_GNU_LINUX
+	long pageSize = sysconf(_SC_PAGESIZE);
+	errno = err;
+#endif
+
 #if CZ_DARWIN
-	switch (errno) {
+	switch (err) {
 	case EPERM:
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
@@ -435,15 +449,14 @@ enum CzResult czWrap_madvise(void* addr, size_t size, int advice)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_GNU_LINUX
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EPERM:
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
 		return CZ_RESULT_BAD_ADDRESS;
 	case EINVAL:
-		long pageSize = sysconf(_SC_PAGESIZE);
-		if (pageSize > 0 && (uintptr_t) addr & (uintptr_t) (pageSize - 1))
+		if ((uintptr_t) addr & (uintptr_t) (pageSize - 1))
 			return CZ_RESULT_BAD_ALIGNMENT;
 
 		switch (advice) {
@@ -494,7 +507,7 @@ enum CzResult czWrap_madvise(void* addr, size_t size, int advice)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EPERM:
 		return CZ_RESULT_BAD_ACCESS;
 	case ENOMEM:
@@ -519,6 +532,12 @@ enum CzResult czWrap_posix_madvise(int* res, void* addr, size_t size, int advice
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
+#if !CZ_DARWIN && !CZ_FREE_BSD
+	int err = errno;
+	long pageSize = sysconf(_SC_PAGESIZE);
+	errno = err;
+#endif
+
 #if CZ_DARWIN
 	switch (r) {
 	case EPERM:
@@ -533,15 +552,12 @@ enum CzResult czWrap_posix_madvise(int* res, void* addr, size_t size, int advice
 	}
 #elif CZ_GNU_LINUX
 	switch (r) {
-	case EINVAL:
-		long pageSize = sysconf(_SC_PAGESIZE);
-		if (pageSize <= 0)
-			return CZ_RESULT_NO_SUPPORT;
-		if (!((uintptr_t) addr & (uintptr_t) (pageSize - 1)))
-			return CZ_RESULT_NO_SUPPORT;
-		return CZ_RESULT_BAD_ALIGNMENT;
 	case ENOMEM:
 		return CZ_RESULT_BAD_ADDRESS;
+	case EINVAL:
+		if ((uintptr_t) addr & (uintptr_t) (pageSize - 1))
+			return CZ_RESULT_BAD_ALIGNMENT;
+		return CZ_RESULT_NO_SUPPORT;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
@@ -556,23 +572,25 @@ enum CzResult czWrap_posix_madvise(int* res, void* addr, size_t size, int advice
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#else
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	switch (r) {
 	case ENOMEM:
 		return CZ_RESULT_BAD_ADDRESS;
 	case EINVAL:
 		if (!size)
 			return CZ_RESULT_BAD_SIZE;
-
-		long pageSize = sysconf(_SC_PAGESIZE);
-		if (pageSize <= 0)
-			return CZ_RESULT_NO_SUPPORT;
-		if (!((uintptr_t) addr & (uintptr_t) (pageSize - 1)))
-			return CZ_RESULT_NO_SUPPORT;
-		return CZ_RESULT_BAD_ALIGNMENT;
+		if ((uintptr_t) addr & (uintptr_t) (pageSize - 1))
+			return CZ_RESULT_BAD_ALIGNMENT;
+		return CZ_RESULT_NO_SUPPORT;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
+#else
+	if (!size)
+		return CZ_RESULT_BAD_SIZE;
+	if ((uintptr_t) addr & (uintptr_t) (pageSize - 1))
+		return CZ_RESULT_BAD_ALIGNMENT;
+	return CZ_RESULT_INTERNAL_ERROR;
 #endif
 }
 #endif
@@ -845,8 +863,14 @@ enum CzResult czWrap_fdopen(FILE* restrict* res, int fd, const char* mode)
 		return CZ_RESULT_SUCCESS;
 	}
 
+	int err = errno;
+#if !CZ_DARWIN && !CZ_GNU_LINUX && !CZ_FREE_BSD && CZ_POSIX_VERSION < CZ_POSIX_2001
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
+
 #if CZ_DARWIN
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 	case EINVAL:
@@ -858,7 +882,7 @@ enum CzResult czWrap_fdopen(FILE* restrict* res, int fd, const char* mode)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_GNU_LINUX
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_ACCESS;
@@ -871,7 +895,7 @@ enum CzResult czWrap_fdopen(FILE* restrict* res, int fd, const char* mode)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 	case EINVAL:
 	case ENOTTY:
@@ -882,7 +906,7 @@ enum CzResult czWrap_fdopen(FILE* restrict* res, int fd, const char* mode)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 	case EINVAL:
 		return CZ_RESULT_BAD_ACCESS;
@@ -895,6 +919,8 @@ enum CzResult czWrap_fdopen(FILE* restrict* res, int fd, const char* mode)
 	}
 #else
 	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (openMax != -1 && fd >= openMax)
 		return CZ_RESULT_BAD_ACCESS;
 	if (mode[0] == 'r')
 		return CZ_RESULT_INTERNAL_ERROR;
@@ -1004,10 +1030,6 @@ enum CzResult czWrap_freopen(const char* path, const char* mode, FILE* stream)
 	case EBUSY:
 	case ETXTBSY:
 		return CZ_RESULT_IN_USE;
-#if EAGAIN != EWOULDBLOCK
-	case EWOULDBLOCK:
-		return CZ_RESULT_IN_USE;
-#endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case EDESTADDRREQ:
@@ -1310,10 +1332,6 @@ enum CzResult czWrap_fclose(FILE* stream)
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
-#if EAGAIN != EWOULDBLOCK
-	case EWOULDBLOCK:
-		return CZ_RESULT_IN_USE;
-#endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case EDESTADDRREQ:
@@ -1474,10 +1492,6 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence)
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
-#if EAGAIN != EWOULDBLOCK
-	case EWOULDBLOCK:
-		return CZ_RESULT_IN_USE;
-#endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -1630,10 +1644,6 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence)
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
-#if EAGAIN != EWOULDBLOCK
-	case EWOULDBLOCK:
-		return CZ_RESULT_IN_USE;
-#endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -1764,10 +1774,6 @@ enum CzResult czWrap_ftell(long* res, FILE* stream)
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
-#if EAGAIN != EWOULDBLOCK
-	case EWOULDBLOCK:
-		return CZ_RESULT_IN_USE;
-#endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -1889,10 +1895,6 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream)
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
-#if EAGAIN != EWOULDBLOCK
-	case EWOULDBLOCK:
-		return CZ_RESULT_IN_USE;
-#endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -2015,10 +2017,6 @@ enum CzResult czWrap_fgetpos(FILE* stream, fpos_t* pos)
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
-#if EAGAIN != EWOULDBLOCK
-	case EWOULDBLOCK:
-		return CZ_RESULT_IN_USE;
-#endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -2138,10 +2136,6 @@ enum CzResult czWrap_fsetpos(FILE* stream, const fpos_t* pos)
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
-#if EAGAIN != EWOULDBLOCK
-	case EWOULDBLOCK:
-		return CZ_RESULT_IN_USE;
-#endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -2504,10 +2498,6 @@ enum CzResult czWrap_fflush(FILE* stream)
 		return CZ_RESULT_BAD_STREAM;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
-#if EAGAIN != EWOULDBLOCK
-	case EWOULDBLOCK:
-		return CZ_RESULT_IN_USE;
-#endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case EDESTADDRREQ:
@@ -3031,8 +3021,14 @@ enum CzResult czWrap_unlinkat(int fd, const char* path, int flags)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
+	int err = errno;
+#if !CZ_DARWIN && !CZ_GNU_LINUX && !CZ_FREE_BSD && CZ_POSIX_VERSION < CZ_POSIX_2008
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
+
 #if CZ_DARWIN
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 	case EINVAL:
@@ -3061,7 +3057,7 @@ enum CzResult czWrap_unlinkat(int fd, const char* path, int flags)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_GNU_LINUX
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 	case EPERM:
@@ -3100,7 +3096,7 @@ enum CzResult czWrap_unlinkat(int fd, const char* path, int flags)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 	case EINVAL:
@@ -3131,7 +3127,7 @@ enum CzResult czWrap_unlinkat(int fd, const char* path, int flags)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2008
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 	case EINVAL:
@@ -3159,10 +3155,16 @@ enum CzResult czWrap_unlinkat(int fd, const char* path, int flags)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #else
-	if (fd < 0 && fd != AT_FDCWD)
-		return CZ_RESULT_BAD_ACCESS;
 	if (!path[0])
 		return CZ_RESULT_BAD_PATH;
+	if (fd == AT_FDCWD)
+		return CZ_RESULT_NO_FILE;
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
+		return CZ_RESULT_NO_FILE;
+	if (fd >= openMax)
+		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_NO_FILE;
 #endif
 }
@@ -3176,7 +3178,7 @@ enum CzResult czWrap_fileno(int* res, FILE* stream)
 #if CZ_DARWIN || CZ_WIN32
 	*res = fd;
 	return CZ_RESULT_SUCCESS;
-#elif CZ_POSIX_VERSION >= CZ_POSIX_1988
+#elif CZ_GNU_LINUX || CZ_FREE_BSD || CZ_POSIX_VERSION >= CZ_POSIX_1988
 	if CZ_EXPECT (fd != -1) {
 		*res = fd;
 		return CZ_RESULT_SUCCESS;
@@ -3222,7 +3224,7 @@ enum CzResult czWrap_isatty(int* res, int fd)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
+#elif CZ_DARWIN || CZ_FREE_BSD || CZ_POSIX_VERSION >= CZ_POSIX_2001
 	if CZ_EXPECT (r || !errno || errno == ENOTTY) {
 		*res = r;
 		return CZ_RESULT_SUCCESS;
@@ -3235,6 +3237,15 @@ enum CzResult czWrap_isatty(int* res, int fd)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #else
+	int err = errno;
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+
+	if CZ_NOEXPECT (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if CZ_NOEXPECT (openMax != -1 && fd >= openMax)
+		return CZ_RESULT_BAD_ACCESS;
+
 	*res = r;
 	return CZ_RESULT_SUCCESS;
 #endif
@@ -3460,8 +3471,14 @@ enum CzResult czWrap_fstat(int fd, struct stat* st)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
+	int err = errno;
+#if !CZ_DARWIN && !CZ_GNU_LINUX && !CZ_FREE_BSD && CZ_POSIX_VERSION < CZ_POSIX_1988
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
+
 #if CZ_DARWIN
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
@@ -3474,7 +3491,7 @@ enum CzResult czWrap_fstat(int fd, struct stat* st)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_GNU_LINUX
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
@@ -3487,7 +3504,7 @@ enum CzResult czWrap_fstat(int fd, struct stat* st)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
@@ -3501,7 +3518,7 @@ enum CzResult czWrap_fstat(int fd, struct stat* st)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EOVERFLOW:
@@ -3512,7 +3529,7 @@ enum CzResult czWrap_fstat(int fd, struct stat* st)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_1988
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	default:
@@ -3520,6 +3537,8 @@ enum CzResult czWrap_fstat(int fd, struct stat* st)
 	}
 #else
 	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (openMax != -1 && fd >= openMax)
 		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
@@ -3533,8 +3552,14 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
+	int err = errno;
+#if !CZ_DARWIN && !CZ_GNU_LINUX && !CZ_FREE_BSD && CZ_POSIX_VERSION < CZ_POSIX_2008
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
+
 #if CZ_DARWIN
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 	case EINVAL:
@@ -3556,7 +3581,7 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_GNU_LINUX
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 	case EINVAL:
@@ -3583,7 +3608,7 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 	case EINVAL:
@@ -3609,7 +3634,7 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2008
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 	case EINVAL:
@@ -3630,10 +3655,16 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* st, int flag
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #else
-	if (fd < 0 && fd != AT_FDCWD)
-		return CZ_RESULT_BAD_ACCESS;
 	if (!path[0])
 		return CZ_RESULT_BAD_PATH;
+	if (fd == AT_FDCWD)
+		return CZ_RESULT_NO_FILE;
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
+		return CZ_RESULT_NO_FILE;
+	if (fd >= openMax)
+		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_NO_FILE;
 #endif
 }
@@ -3646,8 +3677,14 @@ enum CzResult czWrap_flock(int fd, int op)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
+	int err = errno;
+#if !CZ_DARWIN && !CZ_GNU_LINUX && !CZ_FREE_BSD
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
+
 #if CZ_DARWIN
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
@@ -3661,7 +3698,7 @@ enum CzResult czWrap_flock(int fd, int op)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_GNU_LINUX
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EWOULDBLOCK:
@@ -3676,7 +3713,7 @@ enum CzResult czWrap_flock(int fd, int op)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
@@ -3694,6 +3731,10 @@ enum CzResult czWrap_flock(int fd, int op)
 #else
 	if (fd < 0)
 		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (fd >= openMax)
+		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
 }
@@ -3706,8 +3747,27 @@ enum CzResult czWrap_lockf(int fd, int func, off_t size)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
+	int err = errno;
+#if !CZ_DARWIN && !CZ_GNU_LINUX && !CZ_FREE_BSD
+	off_t pos = lseek(fd, 0, SEEK_CUR);
+	int posErr = (pos == -1) ? errno : 0;
+	errno = err;
+#endif
+#if !CZ_DARWIN &&                         \
+	!CZ_GNU_LINUX &&                      \
+	!CZ_FREE_BSD &&                       \
+	CZ_POSIX_VERSION < CZ_POSIX_2001 &&   \
+	CZ_XOPEN_VERSION < CZ_SUS_1997 &&     \
+	(                                     \
+		CZ_XOPEN_VERSION < CZ_SUS_1994 || \
+		CZ_XOPEN_UNIX <= 0)
+
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
+
 #if CZ_DARWIN
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EOPNOTSUPP:
@@ -3734,7 +3794,7 @@ enum CzResult czWrap_lockf(int fd, int func, off_t size)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_GNU_LINUX
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EDEADLK:
@@ -3752,7 +3812,7 @@ enum CzResult czWrap_lockf(int fd, int func, off_t size)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
@@ -3782,7 +3842,7 @@ enum CzResult czWrap_lockf(int fd, int func, off_t size)
 	CZ_XOPEN_VERSION >= CZ_SUS_1997 ||     \
 	CZ_POSIX_VERSION >= CZ_POSIX_2001
 
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EOPNOTSUPP:
@@ -3790,8 +3850,7 @@ enum CzResult czWrap_lockf(int fd, int func, off_t size)
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_RANGE;
 	case EINVAL:
-		off_t pos = lseek(fd, 0, SEEK_CUR);
-		if (pos != -1 && size < 0 && pos + size < 0)
+		if (!posErr && size < 0 && pos + size < 0)
 			return CZ_RESULT_BAD_SIZE;
 		if (func == F_LOCK)
 			return CZ_RESULT_BAD_FILE;
@@ -3817,10 +3876,11 @@ enum CzResult czWrap_lockf(int fd, int func, off_t size)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #else
-	off_t pos = lseek(fd, 0, SEEK_CUR);
 	if (fd < 0)
 		return CZ_RESULT_BAD_ACCESS;
-	if (pos == -1)
+	if (openMax != -1 && fd >= openMax)
+		return CZ_RESULT_BAD_ACCESS;
+	if (posErr)
 		return CZ_RESULT_BAD_FILE;
 	if (size < 0 && pos + size < 0)
 		return CZ_RESULT_BAD_SIZE;
@@ -3997,8 +4057,22 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
+	int err = errno;
+#if !CZ_DARWIN &&                         \
+	!CZ_GNU_LINUX &&                      \
+	!CZ_FREE_BSD &&                       \
+	CZ_POSIX_VERSION < CZ_POSIX_2001 &&   \
+	CZ_XOPEN_VERSION < CZ_SUS_1997 &&     \
+	(                                     \
+		CZ_XOPEN_VERSION < CZ_SUS_1994 || \
+		CZ_XOPEN_UNIX <= 0)
+
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
+
 #if CZ_DARWIN
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 	case EPERM:
 	case EROFS:
@@ -4019,7 +4093,7 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_GNU_LINUX
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 	case EPERM:
 	case EROFS:
@@ -4039,7 +4113,7 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
@@ -4048,7 +4122,7 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2024
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EIO:
@@ -4065,7 +4139,7 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2008
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EIO:
@@ -4082,7 +4156,7 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_1997
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
@@ -4100,7 +4174,7 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_XOPEN_VERSION >= CZ_SUS_1994 && CZ_XOPEN_UNIX > 0
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EIO:
@@ -4117,10 +4191,14 @@ enum CzResult czWrap_ftruncate(int fd, off_t size)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #else
-	if (fd < 0)
-		return CZ_RESULT_BAD_ACCESS;
 	if (size < 0)
 		return CZ_RESULT_BAD_SIZE;
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (fd >= openMax)
+		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
 }
@@ -4134,6 +4212,12 @@ enum CzResult czWrap_posix_fadvise(int* res, int fd, off_t offset, off_t size, i
 		*res = r;
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
+
+#if !CZ_GNU_LINUX && !CZ_FREE_BSD && CZ_POSIX_VERSION < CZ_POSIX_2001
+	int err = errno;
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
 
 #if CZ_GNU_LINUX
 	switch (r) {
@@ -4183,10 +4267,14 @@ enum CzResult czWrap_posix_fadvise(int* res, int fd, off_t offset, off_t size, i
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #else
-	if (fd < 0)
-		return CZ_RESULT_BAD_ACCESS;
 	if (size < 0)
 		return CZ_RESULT_BAD_SIZE;
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (fd >= openMax)
+		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
 }
@@ -4199,8 +4287,20 @@ enum CzResult czWrap_fallocate(int fd, int mode, off_t offset, off_t size)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
+	int err = errno;
 #if CZ_GNU_LINUX
-	switch (errno) {
+	struct stat st;
+	int stRes = fstat(fd, &st);
+	int stErr = (stRes == -1) ? errno : 0;
+	errno = err;
+#endif
+#if !CZ_GNU_LINUX
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
+
+#if CZ_GNU_LINUX
+	switch (err) {
 	case EBADF:
 	case EPERM:
 		return CZ_RESULT_BAD_ACCESS;
@@ -4210,12 +4310,16 @@ enum CzResult czWrap_fallocate(int fd, int mode, off_t offset, off_t size)
 	case EIO:
 		return CZ_RESULT_BAD_IO;
 	case EINVAL:
-		struct stat st;
-		fstat(fd, &st);
 		if (offset < 0)
 			return CZ_RESULT_BAD_OFFSET;
 		if (size <= 0)
 			return CZ_RESULT_BAD_SIZE;
+		if (mode & FALLOC_FL_COLLAPSE_RANGE && mode != FALLOC_FL_COLLAPSE_RANGE)
+			return CZ_RESULT_BAD_ACCESS;
+		if (mode & FALLOC_FL_INSERT_RANGE && mode != FALLOC_FL_INSERT_RANGE)
+			return CZ_RESULT_BAD_ACCESS;
+		if (stErr)
+			return CZ_RESULT_INTERNAL_ERROR;
 		if (!S_ISREG(st.st_mode) && mode == FALLOC_FL_COLLAPSE_RANGE)
 			return CZ_RESULT_BAD_FILE;
 		if (!S_ISREG(st.st_mode) && mode == FALLOC_FL_INSERT_RANGE)
@@ -4234,10 +4338,6 @@ enum CzResult czWrap_fallocate(int fd, int mode, off_t offset, off_t size)
 			return CZ_RESULT_BAD_ALIGNMENT;
 		if (size & (st.st_blksize - 1) && mode == FALLOC_FL_INSERT_RANGE)
 			return CZ_RESULT_BAD_ALIGNMENT;
-		if (mode & FALLOC_FL_COLLAPSE_RANGE && mode != FALLOC_FL_COLLAPSE_RANGE)
-			return CZ_RESULT_BAD_ACCESS;
-		if (mode & FALLOC_FL_INSERT_RANGE && mode != FALLOC_FL_INSERT_RANGE)
-			return CZ_RESULT_BAD_ACCESS;
 		return CZ_RESULT_INTERNAL_ERROR;
 	case EFBIG:
 		return CZ_RESULT_BAD_RANGE;
@@ -4254,12 +4354,16 @@ enum CzResult czWrap_fallocate(int fd, int mode, off_t offset, off_t size)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #else
-	if (fd < 0)
-		return CZ_RESULT_BAD_ACCESS;
 	if (offset < 0)
 		return CZ_RESULT_BAD_OFFSET;
 	if (size <= 0)
 		return CZ_RESULT_BAD_SIZE;
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (fd >= openMax)
+		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
 }
@@ -4273,6 +4377,12 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 		*res = r;
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
+
+#if !CZ_GNU_LINUX && !CZ_FREE_BSD && CZ_POSIX_VERSION < CZ_POSIX_2001
+	int err = errno;
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
 
 #if CZ_GNU_LINUX
 	switch (r) {
@@ -4401,12 +4511,16 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t size)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #else
-	if (fd < 0)
-		return CZ_RESULT_BAD_ACCESS;
 	if (offset < 0)
 		return CZ_RESULT_BAD_OFFSET;
 	if (size <= 0)
 		return CZ_RESULT_BAD_SIZE;
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (fd >= openMax)
+		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
 }
@@ -4419,8 +4533,14 @@ enum CzResult czWrap_fsync(int fd)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
+	int err = errno;
+#if !CZ_DARWIN && !CZ_GNU_LINUX && !CZ_FREE_BSD && CZ_POSIX_VERSION < CZ_POSIX_2001 && CZ_XOPEN_VERSION < CZ_XPG_1989
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
+
 #if CZ_DARWIN
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
@@ -4440,7 +4560,7 @@ enum CzResult czWrap_fsync(int fd)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_GNU_LINUX
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EROFS:
@@ -4458,7 +4578,7 @@ enum CzResult czWrap_fsync(int fd)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EINTEGRITY:
@@ -4470,7 +4590,7 @@ enum CzResult czWrap_fsync(int fd)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
@@ -4488,7 +4608,7 @@ enum CzResult czWrap_fsync(int fd)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_XOPEN_VERSION >= CZ_SUS_1997
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EIO:
@@ -4501,7 +4621,7 @@ enum CzResult czWrap_fsync(int fd)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_XOPEN_VERSION >= CZ_XPG_1989
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EINTR:
@@ -4511,6 +4631,10 @@ enum CzResult czWrap_fsync(int fd)
 	}
 #else
 	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (fd >= openMax)
 		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
@@ -4524,8 +4648,14 @@ enum CzResult czWrap_fdatasync(int fd)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
+	int err = errno;
+#if !CZ_GNU_LINUX && !CZ_FREE_BSD && CZ_POSIX_VERSION < CZ_POSIX_2001 && CZ_XOPEN_VERSION < CZ_SUS_1997
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
+
 #if CZ_GNU_LINUX
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EROFS:
@@ -4543,7 +4673,7 @@ enum CzResult czWrap_fdatasync(int fd)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EINTEGRITY:
@@ -4555,7 +4685,7 @@ enum CzResult czWrap_fdatasync(int fd)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
@@ -4573,7 +4703,7 @@ enum CzResult czWrap_fdatasync(int fd)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_XOPEN_VERSION >= CZ_SUS_1997
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
@@ -4589,6 +4719,10 @@ enum CzResult czWrap_fdatasync(int fd)
 	}
 #else
 	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (fd >= openMax)
 		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
@@ -4620,7 +4754,9 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
 	case ENOTDIR:
-		if (flags & (O_DIRECTORY | O_SEARCH))
+		if (flags & O_DIRECTORY)
+			return CZ_RESULT_BAD_FILE;
+		if (flags & O_SEARCH)
 			return CZ_RESULT_BAD_FILE;
 		return CZ_RESULT_BAD_PATH;
 	case EIO:
@@ -4664,7 +4800,11 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
 #if CZ_GNU_SOURCE
-		if (flags & O_TMPFILE && !(flags & (O_WRONLY | O_RDWR)))
+		if (flags & O_TMPFILE && !(flags & O_WRONLY))
+			return CZ_RESULT_BAD_ACCESS;
+#endif
+#if CZ_GNU_SOURCE
+		if (flags & O_TMPFILE && !(flags & O_RDWR))
 			return CZ_RESULT_BAD_ACCESS;
 #endif
 #if CZ_GNU_SOURCE
@@ -4695,7 +4835,11 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 		if (flags & O_CREAT)
 			return CZ_RESULT_BAD_PATH;
 #if CZ_GNU_SOURCE
-		if (flags & O_TMPFILE && flags & (O_WRONLY | O_RDWR))
+		if (flags & O_TMPFILE && flags & O_WRONLY)
+			return CZ_RESULT_NO_SUPPORT;
+#endif
+#if CZ_GNU_SOURCE
+		if (flags & O_TMPFILE && flags & O_RDWR)
 			return CZ_RESULT_NO_SUPPORT;
 #endif
 		return CZ_RESULT_NO_FILE;
@@ -4718,7 +4862,11 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 		return CZ_RESULT_NO_SUPPORT;
 	case EISDIR:
 #if CZ_GNU_SOURCE
-		if (flags & O_TMPFILE && flags & (O_WRONLY | O_RDWR))
+		if (flags & O_TMPFILE && flags & O_WRONLY)
+			return CZ_RESULT_NO_SUPPORT;
+#endif
+#if CZ_GNU_SOURCE
+		if (flags & O_TMPFILE && flags & O_RDWR)
 			return CZ_RESULT_NO_SUPPORT;
 #endif
 		return CZ_RESULT_BAD_FILE;
@@ -4783,8 +4931,12 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case EINVAL:
 		if (!(flags & (O_RDONLY | O_WRONLY | O_RDWR | O_EXEC | O_SEARCH)))
 			return CZ_RESULT_BAD_ACCESS;
-		if (flags & (O_DSYNC | O_RSYNC | O_SYNC))
-			return CZ_RESULT_NO_SUPPORT
+		if (flags & O_DSYNC)
+			return CZ_RESULT_NO_SUPPORT;
+		if (flags & O_RSYNC)
+			return CZ_RESULT_NO_SUPPORT;
+		if (flags & O_SYNC)
+			return CZ_RESULT_NO_SUPPORT;
 		return CZ_RESULT_BAD_FILE;
 	case EEXIST:
 	case EISDIR:
@@ -4828,8 +4980,12 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case EINVAL:
 		if (!(flags & (O_RDONLY | O_WRONLY | O_RDWR | O_EXEC | O_SEARCH)))
 			return CZ_RESULT_BAD_ACCESS;
-		if (flags & (O_DSYNC | O_RSYNC | O_SYNC))
-			return CZ_RESULT_NO_SUPPORT
+		if (flags & O_DSYNC)
+			return CZ_RESULT_NO_SUPPORT;
+		if (flags & O_RSYNC)
+			return CZ_RESULT_NO_SUPPORT;
+		if (flags & O_SYNC)
+			return CZ_RESULT_NO_SUPPORT;
 		return CZ_RESULT_BAD_FILE;
 	case EEXIST:
 	case EISDIR:
@@ -4872,8 +5028,12 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case EINVAL:
 		if (!(flags & (O_RDONLY | O_WRONLY | O_RDWR)))
 			return CZ_RESULT_BAD_ACCESS;
-		if (flags & (O_DSYNC | O_RSYNC | O_SYNC))
-			return CZ_RESULT_NO_SUPPORT
+		if (flags & O_DSYNC)
+			return CZ_RESULT_NO_SUPPORT;
+		if (flags & O_RSYNC)
+			return CZ_RESULT_NO_SUPPORT;
+		if (flags & O_SYNC)
+			return CZ_RESULT_NO_SUPPORT;
 		return CZ_RESULT_BAD_FILE;
 	case EEXIST:
 	case EISDIR:
@@ -4941,7 +5101,11 @@ enum CzResult czWrap_open(int* res, const char* path, int flags, mode_t mode)
 	case EOPNOTSUPP:
 		return CZ_RESULT_NO_SUPPORT;
 	case EINVAL:
-		if (flags & (O_DSYNC | O_RSYNC | O_SYNC))
+		if (flags & O_DSYNC)
+			return CZ_RESULT_NO_SUPPORT;
+		if (flags & O_RSYNC)
+			return CZ_RESULT_NO_SUPPORT;
+		if (flags & O_SYNC)
 			return CZ_RESULT_NO_SUPPORT;
 		return CZ_RESULT_BAD_FILE;
 	default:
@@ -4966,8 +5130,14 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 		return CZ_RESULT_SUCCESS;
 	}
 
+	int err = errno;
+#if !CZ_DARWIN && !CZ_GNU_LINUX && !CZ_FREE_BSD && CZ_POSIX_VERSION < CZ_POSIX_2008
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
+
 #if CZ_DARWIN
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 	case EINVAL:
@@ -4983,7 +5153,9 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
 	case ENOTDIR:
-		if (flags & (O_DIRECTORY | O_SEARCH))
+		if (flags & O_DIRECTORY)
+			return CZ_RESULT_BAD_FILE;
+		if (flags & O_SEARCH)
 			return CZ_RESULT_BAD_FILE;
 		return CZ_RESULT_BAD_PATH;
 	case EIO:
@@ -5020,7 +5192,7 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_GNU_LINUX
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 	case EPERM:
@@ -5028,7 +5200,11 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
 #if CZ_GNU_SOURCE
-		if (flags & O_TMPFILE && !(flags & (O_WRONLY | O_RDWR)))
+		if (flags & O_TMPFILE && !(flags & O_WRONLY))
+			return CZ_RESULT_BAD_ACCESS;
+#endif
+#if CZ_GNU_SOURCE
+		if (flags & O_TMPFILE && !(flags & O_RDWR))
 			return CZ_RESULT_BAD_ACCESS;
 #endif
 #if CZ_GNU_SOURCE
@@ -5059,7 +5235,11 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 		if (flags & O_CREAT)
 			return CZ_RESULT_BAD_PATH;
 #if CZ_GNU_SOURCE
-		if (flags & O_TMPFILE && flags & (O_WRONLY | O_RDWR))
+		if (flags & O_TMPFILE && flags & O_WRONLY)
+			return CZ_RESULT_NO_SUPPORT;
+#endif
+#if CZ_GNU_SOURCE
+		if (flags & O_TMPFILE && flags & O_RDWR)
 			return CZ_RESULT_NO_SUPPORT;
 #endif
 		return CZ_RESULT_NO_FILE;
@@ -5082,7 +5262,11 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 		return CZ_RESULT_NO_SUPPORT;
 	case EISDIR:
 #if CZ_GNU_SOURCE
-		if (flags & O_TMPFILE && flags & (O_WRONLY | O_RDWR))
+		if (flags & O_TMPFILE && flags & O_WRONLY)
+			return CZ_RESULT_NO_SUPPORT;
+#endif
+#if CZ_GNU_SOURCE
+		if (flags & O_TMPFILE && flags & O_RDWR)
 			return CZ_RESULT_NO_SUPPORT;
 #endif
 		return CZ_RESULT_BAD_FILE;
@@ -5090,7 +5274,7 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 	case ECAPMODE:
@@ -5146,7 +5330,7 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2024
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 	case EROFS:
@@ -5154,8 +5338,12 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 	case EINVAL:
 		if (!(flags & (O_RDONLY | O_WRONLY | O_RDWR | O_EXEC | O_SEARCH)))
 			return CZ_RESULT_BAD_ACCESS;
-		if (flags & (O_DSYNC | O_RSYNC | O_SYNC))
-			return CZ_RESULT_NO_SUPPORT
+		if (flags & O_DSYNC)
+			return CZ_RESULT_NO_SUPPORT;
+		if (flags & O_RSYNC)
+			return CZ_RESULT_NO_SUPPORT;
+		if (flags & O_SYNC)
+			return CZ_RESULT_NO_SUPPORT;
 		return CZ_RESULT_BAD_FILE;
 	case EEXIST:
 	case EISDIR:
@@ -5192,7 +5380,7 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2008
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 	case EROFS:
@@ -5200,8 +5388,12 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 	case EINVAL:
 		if (!(flags & (O_RDONLY | O_WRONLY | O_RDWR | O_EXEC | O_SEARCH)))
 			return CZ_RESULT_BAD_ACCESS;
-		if (flags & (O_DSYNC | O_RSYNC | O_SYNC))
-			return CZ_RESULT_NO_SUPPORT
+		if (flags & O_DSYNC)
+			return CZ_RESULT_NO_SUPPORT;
+		if (flags & O_RSYNC)
+			return CZ_RESULT_NO_SUPPORT;
+		if (flags & O_SYNC)
+			return CZ_RESULT_NO_SUPPORT;
 		return CZ_RESULT_BAD_FILE;
 	case EEXIST:
 	case EISDIR:
@@ -5237,11 +5429,17 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int flags, mode_
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #else
-	if (fd < 0 && fd != AT_FDCWD)
-		return CZ_RESULT_BAD_ACCESS;
 	if (!path[0])
 		return CZ_RESULT_BAD_PATH;
 	if (!(flags & (O_RDONLY | O_WRONLY | O_RDWR | O_EXEC | O_SEARCH)))
+		return CZ_RESULT_BAD_ACCESS;
+	if (fd == AT_FDCWD)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (fd >= openMax)
 		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
@@ -5457,8 +5655,25 @@ enum CzResult czWrap_close(int fd)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
-#if CZ_GNU_LINUX
-	switch (errno) {
+	int err = errno;
+#if !CZ_DARWIN && !CZ_GNU_LINUX && !CZ_FREE_BSD && CZ_POSIX_VERSION < CZ_POSIX_1988
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
+
+#if CZ_DARWIN
+	switch (err) {
+	case EBADF:
+		return CZ_RESULT_BAD_ACCESS;
+	case EIO:
+		return CZ_RESULT_BAD_IO;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_GNU_LINUX
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EIO:
@@ -5473,7 +5688,7 @@ enum CzResult czWrap_close(int fd)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EINTR:
@@ -5484,7 +5699,7 @@ enum CzResult czWrap_close(int fd)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2024
-	switch (errno) {
+	switch (err) {
 	case EINPROGRESS:
 		return CZ_RESULT_SUCCESS;
 	case EBADF:
@@ -5499,7 +5714,7 @@ enum CzResult czWrap_close(int fd)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_1988
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EIO:
@@ -5511,6 +5726,10 @@ enum CzResult czWrap_close(int fd)
 	}
 #else
 	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (fd >= openMax)
 		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
@@ -5524,8 +5743,14 @@ enum CzResult czWrap_posix_close(int fd, int flag)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
+	int err = errno;
+#if CZ_POSIX_VERSION < CZ_POSIX_2024
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
+
 #if CZ_POSIX_VERSION >= CZ_POSIX_2024
-	switch (errno) {
+	switch (err) {
 	case EINPROGRESS:
 		return CZ_RESULT_SUCCESS;
 	case EBADF:
@@ -5541,6 +5766,10 @@ enum CzResult czWrap_posix_close(int fd, int flag)
 #else
 	if (fd < 0)
 		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (fd >= openMax)
+		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
 }
@@ -5549,7 +5778,7 @@ enum CzResult czWrap_posix_close(int fd, int flag)
 #if CZ_WRAP_LSEEK
 enum CzResult czWrap_lseek(off_t* res, int fd, off_t offset, int whence)
 {
-#if CZ_POSIX_VERSION <= CZ_POSIX_1990
+#if CZ_POSIX_VERSION < CZ_POSIX_1996
 	errno = 0;
 #endif
 	off_t r = lseek(fd, offset, whence);
@@ -5558,8 +5787,14 @@ enum CzResult czWrap_lseek(off_t* res, int fd, off_t offset, int whence)
 	if CZ_EXPECT (r != -1)
 		return CZ_RESULT_SUCCESS;
 
+	int err = errno;
+#if !CZ_DARWIN && !CZ_GNU_LINUX && !CZ_FREE_BSD && CZ_POSIX_VERSION < CZ_POSIX_1988
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
+
 #if CZ_DARWIN || CZ_GNU_LINUX || CZ_FREE_BSD || CZ_POSIX_VERSION >= CZ_POSIX_2024
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case ESPIPE:
@@ -5572,7 +5807,7 @@ enum CzResult czWrap_lseek(off_t* res, int fd, off_t offset, int whence)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case ESPIPE:
@@ -5584,7 +5819,7 @@ enum CzResult czWrap_lseek(off_t* res, int fd, off_t offset, int whence)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_XOPEN_VERSION >= CZ_SUS_1997
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
@@ -5606,6 +5841,10 @@ enum CzResult czWrap_lseek(off_t* res, int fd, off_t offset, int whence)
 #else
 	if (fd < 0)
 		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (fd >= openMax)
+		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
 }
@@ -5619,20 +5858,28 @@ enum CzResult czWrap_read(ssize_t* res, int fd, void* buffer, size_t size)
 		*res = r;
 	if CZ_EXPECT (r > 0)
 		return CZ_RESULT_SUCCESS;
-	if (!r) {
-		if (!size)
-			return CZ_RESULT_SUCCESS;
+	if (!r && !size)
+		return CZ_RESULT_SUCCESS;
 
-		off_t pos = lseek(fd, 0, SEEK_CUR);
-		if (pos == -1)
-			return CZ_RESULT_NO_CONNECTION;
-		if (pos)
-			return CZ_RESULT_BAD_OFFSET;
+	int err = errno;
+	off_t pos = lseek(fd, 0, SEEK_CUR);
+	int posErr = (pos == -1) ? errno : 0;
+	errno = err;
+
+	if (!r && posErr)
+		return CZ_RESULT_NO_CONNECTION;
+	if (!r && pos)
+		return CZ_RESULT_BAD_OFFSET;
+	if (!r)
 		return CZ_RESULT_NO_FILE;
-	}
+
+#if !CZ_DARWIN && !CZ_GNU_LINUX && !CZ_FREE_BSD && CZ_POSIX_VERSION < CZ_POSIX_1988
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
 
 #if CZ_DARWIN
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
@@ -5665,7 +5912,7 @@ enum CzResult czWrap_read(ssize_t* res, int fd, void* buffer, size_t size)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_GNU_LINUX
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
@@ -5677,17 +5924,13 @@ enum CzResult czWrap_read(ssize_t* res, int fd, void* buffer, size_t size)
 		return CZ_RESULT_BAD_IO;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
-#if EAGAIN != EWOULDBLOCK
-	case EWOULDBLOCK:
-		return CZ_RESULT_IN_USE;
-#endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 	case EOPNOTSUPP:
 		return CZ_RESULT_BAD_ACCESS;
@@ -5713,7 +5956,7 @@ enum CzResult czWrap_read(ssize_t* res, int fd, void* buffer, size_t size)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2024
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EISDIR:
@@ -5743,7 +5986,7 @@ enum CzResult czWrap_read(ssize_t* res, int fd, void* buffer, size_t size)
 		return CZ_RESULT_SUCCESS;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EBADMSG:
@@ -5775,7 +6018,7 @@ enum CzResult czWrap_read(ssize_t* res, int fd, void* buffer, size_t size)
 		return CZ_RESULT_SUCCESS;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_1988
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EBADMSG:
@@ -5792,10 +6035,14 @@ enum CzResult czWrap_read(ssize_t* res, int fd, void* buffer, size_t size)
 		return CZ_RESULT_SUCCESS;
 	}
 #else
-	if (fd < 0)
-		return CZ_RESULT_BAD_ACCESS;
 	if (size > SSIZE_MAX)
 		return CZ_RESULT_BAD_SIZE;
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (fd >= openMax)
+		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
 }
@@ -5809,16 +6056,21 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
 		*res = r;
 	if CZ_EXPECT (r > 0)
 		return CZ_RESULT_SUCCESS;
-	if (!r) {
-		if (!size)
-			return CZ_RESULT_SUCCESS;
-		if (offset)
-			return CZ_RESULT_BAD_OFFSET;
+	if (!r && !size)
+		return CZ_RESULT_SUCCESS;
+	if (!r && offset)
+		return CZ_RESULT_BAD_OFFSET;
+	if (!r)
 		return CZ_RESULT_NO_FILE;
-	}
+
+	int err = errno;
+#if !CZ_DARWIN && !CZ_GNU_LINUX && !CZ_FREE_BSD && CZ_POSIX_VERSION < CZ_POSIX_2001 && CZ_XOPEN_VERSION < CZ_SUS_1997
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
 
 #if CZ_DARWIN
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
@@ -5849,7 +6101,7 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_GNU_LINUX
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
@@ -5867,17 +6119,13 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
 		return CZ_RESULT_BAD_FILE;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
-#if EAGAIN != EWOULDBLOCK
-	case EWOULDBLOCK:
-		return CZ_RESULT_IN_USE;
-#endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 	case EOPNOTSUPP:
 		return CZ_RESULT_BAD_ACCESS;
@@ -5907,7 +6155,7 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2024
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EISDIR:
@@ -5930,7 +6178,7 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EBADMSG:
@@ -5957,7 +6205,7 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_XOPEN_VERSION >= CZ_SUS_1997
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EBADMSG:
@@ -5978,12 +6226,16 @@ enum CzResult czWrap_pread(ssize_t* res, int fd, void* buffer, size_t size, off_
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #else
-	if (fd < 0)
-		return CZ_RESULT_BAD_ACCESS;
 	if (size > SSIZE_MAX)
 		return CZ_RESULT_BAD_SIZE;
 	if (offset < 0)
 		return CZ_RESULT_BAD_OFFSET;
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (fd >= openMax)
+		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
 }
@@ -5997,14 +6249,19 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 		*res = r;
 	if CZ_EXPECT (r > 0)
 		return CZ_RESULT_SUCCESS;
-	if (!r) {
-		if (!size)
-			return CZ_RESULT_SUCCESS;
+	if (!r && !size)
+		return CZ_RESULT_SUCCESS;
+	if (!r)
 		return CZ_RESULT_INTERNAL_ERROR;
-	}
+
+	int err = errno;
+#if !CZ_DARWIN && !CZ_GNU_LINUX && !CZ_FREE_BSD && CZ_POSIX_VERSION < CZ_POSIX_1988
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
 
 #if CZ_DARWIN
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
@@ -6040,7 +6297,7 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_GNU_LINUX
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 	case EPERM:
 		return CZ_RESULT_BAD_ACCESS;
@@ -6053,10 +6310,6 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 		return CZ_RESULT_BAD_IO;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
-#if EAGAIN != EWOULDBLOCK
-	case EWOULDBLOCK:
-		return CZ_RESULT_IN_USE;
-#endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case EDESTADDRREQ:
@@ -6070,7 +6323,7 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
@@ -6099,7 +6352,7 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2024
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
@@ -6129,7 +6382,7 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
@@ -6162,7 +6415,7 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_1988
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EFBIG:
@@ -6182,10 +6435,14 @@ enum CzResult czWrap_write(ssize_t* res, int fd, const void* buffer, size_t size
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #else
-	if (fd < 0)
-		return CZ_RESULT_BAD_ACCESS;
 	if (size > SSIZE_MAX)
 		return CZ_RESULT_BAD_SIZE;
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (fd >= openMax)
+		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
 }
@@ -6199,14 +6456,19 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 		*res = r;
 	if CZ_EXPECT (r > 0)
 		return CZ_RESULT_SUCCESS;
-	if (!r) {
-		if (!size)
-			return CZ_RESULT_SUCCESS;
+	if (!r && !size)
+		return CZ_RESULT_SUCCESS;
+	if (!r)
 		return CZ_RESULT_INTERNAL_ERROR;
-	}
+
+	int err = errno;
+#if !CZ_DARWIN && !CZ_GNU_LINUX && !CZ_FREE_BSD && CZ_POSIX_VERSION < CZ_POSIX_2001 && CZ_XOPEN_VERSION < CZ_SUS_1997
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
 
 #if CZ_DARWIN
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EFAULT:
@@ -6238,7 +6500,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_GNU_LINUX
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 	case EPERM:
 		return CZ_RESULT_BAD_ACCESS;
@@ -6259,10 +6521,6 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 		return CZ_RESULT_BAD_FILE;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
-#if EAGAIN != EWOULDBLOCK
-	case EWOULDBLOCK:
-		return CZ_RESULT_IN_USE;
-#endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
@@ -6273,7 +6531,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
@@ -6304,7 +6562,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2024
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EFBIG:
@@ -6327,7 +6585,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EFBIG:
@@ -6354,7 +6612,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_XOPEN_VERSION >= CZ_SUS_1997
-	switch (errno) {
+	switch (err) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EFBIG:
@@ -6378,12 +6636,16 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fd, const void* buffer, size_t siz
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #else
-	if (fd < 0)
-		return CZ_RESULT_BAD_ACCESS;
 	if (size > SSIZE_MAX)
 		return CZ_RESULT_BAD_SIZE;
 	if (offset < 0)
 		return CZ_RESULT_BAD_OFFSET;
+	if (fd < 0)
+		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
+		return CZ_RESULT_INTERNAL_ERROR;
+	if (fd >= openMax)
+		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
 }
@@ -6398,8 +6660,26 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 		return CZ_RESULT_SUCCESS;
 	}
 
+	int err = errno;
+#if CZ_DARWIN || CZ_GNU_LINUX || CZ_FREE_BSD || CZ_POSIX_VERSION >= CZ_POSIX_2001
+	long pageSize = sysconf(_SC_PAGESIZE);
+	errno = err;
+#endif
+#if !CZ_DARWIN &&                         \
+	!CZ_GNU_LINUX &&                      \
+	!CZ_FREE_BSD &&                       \
+	CZ_POSIX_VERSION < CZ_POSIX_2001 &&   \
+	CZ_XOPEN_VERSION < CZ_SUS_1997 &&     \
+	(                                     \
+		CZ_XOPEN_VERSION < CZ_SUS_1994 || \
+		CZ_XOPEN_UNIX <= 0)
+
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
+
 #if CZ_DARWIN
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
@@ -6410,10 +6690,6 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 			return CZ_RESULT_BAD_OFFSET;
 		if (!size)
 			return CZ_RESULT_BAD_SIZE;
-
-		long pageSize = sysconf(_SC_PAGESIZE);
-		if (pageSize <= 0)
-			return CZ_RESULT_BAD_ADDRESS;
 		if (offset & (off_t) (pageSize - 1))
 			return CZ_RESULT_BAD_ALIGNMENT;
 		if ((uintptr_t) addr & (uintptr_t) (pageSize - 1) && flags & MAP_FIXED)
@@ -6432,7 +6708,7 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_GNU_LINUX
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 	case EPERM:
@@ -6445,11 +6721,9 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 			return CZ_RESULT_BAD_OFFSET;
 		if (!size)
 			return CZ_RESULT_BAD_SIZE;
-
-		long pageSize = sysconf(_SC_PAGESIZE);
-		if (pageSize > 0 && (uintptr_t) addr & (uintptr_t) (pageSize - 1))
+		if ((uintptr_t) addr & (uintptr_t) (pageSize - 1))
 			return CZ_RESULT_BAD_ALIGNMENT;
-		if (pageSize > 0 && offset & (off_t) (pageSize - 1))
+		if (offset & (off_t) (pageSize - 1))
 			return CZ_RESULT_BAD_ALIGNMENT;
 		if (addr)
 			return CZ_RESULT_BAD_ADDRESS;
@@ -6469,7 +6743,7 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
@@ -6484,9 +6758,13 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 			return CZ_RESULT_BAD_SIZE;
 		if (offset < 0)
 			return CZ_RESULT_BAD_OFFSET;
-		if (flags & (MAP_ANON | MAP_GUARD) && offset)
+		if (flags & MAP_ANON && offset)
 			return CZ_RESULT_BAD_OFFSET;
-		if (flags & (MAP_ANON | MAP_GUARD) && fd != -1)
+		if (flags & MAP_GUARD && offset)
+			return CZ_RESULT_BAD_OFFSET;
+		if (flags & MAP_ANON && fd != -1)
+			return CZ_RESULT_BAD_ACCESS;
+		if (flags & MAP_GUARD && fd != -1)
 			return CZ_RESULT_BAD_ACCESS;
 		if (!(flags & (MAP_ANON | MAP_GUARD | MAP_PRIVATE | MAP_SHARED | MAP_STACK)))
 			return CZ_RESULT_BAD_ACCESS;
@@ -6496,17 +6774,23 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 			return CZ_RESULT_BAD_ACCESS;
 		if (flags & MAP_GUARD && prot != PROT_NONE)
 			return CZ_RESULT_BAD_ACCESS;
-		if (flags & MAP_GUARD && flags & (MAP_ANON | MAP_PREFAULT | MAP_PREFAULT_READ))
+		if (flags & MAP_GUARD && flags & MAP_ANON)
 			return CZ_RESULT_BAD_ACCESS;
-		if (flags & MAP_GUARD && flags & (MAP_PRIVATE | MAP_SHARED | MAP_STACK))
+		if (flags & MAP_GUARD && flags & MAP_PREFAULT)
+			return CZ_RESULT_BAD_ACCESS;
+		if (flags & MAP_GUARD && flags & MAP_PREFAULT_READ)
+			return CZ_RESULT_BAD_ACCESS;
+		if (flags & MAP_GUARD && flags & MAP_PRIVATE)
+			return CZ_RESULT_BAD_ACCESS;
+		if (flags & MAP_GUARD && flags & MAP_SHARED)
+			return CZ_RESULT_BAD_ACCESS;
+		if (flags & MAP_GUARD && flags & MAP_STACK)
 			return CZ_RESULT_BAD_ACCESS;
 		if (flags & MAP_32BIT && flags & MAP_FIXED)
 			return CZ_RESULT_BAD_ADDRESS;
 		if (flags & MAP_EXCL && flags & MAP_FIXED)
 			return CZ_RESULT_IN_USE;
-
-		long pageSize = sysconf(_SC_PAGESIZE);
-		if (flags & MAP_FIXED && pageSize > 0 && (uintptr_t) addr & (uintptr_t) (pageSize - 1))
+		if (flags & MAP_FIXED && (uintptr_t) addr & (uintptr_t) (pageSize - 1))
 			return CZ_RESULT_BAD_ALIGNMENT;
 		if (flags & MAP_FIXED)
 			return CZ_RESULT_BAD_ADDRESS;
@@ -6517,7 +6801,7 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2024
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
@@ -6528,11 +6812,9 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 			return CZ_RESULT_BAD_OFFSET;
 		if (!size)
 			return CZ_RESULT_BAD_SIZE;
-
-		long pageSize = sysconf(_SC_PAGESIZE);
-		if (pageSize > 0 && (uintptr_t) addr & (uintptr_t) (pageSize - 1))
+		if ((uintptr_t) addr & (uintptr_t) (pageSize - 1))
 			return CZ_RESULT_BAD_ALIGNMENT;
-		if (pageSize > 0 && offset & (off_t) (pageSize - 1))
+		if (offset & (off_t) (pageSize - 1))
 			return CZ_RESULT_BAD_ALIGNMENT;
 		if (addr)
 			return CZ_RESULT_BAD_ADDRESS;
@@ -6559,7 +6841,7 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_2001
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
@@ -6570,11 +6852,9 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 			return CZ_RESULT_BAD_OFFSET;
 		if (!size)
 			return CZ_RESULT_BAD_SIZE;
-
-		long pageSize = sysconf(_SC_PAGESIZE);
-		if (pageSize > 0 && (uintptr_t) addr & (uintptr_t) (pageSize - 1))
+		if ((uintptr_t) addr & (uintptr_t) (pageSize - 1))
 			return CZ_RESULT_BAD_ALIGNMENT;
-		if (pageSize > 0 && offset & (off_t) (pageSize - 1))
+		if (offset & (off_t) (pageSize - 1))
 			return CZ_RESULT_BAD_ALIGNMENT;
 		if (addr)
 			return CZ_RESULT_BAD_ADDRESS;
@@ -6599,7 +6879,7 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_XOPEN_VERSION >= CZ_SUS_1997
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
@@ -6619,7 +6899,7 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_XOPEN_VERSION >= CZ_SUS_1994 && CZ_XOPEN_UNIX > 0
-	switch (errno) {
+	switch (err) {
 	case EACCES:
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
@@ -6639,18 +6919,14 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t size, int prot
 		return CZ_RESULT_BAD_SIZE;
 	if (!(flags & (MAP_PRIVATE | MAP_SHARED)))
 		return CZ_RESULT_BAD_ACCESS;
-	if (fd < -1)
-		return CZ_RESULT_BAD_ACCESS;
 	if (offset < 0)
 		return CZ_RESULT_BAD_OFFSET;
-
-	long pageSize = sysconf(_SC_PAGESIZE);
-	if (pageSize <= 0)
+	if (fd < -1)
+		return CZ_RESULT_BAD_ACCESS;
+	if (openMax == -1)
 		return CZ_RESULT_INTERNAL_ERROR;
-	if ((uintptr_t) addr & (uintptr_t) (pageSize - 1))
-		return CZ_RESULT_BAD_ALIGNMENT;
-	if (offset & (off_t) (pageSize - 1))
-		return CZ_RESULT_BAD_ALIGNMENT;
+	if (fd >= openMax)
+		return CZ_RESULT_BAD_ACCESS;
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
 }
@@ -6663,15 +6939,17 @@ enum CzResult czWrap_munmap(void* addr, size_t size)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
+	int err = errno;
+#if !CZ_FREE_BSD
+	long pageSize = sysconf(_SC_PAGESIZE);
+	errno = err;
+#endif
+
 #if CZ_GNU_LINUX
-	switch (errno) {
+	switch (err) {
 	case EINVAL:
 		if (!size)
 			return CZ_RESULT_BAD_SIZE;
-
-		long pageSize = sysconf(_SC_PAGESIZE);
-		if (pageSize <= 0)
-			return CZ_RESULT_BAD_ADDRESS;
 		if ((uintptr_t) addr & (uintptr_t) (pageSize - 1))
 			return CZ_RESULT_BAD_ALIGNMENT;
 		return CZ_RESULT_BAD_ADDRESS;
@@ -6683,7 +6961,7 @@ enum CzResult czWrap_munmap(void* addr, size_t size)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EINVAL:
 		if (!size)
 			return CZ_RESULT_BAD_SIZE;
@@ -6691,15 +6969,11 @@ enum CzResult czWrap_munmap(void* addr, size_t size)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
-	switch (errno) {
+#elif CZ_DARWIN || CZ_POSIX_VERSION >= CZ_POSIX_2001
+	switch (err) {
 	case EINVAL:
 		if (!size)
 			return CZ_RESULT_BAD_SIZE;
-
-		long pageSize = sysconf(_SC_PAGESIZE);
-		if (pageSize <= 0)
-			return CZ_RESULT_BAD_ADDRESS;
 		if ((uintptr_t) addr & (uintptr_t) (pageSize - 1))
 			return CZ_RESULT_BAD_ALIGNMENT;
 		return CZ_RESULT_BAD_ADDRESS;
@@ -6709,10 +6983,6 @@ enum CzResult czWrap_munmap(void* addr, size_t size)
 #else
 	if (!size)
 		return CZ_RESULT_BAD_SIZE;
-
-	long pageSize = sysconf(_SC_PAGESIZE);
-	if (pageSize <= 0)
-		return CZ_RESULT_INTERNAL_ERROR;
 	if ((uintptr_t) addr & (uintptr_t) (pageSize - 1))
 		return CZ_RESULT_BAD_ALIGNMENT;
 	return CZ_RESULT_INTERNAL_ERROR;
@@ -6727,8 +6997,14 @@ enum CzResult czWrap_msync(void* addr, size_t size, int flags)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
+	int err = errno;
+#if !CZ_FREE_BSD
+	long pageSize = sysconf(_SC_PAGESIZE);
+	errno = err;
+#endif
+
 #if CZ_DARWIN
-	switch (errno) {
+	switch (err) {
 	case ENOMEM:
 		return CZ_RESULT_BAD_ADDRESS;
 	case EIO:
@@ -6736,10 +7012,6 @@ enum CzResult czWrap_msync(void* addr, size_t size, int flags)
 	case EINVAL:
 		if (!size)
 			return CZ_RESULT_BAD_SIZE;
-
-		long pageSize = sysconf(_SC_PAGESIZE);
-		if (pageSize <= 0)
-			return CZ_RESULT_BAD_ACCESS;
 		if ((uintptr_t) addr & (uintptr_t) (pageSize - 1))
 			return CZ_RESULT_BAD_ALIGNMENT;
 		return CZ_RESULT_BAD_ACCESS;
@@ -6749,7 +7021,7 @@ enum CzResult czWrap_msync(void* addr, size_t size, int flags)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_FREE_BSD
-	switch (errno) {
+	switch (err) {
 	case EINVAL:
 		if (flags & MS_ASYNC && flags & MS_INVALIDATE)
 			return CZ_RESULT_BAD_ACCESS;
@@ -6763,14 +7035,11 @@ enum CzResult czWrap_msync(void* addr, size_t size, int flags)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_1997
-	switch (errno) {
+#elif CZ_GNU_LINUX || CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_1997
+	switch (err) {
 	case ENOMEM:
 		return CZ_RESULT_BAD_ADDRESS;
 	case EINVAL:
-		long pageSize = sysconf(_SC_PAGESIZE);
-		if (pageSize <= 0)
-			return CZ_RESULT_BAD_ACCESS;
 		if ((uintptr_t) addr & (uintptr_t) (pageSize - 1))
 			return CZ_RESULT_BAD_ALIGNMENT;
 		return CZ_RESULT_BAD_ACCESS;
@@ -6780,13 +7049,10 @@ enum CzResult czWrap_msync(void* addr, size_t size, int flags)
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
 #elif CZ_XOPEN_VERSION >= CZ_SUS_1994 && CZ_XOPEN_UNIX > 0
-	switch (errno) {
+	switch (err) {
 	case ENOMEM:
 		return CZ_RESULT_BAD_ADDRESS;
 	case EINVAL:
-		long pageSize = sysconf(_SC_PAGESIZE);
-		if (pageSize <= 0)
-			return CZ_RESULT_BAD_ACCESS;
 		if ((uintptr_t) addr & (uintptr_t) (pageSize - 1))
 			return CZ_RESULT_BAD_ALIGNMENT;
 		return CZ_RESULT_BAD_ACCESS;
@@ -6796,10 +7062,6 @@ enum CzResult czWrap_msync(void* addr, size_t size, int flags)
 #else
 	if (!size)
 		return CZ_RESULT_BAD_SIZE;
-
-	long pageSize = sysconf(_SC_PAGESIZE);
-	if (pageSize <= 0)
-		return CZ_RESULT_INTERNAL_ERROR;
 	if ((uintptr_t) addr & (uintptr_t) (pageSize - 1))
 		return CZ_RESULT_BAD_ALIGNMENT;
 	return CZ_RESULT_INTERNAL_ERROR;
@@ -8668,7 +8930,7 @@ enum CzResult czWrap_sysconf(long* res, int name)
 {
 	errno = 0;
 	long r = sysconf(name);
-	if CZ_EXPECT (!errno) {
+	if CZ_EXPECT (r != -1 || !errno) {
 		*res = r;
 		return CZ_RESULT_SUCCESS;
 	}
