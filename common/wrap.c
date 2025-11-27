@@ -3897,6 +3897,914 @@ enum CzResult czWrap_lockf(int fd, int func, off_t size)
 }
 #endif
 
+#if CZ_WRAP_FCNTL
+enum CzResult czWrap_fcntl(int* res, int fd, int cmd, ...)
+{
+	int r = -1;
+	int intArg = 0;
+	struct flock* lockArg = NULL;
+#if CZ_DARWIN && CZ_DARWIN_C_SOURCE
+	char* pathArg = NULL;
+#endif
+#if CZ_DARWIN && CZ_DARWIN_C_SOURCE
+	off_t* offArg = NULL;
+#endif
+#if CZ_DARWIN && CZ_DARWIN_C_SOURCE
+	struct fstore* storeArg = NULL;
+#endif
+#if CZ_DARWIN && CZ_DARWIN_C_SOURCE
+	struct fpunchhole* holeArg = NULL;
+#endif
+#if CZ_DARWIN && CZ_DARWIN_C_SOURCE
+	struct radvisory* readAdviceArg = NULL;
+#endif
+#if CZ_DARWIN && CZ_DARWIN_C_SOURCE
+	struct log2phys* logPhysArg = NULL;
+#endif
+#if CZ_GNU_LINUX && CZ_GNU_SOURCE
+	CzU64* hintArg = NULL;
+#endif
+#if CZ_FREE_BSD
+	struct kinfo_file* kinfoArg = NULL;
+#endif
+#if (CZ_GNU_LINUX && CZ_GNU_SOURCE) || CZ_POSIX_VERSION >= CZ_POSIX_2024
+	struct f_owner_ex* ownerArg = NULL;
+#endif
+
+	va_list vargs;
+	va_start(vargs, cmd);
+
+#if CZ_DARWIN
+	switch (cmd) {
+	case F_GETFD:
+	case F_GETFL:
+	case F_GETOWN:
+		r = fcntl(fd, cmd);
+		break;
+#if CZ_DARWIN_C_SOURCE
+	case F_BARRIERFSYNC:
+	case F_FULLFSYNC:
+	case F_GETNOSIGPIPE:
+		r = fcntl(fd, cmd);
+		break;
+#endif
+	case F_DUPFD:
+	case F_SETFD:
+	case F_SETFL:
+	case F_SETOWN:
+		intArg = va_arg(vargs, int);
+		r = fcntl(fd, cmd, intArg);
+		break;
+#if CZ_DARWIN_C_SOURCE || CZ_POSIX_C_SOURCE >= CZ_POSIX_2008
+	case F_DUPFD_CLOEXEC:
+		intArg = va_arg(vargs, int);
+		r = fcntl(fd, cmd, intArg);
+		break;
+#endif
+#if CZ_DARWIN_C_SOURCE
+	case F_NOCACHE:
+	case F_RDAHEAD:
+	case F_SETNOSIGPIPE:
+	case F_TRANSFEREXTENTS:
+		intArg = va_arg(vargs, int);
+		r = fcntl(fd, cmd, intArg);
+		break;
+#endif
+	case F_GETLK:
+	case F_SETLK:
+	case F_SETLKW:
+		lockArg = va_arg(vargs, struct flock*);
+		r = fcntl(fd, cmd, lockArg);
+		break;
+#if CZ_DARWIN_C_SOURCE
+	case F_OFD_GETLK:
+	case F_OFD_SETLK:
+	case F_OFD_SETLKW:
+		lockArg = va_arg(vargs, struct flock*);
+		r = fcntl(fd, cmd, lockArg);
+		break;
+#endif
+#if CZ_DARWIN_C_SOURCE
+	case F_GETPATH:
+	case F_GETPATH_NOFIRMLINK:
+		pathArg = va_arg(vargs, char*);
+		r = fcntl(fd, cmd, pathArg);
+		break;
+#endif
+#if CZ_DARWIN_C_SOURCE
+	case F_SETSIZE:
+		offArg = va_arg(vargs, off_t*);
+		r = fcntl(fd, cmd, offArg);
+		break;
+#endif
+#if CZ_DARWIN_C_SOURCE
+	case F_PREALLOCATE:
+		storeArg = va_arg(vargs, struct fstore*);
+		r = fcntl(fd, cmd, storeArg);
+		break;
+#endif
+#if CZ_DARWIN_C_SOURCE
+	case F_PUNCHHOLE:
+		holeArg = va_arg(vargs, struct fpunchhole*);
+		r = fcntl(fd, cmd, holeArg);
+		break;
+#endif
+#if CZ_DARWIN_C_SOURCE
+	case F_RDADVISE:
+		readAdviceArg = va_arg(vargs, struct radvisory*);
+		r = fcntl(fd, cmd, readAdviceArg);
+		break;
+#endif
+#if CZ_DARWIN_C_SOURCE
+	case F_LOG2PHYS:
+	case F_LOG2PHYS_EXT:
+		logPhysArg = va_arg(vargs, struct log2phys*);
+		r = fcntl(fd, cmd, logPhysArg);
+		break;
+#endif
+	default:
+		va_end(vargs);
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_GNU_LINUX
+	switch (cmd) {
+	case F_GETFD:
+	case F_GETFL:
+		r = fcntl(fd, cmd);
+		break;
+#if CZ_GNU_SOURCE
+	case F_GET_SEALS:
+	case F_GETLEASE:
+	case F_GETPIPE_SZ:
+	case F_GETSIG:
+		r = fcntl(fd, cmd);
+		break;
+#endif
+#if CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 || CZ_XOPEN_SOURCE >= CZ_SUS_1997
+	case F_GETOWN:
+		r = fcntl(fd, cmd);
+		break;
+#endif
+	case F_DUPFD:
+	case F_SETFD:
+	case F_SETFL:
+		intArg = va_arg(vargs, int);
+		r = fcntl(fd, cmd, intArg);
+		break;
+#if CZ_GNU_SOURCE
+	case F_ADD_SEALS:
+	case F_NOTIFY:
+	case F_SETLEASE:
+	case F_SETPIPE_SZ:
+	case F_SETSIG:
+		intArg = va_arg(vargs, int);
+		r = fcntl(fd, cmd, intArg);
+		break;
+#endif
+#if CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 || CZ_XOPEN_SOURCE >= CZ_SUS_2008
+	case F_DUPFD_CLOEXEC:
+		intArg = va_arg(vargs, int);
+		r = fcntl(fd, cmd, intArg);
+		break;
+#endif
+#if CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 || CZ_XOPEN_SOURCE >= CZ_SUS_1997
+	case F_SETOWN:
+		intArg = va_arg(vargs, int);
+		r = fcntl(fd, cmd, intArg);
+		break;
+#endif
+	case F_GETLK:
+	case F_SETLK:
+	case F_SETLKW:
+		lockArg = va_arg(vargs, struct flock*);
+		r = fcntl(fd, cmd, lockArg);
+		break;
+#if CZ_GNU_SOURCE
+	case F_OFD_GETLK:
+	case F_OFD_SETLK:
+	case F_OFD_SETLKW:
+		lockArg = va_arg(vargs, struct flock*);
+		r = fcntl(fd, cmd, lockArg);
+		break;
+#endif
+#if CZ_GNU_SOURCE
+	case F_GET_RW_HINT:
+	case F_SET_RW_HINT:
+	case F_GET_FILE_RW_HINT:
+	case F_SET_FILE_RW_HINT:
+		hintArg = va_arg(vargs, CzU64*);
+		r = fcntl(fd, cmd, hintArg);
+		break;
+#endif
+#if CZ_GNU_SOURCE
+	case F_GETOWN_EX:
+	case F_SETOWN_EX:
+		ownerArg = va_arg(vargs, struct f_owner_ex*);
+		r = fcntl(fd, cmd, ownerArg);
+		break;
+#endif
+	default:
+		va_end(vargs);
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_FREE_BSD
+	switch (cmd) {
+	case F_GET_SEALS:
+	case F_GETFD:
+	case F_GETFL:
+	case F_GETOWN:
+	case F_ISUNIONSTACK:
+		r = fcntl(fd, cmd);
+		break;
+	case F_DUPFD:
+	case F_DUPFD_CLOEXEC:
+	case F_READAHEAD:
+	case F_RDAHEAD:
+	case F_SET_SEALS:
+	case F_SETFD:
+	case F_SETFL:
+	case F_SETOWN:
+		intArg = va_arg(vargs, int);
+		r = fcntl(fd, cmd, intArg);
+		break;
+#if CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(7, 1)
+	case F_DUP2FD:
+	case F_DUP2FD_CLOEXEC:
+		intArg = va_arg(vargs, int);
+		r = fcntl(fd, cmd, intArg);
+		break;
+#endif
+	case F_KINFO:
+		kinfoArg = va_arg(vargs, struct kinfo_file*);
+		r = fcntl(fd, cmd, kinfoArg);
+		break;
+	case F_GETLK:
+	case F_SETLK:
+	case F_SETLKW:
+		lockArg = va_arg(vargs, struct flock*);
+		r = fcntl(fd, cmd, lockArg);
+		break;
+	default:
+		va_end(vargs);
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2024
+	switch (cmd) {
+	case F_GETFD:
+	case F_GETFL:
+	case F_GETOWN:
+		r = fcntl(fd, cmd);
+		break;
+	case F_DUPFD:
+	case F_DUPFD_CLOEXEC:
+	case F_DUPFD_CLOFORK:
+	case F_SETFD:
+	case F_SETFL:
+	case F_SETOWN:
+		intArg = va_arg(vargs, int);
+		r = fcntl(fd, cmd, intArg);
+		break;
+	case F_GETLK:
+	case F_SETLK:
+	case F_SETLKW:
+	case F_OFD_GETLK:
+	case F_OFD_SETLK:
+	case F_OFD_SETLKW:
+		lockArg = va_arg(vargs, struct flock*);
+		r = fcntl(fd, cmd, lockArg);
+		break;
+	case F_GETOWN_EX:
+	case F_SETOWN_EX:
+		ownerArg = va_arg(vargs, struct f_owner_ex*);
+		r = fcntl(fd, cmd, ownerArg);
+		break;
+	default:
+		va_end(vargs);
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2008
+	switch (cmd) {
+	case F_GETFD:
+	case F_GETFL:
+	case F_GETOWN:
+		r = fcntl(fd, cmd);
+		break;
+	case F_DUPFD:
+	case F_DUPFD_CLOEXEC:
+	case F_SETFD:
+	case F_SETFL:
+	case F_SETOWN:
+		intArg = va_arg(vargs, int);
+		r = fcntl(fd, cmd, intArg);
+		break;
+	case F_GETLK:
+	case F_SETLK:
+	case F_SETLKW:
+		lockArg = va_arg(vargs, struct flock*);
+		r = fcntl(fd, cmd, lockArg);
+		break;
+	default:
+		va_end(vargs);
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
+	switch (cmd) {
+	case F_GETFD:
+	case F_GETFL:
+	case F_GETOWN:
+		r = fcntl(fd, cmd);
+		break;
+	case F_DUPFD:
+	case F_SETFD:
+	case F_SETFL:
+	case F_SETOWN:
+		intArg = va_arg(vargs, int);
+		r = fcntl(fd, cmd, intArg);
+		break;
+	case F_GETLK:
+	case F_SETLK:
+	case F_SETLKW:
+		lockArg = va_arg(vargs, struct flock*);
+		r = fcntl(fd, cmd, lockArg);
+		break;
+	default:
+		va_end(vargs);
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_1988
+	switch (cmd) {
+	case F_GETFD:
+	case F_GETFL:
+		r = fcntl(fd, cmd);
+		break;
+	case F_DUPFD:
+	case F_SETFD:
+	case F_SETFL:
+		intArg = va_arg(vargs, int);
+		r = fcntl(fd, cmd, intArg);
+		break;
+	case F_GETLK:
+	case F_SETLK:
+	case F_SETLKW:
+		lockArg = va_arg(vargs, struct flock*);
+		r = fcntl(fd, cmd, lockArg);
+		break;
+	default:
+		va_end(vargs);
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#endif
+
+	va_end(vargs);
+	if CZ_EXPECT (r != -1) {
+		*res = r;
+		return CZ_RESULT_SUCCESS;
+	}
+
+	int err = errno;
+#if !CZ_GNU_LINUX && !CZ_FREE_BSD
+	off_t pos = lseek(fd, 0, SEEK_CUR);
+	int posErr = (pos == -1) ? errno : 0;
+	errno = err;
+#endif
+#if !CZ_GNU_LINUX && !CZ_FREE_BSD
+	struct stat st;
+	int stRes = fstat(fd, &st);
+	int stErr = (stRes == -1) ? errno : 0;
+	errno = err;
+#endif
+#if CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(7, 1)
+	long openMax = sysconf(_SC_OPEN_MAX);
+	errno = err;
+#endif
+
+#if CZ_DARWIN
+	switch (err) {
+	case EACCES:
+	case EPERM:
+		return CZ_RESULT_BAD_ACCESS;
+	case EXDEV:
+		return CZ_RESULT_BAD_FILE;
+	case EFBIG:
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_RANGE;
+	case EDEADLK:
+		return CZ_RESULT_DEADLOCK;
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOSPC:
+		return CZ_RESULT_NO_DISK;
+	case ENOLCK:
+		return CZ_RESULT_NO_LOCK;
+	case EMFILE:
+		return CZ_RESULT_NO_OPEN;
+	case ESRCH:
+		return CZ_RESULT_NO_PROCESS;
+	case ENOTSUP:
+		return CZ_RESULT_NO_SUPPORT;
+	case EBADF:
+		switch (cmd) {
+#if CZ_DARWIN_C_SOURCE
+		case F_TRANSFEREXTENTS:
+			if (stErr)
+				return CZ_RESULT_BAD_ACCESS;
+			if (!S_ISREG(st.st_mode))
+				return CZ_RESULT_BAD_FILE;
+			return CZ_RESULT_BAD_ACCESS;
+#endif
+		default:
+			return CZ_RESULT_BAD_ACCESS;
+		}
+	case EINVAL:
+		switch (cmd) {
+#if CZ_DARWIN_C_SOURCE
+		case F_PUNCHHOLE:
+			if (holeArg->fp_flags)
+				return CZ_RESULT_BAD_ACCESS;
+			if (holeArg->reserved)
+				return CZ_RESULT_BAD_ACCESS;
+			if (holeArg->fp_offset < 0)
+				return CZ_RESULT_BAD_OFFSET;
+			if (holeArg->fp_length < 0)
+				return CZ_RESULT_BAD_SIZE;
+			return CZ_RESULT_BAD_ALIGNMENT;
+#endif
+#if CZ_DARWIN_C_SOURCE
+		case F_TRANSFEREXTENTS:
+			if (intArg < 0)
+				return CZ_RESULT_BAD_ACCESS;
+			return CZ_RESULT_BAD_FILE;
+#endif
+#if CZ_DARWIN_C_SOURCE
+		case F_PREALLOCATE:
+			return CZ_RESULT_BAD_OFFSET;
+#endif
+		case F_DUPFD:
+			return CZ_RESULT_NO_OPEN;
+#if CZ_DARWIN_C_SOURCE || CZ_POSIX_C_SOURCE >= CZ_POSIX_2008
+		case F_DUPFD_CLOEXEC:
+			return CZ_RESULT_NO_OPEN;
+#endif
+		case F_GETLK:
+		case F_SETLK:
+		case F_SETLKW:
+#if CZ_DARWIN_C_SOURCE
+		case F_OFD_GETLK:
+		case F_OFD_SETLK:
+		case F_OFD_SETLKW:
+#endif
+			switch (lockArg->l_whence) {
+			case SEEK_SET:
+				if (lockArg->l_start < 0)
+					return CZ_RESULT_BAD_OFFSET;
+				break;
+			case SEEK_CUR:
+				if (posErr)
+					break;
+				if (lockArg->l_start < -pos)
+					return CZ_RESULT_BAD_OFFSET;
+				break;
+			case SEEK_END:
+				if (stErr)
+					break;
+				if (lockArg->l_start < -st.st_size)
+					return CZ_RESULT_BAD_OFFSET;
+				break;
+			default:
+				return CZ_RESULT_BAD_OFFSET;
+			}
+			switch (lockArg->l_type) {
+			case F_RDLCK:
+			case F_WRLCK:
+			case F_UNLCK:
+				if (lockArg->l_len < 0)
+					return CZ_RESULT_BAD_SIZE;
+				return CZ_RESULT_BAD_FILE;
+			default:
+				return CZ_RESULT_BAD_ACCESS;
+			}
+		default:
+			return CZ_RESULT_NO_SUPPORT;
+		}
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_GNU_LINUX
+	switch (err) {
+	case EBADF:
+	case EPERM:
+		return CZ_RESULT_BAD_ACCESS;
+	case EFAULT:
+		return CZ_RESULT_BAD_ADDRESS;
+	case ENOTDIR:
+		return CZ_RESULT_BAD_FILE;
+	case EDEADLK:
+		return CZ_RESULT_DEADLOCK;
+	case EACCES:
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOLCK:
+		return CZ_RESULT_NO_LOCK;
+	case EMFILE:
+		return CZ_RESULT_NO_OPEN;
+	case EBUSY:
+		switch (cmd) {
+#if CZ_GNU_SOURCE
+		case F_SETPIPE_SZ:
+			return CZ_RESULT_BAD_SIZE;
+#endif
+#if CZ_GNU_SOURCE
+		case F_ADD_SEALS:
+			return CZ_RESULT_IN_USE;
+#endif
+		default:
+			return CZ_RESULT_INTERNAL_ERROR;
+		}
+	case EINVAL:
+		switch (cmd) {
+#if CZ_GNU_SOURCE
+		case F_OFD_GETLK:
+		case F_OFD_SETLK:
+		case F_OFD_SETLKW:
+		case F_SETSIG:
+			return CZ_RESULT_BAD_ACCESS;
+#endif
+#if CZ_GNU_SOURCE
+		case F_ADD_SEALS:
+			if (intArg & ~(F_SEAL_SEAL | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_WRITE | F_SEAL_FUTURE_WRITE))
+				return CZ_RESULT_BAD_ACCESS;
+			return CZ_RESULT_NO_SUPPORT;
+#endif
+		case F_DUPFD:
+			return CZ_RESULT_NO_OPEN;
+#if CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 || CZ_XOPEN_SOURCE >= CZ_SUS_2008
+		case F_DUPFD_CLOEXEC:
+			return CZ_RESULT_NO_OPEN;
+#endif
+#if CZ_GNU_SOURCE
+		case F_GET_SEALS:
+			return CZ_RESULT_NO_SUPPORT;
+#endif
+		default:
+			return CZ_RESULT_NO_SUPPORT;
+		}
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_FREE_BSD
+	switch (err) {
+	case EPERM:
+		return CZ_RESULT_BAD_ACCESS;
+	case ENOTTY:
+	case EOPNOTSUPP:
+		return CZ_RESULT_BAD_FILE;
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_RANGE;
+	case EDEADLK:
+		return CZ_RESULT_DEADLOCK;
+	case EAGAIN:
+	case EBUSY:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOLCK:
+		return CZ_RESULT_NO_LOCK;
+	case EMFILE:
+		return CZ_RESULT_NO_OPEN;
+	case ESRCH:
+		return CZ_RESULT_NO_PROCESS;
+	case EBADF:
+		switch (cmd) {
+#if CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(7, 1)
+		case F_DUP2FD:
+		case F_DUP2FD_CLOEXEC:
+			if (intArg < 0)
+				return CZ_RESULT_NO_OPEN;
+			if (openMax == -1)
+				return CZ_RESULT_BAD_ACCESS;
+			if (intArg >= openMax)
+				return CZ_RESULT_NO_OPEN;
+			return CZ_RESULT_BAD_ACCESS;
+#endif
+		default:
+			return CZ_RESULT_BAD_ACCESS;
+		}
+	case EINVAL:
+		switch (cmd) {
+		case F_DUPFD:
+		case F_DUPFD_CLOEXEC:
+			return CZ_RESULT_NO_OPEN;
+		case F_ADD_SEALS:
+		case F_GET_SEALS:
+			return CZ_RESULT_NO_SUPPORT;
+		case F_GETLK:
+		case F_SETLK:
+		case F_SETLKW:
+			switch (lockArg->l_type) {
+			case F_RDLCK:
+			case F_WRLCK:
+			case F_UNLCK:
+				return CZ_RESULT_BAD_OFFSET;
+			default:
+				return CZ_RESULT_BAD_ACCESS;
+			}
+		default:
+			return CZ_RESULT_NO_SUPPORT;
+		}
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2024
+	switch (err) {
+	case EBADF:
+	case EPERM:
+		return CZ_RESULT_BAD_ACCESS;
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_RANGE;
+	case EDEADLK:
+		return CZ_RESULT_DEADLOCK;
+	case EACCES:
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOLCK:
+		return CZ_RESULT_NO_LOCK;
+	case EMFILE:
+		return CZ_RESULT_NO_OPEN;
+	case ESRCH:
+		return CZ_RESULT_NO_PROCESS;
+	case EINVAL:
+		switch (cmd) {
+		case F_SETOWN:
+		case F_SETOWN_EX:
+			return CZ_RESULT_BAD_ACCESS;
+		case F_DUPFD:
+		case F_DUPFD_CLOEXEC:
+		case F_DUPFD_CLOFORK:
+			return CZ_RESULT_NO_OPEN;
+		case F_OFD_GETLK:
+		case F_OFD_SETLK:
+		case F_OFD_SETLKW:
+			if (lockArg->l_pid)
+				return CZ_RESULT_BAD_ACCESS;
+		case F_GETLK:
+		case F_SETLK:
+		case F_SETLKW:
+			switch (lockArg->l_whence) {
+			case SEEK_SET:
+				if (lockArg->l_start < 0)
+					return CZ_RESULT_BAD_OFFSET;
+				if (lockArg->l_len < 0 && lockArg->l_len < -lockArg->l_start)
+					return CZ_RESULT_BAD_OFFSET;
+				break;
+			case SEEK_CUR:
+				if (posErr)
+					break;
+				if (lockArg->l_start < -pos)
+					return CZ_RESULT_BAD_OFFSET;
+				if (lockArg->l_len < 0 && lockArg->l_len + pos < -lockArg->l_start)
+					return CZ_RESULT_BAD_OFFSET;
+				break;
+			case SEEK_END;
+				if (stErr)
+					break;
+				if (lockArg->l_start < -st.st_size)
+					return CZ_RESULT_BAD_OFFSET;
+				if (lockArg->l_len < 0 && lockArg->l_len + st.st_size < -lockArg->l_start)
+					return CZ_RESULT_BAD_OFFSET;
+				break;
+			default:
+				return CZ_RESULT_BAD_OFFSET;
+			}
+			switch (lockArg->l_type) {
+			case F_RDLCK:
+			case F_WRLCK:
+			case F_UNLCK:
+				return CZ_RESULT_BAD_FILE;
+			default:
+				return CZ_RESULT_BAD_ACCESS;
+			}
+		default:
+			return CZ_RESULT_NO_SUPPORT;
+		}
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2008
+	switch (err) {
+	case EBADF:
+	case EPERM:
+		return CZ_RESULT_BAD_ACCESS;
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_RANGE;
+	case EDEADLK:
+		return CZ_RESULT_DEADLOCK;
+	case EACCES:
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOLCK:
+		return CZ_RESULT_NO_LOCK;
+	case EMFILE:
+		return CZ_RESULT_NO_OPEN;
+	case ESRCH:
+		return CZ_RESULT_NO_PROCESS;
+	case EINVAL:
+		switch (cmd) {
+		case F_SETOWN:
+			return CZ_RESULT_BAD_ACCESS;
+		case F_DUPFD:
+		case F_DUPFD_CLOEXEC:
+			return CZ_RESULT_NO_OPEN;
+		case F_GETLK:
+		case F_SETLK:
+		case F_SETLKW:
+			switch (lockArg->l_whence) {
+			case SEEK_SET:
+				if (lockArg->l_start < 0)
+					return CZ_RESULT_BAD_OFFSET;
+				if (lockArg->l_len < 0 && lockArg->l_len < -lockArg->l_start)
+					return CZ_RESULT_BAD_OFFSET;
+				break;
+			case SEEK_CUR:
+				if (posErr)
+					break;
+				if (lockArg->l_start < -pos)
+					return CZ_RESULT_BAD_OFFSET;
+				if (lockArg->l_len < 0 && lockArg->l_len + pos < -lockArg->l_start)
+					return CZ_RESULT_BAD_OFFSET;
+				break;
+			case SEEK_END;
+				if (stErr)
+					break;
+				if (lockArg->l_start < -st.st_size)
+					return CZ_RESULT_BAD_OFFSET;
+				if (lockArg->l_len < 0 && lockArg->l_len + st.st_size < -lockArg->l_start)
+					return CZ_RESULT_BAD_OFFSET;
+				break;
+			default:
+				return CZ_RESULT_BAD_OFFSET;
+			}
+			switch (lockArg->l_type) {
+			case F_RDLCK:
+			case F_WRLCK:
+			case F_UNLCK:
+				return CZ_RESULT_BAD_FILE;
+			default:
+				return CZ_RESULT_BAD_ACCESS;
+			}
+		default:
+			return CZ_RESULT_NO_SUPPORT;
+		}
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
+	switch (err) {
+	case EBADF:
+	case EPERM:
+		return CZ_RESULT_BAD_ACCESS;
+	case EOVERFLOW:
+		return CZ_RESULT_BAD_RANGE;
+	case EDEADLK:
+		return CZ_RESULT_DEADLOCK;
+	case EACCES:
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOLCK:
+		return CZ_RESULT_NO_LOCK;
+	case EMFILE:
+		return CZ_RESULT_NO_OPEN;
+	case ESRCH:
+		return CZ_RESULT_NO_PROCESS;
+	case EINVAL:
+		switch (cmd) {
+		case F_SETOWN:
+			return CZ_RESULT_BAD_ACCESS;
+		case F_DUPFD:
+			return CZ_RESULT_NO_OPEN;
+		case F_GETLK:
+		case F_SETLK:
+		case F_SETLKW:
+			switch (lockArg->l_whence) {
+			case SEEK_SET:
+				if (lockArg->l_start < 0)
+					return CZ_RESULT_BAD_OFFSET;
+				if (lockArg->l_len < 0 && lockArg->l_len < -lockArg->l_start)
+					return CZ_RESULT_BAD_OFFSET;
+				break;
+			case SEEK_CUR:
+				if (posErr)
+					break;
+				if (lockArg->l_start < -pos)
+					return CZ_RESULT_BAD_OFFSET;
+				if (lockArg->l_len < 0 && lockArg->l_len + pos < -lockArg->l_start)
+					return CZ_RESULT_BAD_OFFSET;
+				break;
+			case SEEK_END;
+				if (stErr)
+					break;
+				if (lockArg->l_start < -st.st_size)
+					return CZ_RESULT_BAD_OFFSET;
+				if (lockArg->l_len < 0 && lockArg->l_len + st.st_size < -lockArg->l_start)
+					return CZ_RESULT_BAD_OFFSET;
+				break;
+			default:
+				return CZ_RESULT_BAD_OFFSET;
+			}
+			switch (lockArg->l_type) {
+			case F_RDLCK:
+			case F_WRLCK:
+			case F_UNLCK:
+				return CZ_RESULT_BAD_FILE;
+			default:
+				return CZ_RESULT_BAD_ACCESS;
+			}
+		default:
+			return CZ_RESULT_NO_SUPPORT;
+		}
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#elif CZ_POSIX_VERSION >= CZ_POSIX_1988
+	switch (err) {
+	case EBADF:
+	case EPERM:
+		return CZ_RESULT_BAD_ACCESS;
+	case EDEADLK:
+		return CZ_RESULT_DEADLOCK;
+	case EACCES:
+	case EAGAIN:
+		return CZ_RESULT_IN_USE;
+	case EINTR:
+		return CZ_RESULT_INTERRUPT;
+	case ENOLCK:
+		return CZ_RESULT_NO_LOCK;
+	case EMFILE:
+		return CZ_RESULT_NO_OPEN;
+	case ESRCH:
+		return CZ_RESULT_NO_PROCESS;
+	case EINVAL:
+		switch (cmd) {
+		case F_DUPFD:
+			return CZ_RESULT_NO_OPEN;
+		case F_GETLK:
+		case F_SETLK:
+		case F_SETLKW:
+			switch (lockArg->l_whence) {
+			case SEEK_SET:
+				if (lockArg->l_start < 0)
+					return CZ_RESULT_BAD_OFFSET;
+				if (lockArg->l_len < 0 && lockArg->l_len < -lockArg->l_start)
+					return CZ_RESULT_BAD_OFFSET;
+				break;
+			case SEEK_CUR:
+				if (posErr)
+					break;
+				if (lockArg->l_start < -pos)
+					return CZ_RESULT_BAD_OFFSET;
+				if (lockArg->l_len < 0 && lockArg->l_len + pos < -lockArg->l_start)
+					return CZ_RESULT_BAD_OFFSET;
+				break;
+			case SEEK_END;
+				if (stErr)
+					break;
+				if (lockArg->l_start < -st.st_size)
+					return CZ_RESULT_BAD_OFFSET;
+				if (lockArg->l_len < 0 && lockArg->l_len + st.st_size < -lockArg->l_start)
+					return CZ_RESULT_BAD_OFFSET;
+				break;
+			default:
+				return CZ_RESULT_BAD_OFFSET;
+			}
+			switch (lockArg->l_type) {
+			case F_RDLCK:
+			case F_WRLCK:
+			case F_UNLCK:
+				return CZ_RESULT_BAD_FILE;
+			default:
+				return CZ_RESULT_BAD_ACCESS;
+			}
+		default:
+			return CZ_RESULT_NO_SUPPORT;
+		}
+	default:
+		return CZ_RESULT_INTERNAL_ERROR;
+	}
+#else
+	return CZ_RESULT_INTERNAL_ERROR;
+#endif
+}
+#endif
+
 #if CZ_WRAP_TRUNCATE
 enum CzResult czWrap_truncate(const char* path, off_t size)
 {

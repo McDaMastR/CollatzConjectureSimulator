@@ -1615,7 +1615,7 @@ enum CzResult czWrap_flock(int fd, int op);
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
  * @retval CZ_RESULT_BAD_RANGE The file section extended past the maximum file size.
  * @retval CZ_RESULT_BAD_SIZE The sum of @p size and the current file offset was negative.
- * @retval CZ_RESULT_DEADLOCK The file lock would have caused a deadlock.
+ * @retval CZ_RESULT_DEADLOCK The file lock could cause a deadlock.
  * @retval CZ_RESULT_IN_USE The file section was already locked.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
  * @retval CZ_RESULT_NO_LOCK No file locks were available.
@@ -1627,6 +1627,64 @@ enum CzResult czWrap_flock(int fd, int op);
  */
 CZ_WR_FILDES(1)
 enum CzResult czWrap_lockf(int fd, int func, off_t size);
+#endif
+
+/**
+ * @def CZ_WRAP_FCNTL
+ * 
+ * @brief Specifies whether @c fcntl is defined.
+ */
+#if !defined(CZ_WRAP_FCNTL)
+#if CZ_DARWIN ||        \
+	(                   \
+		CZ_GNU_LINUX && \
+		CZ_GLIBC) ||    \
+	CZ_FREE_BSD ||      \
+	CZ_POSIX_VERSION >= CZ_POSIX_1988
+#define CZ_WRAP_FCNTL 1
+#else
+#define CZ_WRAP_FCNTL 0
+#endif
+#endif
+
+#if CZ_WRAP_FCNTL
+/**
+ * @brief Wraps @c fcntl.
+ * 
+ * Calls @c fcntl with @p fd, @p cmd, and 0-1 variadic arguments. On success, the returned @c int is synchronously
+ * written to @p res. On failure, the contents of @p res are unchanged.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] fd The first argument to pass to @c fcntl.
+ * @param[in] cmd The second argument to pass to @c fcntl.
+ * @param[in] ... The variadic arguments to pass to @c fcntl.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to enact @p cmd on the file was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS A variadic argument was an invalid pointer.
+ * @retval CZ_RESULT_BAD_ALIGNMENT A variadic argument had an invalid alignment.
+ * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
+ * @retval CZ_RESULT_BAD_OFFSET The file offset was invalid.
+ * @retval CZ_RESULT_BAD_RANGE The file section extended past the maximum file size.
+ * @retval CZ_RESULT_BAD_SIZE The requested size or capacity was invalid.
+ * @retval CZ_RESULT_DEADLOCK The file lock could cause a deadlock.
+ * @retval CZ_RESULT_IN_USE The file section was already locked.
+ * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
+ * @retval CZ_RESULT_NO_LOCK No file locks were available.
+ * @retval CZ_RESULT_NO_OPEN The requested file descriptor values were unavailable.
+ * @retval CZ_RESULT_NO_PROCESS The process or process group did not exist.
+ * @retval CZ_RESULT_NO_SUPPORT @p cmd was invalid or unsupported by the platform.
+ * 
+ * @pre @p res is nonnull.
+ * @pre @p fd is an open file descriptor.
+ * @pre Any variadic arguments of pointer type are nonnull.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_FCNTL is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS() CZ_FILDES(2)
+enum CzResult czWrap_fcntl(int* res, int fd, int cmd, ...);
 #endif
 
 /**
