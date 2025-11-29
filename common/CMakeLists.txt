@@ -10,6 +10,7 @@ target_sources(cltzCommon
 		file.c
 		util.c
 		wrap.c
+		wrap_win32.c
 	PUBLIC FILE_SET HEADERS FILES
 		alloc.h
 		common.h
@@ -18,4 +19,5 @@ target_sources(cltzCommon
 		file.h
 		util.h
 		wrap.h
+		wrap_win32.h
 )
