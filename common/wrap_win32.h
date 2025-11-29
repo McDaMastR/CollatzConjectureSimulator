@@ -828,10 +828,9 @@ enum CzResult czWrap_WriteFile(
  * @retval CZ_RESULT_BAD_ACCESS Permission to delete the file was denied.
  * @retval CZ_RESULT_BAD_ADDRESS @p lpFileName was an invalid pointer.
  * @retval CZ_RESULT_BAD_FILE The file was too large or the file type was unsupported.
- * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when reading from or writing to the file.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when deleting the file.
  * @retval CZ_RESULT_BAD_PATH @p lpFileName was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
- * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
@@ -841,8 +840,50 @@ enum CzResult czWrap_WriteFile(
  * 
  * @note This function is only defined if @ref CZ_WRAP_DELETE_FILE_W is defined as a nonzero value.
  */
-CZ_NONNULL_ARGS(1) CZ_RD_ACCESS(1)
+CZ_NONNULL_ARGS(1) CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1)
 enum CzResult czWrap_DeleteFileW(LPCWSTR lpFileName);
+#endif
+
+/**
+ * @def CZ_WRAP_REMOVE_DIRECTORY_W
+ * 
+ * @brief Specifies whether @c RemoveDirectoryW is defined.
+ */
+#if !defined(CZ_WRAP_REMOVE_DIRECTORY_W)
+#if CZ_WIN32
+#define CZ_WRAP_REMOVE_DIRECTORY_W 1
+#else
+#define CZ_WRAP_REMOVE_DIRECTORY_W 0
+#endif
+#endif
+
+#if CZ_WRAP_REMOVE_DIRECTORY_W
+/**
+ * @brief Wraps @c RemoveDirectoryW.
+ * 
+ * Calls @c RemoveDirectoryW with @p lpPathName.
+ * 
+ * @param[in] lpPathName The argument to pass to @c RemoveDirectoryW.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
+ * @retval CZ_RESULT_BAD_ACCESS Permission to delete the directory was denied.
+ * @retval CZ_RESULT_BAD_ADDRESS @p lpPathName was an invalid pointer.
+ * @retval CZ_RESULT_BAD_FILE The file was not an empty directory.
+ * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when deleting the directory.
+ * @retval CZ_RESULT_BAD_PATH @p lpPathName was an invalid or unsupported filepath.
+ * @retval CZ_RESULT_IN_USE The directory was already in use by the system.
+ * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
+ * @retval CZ_RESULT_NO_FILE The directory did not exist.
+ * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
+ * @retval CZ_RESULT_NO_SUPPORT The operation was unsupported by the platform.
+ * 
+ * @pre @p lpPathName is nonnull and NUL-terminated.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_REMOVE_DIRECTORY_W is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS(1) CZ_NULTERM_ARG(1) CZ_RD_ACCESS(1)
+enum CzResult czWrap_RemoveDirectoryW(LPCWSTR lpPathName);
 #endif
 
 /**
