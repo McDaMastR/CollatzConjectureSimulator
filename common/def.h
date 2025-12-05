@@ -52,29 +52,27 @@
 #define CZ_STDCXX_2020 202002L // C++20 - ISO/IEC 14882:2020
 #define CZ_STDCXX_2023 202302L // C++23 - ISO/IEC 14882:2024
 
-// POSIX.1 versions
+// POSIX versions
 
 #define CZ_POSIX_1988 198808L // POSIX.1-1988 - IEEE Std 1003.1-1988
-#define CZ_POSIX_1990 199009L // POSIX.1-1990 - IEEE Std 1003.1-1990  - ISO/IEC 9945:1990
+#define CZ_POSIX_1990 199009L // POSIX.1-1990 - IEEE Std 1003.1-1990  - ISO/IEC 9945-1:1990
+#define CZ_POSIX_1992 199209L // POSIX.2-1992 - IEEE Std 1003.2-1992  - ISO/IEC 9945-2:1993
 #define CZ_POSIX_1993 199309L // POSIX.1b     - IEEE Std 1003.1b-1993
 #define CZ_POSIX_1995 199506L // POSIX.1c     - IEEE Std 1003.1c-1995
-#define CZ_POSIX_1996 199506L // POSIX.1-1996 - IEEE Std 1003.1-1996  - ISO/IEC 9945:1996
+#define CZ_POSIX_1996 199506L // POSIX.1-1996 - IEEE Std 1003.1-1996  - ISO/IEC 9945-1:1996
 #define CZ_POSIX_2001 200112L // POSIX.1-2001 - IEEE Std 1003.1-2001  - ISO/IEC 9945:2002
 #define CZ_POSIX_2008 200809L // POSIX.1-2008 - IEEE Std 1003.1-2008  - ISO/IEC/IEEE 9945:2009
 #define CZ_POSIX_2017 200809L // POSIX.1-2017 - IEEE Std 1003.1-2017
 #define CZ_POSIX_2024 202405L // POSIX.1-2024 - IEEE Std 1003.1-2024
 
-// X/Open Portability Guide (XPG) versions
+// X/Open Portability Guide (XPG) and Single UNIX Specification (SUS...) versions
 
 #define CZ_XPG_1985 1 // XPG
 #define CZ_XPG_1987 2 // XPG2
 #define CZ_XPG_1989 3 // XPG3
 #define CZ_XPG_1992 4 // XPG4
-#define CZ_XPG_1994 4 // XPG4v2
 
-// Single UNIX Specification (SUS...) versions
-
-#define CZ_SUS_1994 4   // SUS
+#define CZ_SUS_1994 400 // SUS   - XPG4v2
 #define CZ_SUS_1997 500 // SUSv2
 #define CZ_SUS_2001 600 // SUSv3
 #define CZ_SUS_2008 700 // SUSv4
@@ -1043,8 +1041,18 @@
 // Check for predefined X/OPEN macros
 
 #if !defined(CZ_XOPEN_VERSION)
-#if defined(_XOPEN_VERSION)
+#if defined(_XOPEN_VERSION) && _XOPEN_VERSION >= CZ_SUS_1997
 #define CZ_XOPEN_VERSION _XOPEN_VERSION
+#elif defined(_XOPEN_UNIX)
+#define CZ_XOPEN_VERSION CZ_SUS_1994
+#elif defined(_XOPEN_XPG4)
+#define CZ_XOPEN_VERSION CZ_XPG_1992
+#elif defined(_XOPEN_XPG3)
+#define CZ_XOPEN_VERSION CZ_XPG_1989
+#elif defined(_XOPEN_XPG2)
+#define CZ_XOPEN_VERSION CZ_XPG_1987
+#elif defined(_XOPEN_VERSION)
+#define CZ_XOPEN_VERSION CZ_XPG_1985
 #else
 #define CZ_XOPEN_VERSION ( -1 )
 #endif
@@ -1090,14 +1098,6 @@
 #endif
 #endif
 
-#if !defined(CZ_XOPEN_UNIX)
-#if defined(_XOPEN_UNIX)
-#define CZ_XOPEN_UNIX _XOPEN_UNIX
-#else
-#define CZ_XOPEN_UNIX ( -1 )
-#endif
-#endif
-
 // Check for user-defined feature macros
 
 #if !defined(CZ_ANSI_SOURCE)
@@ -1121,6 +1121,22 @@
 #define CZ_BSD_SOURCE 1
 #else
 #define CZ_BSD_SOURCE 0
+#endif
+#endif
+
+#if !defined(CZ_C99_SOURCE)
+#if defined(_C99_SOURCE)
+#define CZ_C99_SOURCE 1
+#else
+#define CZ_C99_SOURCE 0
+#endif
+#endif
+
+#if !defined(CZ_C11_SOURCE)
+#if defined(_C11_SOURCE)
+#define CZ_C11_SOURCE 1
+#else
+#define CZ_C11_SOURCE 0
 #endif
 #endif
 
@@ -1191,10 +1207,14 @@
 #endif
 
 #if !defined(CZ_POSIX_C_SOURCE)
-#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE > 0
+#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= CZ_POSIX_1993
 #define CZ_POSIX_C_SOURCE _POSIX_C_SOURCE
-#elif defined(_POSIX_SOURCE)
-#define CZ_POSIX_C_SOURCE 1
+#elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 2
+#define CZ_POSIX_C_SOURCE CZ_POSIX_1992
+#elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE == 1
+#define CZ_POSIX_C_SOURCE CZ_POSIX_1990
+#elif defined(_POSIX_C_SOURCE)
+#define CZ_POSIX_C_SOURCE CZ_POSIX_1988
 #else
 #define CZ_POSIX_C_SOURCE 0
 #endif
@@ -1217,10 +1237,10 @@
 #endif
 
 #if !defined(CZ_XOPEN_SOURCE)
-#if defined(_XOPEN_SOURCE) && _XOPEN_SOURCE > CZ_XPG_1992
+#if defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= CZ_SUS_1997
 #define CZ_XOPEN_SOURCE _XOPEN_SOURCE
 #elif defined(_XOPEN_SOURCE)
-#define CZ_XOPEN_SOURCE CZ_XPG_1992
+#define CZ_XOPEN_SOURCE CZ_SUS_1994
 #else
 #define CZ_XOPEN_SOURCE 0
 #endif

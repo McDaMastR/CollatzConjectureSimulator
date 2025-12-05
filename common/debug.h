@@ -149,3 +149,20 @@ void VKAPI_CALL internal_free_callback(
 	}                                        \
 	while (0)
 #endif
+
+#if CZ_DEBUG
+#define CZ_ASSERT(x)                                             \
+	do {                                                         \
+		if CZ_NOEXPECT (!(x)) {                                  \
+			fprintf(                                             \
+				stderr,                                          \
+				CZ_SGR_BOLD "FAILED CZ_ASSERT" CZ_SGR_RESET "\n" \
+				"\tFile = " CZ_FILENAME ", Line = %d\n"          \
+				"\tExpected " #x "\n",                           \
+				__LINE__);                                       \
+		}                                                        \
+	}                                                            \
+	while (0)
+#else
+#define CZ_ASSERT(x) CZ_ASSUME(x)
+#endif
