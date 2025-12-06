@@ -159,6 +159,36 @@ enum CzResult czWrap_realloc(void* restrict* res, void* ptr, size_t size);
 #endif
 
 /**
+ * @def CZ_WRAP_FREE
+ * 
+ * @brief Specifies whether @c free is defined.
+ */
+#if !defined(CZ_WRAP_FREE)
+#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
+	CZ_XOPEN_VERSION >= CZ_XPG_1985
+#define CZ_WRAP_FREE 1
+#else
+#define CZ_WRAP_FREE 0
+#endif
+#endif
+
+#if CZ_WRAP_FREE
+/**
+ * @brief Wraps @c free.
+ * 
+ * Calls @c free with @p ptr.
+ * 
+ * @param[in] ptr The argument to pass to @c free.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_FREE is defined as a nonzero value.
+ */
+enum CzResult czWrap_free(void* ptr);
+#endif
+
+/**
  * @def CZ_WRAP_ALIGNED_ALLOC
  * 
  * @brief Specifies whether @c aligned_alloc is defined.
@@ -357,6 +387,109 @@ enum CzResult czWrap_freopen(const char* pathname, const char* mode, FILE* strea
  */
 CZ_NONNULL_ARGS(1)
 enum CzResult czWrap_fclose(FILE* stream);
+#endif
+
+/**
+ * @def CZ_WRAP_FERROR
+ * 
+ * @brief Specifies whether @c ferror is defined.
+ */
+#if !defined(CZ_WRAP_FERROR)
+#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
+	CZ_XOPEN_VERSION >= CZ_XPG_1985
+#define CZ_WRAP_FERROR 1
+#else
+#define CZ_WRAP_FERROR 0
+#endif
+#endif
+
+#if CZ_WRAP_FERROR
+/**
+ * @brief Wraps @c ferror.
+ * 
+ * Calls @c ferror with @p stream. The returned @c int is synchronously written to @p res.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] stream The argument to pass to @c ferror.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * 
+ * @pre @p res is nonnull.
+ * @pre @p stream is nonnull.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_FERROR is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS(1, 2) CZ_WR_ACCESS(1) CZ_RD_ACCESS(2)
+enum CzResult czWrap_ferror(int* res, FILE* stream);
+#endif
+
+/**
+ * @def CZ_WRAP_FEOF
+ * 
+ * @brief Specifies whether @c feof is defined.
+ */
+#if !defined(CZ_WRAP_FEOF)
+#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
+	CZ_XOPEN_VERSION >= CZ_XPG_1985
+#define CZ_WRAP_FEOF 1
+#else
+#define CZ_WRAP_FEOF 0
+#endif
+#endif
+
+#if CZ_WRAP_FEOF
+/**
+ * @brief Wraps @c feof.
+ * 
+ * Calls @c feof with @p stream. The returned @c int is synchronously written to @p res.
+ * 
+ * @param[out] res The memory to write the return value to.
+ * @param[in] stream The argument to pass to @c feof.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * 
+ * @pre @p res is nonnull.
+ * @pre @p stream is nonnull.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_FEOF is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS(1, 2) CZ_WR_ACCESS(1) CZ_RD_ACCESS(2)
+enum CzResult czWrap_feof(int* res, FILE* stream);
+#endif
+
+/**
+ * @def CZ_WRAP_CLEARERR
+ * 
+ * @brief Specifies whether @c clearerr is defined.
+ */
+#if !defined(CZ_WRAP_CLEARERR)
+#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
+	CZ_XOPEN_VERSION >= CZ_XPG_1985
+#define CZ_WRAP_CLEARERR 1
+#else
+#define CZ_WRAP_CLEARERR 0
+#endif
+#endif
+
+#if CZ_WRAP_CLEARERR
+/**
+ * @brief Wraps @c clearerr.
+ * 
+ * Calls @c clearerr with @p stream.
+ * 
+ * @param[in,out] stream The argument to pass to @c clearerr.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * 
+ * @pre @p stream is nonnull.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_CLEARERR is defined as a nonzero value.
+ */
+CZ_NONNULL_ARGS(1) CZ_RW_ACCESS(1)
+enum CzResult czWrap_clearerr(FILE* stream);
 #endif
 
 /**

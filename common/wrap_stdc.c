@@ -25,7 +25,7 @@
 CZ_NONNULL_ARGS()
 static void stream_clear(FILE* stream)
 {
-#if 1 // TODO wrap with CZ_WRAP_CLEARERR
+#if CZ_WRAP_CLEARERR
 	int err = errno;
 	clearerr(stream);
 	errno = err;
@@ -43,12 +43,12 @@ CZ_NONNULL_ARGS()
 static void stream_err(FILE* stream, int* streamErr, int* streamEof)
 {
 	int err = errno;
-#if 1 // TODO wrap with CZ_WRAP_FERROR
+#if CZ_WRAP_FERROR
 	*streamErr = ferror(stream) ? 1 : 0;
 #else
 	*streamErr = -1;
 #endif
-#if 1 // TODO wrap with CZ_WRAP_FEOF
+#if CZ_WRAP_FEOF
 	*streamEof = feof(stream) ? 1 : 0;
 #else
 	*streamEof = -1;
@@ -203,6 +203,14 @@ enum CzResult czWrap_realloc(void* restrict* res, void* ptr, size_t size)
 		return CZ_RESULT_BAD_SIZE;
 	return CZ_RESULT_NO_MEMORY;
 #endif
+}
+#endif
+
+#if CZ_WRAP_FREE
+enum CzResult czWrap_free(void* ptr)
+{
+	free(ptr);
+	return CZ_RESULT_SUCCESS;
 }
 #endif
 
@@ -858,6 +866,30 @@ enum CzResult czWrap_fclose(FILE* stream)
 #else
 	return CZ_RESULT_INTERNAL_ERROR;
 #endif
+}
+#endif
+
+#if CZ_WRAP_FERROR
+enum CzResult czWrap_ferror(int* res, FILE* stream)
+{
+	*res = ferror(stream);
+	return CZ_RESULT_SUCCESS;
+}
+#endif
+
+#if CZ_WRAP_FEOF
+enum CzResult czWrap_feof(int* res, FILE* stream)
+{
+	*res = feof(stream);
+	return CZ_RESULT_SUCCESS;
+}
+#endif
+
+#if CZ_WRAP_CLEARERR
+enum CzResult czWrap_clearerr(FILE* stream)
+{
+	clearerr(stream);
+	return CZ_RESULT_SUCCESS;
 }
 #endif
 
