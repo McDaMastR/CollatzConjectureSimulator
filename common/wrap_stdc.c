@@ -1254,7 +1254,7 @@ enum CzResult czWrap_fgetpos(FILE* stream, fpos_t* pos)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_1988 || CZ_XOPEN_VERSION >= CZ_XPG_1992
+#elif CZ_POSIX_VERSION >= CZ_POSIX_1996 || CZ_XOPEN_VERSION >= CZ_XPG_1992
 	switch (errno) {
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
@@ -1373,7 +1373,7 @@ enum CzResult czWrap_fsetpos(FILE* stream, const fpos_t* pos)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_1988 || CZ_XOPEN_VERSION >= CZ_XPG_1992
+#elif CZ_POSIX_VERSION >= CZ_POSIX_1996 || CZ_XOPEN_VERSION >= CZ_XPG_1992
 	switch (errno) {
 	case EFBIG:
 	case ENXIO:

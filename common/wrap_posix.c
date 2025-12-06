@@ -4058,7 +4058,7 @@ enum CzResult czWrap_read(ssize_t* res, int fildes, void* buf, size_t nbyte)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_1988 || CZ_XOPEN_VERSION >= CZ_XPG_1985
+#elif CZ_POSIX_VERSION >= CZ_POSIX_1990 || CZ_XOPEN_VERSION >= CZ_XPG_1985
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
@@ -4384,7 +4384,7 @@ enum CzResult czWrap_write(ssize_t* res, int fildes, const void* buf, size_t nby
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_1988 || CZ_XOPEN_VERSION >= CZ_XPG_1985
+#elif CZ_POSIX_VERSION >= CZ_POSIX_1990 || CZ_XOPEN_VERSION >= CZ_XPG_1985
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;

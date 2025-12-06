@@ -58,7 +58,6 @@
 #define CZ_POSIX_1990 199009L // POSIX.1-1990 - IEEE Std 1003.1-1990  - ISO/IEC 9945-1:1990
 #define CZ_POSIX_1992 199209L // POSIX.2-1992 - IEEE Std 1003.2-1992  - ISO/IEC 9945-2:1993
 #define CZ_POSIX_1993 199309L // POSIX.1b     - IEEE Std 1003.1b-1993
-#define CZ_POSIX_1995 199506L // POSIX.1c     - IEEE Std 1003.1c-1995
 #define CZ_POSIX_1996 199506L // POSIX.1-1996 - IEEE Std 1003.1-1996  - ISO/IEC 9945-1:1996
 #define CZ_POSIX_2001 200112L // POSIX.1-2001 - IEEE Std 1003.1-2001  - ISO/IEC 9945:2002
 #define CZ_POSIX_2008 200809L // POSIX.1-2008 - IEEE Std 1003.1-2008  - ISO/IEC/IEEE 9945:2009
@@ -1140,6 +1139,14 @@
 #endif
 #endif
 
+#if !defined(CZ_C23_SOURCE)
+#if defined(_C23_SOURCE)
+#define CZ_C23_SOURCE 1
+#else
+#define CZ_C23_SOURCE 0
+#endif
+#endif
+
 #if !defined(CZ_DARWIN_C_SOURCE)
 #if defined(_DARWIN_C_SOURCE)
 #define CZ_DARWIN_C_SOURCE 1
@@ -1187,6 +1194,14 @@
 #define CZ_ISOC11_SOURCE 1
 #else
 #define CZ_ISOC11_SOURCE 0
+#endif
+#endif
+
+#if !defined(CZ_ISOC23_SOURCE)
+#if defined(_ISOC23_SOURCE)
+#define CZ_ISOC23_SOURCE 1
+#else
+#define CZ_ISOC23_SOURCE 0
 #endif
 #endif
 

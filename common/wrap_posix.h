@@ -1853,7 +1853,7 @@ enum CzResult czWrap_lseek(off_t* res, int fildes, off_t offset, int whence);
 		CZ_GNU_LINUX &&                  \
 		CZ_GLIBC) ||                     \
 	CZ_FREE_BSD ||                       \
-	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
+	CZ_POSIX_VERSION >= CZ_POSIX_1990 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_READ 1
 #else
@@ -1972,7 +1972,7 @@ enum CzResult czWrap_pread(ssize_t* res, int fildes, void* buf, size_t nbyte, of
 		CZ_GNU_LINUX &&                  \
 		CZ_GLIBC) ||                     \
 	CZ_FREE_BSD ||                       \
-	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
+	CZ_POSIX_VERSION >= CZ_POSIX_1990 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_WRITE 1
 #else
@@ -2092,6 +2092,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fildes, const void* buf, size_t nb
 	CZ_FREE_BSD ||                                     \
 	CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001 ||          \
 	CZ_POSIX_SHARED_MEMORY_OBJECTS >= CZ_POSIX_2001 || \
+	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||               \
 	CZ_XOPEN_VERSION >= CZ_SUS_1994
 #define CZ_WRAP_MMAP 1
 #else
@@ -2148,6 +2149,7 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t len, int prot,
 	CZ_FREE_BSD ||                                     \
 	CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001 ||          \
 	CZ_POSIX_SHARED_MEMORY_OBJECTS >= CZ_POSIX_2001 || \
+	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||               \
 	CZ_XOPEN_VERSION >= CZ_SUS_1994
 #define CZ_WRAP_MUNMAP 1
 #else
@@ -2192,6 +2194,7 @@ enum CzResult czWrap_munmap(void* addr, size_t len);
 	CZ_FREE_BSD ||                               \
 	CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001 ||    \
 	CZ_POSIX_SYNCHRONIZED_IO >= CZ_POSIX_2001 || \
+	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||         \
 	CZ_XOPEN_VERSION >= CZ_SUS_1994
 #define CZ_WRAP_MSYNC 1
 #else

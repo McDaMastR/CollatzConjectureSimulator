@@ -591,7 +591,7 @@ enum CzResult czWrap_ftell(long* res, FILE* stream);
  */
 #if !defined(CZ_WRAP_FGETPOS)
 #if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
-	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
+	CZ_POSIX_VERSION >= CZ_POSIX_1996 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1992
 #define CZ_WRAP_FGETPOS 1
 #else
@@ -637,7 +637,7 @@ enum CzResult czWrap_fgetpos(FILE* stream, fpos_t* pos);
  */
 #if !defined(CZ_WRAP_FSETPOS)
 #if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
-	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
+	CZ_POSIX_VERSION >= CZ_POSIX_1996 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1992
 #define CZ_WRAP_FSETPOS 1
 #else
