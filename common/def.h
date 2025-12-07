@@ -1182,7 +1182,7 @@
 #endif
 
 #if !defined(CZ_ISOC99_SOURCE)
-#if defined(_ISOC99_SOURCE) || defined(_ISOC9X_SOURCE)
+#if defined(_ISOC99_SOURCE)
 #define CZ_ISOC99_SOURCE 1
 #else
 #define CZ_ISOC99_SOURCE 0
@@ -1222,7 +1222,7 @@
 #endif
 
 #if !defined(CZ_POSIX_C_SOURCE)
-#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= CZ_POSIX_1993
+#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= CZ_POSIX_1988
 #define CZ_POSIX_C_SOURCE _POSIX_C_SOURCE
 #elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 2
 #define CZ_POSIX_C_SOURCE CZ_POSIX_1992

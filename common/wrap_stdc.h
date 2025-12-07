@@ -204,7 +204,22 @@ enum CzResult czWrap_free(void* ptr);
 		CZ_GNU_LINUX &&                                    \
 		CZ_ISOC11_SOURCE &&                                \
 		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 16)) ||     \
-	CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(10, 0) ||       \
+	(                                                      \
+		CZ_FREE_BSD &&                                     \
+		(                                                  \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_1988 ||          \
+			CZ_XOPEN_SOURCE >= CZ_SUS_1997) &&             \
+		(                                                  \
+			CZ_ISOC11_SOURCE ||                            \
+			CZ_ISOC23_SOURCE) &&                           \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(10, 0)) ||  \
+	(                                                      \
+		CZ_FREE_BSD &&                                     \
+		!CZ_POSIX_C_SOURCE &&                              \
+		!CZ_XOPEN_SOURCE &&                                \
+		!CZ_ANSI_SOURCE &&                                 \
+		!CZ_C99_SOURCE &&                                  \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(10, 0)) ||  \
 	CZ_STDC_VERSION >= CZ_STDC_2011 ||                     \
 	CZ_POSIX_VERSION >= CZ_POSIX_2024 ||                   \
 	CZ_XOPEN_VERSION >= CZ_SUS_2024
