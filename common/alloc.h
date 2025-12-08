@@ -138,15 +138,12 @@ enum CzResult czRealloc(void* restrict* memory, size_t oldSize, size_t newSize, 
  * 
  * @param[in] memory The address of the allocation.
  * 
- * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_BAD_ADDRESS @p memory was null.
+ * @pre @p memory was allocated via @ref czAlloc or @ref czRealloc.
  * 
- * @pre @p memory either is null or was allocated via @ref czAlloc or @ref czRealloc.
- * 
- * @warning On success, any further access of the freed memory will result in undefined behaviour.
+ * @warning Any further access of the freed memory will result in undefined behaviour.
  */
 CZ_HOT
-enum CzResult czFree(void* memory);
+void czFree(void* memory);
 
 /**
  * @brief Dynamically allocates an aligned block of memory.
@@ -250,11 +247,8 @@ enum CzResult czReallocAlign(
  * 
  * @param[in] memory The address of the allocation.
  * 
- * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_BAD_ADDRESS @p memory was null.
+ * @pre @p memory was allocated via @ref czAllocAlign or @ref czReallocAlign.
  * 
- * @pre @p memory either is null or was allocated via @ref czAllocAlign or @ref czReallocAlign.
- * 
- * @warning On success, any further access of the freed memory will result in undefined behaviour.
+ * @warning Any further access of the freed memory will result in undefined behaviour.
  */
-enum CzResult czFreeAlign(void* memory);
+void czFreeAlign(void* memory);

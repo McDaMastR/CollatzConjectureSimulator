@@ -16,8 +16,6 @@
  */
 
 #include "wrap.h"
-#include "debug.h"
-#include "util.h"
 
 enum CzResult czWrap_getExecutablePath(int* res, char* out, int capacity, int* dirnameLength)
 {

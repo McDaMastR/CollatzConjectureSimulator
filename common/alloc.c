@@ -66,16 +66,11 @@ static enum CzResult alloc_zero_win32(void* restrict* memory, size_t size)
 
 #if HAVE_free_win32
 /* 
- * Deallocates the allocation pointed to by 'memory'. Controlled failure occurs if:
- * - 'memory' is NULL.
+ * Deallocates the allocation pointed to by 'memory'.
  */
 static enum CzResult free_win32(void* memory)
 {
-	if CZ_NOEXPECT (!memory)
-		return CZ_RESULT_BAD_ADDRESS;
-
-	free(memory);
-	return CZ_RESULT_SUCCESS;
+	return czWrap_free(memory);
 }
 #endif
 
@@ -184,14 +179,10 @@ static enum CzResult alloc_align_zero_win32(void* restrict* memory, size_t size,
 
 #if HAVE_free_align_win32
 /* 
- * Deallocates the allocation pointed to by 'memory'. Controlled failure occurs if:
- * - 'memory' is NULL.
+ * Deallocates the allocation pointed to by 'memory'.
  */
 static enum CzResult free_align_win32(void* memory)
 {
-	if CZ_NOEXPECT (!memory)
-		return CZ_RESULT_BAD_ADDRESS;
-
 	_aligned_free(memory);
 	return CZ_RESULT_SUCCESS;
 }
@@ -302,16 +293,11 @@ static enum CzResult alloc_zero_stdc(void* restrict* memory, size_t size)
 }
 
 /* 
- * Deallocates the allocation pointed to by 'memory'. Controlled failure occurs if:
- * - 'memory' is NULL.
+ * Deallocates the allocation pointed to by 'memory'.
  */
 static enum CzResult free_stdc(void* memory)
 {
-	if CZ_NOEXPECT (!memory)
-		return CZ_RESULT_BAD_ADDRESS;
-
-	free(memory);
-	return CZ_RESULT_SUCCESS;
+	return czWrap_free(memory);
 }
 
 /* 
@@ -362,8 +348,7 @@ static enum CzResult realloc_zero_stdc(void* restrict* memory, size_t oldSize, s
 			return ret;
 
 		memcpy(*memory, oldMemory, oldSize);
-		free_stdc(oldMemory);
-		return CZ_RESULT_SUCCESS;
+		return free_stdc(oldMemory);
 	}
 
 	enum CzResult ret = realloc_stdc(memory, oldSize, newSize);
@@ -455,17 +440,12 @@ static enum CzResult alloc_align_zero_stdc(void* restrict* memory, size_t size, 
 }
 
 /* 
- * Deallocates the allocation pointed to by 'memory'. Controlled failure occurs if:
- * - 'memory' is NULL.
+ * Deallocates the allocation pointed to by 'memory'.
  */
 static enum CzResult free_align_stdc(void* memory)
 {
-	if CZ_NOEXPECT (!memory)
-		return CZ_RESULT_BAD_ADDRESS;
-
 	void* addr = ADDR_ALIGN_STDC(memory);
-	free(addr);
-	return CZ_RESULT_SUCCESS;
+	return czWrap_free(addr);
 }
 
 /* 
@@ -564,31 +544,6 @@ enum CzResult czAlloc(void* restrict* memory, size_t size, struct CzAllocFlags f
 #endif
 }
 
-#define HAVE_czFree_win32 ( HAVE_free_win32 )
-
-#if HAVE_czFree_win32
-CZ_COPY_ATTR(czFree)
-static enum CzResult czFree_win32(void* memory)
-{
-	return free_win32(memory);
-}
-#endif
-
-CZ_COPY_ATTR(czFree)
-static enum CzResult czFree_stdc(void* memory)
-{
-	return free_stdc(memory);
-}
-
-enum CzResult czFree(void* memory)
-{
-#if HAVE_czFree_win32
-	return free_win32(memory);
-#else
-	return free_stdc(memory);
-#endif
-}
-
 #define HAVE_czRealloc_win32 ( \
 	HAVE_free_win32 &&         \
 	HAVE_realloc_win32 &&      \
@@ -633,6 +588,31 @@ enum CzResult czRealloc(void* restrict* memory, size_t oldSize, size_t newSize, 
 #endif
 }
 
+#define HAVE_czFree_win32 ( HAVE_free_win32 )
+
+#if HAVE_czFree_win32
+CZ_COPY_ATTR(czFree)
+static void czFree_win32(void* memory)
+{
+	free_win32(memory);
+}
+#endif
+
+CZ_COPY_ATTR(czFree)
+static void czFree_stdc(void* memory)
+{
+	free_stdc(memory);
+}
+
+void czFree(void* memory)
+{
+#if HAVE_czFree_win32
+	czFree_win32(memory);
+#else
+	czFree_stdc(memory);
+#endif
+}
+
 #define HAVE_czAllocAlign_win32 ( \
 	HAVE_alloc_align_win32 &&     \
 	HAVE_alloc_align_zero_win32 )
@@ -664,31 +644,6 @@ enum CzResult czAllocAlign(
 	return czAllocAlign_win32(memory, size, alignment, offset, flags);
 #else
 	return czAllocAlign_stdc(memory, size, alignment, offset, flags);
-#endif
-}
-
-#define HAVE_czFreeAlign_win32 ( HAVE_free_align_win32 )
-
-#if HAVE_czFreeAlign_win32
-CZ_COPY_ATTR(czFreeAlign)
-static enum CzResult czFreeAlign_win32(void* memory)
-{
-	return free_align_win32(memory);
-}
-#endif
-
-CZ_COPY_ATTR(czFreeAlign)
-static enum CzResult czFreeAlign_stdc(void* memory)
-{
-	return free_align_stdc(memory);
-}
-
-enum CzResult czFreeAlign(void* memory)
-{
-#if HAVE_czFreeAlign_win32
-	return czFreeAlign_win32(memory);
-#else
-	return czFreeAlign_stdc(memory);
 #endif
 }
 
@@ -736,5 +691,30 @@ enum CzResult czReallocAlign(
 	return czReallocAlign_win32(memory, oldSize, newSize, alignment, offset, flags);
 #else
 	return czReallocAlign_stdc(memory, oldSize, newSize, alignment, offset, flags);
+#endif
+}
+
+#define HAVE_czFreeAlign_win32 ( HAVE_free_align_win32 )
+
+#if HAVE_czFreeAlign_win32
+CZ_COPY_ATTR(czFreeAlign)
+static void czFreeAlign_win32(void* memory)
+{
+	free_align_win32(memory);
+}
+#endif
+
+CZ_COPY_ATTR(czFreeAlign)
+static void czFreeAlign_stdc(void* memory)
+{
+	free_align_stdc(memory);
+}
+
+void czFreeAlign(void* memory)
+{
+#if HAVE_czFreeAlign_win32
+	czFreeAlign_win32(memory);
+#else
+	czFreeAlign_stdc(memory);
 #endif
 }
