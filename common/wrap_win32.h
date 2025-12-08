@@ -75,7 +75,6 @@
  * @param[in] size The third argument to pass to @c _recalloc.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
  * @pre @p res is nonnull.
@@ -113,7 +112,6 @@ enum CzResult czWrap_recalloc(void* restrict* res, void* memblock, size_t num, s
  * @param[in] offset The third argument to pass to @c _aligned_offset_malloc.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ALIGNMENT @p alignment was not a power of two.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was nonzero and greater than or equal to @p size.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
@@ -154,7 +152,6 @@ enum CzResult czWrap_aligned_offset_malloc(void* restrict* res, size_t size, siz
  * @param[in] offset The fourth argument to pass to @c _aligned_offset_realloc.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ALIGNMENT @p alignment was not a power of two.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was nonzero and greater than or equal to @p size.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
@@ -197,7 +194,6 @@ enum CzResult czWrap_aligned_offset_realloc(
  * @param[in] offset The fifth argument to pass to @c _aligned_offset_recalloc.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ALIGNMENT @p alignment was not a power of two.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was nonzero and greater than or equal to (@p num * @p size).
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.

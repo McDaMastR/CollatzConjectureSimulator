@@ -70,7 +70,6 @@ struct CzAllocFlags
  * @param[in] flags Binary flags describing additional behaviour.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero or greater than @c PTRDIFF_MAX.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
@@ -78,7 +77,7 @@ struct CzAllocFlags
  * 
  * @note On success, failing to free the allocation via @ref czFree will result in a memory leak.
  */
-CZ_HOT CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
+CZ_HOT CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
 enum CzResult czAlloc(void* restrict* memory, size_t size, struct CzAllocFlags flags);
 
 /**
@@ -114,7 +113,6 @@ enum CzResult czAlloc(void* restrict* memory, size_t size, struct CzAllocFlags f
  * @param[in] flags Binary flags describing additional behaviour.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_SIZE @p oldSize was zero, or @p oldSize or @p newSize was greater than @c PTRDIFF_MAX.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
@@ -127,7 +125,7 @@ enum CzResult czAlloc(void* restrict* memory, size_t size, struct CzAllocFlags f
  * @warning On success if @p newSize is zero, or on failure if @p flags.freeOnFail is set, any further access of the
  * freed memory will result in undefined behaviour.
  */
-CZ_HOT CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+CZ_HOT CZ_NONNULL_ARGS(1) CZ_RW_ACCESS(1)
 enum CzResult czRealloc(void* restrict* memory, size_t oldSize, size_t newSize, struct CzAllocFlags flags);
 
 /**
@@ -175,7 +173,6 @@ enum CzResult czFree(void* memory);
  * @param[in] flags Binary flags describing additional behaviour.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ALIGNMENT @p alignment was not a power of two.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was greater than or equal to @p size.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero or greater than @c PTRDIFF_MAX.
@@ -185,7 +182,7 @@ enum CzResult czFree(void* memory);
  * 
  * @note On success, failing to free the allocation via @ref czFreeAlign will result in a memory leak.
  */
-CZ_NONNULL_ARGS() CZ_WR_ACCESS(1)
+CZ_NONNULL_ARGS(1) CZ_WR_ACCESS(1)
 enum CzResult czAllocAlign(
 	void* restrict* memory, size_t size, size_t alignment, size_t offset, struct CzAllocFlags flags);
 
@@ -225,7 +222,6 @@ enum CzResult czAllocAlign(
  * @param[in] flags Binary flags describing additional behaviour.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ALIGNMENT @p alignment was not a power of two.
  * @retval CZ_RESULT_BAD_OFFSET @p offset was greater than or equal to @p newSize.
  * @retval CZ_RESULT_BAD_SIZE @p oldSize was zero, or @p oldSize or @p newSize was greater than @c PTRDIFF_MAX.
@@ -240,7 +236,7 @@ enum CzResult czAllocAlign(
  * @warning On success if @p newSize is zero, or on failure if @p flags.freeOnFail is set, any further access of the
  * freed memory will result in undefined behaviour.
  */
-CZ_NONNULL_ARGS() CZ_RW_ACCESS(1)
+CZ_NONNULL_ARGS(1) CZ_RW_ACCESS(1)
 enum CzResult czReallocAlign(
 	void* restrict* memory, size_t oldSize, size_t newSize, size_t alignment, size_t offset, struct CzAllocFlags flags);
 

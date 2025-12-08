@@ -86,28 +86,7 @@ enum CzResult czWrap_malloc(void* restrict* res, size_t size)
 	log_error(stderr, "malloc failed with size %zu (%.3fms)", size, t);
 
 #if CZ_DARWIN || CZ_GNU_LINUX || CZ_FREE_BSD
-	switch (errno) {
-	case ENOMEM:
-		return CZ_RESULT_NO_MEMORY;
-	default:
-		return CZ_RESULT_INTERNAL_ERROR;
-	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
-	switch (errno) {
-	case EINVAL:
-		return CZ_RESULT_BAD_SIZE;
-	case ENOMEM:
-		return CZ_RESULT_NO_MEMORY;
-	default:
-		return CZ_RESULT_INTERNAL_ERROR;
-	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_1988 || CZ_XOPEN_VERSION >= CZ_XPG_1985
-	switch (errno) {
-	case EINVAL:
-		return CZ_RESULT_BAD_SIZE;
-	default:
-		return CZ_RESULT_NO_MEMORY;
-	}
+	return CZ_RESULT_NO_MEMORY;
 #else
 	if (!size)
 		return CZ_RESULT_BAD_SIZE;
@@ -129,28 +108,7 @@ enum CzResult czWrap_calloc(void* restrict* res, size_t nelem, size_t elsize)
 	log_error(stderr, "calloc failed with nelem %zu, elsize %zu (%.3fms)", nelem, elsize, t);
 
 #if CZ_DARWIN || CZ_GNU_LINUX || CZ_FREE_BSD
-	switch (errno) {
-	case ENOMEM:
-		return CZ_RESULT_NO_MEMORY;
-	default:
-		return CZ_RESULT_INTERNAL_ERROR;
-	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
-	switch (errno) {
-	case EINVAL:
-		return CZ_RESULT_BAD_SIZE;
-	case ENOMEM:
-		return CZ_RESULT_NO_MEMORY;
-	default:
-		return CZ_RESULT_INTERNAL_ERROR;
-	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_1988 || CZ_XOPEN_VERSION >= CZ_XPG_1985
-	switch (errno) {
-	case EINVAL:
-		return CZ_RESULT_BAD_SIZE;
-	default:
-		return CZ_RESULT_NO_MEMORY;
-	}
+	return CZ_RESULT_NO_MEMORY;
 #else
 	if (!nelem)
 		return CZ_RESULT_BAD_SIZE;
@@ -174,30 +132,7 @@ enum CzResult czWrap_realloc(void* restrict* res, void* ptr, size_t size)
 	log_error(stderr, "realloc failed with ptr 0x%016" PRIxPTR ", size %zu (%.3fms)", (uintptr_t) ptr, size, t);
 
 #if CZ_DARWIN || CZ_GNU_LINUX || CZ_FREE_BSD
-	switch (errno) {
-	case ENOMEM:
-		return CZ_RESULT_NO_MEMORY;
-	default:
-		return CZ_RESULT_INTERNAL_ERROR;
-	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2024 || CZ_XOPEN_VERSION >= CZ_SUS_2024
-	switch (errno) {
-	case EINVAL:
-		return CZ_RESULT_BAD_SIZE;
-	case ENOMEM:
-		return CZ_RESULT_NO_MEMORY;
-	default:
-		return CZ_RESULT_INTERNAL_ERROR;
-	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
-	switch (errno) {
-	case ENOMEM:
-		return CZ_RESULT_NO_MEMORY;
-	default:
-		if (!size)
-			return CZ_RESULT_BAD_SIZE;
-		return CZ_RESULT_INTERNAL_ERROR;
-	}
+	return CZ_RESULT_NO_MEMORY;
 #else
 	if (!size)
 		return CZ_RESULT_BAD_SIZE;
@@ -226,47 +161,38 @@ enum CzResult czWrap_aligned_alloc(void* restrict* res, size_t alignment, size_t
 	double t = program_time();
 	log_error(stderr, "aligned_alloc failed with alignment %zu, size %zu (%.3fms)", alignment, size, t);
 
-#if CZ_DARWIN
-	switch (errno) {
-	case EINVAL:
-		if (alignment < sizeof(void*))
-			return CZ_RESULT_BAD_ALIGNMENT;
-		if (alignment & (alignment - 1))
-			return CZ_RESULT_BAD_ALIGNMENT;
-		return CZ_RESULT_BAD_SIZE;
-	case ENOMEM:
+#if CZ_DARWIN || CZ_GNU_LINUX
+	if (errno == ENOMEM)
 		return CZ_RESULT_NO_MEMORY;
-	default:
-		return CZ_RESULT_INTERNAL_ERROR;
-	}
-#elif CZ_GNU_LINUX || CZ_FREE_BSD
-	switch (errno) {
-	case EINVAL:
+	if (alignment < sizeof(void*))
 		return CZ_RESULT_BAD_ALIGNMENT;
-	case ENOMEM:
-		return CZ_RESULT_NO_MEMORY;
-	default:
-		return CZ_RESULT_INTERNAL_ERROR;
-	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2024 || CZ_XOPEN_VERSION >= CZ_SUS_2024
-	switch (errno) {
-	case EINVAL:
-		if (!size)
-			return CZ_RESULT_BAD_SIZE;
+	if (alignment & (alignment - 1))
 		return CZ_RESULT_BAD_ALIGNMENT;
-	case ENOMEM:
+	return CZ_RESULT_BAD_SIZE;
+#elif CZ_FREE_BSD
+	if (errno == ENOMEM)
 		return CZ_RESULT_NO_MEMORY;
-	default:
-		return CZ_RESULT_INTERNAL_ERROR;
-	}
-#else
 	if (!alignment)
 		return CZ_RESULT_BAD_ALIGNMENT;
 	if (alignment & (alignment - 1))
 		return CZ_RESULT_BAD_ALIGNMENT;
+	return CZ_RESULT_BAD_SIZE;
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2024 || CZ_XOPEN_VERSION >= CZ_SUS_2024
+	if (errno == ENOMEM)
+		return CZ_RESULT_NO_MEMORY;
+	if (size % alignment)
+		return CZ_RESULT_BAD_SIZE;
 	if (!size)
 		return CZ_RESULT_BAD_SIZE;
-	if (size & (alignment - 1))
+	return CZ_RESULT_BAD_ALIGNMENT;
+#else
+	if (!alignment)
+		return CZ_RESULT_BAD_ALIGNMENT;
+	if (size % alignment)
+		return CZ_RESULT_BAD_SIZE;
+	if (alignment & (alignment - 1))
+		return CZ_RESULT_BAD_ALIGNMENT;
+	if (!size)
 		return CZ_RESULT_BAD_SIZE;
 	return CZ_RESULT_NO_MEMORY;
 #endif

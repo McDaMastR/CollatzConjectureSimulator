@@ -33,15 +33,7 @@ enum CzResult czWrap_recalloc(void* restrict* res, void* memblock, size_t num, s
 		stderr, "_recalloc failed with memblock 0x%016" PRIxPTR ", num %zu, size %zu (%.3fms)",
 		(uintptr_t) memblock, num, size, t);
 
-	int err;
-	_get_errno(&err);
-
-	switch (err) {
-	case ENOMEM:
-		return CZ_RESULT_NO_MEMORY;
-	default:
-		return CZ_RESULT_INTERNAL_ERROR;
-	}
+	return CZ_RESULT_NO_MEMORY;
 }
 #endif
 
@@ -59,21 +51,13 @@ enum CzResult czWrap_aligned_offset_malloc(void* restrict* res, size_t size, siz
 		stderr, "_aligned_offset_malloc failed with size %zu, alignment %zu, offset %zu (%.3fms)",
 		size, alignment, offset, t);
 
-	int err;
-	_get_errno(&err);
-
-	switch (err) {
-	case EINVAL:
-		if (!alignment)
-			return CZ_RESULT_BAD_ALIGNMENT;
-		if (alignment & (alignment - 1))
-			return CZ_RESULT_BAD_ALIGNMENT;
+	if (!alignment)
+		return CZ_RESULT_BAD_ALIGNMENT;
+	if (alignment & (alignment - 1))
+		return CZ_RESULT_BAD_ALIGNMENT;
+	if (offset && offset >= size)
 		return CZ_RESULT_BAD_OFFSET;
-	case ENOMEM:
-		return CZ_RESULT_NO_MEMORY;
-	default:
-		return CZ_RESULT_INTERNAL_ERROR;
-	}
+	return CZ_RESULT_NO_MEMORY;
 }
 #endif
 
@@ -93,21 +77,13 @@ enum CzResult czWrap_aligned_offset_realloc(
 		"_aligned_offset_realloc failed with memblock 0x%016" PRIxPTR ", size %zu, alignment %zu, offset %zu (%.3fms)",
 		(uintptr_t) memblock, size, alignment, offset, t);
 
-	int err;
-	_get_errno(&err);
-
-	switch (err) {
-	case EINVAL:
-		if (!alignment)
-			return CZ_RESULT_BAD_ALIGNMENT;
-		if (alignment & (alignment - 1))
-			return CZ_RESULT_BAD_ALIGNMENT;
+	if (!alignment)
+		return CZ_RESULT_BAD_ALIGNMENT;
+	if (alignment & (alignment - 1))
+		return CZ_RESULT_BAD_ALIGNMENT;
+	if (offset && offset >= size)
 		return CZ_RESULT_BAD_OFFSET;
-	case ENOMEM:
-		return CZ_RESULT_NO_MEMORY;
-	default:
-		return CZ_RESULT_INTERNAL_ERROR;
-	}
+	return CZ_RESULT_NO_MEMORY;
 }
 #endif
 
@@ -130,19 +106,13 @@ enum CzResult czWrap_aligned_offset_recalloc(
 
 	int err;
 	_get_errno(&err);
-
-	switch (err) {
-	case EINVAL:
-		if (!alignment)
-			return CZ_RESULT_BAD_ALIGNMENT;
-		if (alignment & (alignment - 1))
-			return CZ_RESULT_BAD_ALIGNMENT;
-		return CZ_RESULT_BAD_OFFSET;
-	case ENOMEM:
+	if (err == ENOMEM)
 		return CZ_RESULT_NO_MEMORY;
-	default:
-		return CZ_RESULT_INTERNAL_ERROR;
-	}
+	if (!alignment)
+		return CZ_RESULT_BAD_ALIGNMENT;
+	if (alignment & (alignment - 1))
+		return CZ_RESULT_BAD_ALIGNMENT;
+	return CZ_RESULT_BAD_OFFSET;
 }
 #endif
 

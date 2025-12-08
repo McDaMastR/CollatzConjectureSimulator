@@ -68,7 +68,6 @@
  * @param[in] size The argument to pass to @c malloc.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero, which was unsupported.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
@@ -107,7 +106,6 @@ enum CzResult czWrap_malloc(void* restrict* res, size_t size);
  * @param[in] elsize The second argument to pass to @c calloc.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_SIZE @p nelem or @p elsize was zero, which was unsupported.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
@@ -146,7 +144,6 @@ enum CzResult czWrap_calloc(void* restrict* res, size_t nelem, size_t elsize);
  * @param[in] size The second argument to pass to @c realloc.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero, which was unsupported.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
@@ -241,7 +238,6 @@ enum CzResult czWrap_free(void* ptr);
  * @param[in] size The second argument to pass to @c aligned_alloc.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_ALIGNMENT @p alignment was invalid or unsupported.
  * @retval CZ_RESULT_BAD_SIZE @p size was not a nonzero multiple of @p alignment.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
