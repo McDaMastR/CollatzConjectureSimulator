@@ -175,7 +175,7 @@ static enum CzResult alloc_align_zero_win32(void* restrict* memory, size_t size,
 }
 #endif
 
-#define HAVE_free_align_win32 ( CZ_WIN32 )
+#define HAVE_free_align_win32 ( CZ_WRAP_ALIGNED_FREE )
 
 #if HAVE_free_align_win32
 /* 
@@ -183,8 +183,7 @@ static enum CzResult alloc_align_zero_win32(void* restrict* memory, size_t size,
  */
 static enum CzResult free_align_win32(void* memory)
 {
-	_aligned_free(memory);
-	return CZ_RESULT_SUCCESS;
+	return czWrap_aligned_free(memory);
 }
 #endif
 

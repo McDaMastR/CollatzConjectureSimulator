@@ -208,6 +208,34 @@ enum CzResult czWrap_aligned_offset_recalloc(
 #endif
 
 /**
+ * @def CZ_WRAP_ALIGNED_FREE
+ * 
+ * @brief Specifies whether @c _aligned_free is defined.
+ */
+#if !defined(CZ_WRAP_ALIGNED_FREE)
+#if CZ_WIN32
+#define CZ_WRAP_ALIGNED_FREE 1
+#else
+#define CZ_WRAP_ALIGNED_FREE 0
+#endif
+#endif
+
+#if CZ_WRAP_ALIGNED_FREE
+/**
+ * @brief Wraps @c _aligned_free.
+ * 
+ * Calls @c _aligned_free with @p memblock.
+ * 
+ * @param[in] memblock The argument to pass to @c _aligned_free.
+ * 
+ * @retval CZ_RESULT_SUCCESS The operation was successful.
+ * 
+ * @note This function is only defined if @ref CZ_WRAP_ALIGNED_FREE is defined as a nonzero value.
+ */
+enum CzResult czWrap_aligned_free(void* memblock);
+#endif
+
+/**
  * @def CZ_WRAP_GET_OSFHANDLE
  * 
  * @brief Specifies whether @c _get_osfhandle is defined.

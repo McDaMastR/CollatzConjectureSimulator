@@ -116,6 +116,14 @@ enum CzResult czWrap_aligned_offset_recalloc(
 }
 #endif
 
+#if CZ_WRAP_ALIGNED_FREE
+enum CzResult czWrap_aligned_free(void* memblock)
+{
+	_aligned_free(memblock);
+	return CZ_RESULT_SUCCESS;
+}
+#endif
+
 #if CZ_WRAP_GET_OSFHANDLE
 enum CzResult czWrap_get_osfhandle(intptr_t* res, int fd)
 {
