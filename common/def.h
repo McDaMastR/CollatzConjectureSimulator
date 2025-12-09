@@ -1164,7 +1164,7 @@
 #endif
 
 #if !defined(CZ_FILE_OFFSET_BITS)
-#if defined(_FILE_OFFSET_BITS) && _FILE_OFFSET_BITS > 0
+#if defined(_FILE_OFFSET_BITS) && _FILE_OFFSET_BITS + 0 > 0
 #define CZ_FILE_OFFSET_BITS _FILE_OFFSET_BITS
 #elif defined(_LARGEFILE_SOURCE)
 #define CZ_FILE_OFFSET_BITS 64
@@ -1222,11 +1222,11 @@
 #endif
 
 #if !defined(CZ_POSIX_C_SOURCE)
-#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= CZ_POSIX_1988
+#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE + 0 >= CZ_POSIX_1988
 #define CZ_POSIX_C_SOURCE _POSIX_C_SOURCE
-#elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 2
+#elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE + 0 >= 2
 #define CZ_POSIX_C_SOURCE CZ_POSIX_1992
-#elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE == 1
+#elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE + 0 == 1
 #define CZ_POSIX_C_SOURCE CZ_POSIX_1990
 #elif defined(_POSIX_C_SOURCE)
 #define CZ_POSIX_C_SOURCE CZ_POSIX_1988
@@ -1244,7 +1244,7 @@
 #endif
 
 #if !defined(CZ_TIME_BITS)
-#if defined(_TIME_BITS) && _TIME_BITS > 0
+#if defined(_TIME_BITS) && _TIME_BITS + 0 > 0
 #define CZ_TIME_BITS _TIME_BITS
 #else
 #define CZ_TIME_BITS 0
@@ -1252,7 +1252,7 @@
 #endif
 
 #if !defined(CZ_XOPEN_SOURCE)
-#if defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= CZ_SUS_1997
+#if defined(_XOPEN_SOURCE) && _XOPEN_SOURCE + 0 >= CZ_SUS_1997
 #define CZ_XOPEN_SOURCE _XOPEN_SOURCE
 #elif defined(_XOPEN_SOURCE)
 #define CZ_XOPEN_SOURCE CZ_SUS_1994
