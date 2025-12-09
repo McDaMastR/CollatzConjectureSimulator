@@ -19,6 +19,7 @@ target_sources(cltzCommon
 		debug.h
 		def.h
 		file.h
+		support.h
 		util.h
 		wrap.h
 		wrap_posix.h
