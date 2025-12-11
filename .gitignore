@@ -8,5 +8,6 @@ test
 # Files
 *.bin
 *.log
+*.swp
 .DS_Store
 Doxyfile
