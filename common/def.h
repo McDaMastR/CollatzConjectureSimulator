@@ -138,8 +138,10 @@
 #endif
 
 #if !defined(CZ_FREE_BSD_MINOR)
-#if defined(__FreeBSD_version)
+#if defined(__FreeBSD_version) && __FreeBSD_version >= 500000
 #define CZ_FREE_BSD_MINOR ( (__FreeBSD_version / 1000) % 100 )
+#elif defined(__FreeBSD_version)
+#define CZ_FREE_BSD_MINOR ( (__FreeBSD_version / 10000) % 10 )
 #elif CZ_FREE_BSD
 #define CZ_FREE_BSD_MINOR 0
 #else
@@ -148,8 +150,10 @@
 #endif
 
 #if !defined(CZ_FREE_BSD_PATCH)
-#if defined(__FreeBSD_version)
+#if defined(__FreeBSD_version) && __FreeBSD_version >= 500000
 #define CZ_FREE_BSD_PATCH ( __FreeBSD_version % 1000 )
+#elif defined(__FreeBSD_version)
+#define CZ_FREE_BSD_PATCH ( __FreeBSD_version % 10000 )
 #elif CZ_FREE_BSD
 #define CZ_FREE_BSD_PATCH 0
 #else
@@ -1224,7 +1228,7 @@
 #if !defined(CZ_POSIX_C_SOURCE)
 #if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE + 0 >= CZ_POSIX_1988
 #define CZ_POSIX_C_SOURCE _POSIX_C_SOURCE
-#elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE + 0 >= 2
+#elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE + 0 == 2
 #define CZ_POSIX_C_SOURCE CZ_POSIX_1992
 #elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE + 0 == 1
 #define CZ_POSIX_C_SOURCE CZ_POSIX_1990
