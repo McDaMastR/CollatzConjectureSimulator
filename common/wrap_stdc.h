@@ -41,6 +41,7 @@
 #pragma once
 
 #include "def.h"
+#include "support.h"
 
 /**
  * @def CZ_WRAP_MALLOC
@@ -48,7 +49,10 @@
  * @brief Specifies whether @c malloc is defined.
  */
 #if !defined(CZ_WRAP_MALLOC)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_MALLOC 1
@@ -85,7 +89,10 @@ enum CzResult czWrap_malloc(void* restrict* res, size_t size);
  * @brief Specifies whether @c calloc is defined.
  */
 #if !defined(CZ_WRAP_CALLOC)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_CALLOC 1
@@ -123,7 +130,10 @@ enum CzResult czWrap_calloc(void* restrict* res, size_t nelem, size_t elsize);
  * @brief Specifies whether @c realloc is defined.
  */
 #if !defined(CZ_WRAP_REALLOC)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_REALLOC 1
@@ -161,7 +171,10 @@ enum CzResult czWrap_realloc(void* restrict* res, void* ptr, size_t size);
  * @brief Specifies whether @c free is defined.
  */
 #if !defined(CZ_WRAP_FREE)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_FREE 1
@@ -191,34 +204,22 @@ enum CzResult czWrap_free(void* ptr);
  * @brief Specifies whether @c aligned_alloc is defined.
  */
 #if !defined(CZ_WRAP_ALIGNED_ALLOC)
-#if (                                                      \
-		CZ_DARWIN &&                                       \
-		CZ_DARWIN_C_SOURCE &&                              \
-		(                                                  \
-			CZ_MACOS_VERSION >= CZ_MAKE_VERSION(10, 15) || \
-			CZ_IOS_VERSION >= CZ_MAKE_VERSION(13, 0))) ||  \
-	(                                                      \
-		CZ_GNU_LINUX &&                                    \
-		CZ_ISOC11_SOURCE &&                                \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 16)) ||     \
-	(                                                      \
-		CZ_FREE_BSD &&                                     \
-		(                                                  \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_1988 ||          \
-			CZ_XOPEN_SOURCE >= CZ_SUS_1997) &&             \
-		(                                                  \
-			CZ_ISOC11_SOURCE ||                            \
-			CZ_ISOC23_SOURCE) &&                           \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(10, 0)) ||  \
-	(                                                      \
-		CZ_FREE_BSD &&                                     \
-		!CZ_POSIX_C_SOURCE &&                              \
-		!CZ_XOPEN_SOURCE &&                                \
-		!CZ_ANSI_SOURCE &&                                 \
-		!CZ_C99_SOURCE &&                                  \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(10, 0)) ||  \
-	CZ_STDC_VERSION >= CZ_STDC_2011 ||                     \
-	CZ_POSIX_VERSION >= CZ_POSIX_2024 ||                   \
+#if (                                                        \
+		CZ_DARWIN &&                                         \
+		CZ_DARWIN_C_SOURCE &&                                \
+		(                                                    \
+			CZ_MACOS_VERSION >= CZ_MAKE_VERSION(10, 15) ||   \
+			CZ_IOS_VERSION >= CZ_MAKE_VERSION(13, 0))) ||    \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		CZ_ISOC11_SOURCE &&                                  \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 16)) ||       \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_STDC_2011 &&                         \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(10, 0, 5)) || \
+	CZ_STDC_VERSION >= CZ_STDC_2011 ||                       \
+	CZ_POSIX_VERSION >= CZ_POSIX_2024 ||                     \
 	CZ_XOPEN_VERSION >= CZ_SUS_2024
 #define CZ_WRAP_ALIGNED_ALLOC 1
 #else
@@ -256,7 +257,10 @@ enum CzResult czWrap_aligned_alloc(void* restrict* res, size_t alignment, size_t
  * @brief Specifies whether @c fopen is defined.
  */
 #if !defined(CZ_WRAP_FOPEN)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_FOPEN 1
@@ -308,7 +312,10 @@ enum CzResult czWrap_fopen(FILE* restrict* res, const char* pathname, const char
  * @brief Specifies whether @c freopen is defined.
  */
 #if !defined(CZ_WRAP_FREOPEN)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_FREOPEN 1
@@ -361,7 +368,10 @@ enum CzResult czWrap_freopen(const char* pathname, const char* mode, FILE* strea
  * @brief Specifies whether @c fclose is defined.
  */
 #if !defined(CZ_WRAP_FCLOSE)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_FCLOSE 1
@@ -406,7 +416,10 @@ enum CzResult czWrap_fclose(FILE* stream);
  * @brief Specifies whether @c ferror is defined.
  */
 #if !defined(CZ_WRAP_FERROR)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_FERROR 1
@@ -441,7 +454,10 @@ enum CzResult czWrap_ferror(int* res, FILE* stream);
  * @brief Specifies whether @c feof is defined.
  */
 #if !defined(CZ_WRAP_FEOF)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_FEOF 1
@@ -476,7 +492,10 @@ enum CzResult czWrap_feof(int* res, FILE* stream);
  * @brief Specifies whether @c clearerr is defined.
  */
 #if !defined(CZ_WRAP_CLEARERR)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_CLEARERR 1
@@ -509,7 +528,10 @@ enum CzResult czWrap_clearerr(FILE* stream);
  * @brief Specifies whether @c fseek is defined.
  */
 #if !defined(CZ_WRAP_FSEEK)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_FSEEK 1
@@ -555,7 +577,10 @@ enum CzResult czWrap_fseek(FILE* stream, long offset, int whence);
  * @brief Specifies whether @c ftell is defined.
  */
 #if !defined(CZ_WRAP_FTELL)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_FTELL 1
@@ -601,7 +626,10 @@ enum CzResult czWrap_ftell(long* res, FILE* stream);
  * @brief Specifies whether @c fgetpos is defined.
  */
 #if !defined(CZ_WRAP_FGETPOS)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1996 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1992
 #define CZ_WRAP_FGETPOS 1
@@ -647,7 +675,10 @@ enum CzResult czWrap_fgetpos(FILE* stream, fpos_t* pos);
  * @brief Specifies whether @c fsetpos is defined.
  */
 #if !defined(CZ_WRAP_FSETPOS)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1996 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1992
 #define CZ_WRAP_FSETPOS 1
@@ -693,7 +724,10 @@ enum CzResult czWrap_fsetpos(FILE* stream, const fpos_t* pos);
  * @brief Specifies whether @c rewind is defined.
  */
 #if !defined(CZ_WRAP_REWIND)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_REWIND 1
@@ -735,7 +769,10 @@ enum CzResult czWrap_rewind(FILE* stream);
  * @brief Specifies whether @c fread is defined.
  */
 #if !defined(CZ_WRAP_FREAD)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_FREAD 1
@@ -784,7 +821,10 @@ enum CzResult czWrap_fread(size_t* res, void* ptr, size_t size, size_t nitems, F
  * @brief Specifies whether @c fwrite is defined.
  */
 #if !defined(CZ_WRAP_FWRITE)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_FWRITE 1
@@ -833,7 +873,10 @@ enum CzResult czWrap_fwrite(size_t* res, const void* ptr, size_t size, size_t ni
  * @brief Specifies whether @c fflush is defined.
  */
 #if !defined(CZ_WRAP_FFLUSH)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_FFLUSH 1
@@ -875,7 +918,10 @@ enum CzResult czWrap_fflush(FILE* stream);
  * @brief Specifies whether @c remove is defined.
  */
 #if !defined(CZ_WRAP_REMOVE)
-#if CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
+#if (                                    \
+		CZ_FREE_BSD &&                   \
+		CZ_FREE_BSD_USE_STDC_1989) ||    \
+	CZ_STDC_VERSION >= CZ_STDC_1989 ||   \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
 	CZ_XOPEN_VERSION >= CZ_XPG_1989
 #define CZ_WRAP_REMOVE 1

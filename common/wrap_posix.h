@@ -42,6 +42,7 @@
 #pragma once
 
 #include "def.h"
+#include "support.h"
 
 /**
  * @def CZ_WRAP_REALLOCARRAY
@@ -49,25 +50,20 @@
  * @brief Specifies whether @c reallocarray is defined.
  */
 #if !defined(CZ_WRAP_REALLOCARRAY)
-#if (                                                     \
-		CZ_GNU_LINUX &&                                   \
-		CZ_GNU_SOURCE &&                                  \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 26) &&     \
-		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 29)) ||     \
-	(                                                     \
-		CZ_GNU_LINUX &&                                   \
-		CZ_DEFAULT_SOURCE &&                              \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 29)) ||    \
-	(                                                     \
-		CZ_FREE_BSD &&                                    \
-		!CZ_POSIX_C_SOURCE &&                             \
-		!CZ_XOPEN_SOURCE &&                               \
-		!CZ_ANSI_SOURCE &&                                \
-		!CZ_C99_SOURCE &&                                 \
-		!CZ_C11_SOURCE &&                                 \
-		!CZ_C23_SOURCE &&                                 \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(11, 0)) || \
-	CZ_POSIX_VERSION >= CZ_POSIX_2024 ||                  \
+#if (                                                         \
+		CZ_GNU_LINUX &&                                       \
+		CZ_GNU_SOURCE &&                                      \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 26) &&         \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 29)) ||         \
+	(                                                         \
+		CZ_GNU_LINUX &&                                       \
+		CZ_DEFAULT_SOURCE &&                                  \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 29)) ||        \
+	(                                                         \
+		CZ_FREE_BSD &&                                        \
+		CZ_FREE_BSD_USE_BSD &&                                \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(11, 0, 72)) || \
+	CZ_POSIX_VERSION >= CZ_POSIX_2024 ||                      \
 	CZ_XOPEN_VERSION >= CZ_SUS_2024
 #define CZ_WRAP_REALLOCARRAY 1
 #else
@@ -114,13 +110,8 @@ enum CzResult czWrap_reallocarray(void* restrict* res, void* ptr, size_t nelem, 
 			CZ_DARWIN_C_SOURCE)) || \
 	(                               \
 		CZ_FREE_BSD &&              \
-		!CZ_POSIX_C_SOURCE &&       \
-		!CZ_XOPEN_SOURCE &&         \
-		!CZ_ANSI_SOURCE &&          \
-		!CZ_C99_SOURCE &&           \
-		!CZ_C11_SOURCE &&           \
-		!CZ_C23_SOURCE &&           \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(3, 0))
+		CZ_FREE_BSD_USE_BSD &&      \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(3, 0, 5))
 #define CZ_WRAP_REALLOCF 1
 #else
 #define CZ_WRAP_REALLOCF 0
@@ -157,32 +148,21 @@ enum CzResult czWrap_reallocf(void* restrict* res, void* ptr, size_t size);
  * @brief Specifies whether @c posix_memalign is defined.
  */
 #if !defined(CZ_WRAP_POSIX_MEMALIGN)
-#if (                                                     \
-		CZ_DARWIN &&                                      \
-		(                                                 \
-			CZ_MACOS_VERSION >= CZ_MAKE_VERSION(10, 6) || \
-			CZ_IOS_VERSION >= CZ_MAKE_VERSION(3, 0))) ||  \
-	(                                                     \
-		CZ_GNU_LINUX &&                                   \
-		(                                                 \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||         \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&            \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 1, 91)) || \
-	(                                                     \
-		CZ_FREE_BSD &&                                    \
-		(                                                 \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||         \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&            \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(7, 0)) ||  \
-	(                                                     \
-		CZ_FREE_BSD &&                                    \
-		!CZ_POSIX_C_SOURCE &&                             \
-		!CZ_XOPEN_SOURCE &&                               \
-		!CZ_ANSI_SOURCE &&                                \
-		!CZ_C99_SOURCE &&                                 \
-		!CZ_C11_SOURCE &&                                 \
-		!CZ_C23_SOURCE &&                                 \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(7, 0)) ||  \
+#if (                                                        \
+		CZ_DARWIN &&                                         \
+		(                                                    \
+			CZ_MACOS_VERSION >= CZ_MAKE_VERSION(10, 6) ||    \
+			CZ_IOS_VERSION >= CZ_MAKE_VERSION(3, 0))) ||     \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||            \
+			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&               \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 1, 91)) ||    \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_POSIX_2001 &&                        \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(7, 0, 13)) || \
 	CZ_POSIX_ADVISORY_INFO >= CZ_POSIX_2001
 #define CZ_WRAP_POSIX_MEMALIGN 1
 #else
@@ -239,12 +219,8 @@ enum CzResult czWrap_posix_memalign(int* res, void* restrict* memptr, size_t ali
 		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 20)) ||  \
 	(                                                  \
 		CZ_FREE_BSD &&                                 \
-		!CZ_POSIX_C_SOURCE &&                          \
-		!CZ_XOPEN_SOURCE &&                            \
-		!CZ_ANSI_SOURCE &&                             \
-		!CZ_C99_SOURCE &&                              \
-		!CZ_C11_SOURCE &&                              \
-		!CZ_C23_SOURCE)
+		CZ_FREE_BSD_USE_BSD &&                         \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(3, 0, 2))
 #define CZ_WRAP_MADVISE 1
 #else
 #define CZ_WRAP_MADVISE 0
@@ -286,28 +262,19 @@ enum CzResult czWrap_madvise(void* addr, size_t len, int advice);
  * @brief Specifies whether @c posix_madvise is defined.
  */
 #if !defined(CZ_WRAP_POSIX_MADVISE)
-#if (                                                  \
-		CZ_DARWIN &&                                   \
-		CZ_MACOS_VERSION >= CZ_MAKE_VERSION(10, 2)) || \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		(                                              \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||      \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&         \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 2)) ||  \
-	(                                                  \
-		CZ_FREE_BSD &&                                 \
-		(                                              \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||      \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2001)) ||        \
-	(                                                  \
-		CZ_FREE_BSD &&                                 \
-		!CZ_POSIX_C_SOURCE &&                          \
-		!CZ_XOPEN_SOURCE &&                            \
-		!CZ_ANSI_SOURCE &&                             \
-		!CZ_C99_SOURCE &&                              \
-		!CZ_C11_SOURCE &&                              \
-		!CZ_C23_SOURCE) ||                             \
+#if (                                                         \
+		CZ_DARWIN &&                                          \
+		CZ_MACOS_VERSION >= CZ_MAKE_VERSION(10, 2)) ||        \
+	(                                                         \
+		CZ_GNU_LINUX &&                                       \
+		(                                                     \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||             \
+			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&                \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 2)) ||         \
+	(                                                         \
+		CZ_FREE_BSD &&                                        \
+		CZ_FREE_BSD_USE_POSIX_2001 &&                         \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 1, 105)) || \
 	CZ_POSIX_ADVISORY_INFO >= CZ_POSIX_2001
 #define CZ_WRAP_POSIX_MADVISE 1
 #else
@@ -363,17 +330,7 @@ enum CzResult czWrap_posix_madvise(int* res, void* addr, size_t len, int advice)
 		CZ_GLIBC) ||                              \
 	(                                             \
 		CZ_FREE_BSD &&                            \
-		(                                         \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_1988 || \
-			CZ_XOPEN_SOURCE >= CZ_SUS_1997)) ||   \
-	(                                             \
-		CZ_FREE_BSD &&                            \
-		!CZ_POSIX_C_SOURCE &&                     \
-		!CZ_XOPEN_SOURCE &&                       \
-		!CZ_ANSI_SOURCE &&                        \
-		!CZ_C99_SOURCE &&                         \
-		!CZ_C11_SOURCE &&                         \
-		!CZ_C23_SOURCE) ||                        \
+		CZ_FREE_BSD_USE_POSIX_1988) ||            \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 ||          \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_FDOPEN 1
@@ -414,40 +371,36 @@ enum CzResult czWrap_fdopen(FILE* restrict* res, int fildes, const char* mode);
  * @brief Specifies whether @c fmemopen is defined.
  */
 #if !defined(CZ_WRAP_FMEMOPEN)
-#if (                                                      \
-		CZ_DARWIN &&                                       \
-		!CZ_ANSI_SOURCE &&                                 \
-		(                                                  \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||          \
-			CZ_DARWIN_C_SOURCE) &&                         \
-		(                                                  \
-			CZ_MACOS_VERSION >= CZ_MAKE_VERSION(10, 13) || \
-			CZ_IOS_VERSION >= CZ_MAKE_VERSION(11, 0))) ||  \
-	(                                                      \
-		CZ_GNU_LINUX &&                                    \
-		CZ_GNU_SOURCE &&                                   \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(1, 1) &&       \
-		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 10)) ||      \
-	(                                                      \
-		CZ_GNU_LINUX &&                                    \
-		(                                                  \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||          \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2008) &&             \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 10)) ||     \
-	(                                                      \
-		CZ_FREE_BSD &&                                     \
-		(                                                  \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||          \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2008)) ||            \
-	(                                                      \
-		CZ_FREE_BSD &&                                     \
-		!CZ_POSIX_C_SOURCE &&                              \
-		!CZ_XOPEN_SOURCE &&                                \
-		!CZ_ANSI_SOURCE &&                                 \
-		!CZ_C99_SOURCE &&                                  \
-		!CZ_C11_SOURCE &&                                  \
-		!CZ_C23_SOURCE) ||                                 \
-	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                   \
+#if (                                                         \
+		CZ_DARWIN &&                                          \
+		!CZ_ANSI_SOURCE &&                                    \
+		(                                                     \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||             \
+			CZ_DARWIN_C_SOURCE) &&                            \
+		(                                                     \
+			CZ_MACOS_VERSION >= CZ_MAKE_VERSION(10, 13) ||    \
+			CZ_IOS_VERSION >= CZ_MAKE_VERSION(11, 0))) ||     \
+	(                                                         \
+		CZ_GNU_LINUX &&                                       \
+		CZ_GNU_SOURCE &&                                      \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(1, 1) &&          \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 10)) ||         \
+	(                                                         \
+		CZ_GNU_LINUX &&                                       \
+		(                                                     \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||             \
+			CZ_XOPEN_SOURCE >= CZ_SUS_2008) &&                \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 10)) ||        \
+	(                                                         \
+		CZ_FREE_BSD &&                                        \
+		CZ_FREE_BSD_USE_POSIX_2008 &&                         \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(9, 2) &&       \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(10, 0)) ||      \
+	(                                                         \
+		CZ_FREE_BSD &&                                        \
+		CZ_FREE_BSD_USE_POSIX_2008 &&                         \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(10, 0, 28)) || \
+	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                      \
 	CZ_XOPEN_VERSION >= CZ_SUS_2008
 #define CZ_WRAP_FMEMOPEN 1
 #else
@@ -490,33 +443,38 @@ enum CzResult czWrap_fmemopen(FILE* restrict* res, void* buf, size_t max_size, c
  * @brief Specifies whether @c fseeko is defined.
  */
 #if !defined(CZ_WRAP_FSEEKO)
-#if (                                                 \
-		CZ_DARWIN &&                                  \
-		!CZ_ANSI_SOURCE &&                            \
-		(                                             \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||     \
-			CZ_DARWIN_C_SOURCE)) ||                   \
-	(                                                 \
-		CZ_GNU_LINUX &&                               \
-		(                                             \
-			CZ_FILE_OFFSET_BITS == 64 ||              \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||     \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&        \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 1)) || \
-	(                                                 \
-		CZ_FREE_BSD &&                                \
-		(                                             \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||     \
-			CZ_XOPEN_SOURCE >= CZ_SUS_1997)) ||       \
-	(                                                 \
-		CZ_FREE_BSD &&                                \
-		!CZ_POSIX_C_SOURCE &&                         \
-		!CZ_XOPEN_SOURCE &&                           \
-		!CZ_ANSI_SOURCE &&                            \
-		!CZ_C99_SOURCE &&                             \
-		!CZ_C11_SOURCE &&                             \
-		!CZ_C23_SOURCE) ||                            \
-	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||              \
+#if (                                                         \
+		CZ_DARWIN &&                                          \
+		!CZ_ANSI_SOURCE &&                                    \
+		(                                                     \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||             \
+			CZ_DARWIN_C_SOURCE)) ||                           \
+	(                                                         \
+		CZ_GNU_LINUX &&                                       \
+		(                                                     \
+			CZ_FILE_OFFSET_BITS == 64 ||                      \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||             \
+			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&                \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 1)) ||         \
+	(                                                         \
+		CZ_FREE_BSD &&                                        \
+		CZ_FREE_BSD_USE_BSD &&                                \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(3, 1, 3) &&    \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(4, 0, 0)) ||    \
+	(                                                         \
+		CZ_FREE_BSD &&                                        \
+		CZ_FREE_BSD_USE_BSD &&                                \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(4, 0, 1) &&    \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(5, 0, 38)) ||   \
+	(                                                         \
+		CZ_FREE_BSD &&                                        \
+		CZ_FREE_BSD_USE_POSIX_2001 &&                         \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 38)) ||  \
+	(                                                         \
+		CZ_FREE_BSD &&                                        \
+		CZ_FREE_BSD_USE_XSI_1997 &&                           \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(12, 0, 31)) || \
+	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||                      \
 	CZ_XOPEN_VERSION >= CZ_SUS_2001
 #define CZ_WRAP_FSEEKO 1
 #else
@@ -561,33 +519,38 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence);
  * @brief Specifies whether @c ftello is defined.
  */
 #if !defined(CZ_WRAP_FTELLO)
-#if (                                                 \
-		CZ_DARWIN &&                                  \
-		!CZ_ANSI_SOURCE &&                            \
-		(                                             \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||     \
-			CZ_DARWIN_C_SOURCE)) ||                   \
-	(                                                 \
-		CZ_GNU_LINUX &&                               \
-		(                                             \
-			CZ_FILE_OFFSET_BITS == 64 ||              \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||     \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&        \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 1)) || \
-	(                                                 \
-		CZ_FREE_BSD &&                                \
-		(                                             \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||     \
-			CZ_XOPEN_SOURCE >= CZ_SUS_1997)) ||       \
-	(                                                 \
-		CZ_FREE_BSD &&                                \
-		!CZ_POSIX_C_SOURCE &&                         \
-		!CZ_XOPEN_SOURCE &&                           \
-		!CZ_ANSI_SOURCE &&                            \
-		!CZ_C99_SOURCE &&                             \
-		!CZ_C11_SOURCE &&                             \
-		!CZ_C23_SOURCE) ||                            \
-	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||              \
+#if (                                                         \
+		CZ_DARWIN &&                                          \
+		!CZ_ANSI_SOURCE &&                                    \
+		(                                                     \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||             \
+			CZ_DARWIN_C_SOURCE)) ||                           \
+	(                                                         \
+		CZ_GNU_LINUX &&                                       \
+		(                                                     \
+			CZ_FILE_OFFSET_BITS == 64 ||                      \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||             \
+			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&                \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 1)) ||         \
+	(                                                         \
+		CZ_FREE_BSD &&                                        \
+		CZ_FREE_BSD_USE_BSD &&                                \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(3, 1, 3) &&    \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(4, 0)) ||       \
+	(                                                         \
+		CZ_FREE_BSD &&                                        \
+		CZ_FREE_BSD_USE_BSD &&                                \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(4, 0, 1) &&    \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(5, 0, 38)) ||   \
+	(                                                         \
+		CZ_FREE_BSD &&                                        \
+		CZ_FREE_BSD_USE_POSIX_2001 &&                         \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 38)) ||  \
+	(                                                         \
+		CZ_FREE_BSD &&                                        \
+		CZ_FREE_BSD_USE_XSI_1997 &&                           \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(12, 0, 31)) || \
+	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||                      \
 	CZ_XOPEN_VERSION >= CZ_SUS_2001
 #define CZ_WRAP_FTELLO 1
 #else
@@ -725,42 +688,36 @@ enum CzResult czWrap_unlink(const char* path);
  * @brief Specifies whether @c unlinkat is defined.
  */
 #if !defined(CZ_WRAP_UNLINKAT)
-#if (                                                      \
-		CZ_DARWIN &&                                       \
-		!CZ_ANSI_SOURCE &&                                 \
-		(                                                  \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||          \
-			CZ_DARWIN_C_SOURCE) &&                         \
-		(                                                  \
-			CZ_MACOS_VERSION >= CZ_MAKE_VERSION(10, 10) || \
-			CZ_IOS_VERSION >= CZ_MAKE_VERSION(8, 0))) ||   \
-	(                                                      \
-		CZ_GNU_LINUX &&                                    \
-		CZ_ATFILE_SOURCE &&                                \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 4) &&       \
-		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 10)) ||      \
-	(                                                      \
-		CZ_GNU_LINUX &&                                    \
-		(                                                  \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||          \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2008) &&             \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 10)) ||     \
-	(                                                      \
-		CZ_FREE_BSD &&                                     \
-		(                                                  \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||          \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2008) &&             \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0)) ||   \
-	(                                                      \
-		CZ_FREE_BSD &&                                     \
-		!CZ_POSIX_C_SOURCE &&                              \
-		!CZ_XOPEN_SOURCE &&                                \
-		!CZ_ANSI_SOURCE &&                                 \
-		!CZ_C99_SOURCE &&                                  \
-		!CZ_C11_SOURCE &&                                  \
-		!CZ_C23_SOURCE &&                                  \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0)) ||   \
-	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                   \
+#if (                                                        \
+		CZ_DARWIN &&                                         \
+		!CZ_ANSI_SOURCE &&                                   \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||            \
+			CZ_DARWIN_C_SOURCE) &&                           \
+		(                                                    \
+			CZ_MACOS_VERSION >= CZ_MAKE_VERSION(10, 10) ||   \
+			CZ_IOS_VERSION >= CZ_MAKE_VERSION(8, 0))) ||     \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		CZ_ATFILE_SOURCE &&                                  \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 4) &&         \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 10)) ||        \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||            \
+			CZ_XOPEN_SOURCE >= CZ_SUS_2008) &&               \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 10)) ||       \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_BSD &&                               \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0, 30) &&  \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(8, 0, 69)) ||  \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_POSIX_2008 &&                        \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0, 69)) || \
+	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                     \
 	CZ_XOPEN_VERSION >= CZ_SUS_2008
 #define CZ_WRAP_UNLINKAT 1
 #else
@@ -819,17 +776,7 @@ enum CzResult czWrap_unlinkat(int fd, const char* path, int flag);
 		CZ_GLIBC) ||                              \
 	(                                             \
 		CZ_FREE_BSD &&                            \
-		(                                         \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_1988 || \
-			CZ_XOPEN_SOURCE >= CZ_SUS_1997)) ||   \
-	(                                             \
-		CZ_FREE_BSD &&                            \
-		!CZ_POSIX_C_SOURCE &&                     \
-		!CZ_XOPEN_SOURCE &&                       \
-		!CZ_ANSI_SOURCE &&                        \
-		!CZ_C99_SOURCE &&                         \
-		!CZ_C11_SOURCE &&                         \
-		!CZ_C23_SOURCE) ||                        \
+		CZ_FREE_BSD_USE_POSIX_1988) ||            \
 	CZ_POSIX_VERSION >= CZ_POSIX_1988 ||          \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_FILENO 1
@@ -957,38 +904,33 @@ enum CzResult czWrap_stat(const char* path, struct stat* buf);
  * @brief Specifies whether @c lstat is defined.
  */
 #if !defined(CZ_WRAP_LSTAT)
-#if CZ_DARWIN ||                                       \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		CZ_XOPEN_SOURCE >= CZ_SUS_1997 &&              \
-		CZ_GLIBC) ||                                   \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 &&          \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 10)) || \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		CZ_BSD_SOURCE &&                               \
-		CZ_GLIBC &&                                    \
-		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 20)) ||  \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		CZ_DEFAULT_SOURCE &&                           \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 20)) || \
-	(                                                  \
-		CZ_FREE_BSD &&                                 \
-		(                                              \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||      \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2001)) ||        \
-	(                                                  \
-		CZ_FREE_BSD &&                                 \
-		!CZ_POSIX_C_SOURCE &&                          \
-		!CZ_XOPEN_SOURCE &&                            \
-		!CZ_ANSI_SOURCE &&                             \
-		!CZ_C99_SOURCE &&                              \
-		!CZ_C11_SOURCE &&                              \
-		!CZ_C23_SOURCE) ||                             \
-	CZ_POSIX_VERSION >= CZ_POSIX_1988 ||               \
+#if CZ_DARWIN ||                                              \
+	(                                                         \
+		CZ_GNU_LINUX &&                                       \
+		CZ_XOPEN_SOURCE >= CZ_SUS_1997 &&                     \
+		CZ_GLIBC) ||                                          \
+	(                                                         \
+		CZ_GNU_LINUX &&                                       \
+		CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 &&                 \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 10)) ||        \
+	(                                                         \
+		CZ_GNU_LINUX &&                                       \
+		CZ_BSD_SOURCE &&                                      \
+		CZ_GLIBC &&                                           \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 20)) ||         \
+	(                                                         \
+		CZ_GNU_LINUX &&                                       \
+		CZ_DEFAULT_SOURCE &&                                  \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 20)) ||        \
+	(                                                         \
+		CZ_FREE_BSD &&                                        \
+		CZ_FREE_BSD_USE_BSD &&                                \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(5, 0, 107)) ||  \
+	(                                                         \
+		CZ_FREE_BSD &&                                        \
+		CZ_FREE_BSD_USE_POSIX_2001 &&                         \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 107)) || \
+	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||                      \
 	CZ_XOPEN_VERSION >= CZ_XPG_1985
 #define CZ_WRAP_LSTAT 1
 #else
@@ -1075,42 +1017,36 @@ enum CzResult czWrap_fstat(int fildes, struct stat* buf);
  * @brief Specifies whether @c fstatat is defined.
  */
 #if !defined(CZ_WRAP_FSTATAT)
-#if (                                                      \
-		CZ_DARWIN &&                                       \
-		!CZ_ANSI_SOURCE &&                                 \
-		(                                                  \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||          \
-			CZ_DARWIN_C_SOURCE) &&                         \
-		(                                                  \
-			CZ_MACOS_VERSION >= CZ_MAKE_VERSION(10, 10) || \
-			CZ_IOS_VERSION >= CZ_MAKE_VERSION(8, 0))) ||   \
-	(                                                      \
-		CZ_GNU_LINUX &&                                    \
-		CZ_ATFILE_SOURCE &&                                \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 4) &&       \
-		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 10)) ||      \
-	(                                                      \
-		CZ_GNU_LINUX &&                                    \
-		(                                                  \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||          \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2008) &&             \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 10)) ||     \
-	(                                                      \
-		CZ_FREE_BSD &&                                     \
-		(                                                  \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||          \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2008) &&             \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0)) ||   \
-	(                                                      \
-		CZ_FREE_BSD &&                                     \
-		!CZ_POSIX_C_SOURCE &&                              \
-		!CZ_XOPEN_SOURCE &&                                \
-		!CZ_ANSI_SOURCE &&                                 \
-		!CZ_C99_SOURCE &&                                  \
-		!CZ_C11_SOURCE &&                                  \
-		!CZ_C23_SOURCE &&                                  \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0)) ||   \
-	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                   \
+#if (                                                        \
+		CZ_DARWIN &&                                         \
+		!CZ_ANSI_SOURCE &&                                   \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||            \
+			CZ_DARWIN_C_SOURCE) &&                           \
+		(                                                    \
+			CZ_MACOS_VERSION >= CZ_MAKE_VERSION(10, 10) ||   \
+			CZ_IOS_VERSION >= CZ_MAKE_VERSION(8, 0))) ||     \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		CZ_ATFILE_SOURCE &&                                  \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 4) &&         \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 10)) ||        \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||            \
+			CZ_XOPEN_SOURCE >= CZ_SUS_2008) &&               \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 10)) ||       \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_BSD &&                               \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0, 30) &&  \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(8, 0, 69)) ||  \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_POSIX_2008 &&                        \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0, 69)) || \
+	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                     \
 	CZ_XOPEN_VERSION >= CZ_SUS_2008
 #define CZ_WRAP_FSTATAT 1
 #else
@@ -1165,12 +1101,7 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* buf, int fla
 		CZ_GLIBC) ||                \
 	(                               \
 		CZ_FREE_BSD &&              \
-		!CZ_POSIX_C_SOURCE &&       \
-		!CZ_XOPEN_SOURCE &&         \
-		!CZ_ANSI_SOURCE &&          \
-		!CZ_C99_SOURCE &&           \
-		!CZ_C11_SOURCE &&           \
-		!CZ_C23_SOURCE)
+		CZ_FREE_BSD_USE_BSD)
 #define CZ_WRAP_FLOCK 1
 #else
 #define CZ_WRAP_FLOCK 0
@@ -1207,39 +1138,37 @@ enum CzResult czWrap_flock(int fd, int op);
  * @brief Specifies whether @c lockf is defined.
  */
 #if !defined(CZ_WRAP_LOCKF)
-#if (                                                  \
-		CZ_DARWIN &&                                   \
-		!CZ_ANSI_SOURCE &&                             \
-		(                                              \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996 ||      \
-			CZ_DARWIN_C_SOURCE)) ||                    \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		CZ_XOPEN_SOURCE >= CZ_SUS_1997 &&              \
-		CZ_GLIBC) ||                                   \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		(                                              \
-			CZ_BSD_SOURCE ||                           \
-			CZ_SVID_SOURCE) &&                         \
-		CZ_GLIBC &&                                    \
-		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 20)) ||  \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		CZ_DEFAULT_SOURCE &&                           \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 19)) || \
-	(                                                  \
-		CZ_FREE_BSD &&                                 \
-		CZ_XOPEN_SOURCE >= CZ_SUS_1997) ||             \
-	(                                                  \
-		CZ_FREE_BSD &&                                 \
-		!CZ_POSIX_C_SOURCE &&                          \
-		!CZ_XOPEN_SOURCE &&                            \
-		!CZ_ANSI_SOURCE &&                             \
-		!CZ_C99_SOURCE &&                              \
-		!CZ_C11_SOURCE &&                              \
-		!CZ_C23_SOURCE) ||                             \
-	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||               \
+#if (                                                        \
+		CZ_DARWIN &&                                         \
+		!CZ_ANSI_SOURCE &&                                   \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996 ||            \
+			CZ_DARWIN_C_SOURCE)) ||                          \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		CZ_XOPEN_SOURCE >= CZ_SUS_1997 &&                    \
+		CZ_GLIBC) ||                                         \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		(                                                    \
+			CZ_BSD_SOURCE ||                                 \
+			CZ_SVID_SOURCE) &&                               \
+		CZ_GLIBC &&                                          \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 20)) ||        \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		CZ_DEFAULT_SOURCE &&                                 \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 19)) ||       \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_BSD &&                               \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(3, 0, 4) &&   \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(5, 0, 38)) ||  \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_XSI_1997 &&                          \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 38)) || \
+	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||                     \
 	CZ_XOPEN_VERSION >= CZ_SUS_1994
 #define CZ_WRAP_LOCKF 1
 #else
@@ -1339,41 +1268,40 @@ enum CzResult czWrap_fcntl(int* res, int fildes, int cmd, ...);
  * @brief Specifies whether @c truncate is defined.
  */
 #if !defined(CZ_WRAP_TRUNCATE)
-#if (                                                  \
-		CZ_DARWIN &&                                   \
-		!CZ_ANSI_SOURCE &&                             \
-		(                                              \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996 ||      \
-			CZ_DARWIN_C_SOURCE)) ||                    \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		CZ_XOPEN_SOURCE >= CZ_SUS_1997 &&              \
-		CZ_GLIBC) ||                                   \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		(                                              \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||      \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2008) &&         \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 12)) || \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		CZ_BSD_SOURCE &&                               \
-		CZ_GLIBC &&                                    \
-		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 20)) ||  \
-	(                                                  \
-		CZ_FREE_BSD &&                                 \
-		(                                              \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||      \
-			CZ_XOPEN_SOURCE >= CZ_SUS_1997)) ||        \
-	(                                                  \
-		CZ_FREE_BSD &&                                 \
-		!CZ_POSIX_C_SOURCE &&                          \
-		!CZ_XOPEN_SOURCE &&                            \
-		!CZ_ANSI_SOURCE &&                             \
-		!CZ_C99_SOURCE &&                              \
-		!CZ_C11_SOURCE &&                              \
-		!CZ_C23_SOURCE) ||                             \
-	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||               \
+#if (                                                        \
+		CZ_DARWIN &&                                         \
+		!CZ_ANSI_SOURCE &&                                   \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996 ||            \
+			CZ_DARWIN_C_SOURCE)) ||                          \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		CZ_XOPEN_SOURCE >= CZ_SUS_1997 &&                    \
+		CZ_GLIBC) ||                                         \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||            \
+			CZ_XOPEN_SOURCE >= CZ_SUS_2008) &&               \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 12)) ||       \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		CZ_BSD_SOURCE &&                                     \
+		CZ_GLIBC &&                                          \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 20)) ||        \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_BSD &&                               \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(5, 0, 38)) ||  \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_POSIX_2008 &&                        \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0, 69)) || \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_XSI_1997 &&                          \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 38)) || \
+	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||                     \
 	CZ_XOPEN_VERSION >= CZ_SUS_1994
 #define CZ_WRAP_TRUNCATE 1
 #else
@@ -1416,41 +1344,40 @@ enum CzResult czWrap_truncate(const char* path, off_t length);
  * @brief Specifies whether @c ftruncate is defined.
  */
 #if !defined(CZ_WRAP_FTRUNCATE)
-#if (                                                    \
-		CZ_DARWIN &&                                     \
-		!CZ_ANSI_SOURCE &&                               \
-		(                                                \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996 ||        \
-			CZ_DARWIN_C_SOURCE)) ||                      \
-	(                                                    \
-		CZ_GNU_LINUX &&                                  \
-		CZ_XOPEN_SOURCE >= CZ_SUS_1997 &&                \
-		CZ_GLIBC) ||                                     \
-	(                                                    \
-		CZ_GNU_LINUX &&                                  \
-		(                                                \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||        \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&           \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 3, 5)) || \
-	(                                                    \
-		CZ_GNU_LINUX &&                                  \
-		CZ_BSD_SOURCE &&                                 \
-		CZ_GLIBC &&                                      \
-		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 20)) ||    \
-	(                                                    \
-		CZ_FREE_BSD &&                                   \
-		(                                                \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996 ||        \
-			CZ_XOPEN_SOURCE >= CZ_SUS_1997)) ||          \
-	(                                                    \
-		CZ_FREE_BSD &&                                   \
-		!CZ_POSIX_C_SOURCE &&                            \
-		!CZ_XOPEN_SOURCE &&                              \
-		!CZ_ANSI_SOURCE &&                               \
-		!CZ_C99_SOURCE &&                                \
-		!CZ_C11_SOURCE &&                                \
-		!CZ_C23_SOURCE) ||                               \
-	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||                 \
+#if (                                                        \
+		CZ_DARWIN &&                                         \
+		!CZ_ANSI_SOURCE &&                                   \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996 ||            \
+			CZ_DARWIN_C_SOURCE)) ||                          \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		CZ_XOPEN_SOURCE >= CZ_SUS_1997 &&                    \
+		CZ_GLIBC) ||                                         \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||            \
+			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&               \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 3, 5)) ||     \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		CZ_BSD_SOURCE &&                                     \
+		CZ_GLIBC &&                                          \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 20)) ||        \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_BSD &&                               \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(5, 0, 38)) ||  \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_POSIX_1996 &&                        \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 38)) || \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_XSI_1997 &&                          \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 44)) || \
+	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||                     \
 	CZ_XOPEN_VERSION >= CZ_SUS_1994
 #define CZ_WRAP_FTRUNCATE 1
 #else
@@ -1488,27 +1415,26 @@ enum CzResult czWrap_ftruncate(int fildes, off_t length);
  * @brief Specifies whether @c posix_fadvise is defined.
  */
 #if !defined(CZ_WRAP_POSIX_FADVISE)
-#if (                                                    \
-		CZ_GNU_LINUX &&                                  \
-		(                                                \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||        \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&           \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 2)) ||    \
-	(                                                    \
-		CZ_FREE_BSD &&                                   \
-		(                                                \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||        \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&           \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(9, 1)) || \
-	(                                                    \
-		CZ_FREE_BSD &&                                   \
-		!CZ_POSIX_C_SOURCE &&                            \
-		!CZ_XOPEN_SOURCE &&                              \
-		!CZ_ANSI_SOURCE &&                               \
-		!CZ_C99_SOURCE &&                                \
-		!CZ_C11_SOURCE &&                                \
-		!CZ_C23_SOURCE &&                                \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(9, 1)) || \
+#if (                                                        \
+		CZ_GNU_LINUX &&                                      \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||            \
+			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&               \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 2)) ||        \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_POSIX_2001 &&                        \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 2, 515) && \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(9, 0)) ||      \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_POSIX_2001 &&                        \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(9, 0, 501) && \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(10, 0)) ||     \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_POSIX_2001 &&                        \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(10, 0, 1)) || \
 	CZ_POSIX_ADVISORY_INFO >= CZ_POSIX_2001
 #define CZ_WRAP_POSIX_FADVISE 1
 #else
@@ -1594,27 +1520,21 @@ enum CzResult czWrap_fallocate(int fd, int mode, off_t offset, off_t len);
  * @brief Specifies whether @c posix_fallocate is defined.
  */
 #if !defined(CZ_WRAP_POSIX_FALLOCATE)
-#if (                                                     \
-		CZ_GNU_LINUX &&                                   \
-		(                                                 \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||         \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&            \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 1, 94)) || \
-	(                                                    \
-		CZ_FREE_BSD &&                                   \
-		(                                                \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||        \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&           \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(9, 0)) || \
-	(                                                    \
-		CZ_FREE_BSD &&                                   \
-		!CZ_POSIX_C_SOURCE &&                            \
-		!CZ_XOPEN_SOURCE &&                              \
-		!CZ_ANSI_SOURCE &&                               \
-		!CZ_C99_SOURCE &&                                \
-		!CZ_C11_SOURCE &&                                \
-		!CZ_C23_SOURCE &&                                \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(9, 0)) || \
+#if (                                                        \
+		CZ_GNU_LINUX &&                                      \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||            \
+			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&               \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 1, 94)) ||    \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_POSIX_2001 &&                        \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 2, 514) && \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(9, 0)) ||      \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_POSIX_2001 &&                        \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(9, 0, 37)) || \
 	CZ_POSIX_ADVISORY_INFO >= CZ_POSIX_2001
 #define CZ_WRAP_POSIX_FALLOCATE 1
 #else
@@ -1658,43 +1578,42 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t len);
  * @brief Specifies whether @c fsync is defined.
  */
 #if !defined(CZ_WRAP_FSYNC)
-#if (                                                  \
-		CZ_DARWIN &&                                   \
-		!CZ_ANSI_SOURCE &&                             \
-		(                                              \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996 ||      \
-			CZ_DARWIN_C_SOURCE)) ||                    \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		(                                              \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||      \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&         \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 8) &&   \
-		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 16)) ||  \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		(                                              \
-			CZ_BSD_SOURCE ||                           \
-			CZ_XOPEN_SOURCE >= CZ_SUS_1994) &&         \
-		CZ_GLIBC &&                                    \
-		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 16)) ||  \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 16)) || \
-	(                                                  \
-		CZ_FREE_BSD &&                                 \
-		(                                              \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996 ||      \
-			CZ_XOPEN_SOURCE >= CZ_SUS_1997)) ||        \
-	(                                                  \
-		CZ_FREE_BSD &&                                 \
-		!CZ_POSIX_C_SOURCE &&                          \
-		!CZ_XOPEN_SOURCE &&                            \
-		!CZ_ANSI_SOURCE &&                             \
-		!CZ_C99_SOURCE &&                              \
-		!CZ_C11_SOURCE &&                              \
-		!CZ_C23_SOURCE) ||                             \
-	CZ_POSIX_FSYNC >= CZ_POSIX_2001 ||                 \
+#if (                                                        \
+		CZ_DARWIN &&                                         \
+		!CZ_ANSI_SOURCE &&                                   \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996 ||            \
+			CZ_DARWIN_C_SOURCE)) ||                          \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2001 ||            \
+			CZ_XOPEN_SOURCE >= CZ_SUS_2001) &&               \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 8) &&         \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 16)) ||        \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		(                                                    \
+			CZ_BSD_SOURCE ||                                 \
+			CZ_XOPEN_SOURCE >= CZ_SUS_1994) &&               \
+		CZ_GLIBC &&                                          \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 16)) ||        \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 16)) ||       \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_BSD &&                               \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(5, 0, 38)) ||  \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_POSIX_1996 &&                        \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 38)) || \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_XSI_1997 &&                          \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 44)) || \
+	CZ_POSIX_FSYNC >= CZ_POSIX_2001 ||                       \
 	CZ_XOPEN_VERSION >= CZ_XPG_1989
 #define CZ_WRAP_FSYNC 1
 #else
@@ -1732,31 +1651,29 @@ enum CzResult czWrap_fsync(int fildes);
  * @brief Specifies whether @c fdatasync is defined.
  */
 #if !defined(CZ_WRAP_FDATASYNC)
-#if (                                                     \
-		CZ_GNU_LINUX &&                                   \
-		(                                                 \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_1993 ||         \
-			CZ_XOPEN_SOURCE >= CZ_SUS_1997) &&            \
-		CZ_GLIBC) ||                                      \
-	(                                                     \
-		CZ_FREE_BSD &&                                    \
-		(                                                 \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996 ||         \
-			CZ_XOPEN_SOURCE >= CZ_SUS_1997) &&            \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(11, 1)) || \
-	(                                                     \
-		CZ_FREE_BSD &&                                    \
-		!CZ_POSIX_C_SOURCE &&                             \
-		!CZ_XOPEN_SOURCE &&                               \
-		!CZ_ANSI_SOURCE &&                                \
-		!CZ_C99_SOURCE &&                                 \
-		!CZ_C11_SOURCE &&                                 \
-		!CZ_C23_SOURCE &&                                 \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(11, 1)) || \
-	(                                                     \
-		CZ_XOPEN_REALTIME > 0 &&                          \
-		(                                                 \
-			CZ_POSIX_VERSION >= CZ_POSIX_2001 ||          \
+#if (                                                         \
+		CZ_GNU_LINUX &&                                       \
+		(                                                     \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_1993 ||             \
+			CZ_XOPEN_SOURCE >= CZ_SUS_1997) &&                \
+		CZ_GLIBC) ||                                          \
+	(                                                         \
+		CZ_FREE_BSD &&                                        \
+		(                                                     \
+			CZ_FREE_BSD_USE_POSIX_1996 ||                     \
+			CZ_FREE_BSD_USE_XSI_1997) &&                      \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(11, 0, 503) && \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(12, 0)) ||      \
+	(                                                         \
+		CZ_FREE_BSD &&                                        \
+		(                                                     \
+			CZ_FREE_BSD_USE_POSIX_1996 ||                     \
+			CZ_FREE_BSD_USE_XSI_1997) &&                      \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(12, 0, 2)) ||  \
+	(                                                         \
+		CZ_XOPEN_REALTIME > 0 &&                              \
+		(                                                     \
+			CZ_POSIX_VERSION >= CZ_POSIX_2001 ||              \
 			CZ_XOPEN_VERSION >= CZ_SUS_1997))
 #define CZ_WRAP_FDATASYNC 1
 #else
@@ -1850,42 +1767,35 @@ enum CzResult czWrap_open(int* res, const char* path, int oflag, mode_t mode);
  * @brief Specifies whether @c openat is defined.
  */
 #if !defined(CZ_WRAP_OPENAT)
-#if (                                                      \
-		CZ_DARWIN &&                                       \
-		!CZ_ANSI_SOURCE &&                                 \
-		(                                                  \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||          \
-			CZ_DARWIN_C_SOURCE) &&                         \
-		(                                                  \
-			CZ_MACOS_VERSION >= CZ_MAKE_VERSION(10, 10) || \
-			CZ_IOS_VERSION >= CZ_MAKE_VERSION(8, 0))) ||   \
-	(                                                      \
-		CZ_GNU_LINUX &&                                    \
-		CZ_ATFILE_SOURCE &&                                \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 4) &&       \
-		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 10)) ||      \
-	(                                                      \
-		CZ_GNU_LINUX &&                                    \
-		(                                                  \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||          \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2008) &&             \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 10)) ||     \
-	(                                                      \
-		CZ_FREE_BSD &&                                     \
-		(                                                  \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||          \
-			CZ_XOPEN_SOURCE >= CZ_SUS_2008) &&             \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0)) ||   \
-	(                                                      \
-		CZ_FREE_BSD &&                                     \
-		!CZ_POSIX_C_SOURCE &&                              \
-		!CZ_XOPEN_SOURCE &&                                \
-		!CZ_ANSI_SOURCE &&                                 \
-		!CZ_C99_SOURCE &&                                  \
-		!CZ_C11_SOURCE &&                                  \
-		!CZ_C23_SOURCE &&                                  \
-		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0)) ||   \
-	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                   \
+#if (                                                        \
+		CZ_DARWIN &&                                         \
+		!CZ_ANSI_SOURCE &&                                   \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||            \
+			CZ_DARWIN_C_SOURCE) &&                           \
+		(                                                    \
+			CZ_MACOS_VERSION >= CZ_MAKE_VERSION(10, 10) ||   \
+			CZ_IOS_VERSION >= CZ_MAKE_VERSION(8, 0))) ||     \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		CZ_ATFILE_SOURCE &&                                  \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 4) &&         \
+		CZ_GLIBC_VERSION < CZ_MAKE_VERSION(2, 10)) ||        \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||            \
+			CZ_XOPEN_SOURCE >= CZ_SUS_2008) &&               \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 10)) ||       \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0, 30) &&  \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(8, 0, 69)) ||  \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_POSIX_2008 &&                        \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0, 69)) || \
+	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                     \
 	CZ_XOPEN_VERSION >= CZ_SUS_2008
 #define CZ_WRAP_OPENAT 1
 #else
@@ -2164,34 +2074,39 @@ enum CzResult czWrap_read(ssize_t* res, int fildes, void* buf, size_t nbyte);
  * @brief Specifies whether @c pread is defined.
  */
 #if !defined(CZ_WRAP_PREAD)
-#if (                                                  \
-		CZ_DARWIN &&                                   \
-		!CZ_ANSI_SOURCE &&                             \
-		(                                              \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996 ||      \
-			CZ_DARWIN_C_SOURCE)) ||                    \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		CZ_XOPEN_SOURCE >= CZ_SUS_1997 &&              \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 1)) ||  \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 &&          \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 12)) || \
-	(                                                  \
-		CZ_FREE_BSD &&                                 \
-		(                                              \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||      \
-			CZ_XOPEN_SOURCE >= CZ_SUS_1997)) ||        \
-	(                                                  \
-		CZ_FREE_BSD &&                                 \
-		!CZ_POSIX_C_SOURCE &&                          \
-		!CZ_XOPEN_SOURCE &&                            \
-		!CZ_ANSI_SOURCE &&                             \
-		!CZ_C99_SOURCE &&                              \
-		!CZ_C11_SOURCE &&                              \
-		!CZ_C23_SOURCE) ||                             \
-	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||               \
+#if (                                                        \
+		CZ_DARWIN &&                                         \
+		!CZ_ANSI_SOURCE &&                                   \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996 ||            \
+			CZ_DARWIN_C_SOURCE)) ||                          \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		CZ_XOPEN_SOURCE >= CZ_SUS_1997 &&                    \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 1)) ||        \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 &&                \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 12)) ||       \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_BSD &&                               \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(3, 1, 3) &&   \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(4, 0)) ||      \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_BSD &&                               \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(4, 0, 4) &&   \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(5, 0, 38)) ||  \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_POSIX_2008 &&                        \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0, 69)) || \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_XSI_1997 &&                          \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 38)) || \
+	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||                     \
 	CZ_XOPEN_VERSION >= CZ_SUS_1997
 #define CZ_WRAP_PREAD 1
 #else
@@ -2295,34 +2210,39 @@ enum CzResult czWrap_write(ssize_t* res, int fildes, const void* buf, size_t nby
  * @brief Specifies whether @c pwrite is defined.
  */
 #if !defined(CZ_WRAP_PWRITE)
-#if (                                                  \
-		CZ_DARWIN &&                                   \
-		!CZ_ANSI_SOURCE &&                             \
-		(                                              \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996 ||      \
-			CZ_DARWIN_C_SOURCE)) ||                    \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		CZ_XOPEN_SOURCE >= CZ_SUS_1997 &&              \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 1)) ||  \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 &&          \
-		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 12)) || \
-	(                                                  \
-		CZ_FREE_BSD &&                                 \
-		(                                              \
-			CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 ||      \
-			CZ_XOPEN_SOURCE >= CZ_SUS_1997)) ||        \
-	(                                                  \
-		CZ_FREE_BSD &&                                 \
-		!CZ_POSIX_C_SOURCE &&                          \
-		!CZ_XOPEN_SOURCE &&                            \
-		!CZ_ANSI_SOURCE &&                             \
-		!CZ_C99_SOURCE &&                              \
-		!CZ_C11_SOURCE &&                              \
-		!CZ_C23_SOURCE) ||                             \
-	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||               \
+#if (                                                        \
+		CZ_DARWIN &&                                         \
+		!CZ_ANSI_SOURCE &&                                   \
+		(                                                    \
+			CZ_POSIX_C_SOURCE >= CZ_POSIX_1996 ||            \
+			CZ_DARWIN_C_SOURCE)) ||                          \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		CZ_XOPEN_SOURCE >= CZ_SUS_1997 &&                    \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 1)) ||        \
+	(                                                        \
+		CZ_GNU_LINUX &&                                      \
+		CZ_POSIX_C_SOURCE >= CZ_POSIX_2008 &&                \
+		CZ_GLIBC_VERSION >= CZ_MAKE_VERSION(2, 12)) ||       \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_BSD &&                               \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(3, 1, 3) &&   \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(4, 0)) ||      \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_BSD &&                               \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(4, 0, 4) &&   \
+		CZ_FREE_BSD_VERSION < CZ_MAKE_VERSION(5, 0, 38)) ||  \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_POSIX_2008 &&                        \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0, 69)) || \
+	(                                                        \
+		CZ_FREE_BSD &&                                       \
+		CZ_FREE_BSD_USE_XSI_1997 &&                          \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 38)) || \
+	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||                     \
 	CZ_XOPEN_VERSION >= CZ_SUS_1997
 #define CZ_WRAP_PWRITE 1
 #else
@@ -2372,14 +2292,16 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fildes, const void* buf, size_t nb
  * @brief Specifies whether @c mmap is defined.
  */
 #if !defined(CZ_WRAP_MMAP)
-#if CZ_DARWIN ||                                       \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		CZ_GLIBC) ||                                   \
-	CZ_FREE_BSD ||                                     \
-	CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001 ||          \
-	CZ_POSIX_SHARED_MEMORY_OBJECTS >= CZ_POSIX_2001 || \
-	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||               \
+#if CZ_DARWIN ||                                            \
+	(                                                       \
+		CZ_GNU_LINUX &&                                     \
+		CZ_GLIBC) ||                                        \
+	(                                                       \
+		CZ_FREE_BSD &&                                      \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(3, 0, 2)) || \
+	CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001 ||               \
+	CZ_POSIX_SHARED_MEMORY_OBJECTS >= CZ_POSIX_2001 ||      \
+	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                    \
 	CZ_XOPEN_VERSION >= CZ_SUS_1994
 #define CZ_WRAP_MMAP 1
 #else
@@ -2429,14 +2351,16 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t len, int prot,
  * @brief Specifies whether @c munmap is defined.
  */
 #if !defined(CZ_WRAP_MUNMAP)
-#if CZ_DARWIN ||                                       \
-	(                                                  \
-		CZ_GNU_LINUX &&                                \
-		CZ_GLIBC) ||                                   \
-	CZ_FREE_BSD ||                                     \
-	CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001 ||          \
-	CZ_POSIX_SHARED_MEMORY_OBJECTS >= CZ_POSIX_2001 || \
-	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||               \
+#if CZ_DARWIN ||                                            \
+	(                                                       \
+		CZ_GNU_LINUX &&                                     \
+		CZ_GLIBC) ||                                        \
+	(                                                       \
+		CZ_FREE_BSD &&                                      \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(3, 0, 2)) || \
+	CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001 ||               \
+	CZ_POSIX_SHARED_MEMORY_OBJECTS >= CZ_POSIX_2001 ||      \
+	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                    \
 	CZ_XOPEN_VERSION >= CZ_SUS_1994
 #define CZ_WRAP_MUNMAP 1
 #else
@@ -2474,14 +2398,16 @@ enum CzResult czWrap_munmap(void* addr, size_t len);
  * @brief Specifies whether @c msync is defined.
  */
 #if !defined(CZ_WRAP_MSYNC)
-#if CZ_DARWIN ||                                 \
-	(                                            \
-		CZ_GNU_LINUX &&                          \
-		CZ_GLIBC) ||                             \
-	CZ_FREE_BSD ||                               \
-	CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001 ||    \
-	CZ_POSIX_SYNCHRONIZED_IO >= CZ_POSIX_2001 || \
-	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||         \
+#if CZ_DARWIN ||                                            \
+	(                                                       \
+		CZ_GNU_LINUX &&                                     \
+		CZ_GLIBC) ||                                        \
+	(                                                       \
+		CZ_FREE_BSD &&                                      \
+		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(3, 0, 2)) || \
+	CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001 ||               \
+	CZ_POSIX_SYNCHRONIZED_IO >= CZ_POSIX_2001 ||            \
+	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                    \
 	CZ_XOPEN_VERSION >= CZ_SUS_1994
 #define CZ_WRAP_MSYNC 1
 #else

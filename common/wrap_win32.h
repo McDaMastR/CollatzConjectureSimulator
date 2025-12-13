@@ -48,6 +48,7 @@
 #pragma once
 
 #include "def.h"
+#include "support.h"
 
 /**
  * @def CZ_WRAP_RECALLOC
