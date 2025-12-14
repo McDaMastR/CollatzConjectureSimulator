@@ -121,7 +121,7 @@ enum CzResult czWrap_reallocarray(void* restrict* res, void* ptr, size_t nelem, 
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2024 || CZ_XOPEN_VERSION >= CZ_SUS_2024
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2024
 	switch (errno) {
 	case EINVAL:
 		return CZ_RESULT_BAD_SIZE;
@@ -349,7 +349,7 @@ enum CzResult czWrap_posix_madvise(int* res, void* addr, size_t len, int advice)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	switch (r) {
 	case ENOMEM:
 		return CZ_RESULT_BAD_ADDRESS;
@@ -414,7 +414,7 @@ enum CzResult czWrap_fdopen(FILE* restrict* res, int fildes, const char* mode)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	switch (errno) {
 	case EBADF:
 	case EINVAL:
@@ -461,7 +461,7 @@ enum CzResult czWrap_fmemopen(FILE* restrict* res, void* buf, size_t max_size, c
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2008 || CZ_XOPEN_VERSION >= CZ_SUS_2008
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2008
 	switch (errno) {
 	case EINVAL:
 		if (!max_size)
@@ -598,7 +598,7 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_1997
 	switch (errno) {
 	case EFBIG:
 	case ENXIO:
@@ -728,7 +728,7 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_1997
 	switch (errno) {
 	case EOVERFLOW:
 	case ESPIPE:
@@ -832,7 +832,7 @@ enum CzResult czWrap_rmdir(const char* path)
 	case EEXIST:
 	case ENOTEMPTY:
 		return CZ_RESULT_BAD_FILE;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case EIO:
 		return CZ_RESULT_BAD_IO;
 #endif
@@ -840,7 +840,7 @@ enum CzResult czWrap_rmdir(const char* path)
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ELOOP:
 		return CZ_RESULT_BAD_PATH;
 #endif
@@ -949,7 +949,7 @@ enum CzResult czWrap_unlink(const char* path)
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ELOOP:
 		return CZ_RESULT_BAD_PATH;
 #endif
@@ -961,7 +961,7 @@ enum CzResult czWrap_unlink(const char* path)
 	case EBUSY:
 		return CZ_RESULT_IN_USE;
 #endif
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ETXTBSY:
 		return CZ_RESULT_IN_USE;
 #endif
@@ -1084,7 +1084,7 @@ enum CzResult czWrap_unlinkat(int fd, const char* path, int flag)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2008 || CZ_XOPEN_VERSION >= CZ_SUS_2008
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2008
 	switch (errno) {
 	case EACCES:
 	case EBADF:
@@ -1188,7 +1188,7 @@ enum CzResult czWrap_isatty(int* res, int fildes)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_DARWIN || CZ_FREE_BSD || CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#elif CZ_DARWIN || CZ_FREE_BSD || CZ_POSIX_VERSION >= CZ_POSIX_2001
 	switch (errno) {
 	case 0:
 	case ENOTTY:
@@ -1283,18 +1283,18 @@ enum CzResult czWrap_stat(const char* path, struct stat* buf)
 	switch (errno) {
 	case EACCES:
 		return CZ_RESULT_BAD_ACCESS;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
 #endif
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case EIO:
 		return CZ_RESULT_BAD_IO;
 #endif
 	case ENAMETOOLONG:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ELOOP:
 		return CZ_RESULT_BAD_PATH;
 #endif
@@ -1381,11 +1381,11 @@ enum CzResult czWrap_lstat(const char* path, struct stat* buf)
 	switch (errno) {
 	case EACCES:
 		return CZ_RESULT_BAD_ACCESS;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
 #endif
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case EIO:
 		return CZ_RESULT_BAD_IO;
 #endif
@@ -1458,11 +1458,11 @@ enum CzResult czWrap_fstat(int fildes, struct stat* buf)
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
 #endif
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case EIO:
 		return CZ_RESULT_BAD_IO;
 #endif
@@ -1562,7 +1562,7 @@ enum CzResult czWrap_fstatat(int fd, const char* path, struct stat* buf, int fla
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2008 || CZ_XOPEN_VERSION >= CZ_SUS_2008
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2008
 	switch (errno) {
 	case EACCES:
 	case EBADF:
@@ -1740,7 +1740,7 @@ enum CzResult czWrap_lockf(int fildes, int function, off_t size)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_1994
+#elif CZ_XOPEN_VERSION >= CZ_SUS_1994
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
@@ -2509,7 +2509,7 @@ enum CzResult czWrap_truncate(const char* path, off_t length)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_1994
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2008 || CZ_XOPEN_VERSION >= CZ_SUS_1994
 	switch (errno) {
 	case EACCES:
 	case EROFS:
@@ -2528,7 +2528,7 @@ enum CzResult czWrap_truncate(const char* path, off_t length)
 		return CZ_RESULT_NO_FILE;
 	case EFBIG:
 		return CZ_RESULT_BAD_SIZE;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2024 || CZ_XOPEN_VERSION >= CZ_SUS_2024
+#if CZ_POSIX_VERSION >= CZ_POSIX_2024
 	case EINVAL:
 		if (length < 0)
 			return CZ_RESULT_BAD_SIZE;
@@ -2609,11 +2609,11 @@ enum CzResult czWrap_ftruncate(int fildes, off_t length)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_1994
+#elif CZ_POSIX_VERSION >= CZ_POSIX_1996 || CZ_XOPEN_VERSION >= CZ_SUS_1994
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
-#if CZ_POSIX_VERSION < CZ_POSIX_2008 && CZ_XOPEN_VERSION < CZ_SUS_2008
+#if CZ_POSIX_VERSION < CZ_POSIX_2008
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
 #endif
@@ -2624,7 +2624,7 @@ enum CzResult czWrap_ftruncate(int fildes, off_t length)
 	case EINVAL:
 		if (length < 0)
 			return CZ_RESULT_BAD_SIZE;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2024 || CZ_XOPEN_VERSION >= CZ_SUS_2024
+#if CZ_POSIX_VERSION >= CZ_POSIX_2024
 		return CZ_RESULT_BAD_FILE;
 #else
 		return CZ_RESULT_BAD_ACCESS;
@@ -2680,14 +2680,14 @@ enum CzResult czWrap_posix_fadvise(int* res, int fd, off_t offset, off_t len, in
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	switch (r) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 	case EINVAL:
-#if CZ_POSIX_VERSION >= CZ_POSIX_2008 || CZ_XOPEN_VERSION >= CZ_SUS_2008
+#if CZ_POSIX_VERSION >= CZ_POSIX_2008
 		if (len < 0)
 			return CZ_RESULT_BAD_SIZE;
 #endif
@@ -2860,7 +2860,7 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t len)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 	switch (r) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
@@ -2874,11 +2874,11 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t len)
 			return CZ_RESULT_BAD_OFFSET;
 		if (!len)
 			return CZ_RESULT_BAD_SIZE;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2008 || CZ_XOPEN_VERSION >= CZ_SUS_2008
+#if CZ_POSIX_VERSION >= CZ_POSIX_2008
 		if (len < 0)
 			return CZ_RESULT_BAD_SIZE;
 #endif
-#if CZ_POSIX_VERSION >= CZ_POSIX_2024 || CZ_XOPEN_VERSION >= CZ_SUS_2024
+#if CZ_POSIX_VERSION >= CZ_POSIX_2024
 		return CZ_RESULT_INTERNAL_ERROR;
 #else
 		return CZ_RESULT_NO_SUPPORT;
@@ -2889,7 +2889,7 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t len)
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
 		return CZ_RESULT_NO_DISK;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2024 || CZ_XOPEN_VERSION >= CZ_SUS_2024
+#if CZ_POSIX_VERSION >= CZ_POSIX_2024
 	case ENOTSUP:
 		return CZ_RESULT_NO_SUPPORT;
 #endif
@@ -2968,11 +2968,11 @@ enum CzResult czWrap_fsync(int fildes)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_XPG_1989
+#elif CZ_POSIX_VERSION >= CZ_POSIX_1996 || CZ_XOPEN_VERSION >= CZ_XPG_1989
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case EINVAL:
 		return CZ_RESULT_BAD_FILE;
 #endif
@@ -2982,11 +2982,11 @@ enum CzResult czWrap_fsync(int fildes)
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_1997
+#if CZ_POSIX_VERSION >= CZ_POSIX_1996 || CZ_XOPEN_VERSION >= CZ_SUS_1997
 	case ENOSPC:
 		return CZ_RESULT_NO_DISK;
 #endif
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ENOBUFS:
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
@@ -3042,7 +3042,7 @@ enum CzResult czWrap_fdatasync(int fildes)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_1997
+#elif CZ_POSIX_VERSION >= CZ_POSIX_1996 || CZ_XOPEN_VERSION >= CZ_SUS_1997
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
@@ -3054,7 +3054,7 @@ enum CzResult czWrap_fdatasync(int fildes)
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
 		return CZ_RESULT_NO_DISK;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ENOBUFS:
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
@@ -3287,10 +3287,10 @@ enum CzResult czWrap_open(int* res, const char* path, int oflag, mode_t mode)
 	case EROFS:
 		return CZ_RESULT_BAD_ACCESS;
 	case EINVAL:
-#if CZ_POSIX_VERSION >= CZ_POSIX_2008 || CZ_XOPEN_VERSION >= CZ_SUS_2008
+#if CZ_POSIX_VERSION >= CZ_POSIX_2008
 		if (!(oflag & (O_RDONLY | O_WRONLY | O_RDWR | O_EXEC | O_SEARCH)))
 			return CZ_RESULT_BAD_ACCESS;
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2001
 		if (!(oflag & (O_RDONLY | O_WRONLY | O_RDWR)))
 			return CZ_RESULT_BAD_ACCESS;
 #endif
@@ -3304,7 +3304,7 @@ enum CzResult czWrap_open(int* res, const char* path, int oflag, mode_t mode)
 	case EEXIST:
 	case EISDIR:
 		return CZ_RESULT_BAD_FILE;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ENXIO:
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_FILE;
@@ -3316,7 +3316,7 @@ enum CzResult czWrap_open(int* res, const char* path, int oflag, mode_t mode)
 	case ELOOP:
 	case ENAMETOOLONG:
 		return CZ_RESULT_BAD_PATH;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2024 || CZ_XOPEN_VERSION >= CZ_SUS_2024
+#if CZ_POSIX_VERSION >= CZ_POSIX_2024
 	case EILSEQ:
 		return CZ_RESULT_BAD_PATH;
 #endif
@@ -3328,7 +3328,7 @@ enum CzResult czWrap_open(int* res, const char* path, int oflag, mode_t mode)
 		return CZ_RESULT_NO_FILE;
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ETXTBSY:
 		return CZ_RESULT_IN_USE;
 #endif
@@ -3570,7 +3570,7 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int oflag, mode_
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2008 || CZ_XOPEN_VERSION >= CZ_SUS_2008
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2008
 	switch (errno) {
 	case EACCES:
 	case EBADF:
@@ -3598,7 +3598,7 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int oflag, mode_
 	case ELOOP:
 	case ENAMETOOLONG:
 		return CZ_RESULT_BAD_PATH;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2024 || CZ_XOPEN_VERSION >= CZ_SUS_2024
+#if CZ_POSIX_VERSION >= CZ_POSIX_2024
 	case EILSEQ:
 		return CZ_RESULT_BAD_PATH;
 #endif
@@ -3760,7 +3760,7 @@ enum CzResult czWrap_creat(int* res, const char* path, mode_t mode)
 	case EISDIR:
 	case EOPNOTSUPP:
 		return CZ_RESULT_BAD_FILE;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
 #endif
@@ -3769,13 +3769,13 @@ enum CzResult czWrap_creat(int* res, const char* path, mode_t mode)
 	case ENOENT:
 	case ENOTDIR:
 		return CZ_RESULT_BAD_PATH;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2024 || CZ_XOPEN_VERSION >= CZ_SUS_2024
+#if CZ_POSIX_VERSION >= CZ_POSIX_2024
 	case EILSEQ:
 		return CZ_RESULT_BAD_PATH;
 #endif
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ETXTBSY:
 		return CZ_RESULT_IN_USE;
 #endif
@@ -3843,7 +3843,7 @@ enum CzResult czWrap_close(int fildes)
 	}
 #elif CZ_POSIX_VERSION >= CZ_POSIX_1988 || CZ_XOPEN_VERSION >= CZ_XPG_1985
 	switch (errno) {
-#if CZ_POSIX_VERSION >= CZ_POSIX_2024 || CZ_XOPEN_VERSION >= CZ_SUS_2024
+#if CZ_POSIX_VERSION >= CZ_POSIX_2024
 	case EINPROGRESS:
 		return CZ_RESULT_SUCCESS;
 #endif
@@ -3851,7 +3851,7 @@ enum CzResult czWrap_close(int fildes)
 		return CZ_RESULT_BAD_ACCESS;
 	case EIO:
 		return CZ_RESULT_BAD_IO;
-#if (CZ_POSIX_VERSION < CZ_POSIX_2024 && CZ_XOPEN_VERSION < CZ_SUS_2024) || POSIX_CLOSE_RESTART
+#if CZ_POSIX_VERSION < CZ_POSIX_2024 || POSIX_CLOSE_RESTART
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
 #endif
@@ -3876,7 +3876,7 @@ enum CzResult czWrap_posix_close(int fildes, int flag)
 	if CZ_EXPECT (!r)
 		return CZ_RESULT_SUCCESS;
 
-#if CZ_POSIX_VERSION >= CZ_POSIX_2024 || CZ_XOPEN_VERSION >= CZ_SUS_2024
+#if CZ_POSIX_VERSION >= CZ_POSIX_2024
 	switch (errno) {
 	case EINPROGRESS:
 		return CZ_RESULT_SUCCESS;
@@ -3904,7 +3904,7 @@ enum CzResult czWrap_posix_close(int fildes, int flag)
 #if CZ_WRAP_LSEEK
 enum CzResult czWrap_lseek(off_t* res, int fildes, off_t offset, int whence)
 {
-#if CZ_POSIX_VERSION < CZ_POSIX_2001 && CZ_XOPEN_VERSION < CZ_SUS_1997
+#if !CZ_DARWIN && !CZ_GNU_LINUX && !CZ_FREE_BSD
 	errno = 0;
 #endif
 	off_t r = lseek(fildes, offset, whence);
@@ -3934,17 +3934,17 @@ enum CzResult czWrap_lseek(off_t* res, int fildes, off_t offset, int whence)
 #endif
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
 #endif
 	case EINVAL:
 		return CZ_RESULT_BAD_OFFSET;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
 #endif
-#if CZ_POSIX_VERSION >= CZ_POSIX_2024 || CZ_XOPEN_VERSION >= CZ_SUS_2024
+#if CZ_POSIX_VERSION >= CZ_POSIX_2024
 	case ENXIO:
 		return CZ_RESULT_BAD_OFFSET;
 #endif
@@ -4058,48 +4058,48 @@ enum CzResult czWrap_read(ssize_t* res, int fildes, void* buf, size_t nbyte)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_1990 || CZ_XOPEN_VERSION >= CZ_XPG_1985
+#elif CZ_POSIX_VERSION >= CZ_POSIX_1990 || CZ_XOPEN_VERSION >= CZ_XPG_1992
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EISDIR:
 		return CZ_RESULT_BAD_FILE;
-#if CZ_POSIX_VERSION < CZ_POSIX_2024 && CZ_XOPEN_VERSION < CZ_SUS_2024
+#if CZ_POSIX_VERSION < CZ_POSIX_2024
 	case EBADMSG:
 	case EINVAL:
 		return CZ_RESULT_BAD_FILE;
 #endif
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
 #endif
 	case EIO:
 		return CZ_RESULT_BAD_IO;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
 #endif
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
 #endif
-#if (CZ_POSIX_VERSION < CZ_POSIX_2001 && CZ_XOPEN_VERSION < CZ_SUS_2001) || EAGAIN != EWOULDBLOCK
+#if CZ_POSIX_VERSION < CZ_POSIX_2001 || EAGAIN != EWOULDBLOCK
 	case EWOULDBLOCK:
 		return CZ_RESULT_IN_USE;
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ECONNRESET:
 	case ENOTCONN:
 		return CZ_RESULT_NO_CONNECTION;
 #endif
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ENOBUFS:
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
 #endif
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ETIMEDOUT:
 		return CZ_RESULT_TIMEOUT;
 #endif
@@ -4219,28 +4219,28 @@ enum CzResult czWrap_pread(ssize_t* res, int fildes, void* buf, size_t nbyte, of
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_1997
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2008 || CZ_XOPEN_VERSION >= CZ_SUS_1997
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EISDIR:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
-#if CZ_POSIX_VERSION < CZ_POSIX_2024 && CZ_XOPEN_VERSION < CZ_SUS_2024
+#if CZ_POSIX_VERSION < CZ_POSIX_2024
 	case EBADMSG:
 		return CZ_RESULT_BAD_FILE;
 #endif
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
 #endif
 	case EIO:
 		return CZ_RESULT_BAD_IO;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_OFFSET;
 #endif
-#if CZ_POSIX_VERSION >= CZ_POSIX_2024 || CZ_XOPEN_VERSION >= CZ_SUS_2024
+#if CZ_POSIX_VERSION >= CZ_POSIX_2024
 	case EINVAL:
 		return CZ_RESULT_BAD_OFFSET;
 #else
@@ -4253,7 +4253,7 @@ enum CzResult czWrap_pread(ssize_t* res, int fildes, void* buf, size_t nbyte, of
 		return CZ_RESULT_IN_USE;
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2008 || CZ_XOPEN_VERSION >= CZ_SUS_2001
 	case ENOBUFS:
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
@@ -4384,39 +4384,39 @@ enum CzResult czWrap_write(ssize_t* res, int fildes, const void* buf, size_t nby
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_1990 || CZ_XOPEN_VERSION >= CZ_XPG_1985
+#elif CZ_POSIX_VERSION >= CZ_POSIX_1990 || CZ_XOPEN_VERSION >= CZ_XPG_1992
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case EACCES:
 		return CZ_RESULT_BAD_ACCESS;
 #endif
 	case EFBIG:
 		return CZ_RESULT_BAD_FILE;
-#if CZ_POSIX_VERSION < CZ_POSIX_2024 && CZ_XOPEN_VERSION < CZ_SUS_2024
+#if CZ_POSIX_VERSION < CZ_POSIX_2024
 	case EINVAL:
 		return CZ_RESULT_BAD_FILE;
 #endif
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
 #endif
 	case EIO:
 		return CZ_RESULT_BAD_IO;
-#if CZ_POSIX_VERSION < CZ_POSIX_2024 && CZ_XOPEN_VERSION < CZ_SUS_2024
+#if CZ_POSIX_VERSION < CZ_POSIX_2024
 	case ERANGE:
 		return CZ_RESULT_BAD_SIZE;
 #endif
 	case EAGAIN:
 		return CZ_RESULT_IN_USE;
-#if (CZ_POSIX_VERSION < CZ_POSIX_2001 && CZ_XOPEN_VERSION < CZ_SUS_2001) || EAGAIN != EWOULDBLOCK
+#if CZ_POSIX_VERSION < CZ_POSIX_2001 || EAGAIN != EWOULDBLOCK
 	case EWOULDBLOCK:
 		return CZ_RESULT_IN_USE;
 #endif
 	case EINTR:
 		return CZ_RESULT_INTERRUPT;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ECONNRESET:
 	case ENETDOWN:
 	case ENETUNREACH:
@@ -4425,7 +4425,7 @@ enum CzResult czWrap_write(ssize_t* res, int fildes, const void* buf, size_t nby
 #endif
 	case ENOSPC:
 		return CZ_RESULT_NO_DISK;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case ENOBUFS:
 		return CZ_RESULT_NO_MEMORY;
 #endif
@@ -4556,20 +4556,20 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fildes, const void* buf, size_t nb
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_1997
+#elif CZ_POSIX_VERSION >= CZ_POSIX_2008 || CZ_XOPEN_VERSION >= CZ_SUS_1997
 	switch (errno) {
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
 	case EFBIG:
 	case ESPIPE:
 		return CZ_RESULT_BAD_FILE;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2008 || CZ_XOPEN_VERSION >= CZ_SUS_2001
 	case ENXIO:
 		return CZ_RESULT_BAD_FILE;
 #endif
 	case EIO:
 		return CZ_RESULT_BAD_IO;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2024 || CZ_XOPEN_VERSION >= CZ_SUS_2024
+#if CZ_POSIX_VERSION >= CZ_POSIX_2024
 	case EINVAL:
 		return CZ_RESULT_BAD_OFFSET;
 #else
@@ -4578,7 +4578,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fildes, const void* buf, size_t nb
 			return CZ_RESULT_BAD_OFFSET;
 		return CZ_RESULT_BAD_FILE;
 #endif
-#if CZ_POSIX_VERSION < CZ_POSIX_2024 && CZ_XOPEN_VERSION < CZ_SUS_2024
+#if CZ_POSIX_VERSION < CZ_POSIX_2024
 	case ERANGE:
 		return CZ_RESULT_BAD_SIZE;
 #endif
@@ -4588,7 +4588,7 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fildes, const void* buf, size_t nb
 		return CZ_RESULT_INTERRUPT;
 	case ENOSPC:
 		return CZ_RESULT_NO_DISK;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2008 || CZ_XOPEN_VERSION >= CZ_SUS_2001
 	case ENOBUFS:
 		return CZ_RESULT_NO_MEMORY;
 #endif
@@ -4619,7 +4619,7 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t len, int prot,
 		return CZ_RESULT_SUCCESS;
 	}
 
-#if CZ_DARWIN || CZ_GNU_LINUX || CZ_FREE_BSD || CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_DARWIN || CZ_GNU_LINUX || CZ_FREE_BSD || CZ_POSIX_VERSION >= CZ_POSIX_2001
 	unsigned long pageSize = system_page_size();
 #endif
 
@@ -4747,12 +4747,12 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t len, int prot,
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_1994
+#elif CZ_POSIX_VERSION >= CZ_POSIX_1996 || CZ_XOPEN_VERSION >= CZ_SUS_1994
 	switch (errno) {
 	case EACCES:
 	case EBADF:
 		return CZ_RESULT_BAD_ACCESS;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case EINVAL:
 		if (!(flags & (MAP_PRIVATE | MAP_SHARED)))
 			return CZ_RESULT_BAD_ACCESS;
@@ -4768,14 +4768,14 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t len, int prot,
 			return CZ_RESULT_BAD_ADDRESS;
 		return CZ_RESULT_BAD_OFFSET;
 #endif
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case EOVERFLOW:
 		return CZ_RESULT_BAD_ADDRESS;
 #endif
 	case ENXIO:
 		if (flags & MAP_FIXED)
 			return CZ_RESULT_BAD_ADDRESS;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2024 || CZ_XOPEN_VERSION >= CZ_SUS_2024
+#if CZ_POSIX_VERSION >= CZ_POSIX_2024
 		if (!(flags & MAP_ANON))
 			return CZ_RESULT_BAD_ADDRESS;
 #endif
@@ -4788,7 +4788,7 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t len, int prot,
 #endif
 	case ENOMEM:
 		return CZ_RESULT_NO_MEMORY;
-#if CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#if CZ_POSIX_VERSION >= CZ_POSIX_2001
 	case EMFILE:
 		return CZ_RESULT_NO_OPEN;
 #endif
@@ -4851,7 +4851,7 @@ enum CzResult czWrap_munmap(void* addr, size_t len)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_DARWIN || CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_2001
+#elif CZ_DARWIN || CZ_POSIX_VERSION >= CZ_POSIX_1996 || CZ_XOPEN_VERSION >= CZ_SUS_1994
 	switch (errno) {
 	case EINVAL:
 		if (!len)
@@ -4928,7 +4928,7 @@ enum CzResult czWrap_msync(void* addr, size_t len, int flags)
 	default:
 		return CZ_RESULT_INTERNAL_ERROR;
 	}
-#elif CZ_POSIX_VERSION >= CZ_POSIX_2001 || CZ_XOPEN_VERSION >= CZ_SUS_1994
+#elif CZ_POSIX_VERSION >= CZ_POSIX_1996 || CZ_XOPEN_VERSION >= CZ_SUS_1994
 	switch (errno) {
 	case ENOMEM:
 		return CZ_RESULT_BAD_ADDRESS;

@@ -63,8 +63,10 @@
 		CZ_FREE_BSD &&                                        \
 		CZ_FREE_BSD_USE_BSD &&                                \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(11, 0, 72)) || \
-	CZ_POSIX_VERSION >= CZ_POSIX_2024 ||                      \
-	CZ_XOPEN_VERSION >= CZ_SUS_2024
+	(                                                         \
+		!CZ_GNU_LINUX &&                                      \
+		!CZ_FREE_BSD &&                                       \
+		CZ_POSIX_VERSION >= CZ_POSIX_2024)
 #define CZ_WRAP_REALLOCARRAY 1
 #else
 #define CZ_WRAP_REALLOCARRAY 0
@@ -163,7 +165,12 @@ enum CzResult czWrap_reallocf(void* restrict* res, void* ptr, size_t size);
 		CZ_FREE_BSD &&                                       \
 		CZ_FREE_BSD_USE_POSIX_2001 &&                        \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(7, 0, 13)) || \
-	CZ_POSIX_ADVISORY_INFO >= CZ_POSIX_2001
+	(                                                        \
+		!CZ_DARWIN &&                                        \
+		!CZ_GNU_LINUX &&                                     \
+		!CZ_FREE_BSD &&                                      \
+		CZ_POSIX_VERSION >= CZ_POSIX_2001 &&                 \
+		CZ_POSIX_ADVISORY_INFO >= 0)
 #define CZ_WRAP_POSIX_MEMALIGN 1
 #else
 #define CZ_WRAP_POSIX_MEMALIGN 0
@@ -275,7 +282,12 @@ enum CzResult czWrap_madvise(void* addr, size_t len, int advice);
 		CZ_FREE_BSD &&                                        \
 		CZ_FREE_BSD_USE_POSIX_2001 &&                         \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 1, 105)) || \
-	CZ_POSIX_ADVISORY_INFO >= CZ_POSIX_2001
+	(                                                         \
+		!CZ_DARWIN &&                                         \
+		!CZ_GNU_LINUX &&                                      \
+		!CZ_FREE_BSD &&                                       \
+		CZ_POSIX_VERSION >= CZ_POSIX_2001 &&                  \
+		CZ_POSIX_ADVISORY_INFO >= 0)
 #define CZ_WRAP_POSIX_MADVISE 1
 #else
 #define CZ_WRAP_POSIX_MADVISE 0
@@ -331,8 +343,13 @@ enum CzResult czWrap_posix_madvise(int* res, void* addr, size_t len, int advice)
 	(                                             \
 		CZ_FREE_BSD &&                            \
 		CZ_FREE_BSD_USE_POSIX_1988) ||            \
-	CZ_POSIX_VERSION >= CZ_POSIX_1988 ||          \
-	CZ_XOPEN_VERSION >= CZ_XPG_1985
+	(                                             \
+		!CZ_DARWIN &&                             \
+		!CZ_GNU_LINUX &&                          \
+		!CZ_FREE_BSD &&                           \
+		(                                         \
+			CZ_POSIX_VERSION >= CZ_POSIX_1988 ||  \
+			CZ_XOPEN_VERSION >= CZ_XPG_1985))
 #define CZ_WRAP_FDOPEN 1
 #else
 #define CZ_WRAP_FDOPEN 0
@@ -400,8 +417,11 @@ enum CzResult czWrap_fdopen(FILE* restrict* res, int fildes, const char* mode);
 		CZ_FREE_BSD &&                                        \
 		CZ_FREE_BSD_USE_POSIX_2008 &&                         \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(10, 0, 28)) || \
-	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                      \
-	CZ_XOPEN_VERSION >= CZ_SUS_2008
+	(                                                         \
+		!CZ_DARWIN &&                                         \
+		!CZ_GNU_LINUX &&                                      \
+		!CZ_FREE_BSD &&                                       \
+		CZ_POSIX_VERSION >= CZ_POSIX_2008)
 #define CZ_WRAP_FMEMOPEN 1
 #else
 #define CZ_WRAP_FMEMOPEN 0
@@ -474,8 +494,13 @@ enum CzResult czWrap_fmemopen(FILE* restrict* res, void* buf, size_t max_size, c
 		CZ_FREE_BSD &&                                        \
 		CZ_FREE_BSD_USE_XSI_1997 &&                           \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(12, 0, 31)) || \
-	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||                      \
-	CZ_XOPEN_VERSION >= CZ_SUS_2001
+	(                                                         \
+		!CZ_DARWIN &&                                         \
+		!CZ_GNU_LINUX &&                                      \
+		!CZ_FREE_BSD &&                                       \
+		(                                                     \
+			CZ_POSIX_VERSION >= CZ_POSIX_2001 ||              \
+			CZ_XOPEN_VERSION >= CZ_SUS_1997))
 #define CZ_WRAP_FSEEKO 1
 #else
 #define CZ_WRAP_FSEEKO 0
@@ -550,8 +575,13 @@ enum CzResult czWrap_fseeko(FILE* stream, off_t offset, int whence);
 		CZ_FREE_BSD &&                                        \
 		CZ_FREE_BSD_USE_XSI_1997 &&                           \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(12, 0, 31)) || \
-	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||                      \
-	CZ_XOPEN_VERSION >= CZ_SUS_2001
+	(                                                         \
+		!CZ_DARWIN &&                                         \
+		!CZ_GNU_LINUX &&                                      \
+		!CZ_FREE_BSD &&                                       \
+		(                                                     \
+			CZ_POSIX_VERSION >= CZ_POSIX_2001 ||              \
+			CZ_XOPEN_VERSION >= CZ_SUS_1997))
 #define CZ_WRAP_FTELLO 1
 #else
 #define CZ_WRAP_FTELLO 0
@@ -717,8 +747,11 @@ enum CzResult czWrap_unlink(const char* path);
 		CZ_FREE_BSD &&                                       \
 		CZ_FREE_BSD_USE_POSIX_2008 &&                        \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0, 69)) || \
-	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                     \
-	CZ_XOPEN_VERSION >= CZ_SUS_2008
+	(                                                        \
+		!CZ_DARWIN &&                                        \
+		!CZ_GNU_LINUX &&                                     \
+		!CZ_FREE_BSD &&                                      \
+		CZ_POSIX_VERSION >= CZ_POSIX_2008)
 #define CZ_WRAP_UNLINKAT 1
 #else
 #define CZ_WRAP_UNLINKAT 0
@@ -777,8 +810,13 @@ enum CzResult czWrap_unlinkat(int fd, const char* path, int flag);
 	(                                             \
 		CZ_FREE_BSD &&                            \
 		CZ_FREE_BSD_USE_POSIX_1988) ||            \
-	CZ_POSIX_VERSION >= CZ_POSIX_1988 ||          \
-	CZ_XOPEN_VERSION >= CZ_XPG_1985
+	(                                             \
+		!CZ_DARWIN &&                             \
+		!CZ_GNU_LINUX &&                          \
+		!CZ_FREE_BSD &&                           \
+		(                                         \
+			CZ_POSIX_VERSION >= CZ_POSIX_1988 ||  \
+			CZ_XOPEN_VERSION >= CZ_XPG_1985))
 #define CZ_WRAP_FILENO 1
 #else
 #define CZ_WRAP_FILENO 0
@@ -930,8 +968,12 @@ enum CzResult czWrap_stat(const char* path, struct stat* buf);
 		CZ_FREE_BSD &&                                        \
 		CZ_FREE_BSD_USE_POSIX_2001 &&                         \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 107)) || \
-	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||                      \
-	CZ_XOPEN_VERSION >= CZ_XPG_1985
+	(                                                         \
+		!CZ_GNU_LINUX &&                                      \
+		!CZ_FREE_BSD &&                                       \
+		(                                                     \
+			CZ_POSIX_VERSION >= CZ_POSIX_2001 ||              \
+			CZ_XOPEN_VERSION >= CZ_SUS_1994))
 #define CZ_WRAP_LSTAT 1
 #else
 #define CZ_WRAP_LSTAT 0
@@ -1046,8 +1088,11 @@ enum CzResult czWrap_fstat(int fildes, struct stat* buf);
 		CZ_FREE_BSD &&                                       \
 		CZ_FREE_BSD_USE_POSIX_2008 &&                        \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0, 69)) || \
-	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                     \
-	CZ_XOPEN_VERSION >= CZ_SUS_2008
+	(                                                        \
+		!CZ_DARWIN &&                                        \
+		!CZ_GNU_LINUX &&                                     \
+		!CZ_FREE_BSD &&                                      \
+		CZ_POSIX_VERSION >= CZ_POSIX_2008)
 #define CZ_WRAP_FSTATAT 1
 #else
 #define CZ_WRAP_FSTATAT 0
@@ -1168,8 +1213,11 @@ enum CzResult czWrap_flock(int fd, int op);
 		CZ_FREE_BSD &&                                       \
 		CZ_FREE_BSD_USE_XSI_1997 &&                          \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 38)) || \
-	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||                     \
-	CZ_XOPEN_VERSION >= CZ_SUS_1994
+	(                                                        \
+		!CZ_DARWIN &&                                        \
+		!CZ_GNU_LINUX &&                                     \
+		!CZ_FREE_BSD &&                                      \
+		CZ_XOPEN_VERSION >= CZ_SUS_1994)
 #define CZ_WRAP_LOCKF 1
 #else
 #define CZ_WRAP_LOCKF 0
@@ -1301,8 +1349,13 @@ enum CzResult czWrap_fcntl(int* res, int fildes, int cmd, ...);
 		CZ_FREE_BSD &&                                       \
 		CZ_FREE_BSD_USE_XSI_1997 &&                          \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 38)) || \
-	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||                     \
-	CZ_XOPEN_VERSION >= CZ_SUS_1994
+	(                                                        \
+		!CZ_DARWIN &&                                        \
+		!CZ_GNU_LINUX &&                                     \
+		!CZ_FREE_BSD &&                                      \
+		(                                                    \
+			CZ_POSIX_VERSION >= CZ_POSIX_2008 ||             \
+			CZ_XOPEN_VERSION >= CZ_SUS_1994))
 #define CZ_WRAP_TRUNCATE 1
 #else
 #define CZ_WRAP_TRUNCATE 0
@@ -1377,8 +1430,13 @@ enum CzResult czWrap_truncate(const char* path, off_t length);
 		CZ_FREE_BSD &&                                       \
 		CZ_FREE_BSD_USE_XSI_1997 &&                          \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 44)) || \
-	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||                     \
-	CZ_XOPEN_VERSION >= CZ_SUS_1994
+	(                                                        \
+		!CZ_DARWIN &&                                        \
+		!CZ_GNU_LINUX &&                                     \
+		!CZ_FREE_BSD &&                                      \
+		(                                                    \
+			CZ_POSIX_VERSION >= CZ_POSIX_1996 ||             \
+			CZ_XOPEN_VERSION >= CZ_SUS_1994))
 #define CZ_WRAP_FTRUNCATE 1
 #else
 #define CZ_WRAP_FTRUNCATE 0
@@ -1435,7 +1493,11 @@ enum CzResult czWrap_ftruncate(int fildes, off_t length);
 		CZ_FREE_BSD &&                                       \
 		CZ_FREE_BSD_USE_POSIX_2001 &&                        \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(10, 0, 1)) || \
-	CZ_POSIX_ADVISORY_INFO >= CZ_POSIX_2001
+	(                                                        \
+		!CZ_GNU_LINUX &&                                     \
+		!CZ_FREE_BSD &&                                      \
+		CZ_POSIX_VERSION >= CZ_POSIX_2001 &&                 \
+		CZ_POSIX_ADVISORY_INFO >= 0)
 #define CZ_WRAP_POSIX_FADVISE 1
 #else
 #define CZ_WRAP_POSIX_FADVISE 0
@@ -1535,7 +1597,11 @@ enum CzResult czWrap_fallocate(int fd, int mode, off_t offset, off_t len);
 		CZ_FREE_BSD &&                                       \
 		CZ_FREE_BSD_USE_POSIX_2001 &&                        \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(9, 0, 37)) || \
-	CZ_POSIX_ADVISORY_INFO >= CZ_POSIX_2001
+	(                                                        \
+		!CZ_GNU_LINUX &&                                     \
+		!CZ_FREE_BSD &&                                      \
+		CZ_POSIX_VERSION >= CZ_POSIX_2001 &&                 \
+		CZ_POSIX_ADVISORY_INFO >= 0)
 #define CZ_WRAP_POSIX_FALLOCATE 1
 #else
 #define CZ_WRAP_POSIX_FALLOCATE 0
@@ -1613,8 +1679,15 @@ enum CzResult czWrap_posix_fallocate(int* res, int fd, off_t offset, off_t len);
 		CZ_FREE_BSD &&                                       \
 		CZ_FREE_BSD_USE_XSI_1997 &&                          \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 44)) || \
-	CZ_POSIX_FSYNC >= CZ_POSIX_2001 ||                       \
-	CZ_XOPEN_VERSION >= CZ_XPG_1989
+	(                                                        \
+		!CZ_DARWIN &&                                        \
+		!CZ_GNU_LINUX &&                                     \
+		!CZ_FREE_BSD &&                                      \
+		(                                                    \
+			(                                                \
+				CZ_POSIX_VERSION >= CZ_POSIX_1996 &&         \
+				CZ_POSIX_FSYNC >= 0) ||                      \
+			CZ_XOPEN_VERSION >= CZ_XPG_1989))
 #define CZ_WRAP_FSYNC 1
 #else
 #define CZ_WRAP_FSYNC 0
@@ -1671,10 +1744,15 @@ enum CzResult czWrap_fsync(int fildes);
 			CZ_FREE_BSD_USE_XSI_1997) &&                      \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(12, 0, 2)) ||  \
 	(                                                         \
-		CZ_XOPEN_REALTIME > 0 &&                              \
+		!CZ_GNU_LINUX &&                                      \
+		!CZ_FREE_BSD &&                                       \
 		(                                                     \
-			CZ_POSIX_VERSION >= CZ_POSIX_2001 ||              \
-			CZ_XOPEN_VERSION >= CZ_SUS_1997))
+			(                                                 \
+				CZ_POSIX_VERSION >= CZ_POSIX_1996 &&          \
+				CZ_POSIX_SYNCHRONIZED_IO >= 0) ||             \
+			(                                                 \
+				CZ_XOPEN_VERSION >= CZ_SUS_1997 &&            \
+				CZ_XOPEN_REALTIME != -1)))
 #define CZ_WRAP_FDATASYNC 1
 #else
 #define CZ_WRAP_FDATASYNC 0
@@ -1795,8 +1873,11 @@ enum CzResult czWrap_open(int* res, const char* path, int oflag, mode_t mode);
 		CZ_FREE_BSD &&                                       \
 		CZ_FREE_BSD_USE_POSIX_2008 &&                        \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(8, 0, 69)) || \
-	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                     \
-	CZ_XOPEN_VERSION >= CZ_SUS_2008
+	(                                                        \
+		!CZ_DARWIN &&                                        \
+		!CZ_GNU_LINUX &&                                     \
+		!CZ_FREE_BSD &&                                      \
+		CZ_POSIX_VERSION >= CZ_POSIX_2008)
 #define CZ_WRAP_OPENAT 1
 #else
 #define CZ_WRAP_OPENAT 0
@@ -1941,8 +2022,7 @@ enum CzResult czWrap_close(int fildes);
  * @brief Specifies whether @c posix_close is defined.
  */
 #if !defined(CZ_WRAP_POSIX_CLOSE)
-#if CZ_POSIX_VERSION >= CZ_POSIX_2024 || \
-	CZ_XOPEN_VERSION >= CZ_SUS_2024
+#if CZ_POSIX_VERSION >= CZ_POSIX_2024
 #define CZ_WRAP_POSIX_CLOSE 1
 #else
 #define CZ_WRAP_POSIX_CLOSE 0
@@ -2025,7 +2105,7 @@ enum CzResult czWrap_lseek(off_t* res, int fildes, off_t offset, int whence);
 		CZ_GLIBC) ||                     \
 	CZ_FREE_BSD ||                       \
 	CZ_POSIX_VERSION >= CZ_POSIX_1990 || \
-	CZ_XOPEN_VERSION >= CZ_XPG_1985
+	CZ_XOPEN_VERSION >= CZ_XPG_1992
 #define CZ_WRAP_READ 1
 #else
 #define CZ_WRAP_READ 0
@@ -2106,8 +2186,13 @@ enum CzResult czWrap_read(ssize_t* res, int fildes, void* buf, size_t nbyte);
 		CZ_FREE_BSD &&                                       \
 		CZ_FREE_BSD_USE_XSI_1997 &&                          \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 38)) || \
-	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||                     \
-	CZ_XOPEN_VERSION >= CZ_SUS_1997
+	(                                                        \
+		!CZ_DARWIN &&                                        \
+		!CZ_GNU_LINUX &&                                     \
+		!CZ_FREE_BSD &&                                      \
+		(                                                    \
+			CZ_POSIX_VERSION >= CZ_POSIX_2008 ||             \
+			CZ_XOPEN_VERSION >= CZ_SUS_1997))
 #define CZ_WRAP_PREAD 1
 #else
 #define CZ_WRAP_PREAD 0
@@ -2162,7 +2247,7 @@ enum CzResult czWrap_pread(ssize_t* res, int fildes, void* buf, size_t nbyte, of
 		CZ_GLIBC) ||                     \
 	CZ_FREE_BSD ||                       \
 	CZ_POSIX_VERSION >= CZ_POSIX_1990 || \
-	CZ_XOPEN_VERSION >= CZ_XPG_1985
+	CZ_XOPEN_VERSION >= CZ_XPG_1992
 #define CZ_WRAP_WRITE 1
 #else
 #define CZ_WRAP_WRITE 0
@@ -2242,8 +2327,13 @@ enum CzResult czWrap_write(ssize_t* res, int fildes, const void* buf, size_t nby
 		CZ_FREE_BSD &&                                       \
 		CZ_FREE_BSD_USE_XSI_1997 &&                          \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(5, 0, 38)) || \
-	CZ_POSIX_VERSION >= CZ_POSIX_2001 ||                     \
-	CZ_XOPEN_VERSION >= CZ_SUS_1997
+	(                                                        \
+		!CZ_DARWIN &&                                        \
+		!CZ_GNU_LINUX &&                                     \
+		!CZ_FREE_BSD &&                                      \
+		(                                                    \
+			CZ_POSIX_VERSION >= CZ_POSIX_2008 ||             \
+			CZ_XOPEN_VERSION >= CZ_SUS_1997))
 #define CZ_WRAP_PWRITE 1
 #else
 #define CZ_WRAP_PWRITE 0
@@ -2299,10 +2389,16 @@ enum CzResult czWrap_pwrite(ssize_t* res, int fildes, const void* buf, size_t nb
 	(                                                       \
 		CZ_FREE_BSD &&                                      \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(3, 0, 2)) || \
-	CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001 ||               \
-	CZ_POSIX_SHARED_MEMORY_OBJECTS >= CZ_POSIX_2001 ||      \
-	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                    \
-	CZ_XOPEN_VERSION >= CZ_SUS_1994
+	(                                                       \
+		!CZ_FREE_BSD &&                                     \
+		(                                                   \
+			(                                               \
+				CZ_POSIX_VERSION >= CZ_POSIX_1996 &&        \
+				CZ_POSIX_MAPPED_FILES >= 0) ||              \
+			(                                               \
+				CZ_POSIX_VERSION >= CZ_POSIX_1996 &&        \
+				CZ_POSIX_SHARED_MEMORY_OBJECTS >= 0) ||     \
+			CZ_XOPEN_VERSION >= CZ_SUS_1994))
 #define CZ_WRAP_MMAP 1
 #else
 #define CZ_WRAP_MMAP 0
@@ -2358,10 +2454,16 @@ enum CzResult czWrap_mmap(void* restrict* res, void* addr, size_t len, int prot,
 	(                                                       \
 		CZ_FREE_BSD &&                                      \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(3, 0, 2)) || \
-	CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001 ||               \
-	CZ_POSIX_SHARED_MEMORY_OBJECTS >= CZ_POSIX_2001 ||      \
-	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                    \
-	CZ_XOPEN_VERSION >= CZ_SUS_1994
+	(                                                       \
+		!CZ_FREE_BSD &&                                     \
+		(                                                   \
+			(                                               \
+				CZ_POSIX_VERSION >= CZ_POSIX_1996 &&        \
+				CZ_POSIX_MAPPED_FILES >= 0) ||              \
+			(                                               \
+				CZ_POSIX_VERSION >= CZ_POSIX_1996 &&        \
+				CZ_POSIX_SHARED_MEMORY_OBJECTS >= 0) ||     \
+			CZ_XOPEN_VERSION >= CZ_SUS_1994))
 #define CZ_WRAP_MUNMAP 1
 #else
 #define CZ_WRAP_MUNMAP 0
@@ -2405,10 +2507,16 @@ enum CzResult czWrap_munmap(void* addr, size_t len);
 	(                                                       \
 		CZ_FREE_BSD &&                                      \
 		CZ_FREE_BSD_VERSION >= CZ_MAKE_VERSION(3, 0, 2)) || \
-	CZ_POSIX_MAPPED_FILES >= CZ_POSIX_2001 ||               \
-	CZ_POSIX_SYNCHRONIZED_IO >= CZ_POSIX_2001 ||            \
-	CZ_POSIX_VERSION >= CZ_POSIX_2008 ||                    \
-	CZ_XOPEN_VERSION >= CZ_SUS_1994
+	(                                                       \
+		!CZ_FREE_BSD &&                                     \
+		(                                                   \
+			(                                               \
+				CZ_POSIX_VERSION >= CZ_POSIX_1996 &&        \
+				CZ_POSIX_MAPPED_FILES >= 0) ||              \
+			(                                               \
+				CZ_POSIX_VERSION >= CZ_POSIX_1996 &&        \
+				CZ_POSIX_SYNCHRONIZED_IO >= 0) ||           \
+			CZ_XOPEN_VERSION >= CZ_SUS_1994))
 #define CZ_WRAP_MSYNC 1
 #else
 #define CZ_WRAP_MSYNC 0
