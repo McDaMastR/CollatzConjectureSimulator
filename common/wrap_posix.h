@@ -86,7 +86,6 @@
  * @param[in] elsize The third argument to pass to @c reallocarray.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_SIZE @p nelem or @p elsize was zero, which was unsupported.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
@@ -132,7 +131,6 @@ enum CzResult czWrap_reallocarray(void* restrict* res, void* ptr, size_t nelem, 
  * @param[in] size The second argument to pass to @c reallocf.
  * 
  * @retval CZ_RESULT_SUCCESS The operation was successful.
- * @retval CZ_RESULT_INTERNAL_ERROR An unexpected or unintended internal event occurred.
  * @retval CZ_RESULT_BAD_SIZE @p size was zero, which was unsupported.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * 
@@ -348,8 +346,8 @@ enum CzResult czWrap_posix_madvise(int* res, void* addr, size_t len, int advice)
 		!CZ_GNU_LINUX &&                          \
 		!CZ_FREE_BSD &&                           \
 		(                                         \
-			CZ_POSIX_VERSION >= CZ_POSIX_1988 ||  \
-			CZ_XOPEN_VERSION >= CZ_XPG_1985))
+			CZ_POSIX_VERSION >= CZ_POSIX_1990 ||  \
+			CZ_XOPEN_VERSION >= CZ_XPG_1992))
 #define CZ_WRAP_FDOPEN 1
 #else
 #define CZ_WRAP_FDOPEN 0
@@ -630,8 +628,8 @@ enum CzResult czWrap_ftello(off_t* res, FILE* stream);
 		CZ_GNU_LINUX &&                  \
 		CZ_GLIBC) ||                     \
 	CZ_FREE_BSD ||                       \
-	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
-	CZ_XOPEN_VERSION >= CZ_XPG_1989
+	CZ_POSIX_VERSION >= CZ_POSIX_1990 || \
+	CZ_XOPEN_VERSION >= CZ_XPG_1992
 #define CZ_WRAP_RMDIR 1
 #else
 #define CZ_WRAP_RMDIR 0
@@ -676,8 +674,8 @@ enum CzResult czWrap_rmdir(const char* path);
 		CZ_GNU_LINUX &&                  \
 		CZ_GLIBC) ||                     \
 	CZ_FREE_BSD ||                       \
-	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
-	CZ_XOPEN_VERSION >= CZ_XPG_1985
+	CZ_POSIX_VERSION >= CZ_POSIX_1990 || \
+	CZ_XOPEN_VERSION >= CZ_XPG_1992
 #define CZ_WRAP_UNLINK 1
 #else
 #define CZ_WRAP_UNLINK 0
@@ -899,8 +897,8 @@ enum CzResult czWrap_isatty(int* res, int fildes);
 		CZ_GNU_LINUX &&                  \
 		CZ_GLIBC) ||                     \
 	CZ_FREE_BSD ||                       \
-	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
-	CZ_XOPEN_VERSION >= CZ_XPG_1985
+	CZ_POSIX_VERSION >= CZ_POSIX_1990 || \
+	CZ_XOPEN_VERSION >= CZ_XPG_1992
 #define CZ_WRAP_STAT 1
 #else
 #define CZ_WRAP_STAT 0
@@ -1435,7 +1433,13 @@ enum CzResult czWrap_truncate(const char* path, off_t length);
 		!CZ_GNU_LINUX &&                                     \
 		!CZ_FREE_BSD &&                                      \
 		(                                                    \
-			CZ_POSIX_VERSION >= CZ_POSIX_1996 ||             \
+			(                                                \
+				CZ_POSIX_VERSION >= CZ_POSIX_1996 &&         \
+				CZ_POSIX_MAPPED_FILES >= 0) ||               \
+			(                                                \
+				CZ_POSIX_VERSION >= CZ_POSIX_1996 &&         \
+				CZ_POSIX_SHARED_MEMORY_OBJECTS >= 0) ||      \
+			CZ_POSIX_VERSION >= CZ_POSIX_2001 ||             \
 			CZ_XOPEN_VERSION >= CZ_SUS_1994))
 #define CZ_WRAP_FTRUNCATE 1
 #else
@@ -1523,6 +1527,7 @@ enum CzResult czWrap_ftruncate(int fildes, off_t length);
  * @retval CZ_RESULT_BAD_FILE The file type was invalid or unsupported.
  * @retval CZ_RESULT_BAD_IO A low-level IO operation failed when enacting @p advice.
  * @retval CZ_RESULT_BAD_SIZE @p len was negative.
+ * @retval CZ_RESULT_NO_SUPPORT @p advice was invalid or unsupported by the platform.
  * 
  * @note This function is only defined if @ref CZ_WRAP_POSIX_FADVISE is defined as a nonzero value.
  */
@@ -1794,8 +1799,8 @@ enum CzResult czWrap_fdatasync(int fildes);
 		CZ_GNU_LINUX &&                  \
 		CZ_GLIBC) ||                     \
 	CZ_FREE_BSD ||                       \
-	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
-	CZ_XOPEN_VERSION >= CZ_XPG_1985
+	CZ_POSIX_VERSION >= CZ_POSIX_1990 || \
+	CZ_XOPEN_VERSION >= CZ_XPG_1992
 #define CZ_WRAP_OPEN 1
 #else
 #define CZ_WRAP_OPEN 0
@@ -1823,6 +1828,7 @@ enum CzResult czWrap_fdatasync(int fildes);
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
@@ -1906,6 +1912,7 @@ enum CzResult czWrap_open(int* res, const char* path, int oflag, mode_t mode);
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_FILE The file did not exist.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
@@ -1933,8 +1940,8 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int oflag, mode_
 		CZ_GNU_LINUX &&                  \
 		CZ_GLIBC) ||                     \
 	CZ_FREE_BSD ||                       \
-	CZ_POSIX_VERSION >= CZ_POSIX_1988 || \
-	CZ_XOPEN_VERSION >= CZ_XPG_1985
+	CZ_POSIX_VERSION >= CZ_POSIX_1990 || \
+	CZ_XOPEN_VERSION >= CZ_XPG_1992
 #define CZ_WRAP_CREAT 1
 #else
 #define CZ_WRAP_CREAT 0
@@ -1961,6 +1968,7 @@ enum CzResult czWrap_openat(int* res, int fd, const char* path, int oflag, mode_
  * @retval CZ_RESULT_BAD_PATH @p path was an invalid or unsupported filepath.
  * @retval CZ_RESULT_IN_USE The file was already in use by the system.
  * @retval CZ_RESULT_INTERRUPT An interruption occured due to a signal.
+ * @retval CZ_RESULT_NO_CONNECTION The file was a disconnected FIFO, pipe, or socket.
  * @retval CZ_RESULT_NO_DISK The filesystem or secondary storage unit was full.
  * @retval CZ_RESULT_NO_MEMORY Sufficient memory was unable to be allocated.
  * @retval CZ_RESULT_NO_OPEN The maximum number of open files was reached.
